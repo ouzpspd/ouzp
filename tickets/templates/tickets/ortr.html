@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+<div class="container">
+
+
+    <div class="row mt-2">
+
+        {% if com_search %}
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="{% url 'commercial' %}">Коммерческие</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
+          </li>
+        </ul>
+        {% elif pto_search %}
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="{% url 'pto' %}">ПТО</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
+          </li>
+        </ul>
+        {% elif all_search %}
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
+          </li>
+            </li>
+            <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="{% url 'all_com_pto_wait' %}">Все</a>
+          </li>
+        </ul>
+        {% elif wait_search %}
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="{% url 'wait' %}">Ожидание</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
+          </li>
+        </ul>
+        {% else%}
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="{% url 'ortr' %}">Новые</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
+          </li>
+            <li class="nav-item">
+            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
+          </li>
+        </ul>
+        {% endif %}
+    </div>
+    <div class="row mt-3">
+    <table class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">№ Заявки</th>
+          <th scope="col">Клиент</th>
+            <th scope="col">Точка подключения</th>
+            <th scope="col">Технолог</th>
+            <th scope="col">Куратор</th>
+            {% comment %}<th scope="col">Статус</th>{% endcomment %}
+            <th scope="col" colspan="2">Действие</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for ticket in search %}
+
+        <tr>
+            <th scope="row">{{forloop.counter}}</th>
+
+            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.1}}">{{ticket.0}}</a></td>
+            <td>{{ticket.2}}</td>
+            <td>{{ticket.3}}</td>
+            <td>{{ticket.4}}</td>
+            <td>{{ticket.5}}</td>
+            {% comment %}<td>{{ticket.6}}</td>{% endcomment %}
+            <td>
+                <a class="btn btn-outline-danger custom" href="{% url 'add_spp' ticket.1 %}?next={{ request.path }}" role="button">Обработать заявку</a>
+            </td>
+            <td>
+                <a class="btn btn-outline-info custom" href="{% url 'spp_view' ticket.1 %}" role="button">Посмотреть заявку</a>
+            </td>
+        </tr>
+
+      {% endfor %}
+      </tbody>
+        <tbody>
+      {% for ticket in spp_process %}
+        <tr>
+            <th scope="row">{{search|length|add:forloop.counter}}</th>
+
+            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}}</a></td>
+            <td>{{ticket.client}}</td>
+            <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
+            {% for it in ticket.des_tr %}
+                {% for k, v in it.items %}
+                {%comment%}{% if forloop.counter == 1 %}{%endcomment%}
+                {% if 'г.' in k and forloop.counter == 1 or forloop.counter == 2 %}
+                {{k}}
+                {% endif %}
+                {%endfor%}
+                {%endfor%}
+
+
+            </td>
+            <td>{{ticket.technolog}}</td>
+            <td>{{ticket.manager}}</td>
+
+            {% if wait_search %}
+            <td>
+                <a class="btn btn-outline-warning custom" href="{% url 'remove_spp_wait' ticket.id %}" role="button">Вернуть в работу</a>
+            </td>
+            <td>
+                <a class="btn btn-outline-info custom" href="{% url 'spp_view' ticket.dID %}" role="button">Посмотреть заявку</a>
+            </td>
+            {% else %}
+            <td>
+                {% if ticket.user.username == user.username%}
+                <a class="btn btn-outline-success custom" href="{% url 'remove_spp_process' ticket.id %}" role="button">Завешить<br /> {{ticket.user.last_name}}</a>
+                {% else %}
+                {% comment %}<a class="btn btn-outline-warning custom" href="#" role="button">Завешить<br /> {{ticket.user.last_name}}</a>{% endcomment %}
+                <button type="button" class="btn btn-outline-success custom" disabled>Завешить<br /> {{ticket.user.last_name}}</button>
+                {% endif %}
+            </td>
+            <td>
+                <a class="btn btn-outline-info custom" href="{% url 'spp_view_save' ticket.dID ticket.id %}" role="button">Перейти к заявке</a>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+        <tbody>
+      {% for ticket in spp_wait %}{%comment%} Только для случая когда нужны абсолютно все заявки {%endcomment%}
+        <tr>
+            <th scope="row">{{search|length|add:forloop.counter}}</th>
+
+            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}}</a></td>
+            <td>{{ticket.client}}</td>
+            <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
+            {% for it in ticket.des_tr %}
+                {% for k, v in it.items %}
+                {%comment%}{% if forloop.counter == 1 %}{%endcomment%}
+                {% if 'г.' in k and forloop.counter == 1 or forloop.counter == 2 %}
+                {{k}}
+                {% endif %}
+                {%endfor%}
+                {%endfor%}
+
+
+            </td>
+            <td>{{ticket.technolog}}</td>
+            <td>{{ticket.manager}}</td>
+
+            <td>
+                <a class="btn btn-outline-warning custom" href="{% url 'remove_spp_wait' ticket.id %}" role="button">Вернуть в работу</a>
+            </td>
+            <td>
+                <a class="btn btn-outline-info custom" href="{% url 'spp_view' ticket.dID %}" role="button">Посмотреть заявку</a>
+            </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+{% endblock %}

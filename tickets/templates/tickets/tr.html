@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<p>Обработано: {{one_tr.created}}</p>
+<p>Заявка СПП: {{one_tr.ticket_spp}}</p>
+<p>ТР №{{one_tr.ticket_tr}}</p>
+{% for i in services_one_tr%}
+<p>Услуга: {{i}}</p>
+{% endfor %}
+<p>Узел связи: {{data_one_tr.pps}}</p>
+<p>Отключение: {{data_one_tr.turnoff}}</p>
+<p>Информация для разработки ТР: {{data_one_tr.info_tr}}</p>
+<p>Решение ОТПМ: {{data_one_tr.oattr}}</p>
+<p>Решение ОРТР: {{ortr_one_tr.ortr}}</p>
+
+{% endblock %}

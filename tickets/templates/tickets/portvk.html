@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_vk|length}}">Услуг{{ services_vk|length|pluralize:"а,и" }}</th>
+      {% for i in services_vk%}
+        <td class="table-light" style="width: 75%">{{i}}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+</div>
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'portvk' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+            {{ portvkform.as_p }}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+  </div>
+</div>
+</div>
+
+
+
+
+
+
+{%endblock%}

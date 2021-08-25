@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container">
+  <div class="row mt-2">
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Адрес</th>
+        <td class="table-light" style="width: 75%">{{address}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Клиент</th>
+        <td class="table-light" style="width: 75%">{{client}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Менеджер</th>
+        <td class="table-light" style="width: 75%">{{manager}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Технолог</th>
+        <td class="table-light" style="width: 75%">{{technolog}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Задача в ОТПМ</th>
+        <td class="table-light" style="width: 75%">{% autoescape off %}{{task_otpm}}{% endautoescape %}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Отключение</th>
+        {% if turnoff %}
+          <td class="table-light" style="width: 75%; color: red">Требуется отключение</td>
+          {% else %}
+            <td class="table-light" style="width: 75%">Нет</td>
+          {% endif %}
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_plus_desc|length}}">Услуг{{ services_plus_desc|length|pluralize:"а,и" }}</th>
+      {% for i in services_plus_desc%}
+        <td class="table-light" style="width: 75%">{{i}}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+  </div>
+  <div class="row mt-2">
+    <a class="btn btn-primary" href="{{next_link}}" role="button">Проектировать ТР</a>
+  </div>
+</div>
+
+
+
+
+{%endblock%}

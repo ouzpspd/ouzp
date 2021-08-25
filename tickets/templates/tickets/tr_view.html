@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+  <div class="row mt-2">
+<table class="table table-bordered">
+  <tbody>
+    {% for key, value in ticket_tr.items %}
+    {% if 'Состав Заявки ТР' in key %}
+
+    <tr>
+
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+
+        <td class="table-light" style="width: 75%">
+            {% for k, v in value.items %}
+            {% if 'Техрешение' in k %}
+            <ul><a href="{{v}}">{{k}}</a></ul>
+            {% else %}
+            {{k}}
+            {% endif %}
+            {% endfor %}
+        </td>
+
+    </tr>
+    {% elif 'Перечень' in key %}
+
+    <tr>
+
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{value|length}}">{{key}}</th>
+        {% for k in value %}
+        <td class="table-light" style="width: 75%">{{k}}</td>
+
+    </tr>
+    {% endfor %}
+
+    {% elif 'Узел подключения клиента' in key %}
+        {% if 'dem_tr' in value %}
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+            <td class="table-light" style="width: 75%">
+
+                Узел не выбран<br />
+                <a class="btn btn-outline-danger" href="{{value}}" target ="_blank" role="button">Выбрать</a>
+
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+            <td class="table-light" style="width: 75%">{{value|linebreaksbr}}</td>
+        </tr>
+        {% endif %}
+    {% elif 'Отключение' in key %}
+        {% if value == 'Нет' %}
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+            <td class="table-light" style="width: 75%">{{value}}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%; color: red">{{key}}</th>
+            <td class="table-light" style="width: 75%">
+                <ul>Требуется отключение</ul>
+                Файлы:<br />
+                {% for k, v in value.items %}
+                    <ul><a href="https://sss.corp.itmh.ru/dem_tr/{{v}}">{{k}}</a></ul>
+                {% endfor %}
+
+            </td>
+        </tr>
+        {% endif %}
+    {% elif 'vID' in key %}
+    {% elif 'ОТПМ' in key %}
+    {% else %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value|linebreaksbr}}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+  </div>
+    {% for key, value in ticket_tr.items %}
+        {% if 'ОТПМ' in key %}
+        <div class="row mb-2">
+
+            <div class="card">
+              <div class="card-header">
+                Решение ОТПМ
+              </div>
+              <div class="card-body">
+                {{value|linebreaksbr}}
+              </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+</div>
+
+
+{% endblock %}

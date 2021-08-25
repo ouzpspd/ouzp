@@ -1,0 +1,17 @@
+.not-visible {
+    display: none;
+}
+
+.colortext {
+    color: red;
+}
+
+body {
+color: black;
+}
+
+.custom {
+    width: 115px !important;
+    height: 60px !important;
+}
+

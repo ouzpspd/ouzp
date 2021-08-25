@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container">
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Услуга</th>
+        <td class="table-light" style="width: 75%">{{service_hotspot}}</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+{% if premium_plus %}
+<div class="container">
+    <div class="card mb-2">
+        <h5 class="card-header">Параметры</h5>
+            <div class="card-body">
+<form action="{% url 'hotspot' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4 mb-3">
+                <div class="form-group">
+                    <label for="{{ hotspotform.exist_client.id_for_label }}">Существующий клиент</label>
+                    {{hotspotform.exist_client}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-3">
+                <div class="form-group">
+                    <label for="{{hotspotform.hotspot_users.id_for_label}}">Количество пользователей</label>
+                    {{hotspotform.hotspot_users}}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 col-4">
+            <button type="submit" class="btn btn-primary">Ok</button>
+        </div>
+
+    </div>
+</form>
+                            </div>
+    </div>
+</div>
+{% else %}
+<div class="container">
+    <div class="card mb-2">
+        <h5 class="card-header">Параметры</h5>
+            <div class="card-body">
+                <form action="{% url 'hotspot' %}" method="post">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-4 mb-3">
+                                <div class="form-group">
+                                    {% csrf_token %}
+                                    {{ hotspotform.as_p }}
+                                    <button type="submit" class="btn btn-primary">Продолжить</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+    </div>
+</div>
+
+{% endif %}
+
+{%endblock%}

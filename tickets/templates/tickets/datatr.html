@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<p>Ссылка на ТР</p>
+<form action="{% url 'datatr' %}" method="post">
+    {% csrf_token %}
+    {{ linkform.as_p }}
+    <button type="submit" class="btn btn-primary btn-block">Найти</button>
+</form>
+{% if success == True %}
+<p>{{services_plus_desc}}</p>
+<p>{{pps}}</p>
+<p>{{turnoff}}</p>
+<p>{{oattr}}</p>
+{%endif%}
+
+
+</body>
+</html>

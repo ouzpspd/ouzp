@@ -1,0 +1,6 @@
+.env
+runserver.py
+local_settings.py
+*.pyc
+/__pycache__
+/nginx_waitress

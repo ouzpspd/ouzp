@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container">
+  <div class="row mt-2">
+<table class="table table-bordered">
+  <tbody>
+    {% for key, value in spp_params.items %}
+    {% if 'Состав Заявки ТР' in key %}
+
+    <tr>
+
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+
+        <td class="table-light" style="width: 75%">
+            {% for it in value %}
+            {% for k, v in it.items %}
+            {% if 'Техрешение' in k or 'Тех Решение' in k %}
+            <ul><a href="{{v.0}}/{{v.1}}">{{k}}</a></ul>
+            {% else %}
+            {{k}}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </td>
+
+    </tr>
+    {% elif 'Перечень' in key %}
+
+    <tr>
+
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{value|length}}">{{key}}</th>
+        {% for k in value %}
+        <td class="table-light" style="width: 75%">{{k}}</td>
+
+    </tr>
+    {% endfor %}
+
+    {% elif 'Примечание' in key %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value|linebreaks}}</td>
+    </tr>
+    {% elif 'Заявка К' in key %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value}}</td>
+    </tr>
+    {% else %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value}}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+
+
+
+
+  </tbody>
+</table>
+  </div>
+
+</div>
+
+
+{% endblock %}

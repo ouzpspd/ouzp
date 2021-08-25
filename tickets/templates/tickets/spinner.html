@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div id="spinner-box" class="text-center mt-3">
+    <div class="spinner-border" role="status"></div>
+</div>
+
+<div id="data-box" class="text-center mt-3"></div>
+<textarea cols='60' rows='8'>{% autoescape off %}{{text}}{%endautoescape%}</textarea>
+
+
+{%endblock%}
