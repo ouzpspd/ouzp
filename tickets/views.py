@@ -12,8 +12,6 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404
 
-print('!!!!!!')
-
 
 def register(request):
     """Данный метод отвечает за регистрацию пользователей в АРМ"""
@@ -2129,6 +2127,36 @@ def video(request):
             'task_otpm': task_otpm
         }
         return render(request, 'tickets/video.html', context)
+
+def get_contract_id(login, password, contract):
+    url = f'https://cis.corp.itmh.ru/doc/crm/contract_ajax.ashx?term={contract}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    contract_list = req.json()
+    if len(contract_list) > 1:
+        pass
+    elif len(contract_list) == 0:
+        pass
+    else:
+        contract_id = contract_list[0].get('id')
+    return contract_id
+
+def get_contract_resources(login, password, contract_id):
+    url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    table = soup.find('table', id="ctl00_middle_Table_ONO")
+    rows_tr = table.find_all('tr')
+    ono = []
+    for index, element_rows_tr in enumerate(rows_tr):
+        ono_inner = []
+        for element_rows_td in element_rows_tr.find_all('td'):
+            ono_inner.append(element_rows_td.text)
+        ono.pop(5)
+        ono.pop(2)
+        ono.append(ono_inner)
+    return ono
+
+
 
 
 
