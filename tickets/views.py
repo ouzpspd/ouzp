@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404
 
-print('!!!')
+print('!!!!!!')
 
 
 def register(request):
