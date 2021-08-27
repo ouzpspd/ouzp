@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -2132,12 +2132,14 @@ def get_contract_id(login, password, contract):
     url = f'https://cis.corp.itmh.ru/doc/crm/contract_ajax.ashx?term={contract}'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     contract_list = req.json()
+    print(contract_list)
     if len(contract_list) > 1:
         pass
     elif len(contract_list) == 0:
         pass
     else:
         contract_id = contract_list[0].get('id')
+        print(contract_id)
     return contract_id
 
 def get_contract_resources(login, password, contract_id):
@@ -2151,13 +2153,61 @@ def get_contract_resources(login, password, contract_id):
         ono_inner = []
         for element_rows_td in element_rows_tr.find_all('td'):
             ono_inner.append(element_rows_td.text)
-        ono.pop(5)
-        ono.pop(2)
+        print(ono_inner)
+        ono_inner.pop(5)
+        ono_inner.pop(2)
         ono.append(ono_inner)
     return ono
 
+@cache_check
+def get_resources(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        contractform = ContractForm(request.POST)
+        if contractform.is_valid():
+            print(contractform.cleaned_data)
+            contract = contractform.cleaned_data['contract']
+            contract_id = get_contract_id(username, password, contract)
+            ono = get_contract_resources(username, password, contract_id)
+            request.session['ono'] = ono
+            request.session['contract'] = contract
+            if ono:
+                return redirect('show_resources')
+            else:
+                messages.warning(request, 'Договора не найдено')
+                return redirect('get_resources')
+    else:
+        contractform = ContractForm()
+
+    return render(request, 'tickets/contract.html', {'contractform': contractform})
+
+def show_resources(request):
+    ono = request.session['ono']
+    contract = request.session['contract']
+    context = {
+        'ono': ono,
+        'contract': contract
+    }
+    return render(request, 'tickets/show_resources.html', context)
 
 
+def get_chain(login, password, device):
+    url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    chains = req.json()
+    temp_chains = []
+    temp_chains2 = []
+    for chain in chains:
+        if device in chain.get('title'):
+            temp_chains2 = chain.get('title').split('\nLink')
+            print(temp_chains2)
+            for i in temp_chains2:
+                print(i)
+                if device in i:
+                    temp_chains.append(i)
 
 
 def parse_tr(login, password, url):

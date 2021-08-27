@@ -187,3 +187,7 @@ class VideoForm(forms.Form):
     deep_archive = forms.CharField(label='Глубина архива камеры', widget=forms.Select(choices=type_deep_archive, attrs={'class': 'form-control'}))
     camera_place_one = forms.CharField(label='Место установки Камеры №1', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), help_text='только если 1 или 2 камеры')
     camera_place_two = forms.CharField(label='Место установки Камеры №2', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), help_text='только если 1 или 2 камеры')
+
+
+class ContractForm(forms.Form):
+    contract =forms.CharField(max_length=150, label='Договор', widget=forms.TextInput(attrs={'class': 'form-control'}))

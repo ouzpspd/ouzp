@@ -56,5 +56,7 @@ urlpatterns = [
     path('add_tr/<int:dID>/<int:tID>/<int:trID>/', add_tr, name='add_tr'),
     path('manually_tr/<int:dID>/<int:tID>/<int:trID>/', manually_tr, name='manually_tr'),
     path('send/', send_to_spp, name='send_to_spp'),
+    path('contract/', get_resources, name='get_resources'),
+    path('show_resources/', show_resources, name='show_resources'),
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
 ]
