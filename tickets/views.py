@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -2194,7 +2194,20 @@ def show_resources(request):
     return render(request, 'tickets/show_resources.html', context)
 
 
-def get_chain(login, password, device):
+def _get_chain(login, password, device):
+    if device.startswith('WDA'):
+        replace_wda_wds = device.split('-')
+        replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
+        replace_wda_wds.pop(1)
+        device = '-'.join(replace_wda_wds)
+        print('!!!dev')
+        print(device)
+    elif device.startswith('WFA'):
+        replace_wfa_wfs = device.split('-')
+        replace_wfa_wfs[0] = replace_wda_wds[0].replace('WFA', 'WFS')
+        replace_wfa_wfs.pop(1)
+        device = '-'.join(replace_wfa_wfs)
+
     url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     chains = req.json()
@@ -2203,11 +2216,44 @@ def get_chain(login, password, device):
     for chain in chains:
         if device in chain.get('title'):
             temp_chains2 = chain.get('title').split('\nLink')
-            print(temp_chains2)
+            #print(temp_chains2)
             for i in temp_chains2:
-                print(i)
-                if device in i:
+                #print(i)
+                if f'-{device}' in i:
                     temp_chains.append(i)
+    print(temp_chains)
+    return temp_chains
+
+@cache_check
+def get_chain(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        chainform = ChainForm(request.POST)
+        if chainform.is_valid():
+            print(chainform.cleaned_data)
+            chain_device = chainform.cleaned_data['chain_device']
+            chain = _get_chain(username, password, chain_device)
+            request.session['chain'] = chain
+            if chain:
+                return redirect('show_chains')
+            else:
+                messages.warning(request, 'не найдено')
+                return redirect('get_chain')
+    else:
+        chainform = ChainForm()
+
+    return render(request, 'tickets/get_chain.html', {'chainform': chainform})
+
+
+def show_chains(request):
+    chain = request.session['chain']
+    context = {
+        'chain': chain
+    }
+    return render(request, 'tickets/chain.html', context)
 
 
 def parse_tr(login, password, url):

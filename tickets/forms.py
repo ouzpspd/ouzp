@@ -191,3 +191,6 @@ class VideoForm(forms.Form):
 
 class ContractForm(forms.Form):
     contract =forms.CharField(max_length=150, label='Договор', widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+class ChainForm(forms.Form):
+    chain_device =forms.CharField(max_length=150, label='Девайс', widget=forms.TextInput(attrs={'class': 'form-control'}))
