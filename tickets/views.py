@@ -2204,25 +2204,37 @@ def _get_chain(login, password, device):
         print(device)
     elif device.startswith('WFA'):
         replace_wfa_wfs = device.split('-')
-        replace_wfa_wfs[0] = replace_wda_wds[0].replace('WFA', 'WFS')
+        replace_wfa_wfs[0] = replace_wfa_wfs[0].replace('WFA', 'WFS')
         replace_wfa_wfs.pop(1)
         device = '-'.join(replace_wfa_wfs)
 
     url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     chains = req.json()
-    temp_chains = []
+    vgw_on_node = []
+    uplink = None
     temp_chains2 = []
     for chain in chains:
+        if device.startswith('SW') or device.startswith('WDS'):
+            if 'VGW' in chain.get('host_name'):
+                vgw_on_node.append(chain.get('host_name'))
+
         if device in chain.get('title'):
+            var_node = chain.get('alias')
             temp_chains2 = chain.get('title').split('\nLink')
             #print(temp_chains2)
             for i in temp_chains2:
                 #print(i)
-                if f'-{device}' in i:
-                    temp_chains.append(i)
-    print(temp_chains)
-    return temp_chains
+                if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
+                    if f'-{device}' in i:
+                        uplink = i.split(f'-{device}')
+                        uplink = uplink[0]
+                        node_mon = var_node
+                else:
+                    if f'_{device}' in i:
+                        node_mon = var_node
+
+    return node_mon, uplink, vgw_on_node
 
 @cache_check
 def get_chain(request):
@@ -2235,9 +2247,11 @@ def get_chain(request):
         if chainform.is_valid():
             print(chainform.cleaned_data)
             chain_device = chainform.cleaned_data['chain_device']
-            chain = _get_chain(username, password, chain_device)
-            request.session['chain'] = chain
-            if chain:
+            node_mon, uplink, vgw_chains = _get_chain(username, password, chain_device)
+            request.session['node_mon'] = node_mon
+            request.session['uplink'] = uplink
+            request.session['vgw_chains'] = vgw_chains
+            if node_mon:
                 return redirect('show_chains')
             else:
                 messages.warning(request, 'не найдено')
@@ -2249,9 +2263,13 @@ def get_chain(request):
 
 
 def show_chains(request):
-    chain = request.session['chain']
+    node_mon = request.session['node_mon']
+    uplink = request.session['uplink']
+    vgw_chains = request.session['vgw_chains']
     context = {
-        'chain': chain
+        'node_mon': node_mon,
+        'uplink': uplink,
+        'vgw_chains': vgw_chains
     }
     return render(request, 'tickets/chain.html', context)
 
