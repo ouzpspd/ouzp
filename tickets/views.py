@@ -2202,7 +2202,7 @@ def _replace_wda_wds(device):
     return device
 
 
-def _get_chain(login, password, device):
+def _get_chain(login, password, device, max_level):
     if device.startswith('WDA'):
         device = _replace_wda_wds(device)
         print('!!!dev')
@@ -2221,6 +2221,8 @@ def _get_chain(login, password, device):
     temp_chains2 = []
     index_uplink = 0
     for chain in chains:
+        print('!!chain')
+        print(chain)
         if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDS'):
             if 'VGW' in chain.get('host_name'):
                 vgw_on_node.append(chain.get('host_name'))
@@ -2228,36 +2230,44 @@ def _get_chain(login, password, device):
         if device in chain.get('title'):
             var_node = chain.get('alias')
             temp_chains2 = chain.get('title').split('\nLink')
+
             #print(temp_chains2)
             for i in temp_chains2:
                 #print(i)
                 if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
-                    if f'-{device}' in i and index_uplink == 0:        #  для всех случаев подключения CSW, WDS, WFS
-                        uplink = i.split(f'-{device}')
-                        uplink = uplink[0]
-                        match_uplink = re.search('_(\S+?)_(\S+)', uplink)
+                    if f'-{device}' in i: #and index_uplink == 0:        #  для всех случаев подключения CSW, WDS, WFS
+                        preuplink = i.split(f'-{device}')
+                        preuplink = preuplink[0]
+                        match_uplink = re.search('_(\S+?)_(\S+)', preuplink)
                         uplink_host = match_uplink.group(1)
                         uplink_port = match_uplink.group(2)
-                        print('!!up')
-                        print(uplink_host)
-                        print(uplink_port)
-                        if 'thernet' in uplink_port:
-                            uplink_port = uplink_port.replace('_', '/')
+                        if uplink_host == chain.get('host_name') and chain.get('level') < max_level:
+                            print('!!up')
+                            print(uplink_host)
+                            print(uplink_port)
+                            max_level = chain.get('level')
+
+                            if 'thernet' in uplink_port:
+                                uplink_port = uplink_port.replace('_', '/')
+                            else:
+                                uplink_port = uplink_port.replace('_', ' ')
+                            uplink = uplink_host + ' ' + uplink_port
+                            node_mon = var_node
+                            #index_uplink = 1
                         else:
-                            uplink_port = uplink_port.replace('_', ' ')
-                        uplink = uplink_host + ' ' + uplink_port
-                        node_mon = var_node
-                        index_uplink = 1
-                    elif 'CSW' in i and 'WDA' in i:    # исключение только для случая, когда CSW подключен от WDA
+                            pass
+                    elif device in i and 'WDA' in i:    # исключение только для случая, когда CSW подключен от WDA
                         link = i.split('-WDA')
                         uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
+                        print('!!!wdauplink')
+                        print(uplink)
                         node_mon = var_node
 
                 else:
                     if f'_{device}' in i:
                         node_mon = var_node
 
-    return node_mon, uplink, vgw_on_node
+    return node_mon, uplink, vgw_on_node, max_level
 
 @cache_check
 def get_chain(request):
@@ -2270,7 +2280,8 @@ def get_chain(request):
         if chainform.is_valid():
             print(chainform.cleaned_data)
             chain_device = chainform.cleaned_data['chain_device']
-            node_mon, uplink, vgw_chains = _get_chain(username, password, chain_device)
+            max_level = 20
+            node_mon, uplink, vgw_chains, max_level = _get_chain(username, password, chain_device, max_level)
             all_chain = []
             all_chain.append(uplink)
             while uplink.startswith('CSW') or uplink.startswith('WDA'):
@@ -2281,7 +2292,7 @@ def get_chain(request):
                 all_chain.append(next_chain_device[0])
                 if uplink.startswith('WDA'):
                     all_chain.append(_replace_wda_wds(next_chain_device[0]))
-                node_mon, uplink, vgw_chains = _get_chain(username, password, next_chain_device[0])
+                node_mon, uplink, vgw_chains, max_level = _get_chain(username, password, next_chain_device[0], max_level)
                 all_chain.append(uplink)
             request.session['node_mon'] = node_mon
             request.session['uplink'] = all_chain
