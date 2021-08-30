@@ -2194,12 +2194,17 @@ def show_resources(request):
     return render(request, 'tickets/show_resources.html', context)
 
 
+def _replace_wda_wds(device):
+    replace_wda_wds = device.split('-')
+    replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
+    replace_wda_wds.pop(1)
+    device = '-'.join(replace_wda_wds)
+    return device
+
+
 def _get_chain(login, password, device):
     if device.startswith('WDA'):
-        replace_wda_wds = device.split('-')
-        replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
-        replace_wda_wds.pop(1)
-        device = '-'.join(replace_wda_wds)
+        device = _replace_wda_wds(device)
         print('!!!dev')
         print(device)
     elif device.startswith('WFA'):
@@ -2214,8 +2219,9 @@ def _get_chain(login, password, device):
     vgw_on_node = []
     uplink = None
     temp_chains2 = []
+    index_uplink = 0
     for chain in chains:
-        if device.startswith('SW') or device.startswith('WDS'):
+        if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDS'):
             if 'VGW' in chain.get('host_name'):
                 vgw_on_node.append(chain.get('host_name'))
 
@@ -2226,10 +2232,27 @@ def _get_chain(login, password, device):
             for i in temp_chains2:
                 #print(i)
                 if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
-                    if f'-{device}' in i:
+                    if f'-{device}' in i and index_uplink == 0:        #  для всех случаев подключения CSW, WDS, WFS
                         uplink = i.split(f'-{device}')
                         uplink = uplink[0]
+                        match_uplink = re.search('_(\S+?)_(\S+)', uplink)
+                        uplink_host = match_uplink.group(1)
+                        uplink_port = match_uplink.group(2)
+                        print('!!up')
+                        print(uplink_host)
+                        print(uplink_port)
+                        if 'thernet' in uplink_port:
+                            uplink_port = uplink_port.replace('_', '/')
+                        else:
+                            uplink_port = uplink_port.replace('_', ' ')
+                        uplink = uplink_host + ' ' + uplink_port
                         node_mon = var_node
+                        index_uplink = 1
+                    elif 'CSW' in i and 'WDA' in i:    # исключение только для случая, когда CSW подключен от WDA
+                        link = i.split('-WDA')
+                        uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
+                        node_mon = var_node
+
                 else:
                     if f'_{device}' in i:
                         node_mon = var_node
@@ -2248,8 +2271,20 @@ def get_chain(request):
             print(chainform.cleaned_data)
             chain_device = chainform.cleaned_data['chain_device']
             node_mon, uplink, vgw_chains = _get_chain(username, password, chain_device)
+            all_chain = []
+            all_chain.append(uplink)
+            while uplink.startswith('CSW') or uplink.startswith('WDA'):
+                next_chain_device = uplink.split()
+                all_chain.pop()
+                if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+                    all_chain.append(_replace_wda_wds(chain_device))
+                all_chain.append(next_chain_device[0])
+                if uplink.startswith('WDA'):
+                    all_chain.append(_replace_wda_wds(next_chain_device[0]))
+                node_mon, uplink, vgw_chains = _get_chain(username, password, next_chain_device[0])
+                all_chain.append(uplink)
             request.session['node_mon'] = node_mon
-            request.session['uplink'] = uplink
+            request.session['uplink'] = all_chain
             request.session['vgw_chains'] = vgw_chains
             if node_mon:
                 return redirect('show_chains')
