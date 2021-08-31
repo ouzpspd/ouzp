@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -2166,6 +2166,8 @@ def get_resources(request):
     username = credent['username']
     password = credent['password']
     if request.method == 'POST':
+        print('!!!!req_con')
+        print(request.POST)
         contractform = ContractForm(request.POST)
         if contractform.is_valid():
             print(contractform.cleaned_data)
@@ -2176,6 +2178,7 @@ def get_resources(request):
             request.session['contract'] = contract
             if ono:
                 return redirect('show_resources')
+                #return redirect('test_formset')
             else:
                 messages.warning(request, 'Договора не найдено')
                 return redirect('get_resources')
@@ -2235,7 +2238,7 @@ def _get_chain(login, password, device, max_level):
             for i in temp_chains2:
                 #print(i)
                 if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
-                    if f'-{device}' in i: #and index_uplink == 0:        #  для всех случаев подключения CSW, WDS, WFS
+                    if f'-{device}' in i:     #  для всех случаев подключения CSW, WDS, WFS
                         preuplink = i.split(f'-{device}')
                         preuplink = preuplink[0]
                         match_uplink = re.search('_(\S+?)_(\S+)', preuplink)
@@ -4102,3 +4105,41 @@ def tr_spin(request):
 def spp_json(request):
     data = list(SPP.objects.values())
     return JsonResponse(data, safe=False)
+
+
+from django.forms import formset_factory
+#ArticleFormSet = formset_factory(ListResourcesForm, extra=2)
+#formset = ArticleFormSet()
+
+def test_formset(request):
+    #ono = request.session['ono']
+    #contract = request.session['contract']
+    ono = [['00217308', 'ООО "УК "ГИГ"', 'IP-адрес или подсеть', 'Екатеринбург, Торговая, д. 2', '92.242.8.8/29', 'AR13-23.ekb - 1144 - CC-00217308-inet3', 'SW269-AR13-23.ekb', 'Ethernet1/0/2'], ['00217308', 'ООО "УК "ГИГ"', 'IP-адрес или подсеть', 'Екатеринбург, Чернышевского, д. 7', '188.226.86.224/29', 'AR13-23.ekb - 1142 - CC-00217308-inet2', 'SW280-AR13-23.ekb', 'Ethernet0/0/43']]
+    ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
+    if request.method == 'POST':
+        formset = ListResourcesFormSet(request.POST)
+        if formset.is_valid():
+            print(request.POST)
+            print(formset.cleaned_data)
+            data = formset.cleaned_data
+            print(data)
+            #contract = contractform.cleaned_data['contract']
+            #contract_id = get_contract_id(username, password, contract)
+            #ono = get_contract_resources(username, password, contract_id)
+            #request.session['ono'] = ono
+            #request.session['contract'] = contract
+            #if ono:
+            #    return redirect('show_resources')
+            #else:
+            #    messages.warning(request, 'Договора не найдено')
+            #    return redirect('get_resources')
+            return redirect('get_resources')
+    else:
+        formset = ListResourcesFormSet()
+        context = {
+            'ono': ono,
+            #'contract': contract,
+            'formset': formset
+        }
+
+    return render(request, 'tickets/test_formset.html', context)

@@ -194,3 +194,6 @@ class ContractForm(forms.Form):
 
 class ChainForm(forms.Form):
     chain_device =forms.CharField(max_length=150, label='Девайс', widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+class ListResourcesForm(forms.Form):
+    resource = forms.BooleanField(label='Ресурс', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

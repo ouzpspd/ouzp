@@ -60,6 +60,8 @@ urlpatterns = [
     path('show_resources/', show_resources, name='show_resources'),
     path('chain/', get_chain, name='get_chain'),
     path('show-chains/', show_chains, name='show_chains'),
+    path('test/', test_formset, name='test_formset'),
+
 
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
 ]
