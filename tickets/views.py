@@ -4115,6 +4115,7 @@ def test_formset(request):
     #ono = request.session['ono']
     #contract = request.session['contract']
     ono = [['00217308', 'ООО "УК "ГИГ"', 'IP-адрес или подсеть', 'Екатеринбург, Торговая, д. 2', '92.242.8.8/29', 'AR13-23.ekb - 1144 - CC-00217308-inet3', 'SW269-AR13-23.ekb', 'Ethernet1/0/2'], ['00217308', 'ООО "УК "ГИГ"', 'IP-адрес или подсеть', 'Екатеринбург, Чернышевского, д. 7', '188.226.86.224/29', 'AR13-23.ekb - 1142 - CC-00217308-inet2', 'SW280-AR13-23.ekb', 'Ethernet0/0/43']]
+
     ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
     if request.method == 'POST':
         formset = ListResourcesFormSet(request.POST)
@@ -4137,9 +4138,10 @@ def test_formset(request):
     else:
         formset = ListResourcesFormSet()
         context = {
-            'ono': ono,
+            'ono_formset': zip(ono, formset)
+            #'ono': ono,
             #'contract': contract,
-            'formset': formset
+            #'formset': formset
         }
 
-    return render(request, 'tickets/test_formset.html', context)
+        return render(request, 'tickets/test_formset.html', context)

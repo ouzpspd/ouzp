@@ -3,14 +3,38 @@
 
 
 <form action="{% url 'test_formset' %}" method="post">
-    {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
+    {{ ono_formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
     {% csrf_token %}
+
+    {{ono}}
+    {{ono.0}}
+    <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">First</th>
+      <th scope="col">Last</th
+    </tr>
+  </thead>
+  <tbody>
+  {% for ono, form in ono_formset %}
+    <tr>
+      <th scope="row">{{forloop.counter}}</th>
+      <td>{{ form.as_p }}</td>
+      <td>{{ono}}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+
+
     <div class="container">
         <div class="row">
             <div class="col-4">
-                {% for form in formset %}
-                    {{ form.as_p }}
-                {% endfor %}
+
+
+
             </div>
         </div>
         <div class="row mt-3">
