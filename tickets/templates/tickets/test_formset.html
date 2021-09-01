@@ -3,39 +3,53 @@
 
 
 <form action="{% url 'test_formset' %}" method="post">
-    {{ ono_formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
+    {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
     {% csrf_token %}
-
-    {{ono}}
-    {{ono.0}}
-    <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">#</th>
-      <th scope="col">First</th>
-      <th scope="col">Last</th
-    </tr>
-  </thead>
-  <tbody>
-  {% for ono, form in ono_formset %}
-    <tr>
-      <th scope="row">{{forloop.counter}}</th>
-      <td>{{ form.as_p }}</td>
-      <td>{{ono}}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-
-
-
     <div class="container">
         <div class="row">
-            <div class="col-4">
+                <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col"></th>
+                          <th scope="col"></th>
+                          <th scope="col">Ресурс</th>
+                            <th scope="col">Точка подключения</th>
+                            <th scope="col">Реквизиты</th>
+                            <th scope="col">КАД</th>
+                            <th scope="col">Порт</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      {% for form in formset %}
 
+                        <tr>
+                          <th scope="row">{{forloop.counter}}</th>
+                          <td>{{ form.as_p }}</td>
 
+                              {% for element in ono_for_formset %}
+                                {% if forloop.counter == forloop.parentloop.counter %}
+                              <td>
+                                {{element.0}}
+                                  </td>
+                            <td>
+                                {{element.1}}
+                                  </td>
+                            <td>
+                                {{element.2}}
+                                  </td>
+                            <td>
+                                {{element.3}}
+                                  </td>
+                            <td>
+                                {{element.4}}
+                                  </td>
+                                {% endif %}
+                              {% endfor %}
 
-            </div>
+                        </tr>
+                      {% endfor %}
+                      </tbody>
+                </table>
         </div>
         <div class="row mt-3">
             <div class="col-4">

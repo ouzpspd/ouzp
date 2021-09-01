@@ -2177,8 +2177,8 @@ def get_resources(request):
             request.session['ono'] = ono
             request.session['contract'] = contract
             if ono:
-                return redirect('show_resources')
-                #return redirect('test_formset')
+                #return redirect('show_resources')
+                return redirect('test_formset')
             else:
                 messages.warning(request, 'Договора не найдено')
                 return redirect('get_resources')
@@ -2188,7 +2188,7 @@ def get_resources(request):
     return render(request, 'tickets/contract.html', {'contractform': contractform})
 
 def show_resources(request):
-    ono = request.session['ono']
+    ono = request.session['selected_ono']
     contract = request.session['contract']
     context = {
         'ono': ono,
@@ -4112,36 +4112,49 @@ from django.forms import formset_factory
 #formset = ArticleFormSet()
 
 def test_formset(request):
-    #ono = request.session['ono']
-    #contract = request.session['contract']
-    ono = [['00217308', 'ООО "УК "ГИГ"', 'IP-адрес или подсеть', 'Екатеринбург, Торговая, д. 2', '92.242.8.8/29', 'AR13-23.ekb - 1144 - CC-00217308-inet3', 'SW269-AR13-23.ekb', 'Ethernet1/0/2'], ['00217308', 'ООО "УК "ГИГ"', 'IP-адрес или подсеть', 'Екатеринбург, Чернышевского, д. 7', '188.226.86.224/29', 'AR13-23.ekb - 1142 - CC-00217308-inet2', 'SW280-AR13-23.ekb', 'Ethernet0/0/43']]
-
+    ono = request.session['ono']
     ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
     if request.method == 'POST':
         formset = ListResourcesFormSet(request.POST)
         if formset.is_valid():
-            print(request.POST)
-            print(formset.cleaned_data)
+
             data = formset.cleaned_data
-            print(data)
-            #contract = contractform.cleaned_data['contract']
-            #contract_id = get_contract_id(username, password, contract)
-            #ono = get_contract_resources(username, password, contract_id)
-            #request.session['ono'] = ono
-            #request.session['contract'] = contract
-            #if ono:
-            #    return redirect('show_resources')
-            #else:
-            #    messages.warning(request, 'Договора не найдено')
-            #    return redirect('get_resources')
-            return redirect('get_resources')
+            selected_ono = []
+            unselected_ono = []
+            selected = zip(ono, data)
+            for ono, data in selected:
+                if bool(data):
+                    selected_ono.append(ono)
+                else:
+                    unselected_ono.append(ono)
+
+            if selected_ono:
+                if len(selected_ono) > 1:
+                    messages.warning(request, 'Было выбрано более 1 ресурса')
+                    return redirect('test_formset')
+                else:
+                    for i in unselected_ono:
+                        if selected_ono[0][-2] == i[-2]: #to do сейчас проверка по КАД. По точке подключения нужна? Хорошо посмотреть 00128733
+                            selected_ono.append(i)
+                    request.session['selected_ono'] = selected_ono
+                    return redirect('show_resources')
+            else:
+                messages.warning(request, 'Ресурсы не выбраны')
+                return redirect('test_formset')
+
     else:
         formset = ListResourcesFormSet()
+        ono_for_formset = []
+        for resource_for_formset in ono:
+            resource_for_formset.pop(5)
+            resource_for_formset.pop(1)
+            resource_for_formset.pop(0)
+            ono_for_formset.append(resource_for_formset)
+
         context = {
-            'ono_formset': zip(ono, formset)
-            #'ono': ono,
+            'ono_for_formset': ono_for_formset,
             #'contract': contract,
-            #'formset': formset
+            'formset': formset
         }
 
         return render(request, 'tickets/test_formset.html', context)
