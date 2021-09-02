@@ -4111,7 +4111,11 @@ from django.forms import formset_factory
 #ArticleFormSet = formset_factory(ListResourcesForm, extra=2)
 #formset = ArticleFormSet()
 
+
 def test_formset(request):
+    """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
+     только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
+      коммутатором в итоговый список"""
     ono = request.session['ono']
     ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
     if request.method == 'POST':
@@ -4136,8 +4140,9 @@ def test_formset(request):
                     for i in unselected_ono:
                         if selected_ono[0][-2] == i[-2]: #to do сейчас проверка по КАД. По точке подключения нужна? Хорошо посмотреть 00128733
                             selected_ono.append(i)
+
                     request.session['selected_ono'] = selected_ono
-                    return redirect('show_resources')
+                    return redirect('forming_header')
             else:
                 messages.warning(request, 'Ресурсы не выбраны')
                 return redirect('test_formset')
@@ -4158,3 +4163,92 @@ def test_formset(request):
         }
 
         return render(request, 'tickets/test_formset.html', context)
+
+
+def _parsing_id_client_device_by_device_name(name, login, password):
+    """Данный метод получает на входе название КАД и по нему парсит страницу с поиском коммутаторв, чтобы определить
+    id этого коммутатора"""
+    #Получение страницы с данными о коммутаторе
+    url = 'https://cis.corp.itmh.ru/stu/NetSwitch/SearchNetSwitchProxy'
+    data = {'IncludeDeleted': 'false', 'IncludeDisabled': 'true', 'HideFilterPane': 'false'}
+    data['Name'] = name
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    print('!!!!!')
+    print('req.status_code')
+    print(req.status_code)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.json()['data'], "html.parser")
+        table = soup.find('div', {"class": "t-grid-content"})
+        row_tr = table.find('tr')
+        id_client_device = row_tr.get('id')
+        print(table)
+        return id_client_device
+
+
+def _parsing_config_ports_client_device(id_client_device, login, password):
+    """Данный метод получает на входе id коммутатора и парсит страницу с конфигом портов, чтобы получить список портконфигов"""
+    url_port_config = 'https://cis.corp.itmh.ru/stu/NetSwitch/PortConfigs?switchId=' + id_client_device + '&PortGonfigsGrid-page=1'
+    req_port_config = requests.get(url_port_config, verify=False, auth=HTTPBasicAuth(login, password))
+    soup = BeautifulSoup(req_port_config.content.decode('utf-8'), "html.parser")
+    table = soup.find('table')
+    rows_tr = table.find_all('tr')
+    config_ports_client_device = []
+    for index, element_rows_tr in enumerate(rows_tr):
+        inner_list = []
+        for element_rows_td in element_rows_tr.find_all('td'):
+            inner_list.append(element_rows_td.text)
+        if inner_list:
+            inner_list.pop(4)
+            inner_list.pop(3)
+            config_ports_client_device.append(inner_list)
+    return config_ports_client_device
+
+def _compare_config_ports_client_device(config_ports_client_device, main_client):
+    """Данный метод на входе получает список портконфигов и номер договора, который участвует в ТР. Данный метод определяет
+    какие портконфиги следует учитывать для формирования заголовка ТР."""
+    extra_clients = []
+    extra_name_clients = []
+    for config_port in config_ports_client_device:
+        if extra_name_clients:
+            for extra_name_client in extra_name_clients:
+                if extra_name_client == config_port[2] or main_client == config_port[2]:
+                    pass
+                else:
+                    extra_name_clients.append(config_port[2])
+                    extra_clients.append(config_port)
+        else:
+            if main_client == config_port[2]:
+                pass
+            else:
+                extra_name_clients.append(config_port[2])
+                extra_clients.append(config_port)
+    return extra_clients
+
+@cache_check
+def forming_header(request):
+    """Данный метод проверяет если клиент подключен через CSW или WDA, то проверяет наличие на этих устройтсвах других
+     договоров и если есть такие договоры, то добавляет их ресурсы в список выбранных ресурсов с договора"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    selected_ono = request.session['selected_ono']
+    selected_client = selected_ono[0][0]
+    selected_device = selected_ono[0][-2]
+    if selected_device.startswith('CSW') or selected_device.startswith('WDA'):
+        id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
+        config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
+        extra_clients = _compare_config_ports_client_device(config_ports_client_device, selected_client)
+        if extra_clients:
+            for extra_client in extra_clients:
+                contract = extra_client[2]
+                contract_id = get_contract_id(username, password, contract)
+                extra_resources = get_contract_resources(username, password, contract_id)
+                for extra_resource in extra_resources:
+                    if extra_resource[-2] == selected_device:
+                        selected_ono.append(extra_resource)
+    context = {
+        'ono': selected_ono,
+
+    }
+    return render(request, 'tickets/show_resources.html', context)
