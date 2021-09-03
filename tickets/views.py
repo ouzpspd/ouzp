@@ -2204,8 +2204,66 @@ def _replace_wda_wds(device):
     device = '-'.join(replace_wda_wds)
     return device
 
+def _get_chain_data(login, password, device):
+    url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    chains = req.json()
+    return chains
 
-def _get_chain(login, password, device, max_level):
+
+def _get_downlink(chains, device):
+    if device.startswith('WDA'):
+        device = _replace_wda_wds(device)
+        print('!!!dev')
+        print(device)
+
+
+    downlink = []
+    downlevel = 20
+    temp_chains2 = []
+    for chain in chains:
+        print('!!chain')
+        print(chain)
+
+        if device == chain.get('host_name'):
+            downlevel = chain.get('level')
+        elif downlevel < chain.get('level'):
+            if device.startswith('WDS'):
+                if device == chain.get('host_name'):
+                    pass
+                elif chain.get('host_name').startswith(device.split('-')[0].replace('S', 'A')):
+                    pass
+                else:
+                    if 'VGW' not in chain.get('host_name'):
+                        downlink.append(chain.get('host_name'))
+            elif device.startswith('CSW'):
+                if device != chain.get('host_name'):
+                    if 'VGW' not in chain.get('host_name'):
+                        print('!!!downle')
+                        print(downlevel)
+                        downlink.append(chain.get('host_name'))
+    return downlink
+
+def _get_vgw_on_node(chains, device):
+    vgw_on_node = []
+    level_device = 0
+    for chain in chains:
+        if device == chain.get('host_name'):
+            level_device = chain.get('level')
+        print('!!chain')
+        print(chain)
+        if device.startswith('SW'):
+            if 'VGW' in chain.get('host_name'):
+                level_vgw = chain.get('level')
+                if level_vgw == level_device + 1:
+                    vgw_on_node.append(chain.get('host_name'))
+        elif device.startswith('CSW') or device.startswith('WDS'):
+            if 'VGW' in chain.get('host_name'):
+                vgw_on_node.append(chain.get('host_name'))
+    return vgw_on_node
+
+
+def _get_chain(chains, device, max_level):
     if device.startswith('WDA'):
         device = _replace_wda_wds(device)
         print('!!!dev')
@@ -2216,29 +2274,23 @@ def _get_chain(login, password, device, max_level):
         replace_wfa_wfs.pop(1)
         device = '-'.join(replace_wfa_wfs)
 
-    url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    chains = req.json()
-    vgw_on_node = []
     uplink = None
-    temp_chains2 = []
-    index_uplink = 0
     for chain in chains:
         print('!!chain')
         print(chain)
-        if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDS'):
-            if 'VGW' in chain.get('host_name'):
-                vgw_on_node.append(chain.get('host_name'))
+        #if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDS'):
+        #    if 'VGW' in chain.get('host_name'):
+        #        vgw_on_node.append(chain.get('host_name'))
 
         if device in chain.get('title'):
             var_node = chain.get('alias')
             temp_chains2 = chain.get('title').split('\nLink')
 
-            #print(temp_chains2)
+            # print(temp_chains2)
             for i in temp_chains2:
-                #print(i)
+                # print(i)
                 if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
-                    if f'-{device}' in i:     #  для всех случаев подключения CSW, WDS, WFS
+                    if f'-{device}' in i:  # для всех случаев подключения CSW, WDS, WFS
                         preuplink = i.split(f'-{device}')
                         preuplink = preuplink[0]
                         match_uplink = re.search('_(\S+?)_(\S+)', preuplink)
@@ -2256,10 +2308,10 @@ def _get_chain(login, password, device, max_level):
                                 uplink_port = uplink_port.replace('_', ' ')
                             uplink = uplink_host + ' ' + uplink_port
                             node_mon = var_node
-                            #index_uplink = 1
+                            # index_uplink = 1
                         else:
                             pass
-                    elif device in i and 'WDA' in i:    # исключение только для случая, когда CSW подключен от WDA
+                    elif device in i and 'WDA' in i:  # исключение только для случая, когда CSW подключен от WDA
                         link = i.split('-WDA')
                         uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
                         print('!!!wdauplink')
@@ -2270,7 +2322,7 @@ def _get_chain(login, password, device, max_level):
                     if f'_{device}' in i:
                         node_mon = var_node
 
-    return node_mon, uplink, vgw_on_node, max_level
+    return node_mon, uplink, max_level
 
 @cache_check
 def get_chain(request):
@@ -2283,22 +2335,28 @@ def get_chain(request):
         if chainform.is_valid():
             print(chainform.cleaned_data)
             chain_device = chainform.cleaned_data['chain_device']
+            chains = _get_chain_data(username,password, chain_device)
+            downlink = _get_downlink(chains, chain_device)
+            vgw_chains = _get_vgw_on_node(chains, chain_device)
             max_level = 20
-            node_mon, uplink, vgw_chains, max_level = _get_chain(username, password, chain_device, max_level)
+            node_mon, uplink, max_level = _get_chain(chains, chain_device, max_level)
+            #total_downlink = downlink   выносится в отдельную переменную, чтобы в дальнейшем цикле while не перезаписывался
             all_chain = []
             all_chain.append(uplink)
-            while uplink.startswith('CSW') or uplink.startswith('WDA'):
-                next_chain_device = uplink.split()
-                all_chain.pop()
-                if uplink.startswith('CSW') and chain_device.startswith('WDA'):
-                    all_chain.append(_replace_wda_wds(chain_device))
-                all_chain.append(next_chain_device[0])
-                if uplink.startswith('WDA'):
-                    all_chain.append(_replace_wda_wds(next_chain_device[0]))
-                node_mon, uplink, vgw_chains, max_level = _get_chain(username, password, next_chain_device[0], max_level)
-                all_chain.append(uplink)
+            if uplink:
+                while uplink.startswith('CSW') or uplink.startswith('WDA'):
+                    next_chain_device = uplink.split()
+                    all_chain.pop()
+                    if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+                        all_chain.append(_replace_wda_wds(chain_device))
+                    all_chain.append(next_chain_device[0])
+                    if uplink.startswith('WDA'):
+                        all_chain.append(_replace_wda_wds(next_chain_device[0]))
+                    node_mon, uplink, max_level = _get_chain(chains, next_chain_device[0], max_level)
+                    all_chain.append(uplink)
             request.session['node_mon'] = node_mon
             request.session['uplink'] = all_chain
+            request.session['downlink'] = downlink
             request.session['vgw_chains'] = vgw_chains
             if node_mon:
                 return redirect('show_chains')
@@ -2314,10 +2372,12 @@ def get_chain(request):
 def show_chains(request):
     node_mon = request.session['node_mon']
     uplink = request.session['uplink']
+    downlink = request.session['downlink']
     vgw_chains = request.session['vgw_chains']
     context = {
         'node_mon': node_mon,
         'uplink': uplink,
+        'downlink': downlink,
         'vgw_chains': vgw_chains
     }
     return render(request, 'tickets/chain.html', context)
@@ -4061,41 +4121,6 @@ def enviroment_csw(sreda, templates):
 
 
 
-
-
-
-
-
-
-
-#def datatr(request):
-#    if request.method == 'POST':
-#        linkform = LinkForm(request.POST)
-#        success = False
-#        if linkform.is_valid():
-#            print(linkform.cleaned_data)
-#            #kad_model = portform.cleaned_data
-#            spplink = linkform.cleaned_data['spplink']
-
-#            success = True
-
-#            services_plus_desc, counter_line_services, pps, turnoff, sreda, tochka, points_hotspot, oattr, address = parse_tr(username, password, spplink)
-#            print(services_plus_desc)
-#            request.session['services_plus_desc'] = services_plus_desc
-#            request.session['counter_line_services'] = counter_line_services
-
-#            for i in services_plus_desc:
-#                if 'HotSpot' in i:
-#                    if points_hotspot == None:
-#                        return redirect('hotspot')
-
-
-#            context = {'services_plus_desc': services_plus_desc, 'pps': pps, 'turnoff': turnoff, 'oattr': oattr, 'success': success, 'linkform': linkform}
-#            return render(request, 'tickets/datatr.html', context)
-#    else:
-#        linkform = LinkForm()
-#    return render(request, 'tickets/datatr.html', {'linkform': linkform})
-
 from django.http import JsonResponse
 
 def tr_spin(request):
@@ -4235,6 +4260,8 @@ def forming_header(request):
     selected_ono = request.session['selected_ono']
     selected_client = selected_ono[0][0]
     selected_device = selected_ono[0][-2]
+    request.session['selected_device'] = selected_device
+    request.session['selected_client'] = selected_client
     if selected_device.startswith('CSW') or selected_device.startswith('WDA'):
         id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
         config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
@@ -4252,3 +4279,52 @@ def forming_header(request):
 
     }
     return render(request, 'tickets/show_resources.html', context)
+
+def get_all_chain(username, password, uplink, max_level, chain_device):
+    all_chain = []
+    all_chain.append(uplink)
+    while uplink.startswith('CSW') or uplink.startswith('WDA'):
+        next_chain_device = uplink.split()
+        all_chain.pop()
+        if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+            all_chain.append(_replace_wda_wds(chain_device))
+        all_chain.append(next_chain_device[0])
+        if uplink.startswith('WDA'):
+            all_chain.append(_replace_wda_wds(next_chain_device[0]))
+        node_mon, uplink, max_level = _get_chain(username, password, next_chain_device[0], max_level)
+        all_chain.append(uplink)
+    return all_chain
+
+
+@cache_check
+def forming_chain_header(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    chain_device = request.session['selected_device']
+    max_level = 20
+    chains = _get_chain_data(username, password, chain_device)
+    downlink = _get_downlink(chains, chain_device)
+    vgw_chains = _get_vgw_on_node(chains, chain_device)
+    node_mon, uplink, max_level = _get_chain(username, password, chain_device, max_level)
+    all_chain = []
+    all_chain.append(uplink)
+    if uplink:
+        while uplink.startswith('CSW') or uplink.startswith('WDA'):
+            next_chain_device = uplink.split()
+            all_chain.pop()
+            if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+                all_chain.append(_replace_wda_wds(chain_device))
+            all_chain.append(next_chain_device[0])
+            if uplink.startswith('WDA'):
+                all_chain.append(_replace_wda_wds(next_chain_device[0]))
+            node_mon, uplink, max_level = _get_chain(username, password, next_chain_device[0], max_level)
+            all_chain.append(uplink)
+
+    request.session['node_mon'] = node_mon
+    request.session['uplink'] = all_chain
+    request.session['downlink'] = downlink
+    request.session['vgw_chains'] = vgw_chains
+    if node_mon:
+        return redirect('show_chains')
