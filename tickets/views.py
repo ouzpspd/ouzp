@@ -2222,8 +2222,8 @@ def _get_downlink(chains, device):
     downlevel = 20
     temp_chains2 = []
     for chain in chains:
-        print('!!chain')
-        print(chain)
+        #print('!!chain')
+        #print(chain)
 
         if device == chain.get('host_name'):
             downlevel = chain.get('level')
@@ -2374,11 +2374,13 @@ def show_chains(request):
     uplink = request.session['uplink']
     downlink = request.session['downlink']
     vgw_chains = request.session['vgw_chains']
+    selected_ono = request.session['selected_ono']
     context = {
         'node_mon': node_mon,
         'uplink': uplink,
         'downlink': downlink,
-        'vgw_chains': vgw_chains
+        'vgw_chains': vgw_chains,
+        'selected_ono': selected_ono
     }
     return render(request, 'tickets/chain.html', context)
 
@@ -4234,19 +4236,22 @@ def _compare_config_ports_client_device(config_ports_client_device, main_client)
     extra_clients = []
     extra_name_clients = []
     for config_port in config_ports_client_device:
+        print('!!!!extra_name_clients')
+        print(extra_name_clients)
         if extra_name_clients:
-            for extra_name_client in extra_name_clients:
-                if extra_name_client == config_port[2] or main_client == config_port[2]:
-                    pass
-                else:
-                    extra_name_clients.append(config_port[2])
-                    extra_clients.append(config_port)
+            if config_port[2] in extra_name_clients or main_client == config_port[2]:
+                pass
+            else:
+                extra_name_clients.append(config_port[2])
+                extra_clients.append(config_port)
         else:
             if main_client == config_port[2]:
                 pass
             else:
                 extra_name_clients.append(config_port[2])
                 extra_clients.append(config_port)
+    print('!!!!extra_clients')
+    print(extra_clients)
     return extra_clients
 
 @cache_check
@@ -4263,51 +4268,35 @@ def forming_header(request):
     request.session['selected_device'] = selected_device
     request.session['selected_client'] = selected_client
     if selected_device.startswith('CSW') or selected_device.startswith('WDA'):
-        id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
-        config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
-        extra_clients = _compare_config_ports_client_device(config_ports_client_device, selected_client)
-        if extra_clients:
-            for extra_client in extra_clients:
-                contract = extra_client[2]
-                contract_id = get_contract_id(username, password, contract)
-                extra_resources = get_contract_resources(username, password, contract_id)
-                for extra_resource in extra_resources:
-                    if extra_resource[-2] == selected_device:
-                        selected_ono.append(extra_resource)
+        extra_selected_ono = _get_extra_selected_ono(username, password, selected_device, selected_client)
+        if extra_selected_ono:
+            for i in extra_selected_ono:
+                selected_ono.append(i)
+
+    request.session['selected_ono'] = selected_ono
     context = {
         'ono': selected_ono,
 
     }
-    return render(request, 'tickets/show_resources.html', context)
+    #return render(request, 'tickets/show_resources.html', context)
+    return redirect('forming_chain_header')
 
-def get_all_chain(username, password, uplink, max_level, chain_device):
-    all_chain = []
-    all_chain.append(uplink)
-    while uplink.startswith('CSW') or uplink.startswith('WDA'):
-        next_chain_device = uplink.split()
-        all_chain.pop()
-        if uplink.startswith('CSW') and chain_device.startswith('WDA'):
-            all_chain.append(_replace_wda_wds(chain_device))
-        all_chain.append(next_chain_device[0])
-        if uplink.startswith('WDA'):
-            all_chain.append(_replace_wda_wds(next_chain_device[0]))
-        node_mon, uplink, max_level = _get_chain(username, password, next_chain_device[0], max_level)
-        all_chain.append(uplink)
-    return all_chain
+def _get_extra_selected_ono(username, password, selected_device, selected_client):
+    extra_selected_ono = []
+    id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
+    config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
+    extra_clients = _compare_config_ports_client_device(config_ports_client_device, selected_client)
+    if extra_clients:
+        for extra_client in extra_clients:
+            contract = extra_client[2]
+            contract_id = get_contract_id(username, password, contract)
+            extra_resources = get_contract_resources(username, password, contract_id)
+            for extra_resource in extra_resources:
+                if extra_resource[-2] == selected_device:
+                    extra_selected_ono.append(extra_resource)
+    return extra_selected_ono
 
-
-@cache_check
-def forming_chain_header(request):
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    chain_device = request.session['selected_device']
-    max_level = 20
-    chains = _get_chain_data(username, password, chain_device)
-    downlink = _get_downlink(chains, chain_device)
-    vgw_chains = _get_vgw_on_node(chains, chain_device)
-    node_mon, uplink, max_level = _get_chain(username, password, chain_device, max_level)
+def _get_all_chain(chains, chain_device, uplink, max_level):
     all_chain = []
     all_chain.append(uplink)
     if uplink:
@@ -4319,8 +4308,43 @@ def forming_chain_header(request):
             all_chain.append(next_chain_device[0])
             if uplink.startswith('WDA'):
                 all_chain.append(_replace_wda_wds(next_chain_device[0]))
-            node_mon, uplink, max_level = _get_chain(username, password, next_chain_device[0], max_level)
+            node_mon, uplink, max_level = _get_chain(chains, next_chain_device[0], max_level)
             all_chain.append(uplink)
+    return all_chain
+
+
+@cache_check
+def forming_chain_header(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    chain_device = request.session['selected_device']
+    selected_ono = request.session['selected_ono']
+    chains = _get_chain_data(username, password, chain_device)
+    downlink = _get_downlink(chains, chain_device)
+    vgw_chains = _get_vgw_on_node(chains, chain_device)
+    max_level = 20
+    node_mon, uplink, max_level = _get_chain(chains, chain_device, max_level)
+    all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
+
+    selected_client = 'No client'
+    if all_chain[0] == None:
+        pass
+    else:
+        # не дождался ответа на втором КК много договор и скрипт дохера чего то парсил, надо разбираться
+        for all_chain_device in all_chain:
+            if all_chain_device.startswith('CSW') or all_chain_device.startswith('WDA'):
+                extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
+                if extra_selected_ono:
+                    for i in extra_selected_ono:
+                        selected_ono.append(i)
+    if downlink:
+        for link_device in downlink:
+            extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
+            if extra_selected_ono:
+                for i in extra_selected_ono:
+                    selected_ono.append(i)
 
     request.session['node_mon'] = node_mon
     request.session['uplink'] = all_chain
