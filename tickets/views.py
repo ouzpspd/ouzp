@@ -2252,18 +2252,21 @@ def _get_vgw_on_node(chains, device):
             level_device = chain.get('level')
         print('!!chain')
         print(chain)
-        if device.startswith('SW'):
+        if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDA'):
             if 'VGW' in chain.get('host_name'):
                 level_vgw = chain.get('level')
                 if level_vgw == level_device + 1:
                     vgw_on_node.append(chain.get('host_name'))
-        elif device.startswith('CSW') or device.startswith('WDS'):
-            if 'VGW' in chain.get('host_name'):
-                vgw_on_node.append(chain.get('host_name'))
     return vgw_on_node
 
+def _get_node_device(chains, device):
+    for chain in chains:
+        if device == chain.get('host_name'):
+            node_device = chain.get('alias')
+    return node_device
 
-def _get_chain(chains, device, max_level):
+
+def _get_uplink(chains, device, max_level):
     if device.startswith('WDA'):
         device = _replace_wda_wds(device)
         print('!!!dev')
@@ -2283,7 +2286,6 @@ def _get_chain(chains, device, max_level):
         #        vgw_on_node.append(chain.get('host_name'))
 
         if device in chain.get('title'):
-            var_node = chain.get('alias')
             temp_chains2 = chain.get('title').split('\nLink')
 
             # print(temp_chains2)
@@ -2307,8 +2309,7 @@ def _get_chain(chains, device, max_level):
                             else:
                                 uplink_port = uplink_port.replace('_', ' ')
                             uplink = uplink_host + ' ' + uplink_port
-                            node_mon = var_node
-                            # index_uplink = 1
+
                         else:
                             pass
                     elif device in i and 'WDA' in i:  # исключение только для случая, когда CSW подключен от WDA
@@ -2316,13 +2317,9 @@ def _get_chain(chains, device, max_level):
                         uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
                         print('!!!wdauplink')
                         print(uplink)
-                        node_mon = var_node
 
-                else:
-                    if f'_{device}' in i:
-                        node_mon = var_node
 
-    return node_mon, uplink, max_level
+    return uplink, max_level
 
 @cache_check
 def get_chain(request):
@@ -2338,8 +2335,9 @@ def get_chain(request):
             chains = _get_chain_data(username,password, chain_device)
             downlink = _get_downlink(chains, chain_device)
             vgw_chains = _get_vgw_on_node(chains, chain_device)
+            node_mon = _get_node_device(chains, chain_device)
             max_level = 20
-            node_mon, uplink, max_level = _get_chain(chains, chain_device, max_level)
+            uplink, max_level = _get_uplink(chains, chain_device, max_level)
             #total_downlink = downlink   выносится в отдельную переменную, чтобы в дальнейшем цикле while не перезаписывался
             all_chain = []
             all_chain.append(uplink)
@@ -2352,7 +2350,7 @@ def get_chain(request):
                     all_chain.append(next_chain_device[0])
                     if uplink.startswith('WDA'):
                         all_chain.append(_replace_wda_wds(next_chain_device[0]))
-                    node_mon, uplink, max_level = _get_chain(chains, next_chain_device[0], max_level)
+                    uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
                     all_chain.append(uplink)
             request.session['node_mon'] = node_mon
             request.session['uplink'] = all_chain
@@ -4308,7 +4306,7 @@ def _get_all_chain(chains, chain_device, uplink, max_level):
             all_chain.append(next_chain_device[0])
             if uplink.startswith('WDA'):
                 all_chain.append(_replace_wda_wds(next_chain_device[0]))
-            node_mon, uplink, max_level = _get_chain(chains, next_chain_device[0], max_level)
+            uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
             all_chain.append(uplink)
     return all_chain
 
@@ -4321,20 +4319,26 @@ def forming_chain_header(request):
     password = credent['password']
     chain_device = request.session['selected_device']
     selected_ono = request.session['selected_ono']
+    vgws = dict()
     chains = _get_chain_data(username, password, chain_device)
     downlink = _get_downlink(chains, chain_device)
-    vgw_chains = _get_vgw_on_node(chains, chain_device)
+    vgw_on_node = _get_vgw_on_node(chains, chain_device)
+    vgws.update({chain_device: vgw_on_node})
+    node_device = _get_node_device(chains, chain_device)
     max_level = 20
-    node_mon, uplink, max_level = _get_chain(chains, chain_device, max_level)
+    uplink, max_level = _get_uplink(chains, chain_device, max_level)
     all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
 
     selected_client = 'No client'
     if all_chain[0] == None:
-        pass
+        node_uplink = node_device
+
     else:
-        # не дождался ответа на втором КК много договор и скрипт дохера чего то парсил, надо разбираться
+        node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
         for all_chain_device in all_chain:
             if all_chain_device.startswith('CSW') or all_chain_device.startswith('WDA'):
+                extra_vgw = _get_vgw_on_node(chains, all_chain_device)
+                vgws.update({chain_device: extra_vgw})
                 extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
                 if extra_selected_ono:
                     for i in extra_selected_ono:
@@ -4346,9 +4350,65 @@ def forming_chain_header(request):
                 for i in extra_selected_ono:
                     selected_ono.append(i)
 
-    request.session['node_mon'] = node_mon
+    request.session['node_mon'] = node_uplink
     request.session['uplink'] = all_chain
     request.session['downlink'] = downlink
-    request.session['vgw_chains'] = vgw_chains
-    if node_mon:
+    request.session['vgw_chains'] = vgws
+    if node_device:
         return redirect('show_chains')
+
+
+def _parsing_vgws_by_device_name(name, login, password):
+    """Данный метод получает на входе название КАД и по нему парсит страницу с поиском тел. шлюзов, чтобы определить
+    id тел. шлюзов, подключенных от этого коммутатора"""
+    url = 'https://cis.corp.itmh.ru/stu/VoipGateway/SearchVoipGatewayProxy'
+    data = {'SearchZip': 'false', 'SearchDeleted': 'false', 'ClientListRequired': 'false', 'BuildingId': '0'}
+    data['Switch'] = name
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    print('!!!!!')
+    print('req.status_code')
+    print(req.status_code)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.json()['data'], "html.parser")
+        table = soup.find('table')
+        rows_tr = table.find_all('tr')
+        vgws = []
+        for row_tr in rows_tr:
+            vgw_inner = dict()
+            for row_td in row_tr.find_all('td'):
+                if row_td.find('a'):
+                    #vgw_inner = dict()
+                    if row_td.find('a', {'class': "voipgateway-name"}):
+                        vgw_inner.update({'name': row_td.find('a').text})
+                        print(row_td.find('a').text)
+                        vgw_inner.update({'href': row_td.find('a').get('href')})
+                        print(row_td.find('a').get('href'))
+                    elif 'tab-links' in row_td.find('a').get('href'):
+                        vgw_inner.update({'uplink': row_td.find('a').text})
+                        print(row_td.find('a').text)
+                elif ('ITM SIP' or 'D-Link') in row_td.text:
+                    vgw_inner.update({'model': row_td.text})
+            print(vgw_inner)
+            if vgw_inner:
+                vgws.append(vgw_inner)
+
+    return vgws
+
+
+def _parsing_config_ports_vgws(id_client_device, login, password):
+    """Данный метод получает на входе id коммутатора и парсит страницу с конфигом портов, чтобы получить список портконфигов"""
+    url_port_config = 'https://cis.corp.itmh.ru/stu/NetSwitch/PortConfigs?switchId=' + id_client_device + '&PortGonfigsGrid-page=1'
+    req_port_config = requests.get(url_port_config, verify=False, auth=HTTPBasicAuth(login, password))
+    soup = BeautifulSoup(req_port_config.content.decode('utf-8'), "html.parser")
+    table = soup.find('table')
+    rows_tr = table.find_all('tr')
+    config_ports_client_device = []
+    for index, element_rows_tr in enumerate(rows_tr):
+        inner_list = []
+        for element_rows_td in element_rows_tr.find_all('td'):
+            inner_list.append(element_rows_td.text)
+        if inner_list:
+            inner_list.pop(4)
+            inner_list.pop(3)
+            config_ports_client_device.append(inner_list)
+    return config_ports_client_device
