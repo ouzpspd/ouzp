@@ -2245,18 +2245,20 @@ def _get_downlink(chains, device):
     return downlink
 
 def _get_vgw_on_node(chains, device):
-    vgw_on_node = []
+    vgw_on_node = None
     level_device = 0
     for chain in chains:
         if device == chain.get('host_name'):
             level_device = chain.get('level')
-        print('!!chain')
-        print(chain)
+
         if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDA'):
             if 'VGW' in chain.get('host_name'):
                 level_vgw = chain.get('level')
                 if level_vgw == level_device + 1:
-                    vgw_on_node.append(chain.get('host_name'))
+                    #vgw_on_node.append(chain.get('host_name'))
+                    vgw_on_node = 'exist'
+                    break
+
     return vgw_on_node
 
 def _get_node_device(chains, device):
@@ -2264,6 +2266,13 @@ def _get_node_device(chains, device):
         if device == chain.get('host_name'):
             node_device = chain.get('alias')
     return node_device
+
+def _get_extra_node_device(chains, device, node_device):
+    extra_node_device = []
+    for chain in chains:
+        if node_device == chain.get('alias') and device != chain.get('host_name'):
+            extra_node_device.append(chain.get('host_name'))
+    return extra_node_device
 
 
 def _get_uplink(chains, device, max_level):
@@ -2279,8 +2288,7 @@ def _get_uplink(chains, device, max_level):
 
     uplink = None
     for chain in chains:
-        print('!!chain')
-        print(chain)
+
         #if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDS'):
         #    if 'VGW' in chain.get('host_name'):
         #        vgw_on_node.append(chain.get('host_name'))
@@ -4319,51 +4327,100 @@ def forming_chain_header(request):
     password = credent['password']
     chain_device = request.session['selected_device']
     selected_ono = request.session['selected_ono']
-    vgws = dict()
+    #vgws = dict()
     chains = _get_chain_data(username, password, chain_device)
     downlink = _get_downlink(chains, chain_device)
-    vgw_on_node = _get_vgw_on_node(chains, chain_device)
-    vgws.update({chain_device: vgw_on_node})
     node_device = _get_node_device(chains, chain_device)
+    #vgw_on_node = _get_vgw_on_node(chains, chain_device)
+    #nodes_vgw = []
+    #if vgw_on_node:
+    #    nodes_vgw.append(node_device)
+    #vgws.update({chain_device: vgw_on_node})
+    vgw_on_node = _get_vgw_on_node(chains, chain_device)
+    nodes_vgw = []
+    if vgw_on_node:
+        nodes_vgw.append(chain_device)
+
     max_level = 20
     uplink, max_level = _get_uplink(chains, chain_device, max_level)
     all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
+    print(all_chain)
 
     selected_client = 'No client'
     if all_chain[0] == None:
         node_uplink = node_device
+        extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
+        print(extra_node_device)
+        if extra_node_device:
+            for extra in extra_node_device:
+                extra_chains = _get_chain_data(username, password, extra)
+                extra_vgw = _get_vgw_on_node(extra_chains, extra)
+                print(extra_vgw)
+                if extra_vgw:
+                    nodes_vgw.append(extra)
+                    print(nodes_vgw)
+
+
+
 
     else:
         node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
         for all_chain_device in all_chain:
-            if all_chain_device.startswith('CSW') or all_chain_device.startswith('WDA'):
-                extra_vgw = _get_vgw_on_node(chains, all_chain_device)
-                vgws.update({chain_device: extra_vgw})
+            if all_chain_device.startswith('CSW'): # or all_chain_device.startswith('WDA'):
+                #extra_vgw = _get_vgw_on_node(chains, all_chain_device)
+                #node_all_chain_device = _get_node_device(chains, all_chain_device)
+                #if node_all_chain_device in nodes_vgw:
+                #    pass
+                #else:
+                extra_chains = _get_chain_data(username, password, all_chain_device)
+                extra_vgw = _get_vgw_on_node(extra_chains, all_chain_device)
+                if extra_vgw:
+                    nodes_vgw.append(all_chain_device)
+                #vgws.update({node_all_chain_device: extra_vgw})
                 extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
                 if extra_selected_ono:
                     for i in extra_selected_ono:
                         selected_ono.append(i)
     if downlink:
         for link_device in downlink:
+            #extra_vgw = _get_vgw_on_node(chains, link_device)
+            #node_link_device = _get_node_device(chains, link_device)
+            #if node_link_device in nodes_vgw:
+            #    pass
+            #else:
+            extra_vgw = _get_vgw_on_node(chains, link_device)
+            if extra_vgw:
+                nodes_vgw.append(link_device)
+            #vgws.update({node_link_device: extra_vgw})
             extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
             if extra_selected_ono:
                 for i in extra_selected_ono:
                     selected_ono.append(i)
 
+    all_vgws = []
+    if nodes_vgw:
+        print(nodes_vgw)
+        #all_vgws = []
+        for i in nodes_vgw:
+            parsing_vgws = _parsing_vgws_by_node_name(i, username, password)
+            for vgw in parsing_vgws:
+                all_vgws.append(vgw)
+
+
     request.session['node_mon'] = node_uplink
     request.session['uplink'] = all_chain
     request.session['downlink'] = downlink
-    request.session['vgw_chains'] = vgws
+    request.session['vgw_chains'] = all_vgws
     if node_device:
         return redirect('show_chains')
 
 
-def _parsing_vgws_by_device_name(name, login, password):
-    """Данный метод получает на входе название КАД и по нему парсит страницу с поиском тел. шлюзов, чтобы определить
-    id тел. шлюзов, подключенных от этого коммутатора"""
+def _parsing_vgws_by_node_name(device, login, password):
+    """Данный метод получает на входе узел связи и по нему парсит страницу с поиском тел. шлюзов, чтобы получить
+    список тел. шлюзов, подключенных от этого узла"""
     url = 'https://cis.corp.itmh.ru/stu/VoipGateway/SearchVoipGatewayProxy'
     data = {'SearchZip': 'false', 'SearchDeleted': 'false', 'ClientListRequired': 'false', 'BuildingId': '0'}
-    data['Switch'] = name
+    data['Switch'] = device
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     print('!!!!!')
     print('req.status_code')
@@ -4373,42 +4430,52 @@ def _parsing_vgws_by_device_name(name, login, password):
         table = soup.find('table')
         rows_tr = table.find_all('tr')
         vgws = []
+        types_model_vgw = ['ITM SIP', 'D-Link', 'Eltex']
+        types_node_vgw = ['Узел связи', 'Помещение клиента']
         for row_tr in rows_tr:
             vgw_inner = dict()
             for row_td in row_tr.find_all('td'):
                 if row_td.find('a'):
-                    #vgw_inner = dict()
                     if row_td.find('a', {'class': "voipgateway-name"}):
                         vgw_inner.update({'name': row_td.find('a').text})
-                        print(row_td.find('a').text)
-                        vgw_inner.update({'href': row_td.find('a').get('href')})
-                        print(row_td.find('a').get('href'))
                     elif 'tab-links' in row_td.find('a').get('href'):
                         vgw_inner.update({'uplink': row_td.find('a').text})
-                        print(row_td.find('a').text)
-                elif ('ITM SIP' or 'D-Link') in row_td.text:
+                    elif 'tab-ports' in row_td.find('a').get('href'):
+                        vgw_inner.update({'ports': row_td.find('a').get('href')})
+                elif any(model in row_td.text for model in types_model_vgw):
                     vgw_inner.update({'model': row_td.text})
-            print(vgw_inner)
+                elif any(room in row_td.text for room in types_node_vgw):
+                    vgw_inner.update({'type': row_td.text})
             if vgw_inner:
                 vgws.append(vgw_inner)
 
     return vgws
 
+def check_client_on_vgw(contract, vgws, login, password):
+    """Данный метод получает на входе контракт клиента и список тел. шлюзов и проверяет наличие этого контракта
+     на тел. шлюзах"""
+    selected_vgw = []
+    for vgw in vgws:
+        contracts_on_vgw = _parsing_config_ports_vgw(vgw.get('ports'), login, password)
+        if contract in contracts_on_vgw:
+            selected_vgw.append(vgw)
+    return selected_vgw
 
-def _parsing_config_ports_vgws(id_client_device, login, password):
-    """Данный метод получает на входе id коммутатора и парсит страницу с конфигом портов, чтобы получить список портконфигов"""
-    url_port_config = 'https://cis.corp.itmh.ru/stu/NetSwitch/PortConfigs?switchId=' + id_client_device + '&PortGonfigsGrid-page=1'
-    req_port_config = requests.get(url_port_config, verify=False, auth=HTTPBasicAuth(login, password))
-    soup = BeautifulSoup(req_port_config.content.decode('utf-8'), "html.parser")
-    table = soup.find('table')
-    rows_tr = table.find_all('tr')
-    config_ports_client_device = []
-    for index, element_rows_tr in enumerate(rows_tr):
-        inner_list = []
-        for element_rows_td in element_rows_tr.find_all('td'):
-            inner_list.append(element_rows_td.text)
-        if inner_list:
-            inner_list.pop(4)
-            inner_list.pop(3)
-            config_ports_client_device.append(inner_list)
-    return config_ports_client_device
+
+def _parsing_config_ports_vgw(href_ports, login, password):
+    """Данный метод получает на входе ссылку на портконфиги тел. шлюза и парсит страницу с конфигом портов,
+     чтобы получить список договоров на этом тел. шлюзе"""
+    url = 'https://cis.corp.itmh.ru' + href_ports
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        contracts = []
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        links = soup.find_all('a')
+        for i in links:
+            if i.get('href') == None:
+                pass
+            else:
+                if 'contract' in i.get('href') and i.text not in contracts:
+                    contracts.append(i.text)
+
+    return contracts
