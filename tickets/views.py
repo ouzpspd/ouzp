@@ -2614,13 +2614,15 @@ def parsingByNodename(node_name, login, password):
             regex_name_model = '\"netswitch-name\\\\\" >\\\\r\\\\n\s+?(\S+?[ekb|ntg|kur])\\\\r\\\\n\s+?</a>\\\\r\\\\n\s+?\\\\r\\\\n</td><td>(.+?)</td><td>\\\\r\\\\n\s+?<a href=\\\\\"/stu/Node'
             match_name_model = re.findall(regex_name_model, switch)
 
+
             # Выявление индексов устройств с признаком SW и CSW
             clear_name_model = []
             clear_index = []
             for i in range(len(match_name_model)):
-                if match_name_model[i][0][:2] == 'CSW' or match_name_model[i][0][:2] == 'SW':
+                if match_name_model[i][0][:3] == 'CSW' or match_name_model[i][0][:2] == 'SW':
                     clear_index.append(i)
                     clear_name_model.append(match_name_model[i])
+
 
             # в regex добавлены знаки ?, чтобы отключить жадность. в выводе match список кортежей
 
@@ -2650,9 +2652,7 @@ def parsingByNodename(node_name, login, password):
             clear_status_desc = []
             for i in clear_index:
                 clear_status_desc.append(match_status_desc[i])
-            print('!!!!!')
-            print('clear_status_desc')
-            print(clear_status_desc)
+
 
             # в выводе match список uplink - строк
 
@@ -2666,6 +2666,8 @@ def parsingByNodename(node_name, login, password):
 
             for i in clear_index:
                 clear_switch_id.append(match_switch_id[i])
+            print('!!!!clear_switch_id')
+            print(clear_switch_id)
             for i in clear_switch_id:
                 ports = {}
 
@@ -2719,6 +2721,8 @@ def parsingByNodename(node_name, login, password):
 
             list_switches = []
             for i in range(len(clear_name_model)):
+                print('!!!')
+                print(i)
                 #list_switches.append([clear_name_model[i][0], clear_name_model[i][1], match_node[i], clear_ip[i], clear_uplink[i], list_ports[i]])
                 list_switches.append(
                     [clear_name_model[i][0], clear_name_model[i][1], clear_ip[i], clear_uplink[i], clear_status_desc[i][0], clear_status_desc[i][1],
@@ -4479,3 +4483,24 @@ def _parsing_config_ports_vgw(href_ports, login, password):
                     contracts.append(i.text)
 
     return contracts
+
+def check_contract_phone_exist(login, password, contract_id):
+    url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
+    rows_td = table.find_all('td')
+    pre_phone_address = []
+    for index, td in enumerate(rows_td):
+        try:
+            if 'Телефонный номер' == td.text:
+                pre_phone_address.append(index)
+        except AttributeError:
+            pass
+
+    phone_address_index = list(map(lambda x: x+2, pre_phone_address))
+    phone_address = []
+    for i in phone_address_index:
+        addr = ','.join(rows_td[i].text.split(',')[:2])
+        phone_address.append(addr)
+    return phone_address
