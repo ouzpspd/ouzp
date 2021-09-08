@@ -2358,7 +2358,7 @@ def parsingByNodename(node_name, login, password):
             clear_name_model = []
             clear_index = []
             for i in range(len(match_name_model)):
-                if match_name_model[i][0][:2] == 'CSW' or match_name_model[i][0][:2] == 'SW':
+                if match_name_model[i][0][:3] == 'CSW' or match_name_model[i][0][:2] == 'SW':
                     clear_index.append(i)
                     clear_name_model.append(match_name_model[i])
 
