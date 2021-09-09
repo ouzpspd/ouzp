@@ -2153,7 +2153,6 @@ def get_contract_resources(login, password, contract_id):
         ono_inner = []
         for element_rows_td in element_rows_tr.find_all('td'):
             ono_inner.append(element_rows_td.text)
-        print(ono_inner)
         ono_inner.pop(5)
         ono_inner.pop(2)
         ono.append(ono_inner)
@@ -2174,6 +2173,9 @@ def get_resources(request):
             contract = contractform.cleaned_data['contract']
             contract_id = get_contract_id(username, password, contract)
             ono = get_contract_resources(username, password, contract_id)
+            phone_address = check_contract_phone_exist(username, password, contract_id)
+            if phone_address:
+                request.session['phone_address'] = phone_address
             request.session['ono'] = ono
             request.session['contract'] = contract
             if ono:
@@ -2381,12 +2383,14 @@ def show_chains(request):
     downlink = request.session['downlink']
     vgw_chains = request.session['vgw_chains']
     selected_ono = request.session['selected_ono']
+    waste_vgw = request.session['waste_vgw']
     context = {
         'node_mon': node_mon,
         'uplink': uplink,
         'downlink': downlink,
         'vgw_chains': vgw_chains,
-        'selected_ono': selected_ono
+        'selected_ono': selected_ono,
+        'waste_vgw': waste_vgw
     }
     return render(request, 'tickets/chain.html', context)
 
@@ -4154,6 +4158,12 @@ def test_formset(request):
      только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
       коммутатором в итоговый список"""
     ono = request.session['ono']
+    try:
+        phone_address = request.session['phone_address']
+    except KeyError:
+        phone_address = None
+    print('!!!!phone_address')
+    print(phone_address)
     ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
     if request.method == 'POST':
         formset = ListResourcesFormSet(request.POST)
@@ -4177,7 +4187,20 @@ def test_formset(request):
                     for i in unselected_ono:
                         if selected_ono[0][-2] == i[-2]: #to do сейчас проверка по КАД. По точке подключения нужна? Хорошо посмотреть 00128733
                             selected_ono.append(i)
+                    if phone_address:
 
+                        print('!!!! doshli do any')
+                        print(selected_ono[0][3])
+                        print(phone_address)
+                        if any(phone_addr in selected_ono[0][3] for phone_addr in phone_address):
+                            phone_exist = True
+                        else:
+                            phone_exist = False
+                    else:
+                        phone_exist = False
+                    print('!!!phone_exist')
+                    print(phone_exist)
+                    request.session['phone_exist'] = phone_exist
                     request.session['selected_ono'] = selected_ono
                     return redirect('forming_header')
             else:
@@ -4273,6 +4296,7 @@ def forming_header(request):
     username = credent['username']
     password = credent['password']
     selected_ono = request.session['selected_ono']
+
     selected_client = selected_ono[0][0]
     selected_device = selected_ono[0][-2]
     request.session['selected_device'] = selected_device
@@ -4331,19 +4355,18 @@ def forming_chain_header(request):
     password = credent['password']
     chain_device = request.session['selected_device']
     selected_ono = request.session['selected_ono']
-    #vgws = dict()
+    phone_exist = request.session['phone_exist']
+    print('!!!phone_exist')
+    print(phone_exist)
     chains = _get_chain_data(username, password, chain_device)
     downlink = _get_downlink(chains, chain_device)
     node_device = _get_node_device(chains, chain_device)
-    #vgw_on_node = _get_vgw_on_node(chains, chain_device)
-    #nodes_vgw = []
-    #if vgw_on_node:
-    #    nodes_vgw.append(node_device)
-    #vgws.update({chain_device: vgw_on_node})
-    vgw_on_node = _get_vgw_on_node(chains, chain_device)
+
     nodes_vgw = []
-    if vgw_on_node:
-        nodes_vgw.append(chain_device)
+    if phone_exist or node_device.endswith(', КК') or node_device.endswith(', WiFi'):
+        vgw_on_node = _get_vgw_on_node(chains, chain_device)
+        if vgw_on_node:
+            nodes_vgw.append(chain_device)
 
     max_level = 20
     uplink, max_level = _get_uplink(chains, chain_device, max_level)
@@ -4353,16 +4376,17 @@ def forming_chain_header(request):
     selected_client = 'No client'
     if all_chain[0] == None:
         node_uplink = node_device
-        extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
-        print(extra_node_device)
-        if extra_node_device:
-            for extra in extra_node_device:
-                extra_chains = _get_chain_data(username, password, extra)
-                extra_vgw = _get_vgw_on_node(extra_chains, extra)
-                print(extra_vgw)
-                if extra_vgw:
-                    nodes_vgw.append(extra)
-                    print(nodes_vgw)
+        if phone_exist:
+            extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
+            print(extra_node_device)
+            if extra_node_device:
+                for extra in extra_node_device:
+                    extra_chains = _get_chain_data(username, password, extra)
+                    extra_vgw = _get_vgw_on_node(extra_chains, extra)
+                    print(extra_vgw)
+                    if extra_vgw:
+                        nodes_vgw.append(extra)
+                        print(nodes_vgw)
 
 
 
@@ -4386,6 +4410,8 @@ def forming_chain_header(request):
                     for i in extra_selected_ono:
                         selected_ono.append(i)
     if downlink:
+        print('!!!downlink')
+
         for link_device in downlink:
             #extra_vgw = _get_vgw_on_node(chains, link_device)
             #node_link_device = _get_node_device(chains, link_device)
@@ -4393,6 +4419,8 @@ def forming_chain_header(request):
             #    pass
             #else:
             extra_vgw = _get_vgw_on_node(chains, link_device)
+            print('!!!extra_vgw')
+            print(extra_vgw)
             if extra_vgw:
                 nodes_vgw.append(link_device)
             #vgws.update({node_link_device: extra_vgw})
@@ -4403,18 +4431,29 @@ def forming_chain_header(request):
 
     all_vgws = []
     if nodes_vgw:
+        print('!!!!!nodes_vgw')
         print(nodes_vgw)
         #all_vgws = []
         for i in nodes_vgw:
             parsing_vgws = _parsing_vgws_by_node_name(i, username, password)
+            print('!!!!parsing_vgws')
+            print(parsing_vgws)
             for vgw in parsing_vgws:
                 all_vgws.append(vgw)
+    selected_clients_for_vgw = [client[0] for client in selected_ono]
+    contracts_for_vgw = list(set(selected_clients_for_vgw))
+    print('!!!contracts_for_vgw')
+    print(contracts_for_vgw)
+    print('!!!!all_vgws')
+    print(all_vgws)
+    selected_vgw, waste_vgw = check_client_on_vgw(contracts_for_vgw, all_vgws, username, password)
 
 
     request.session['node_mon'] = node_uplink
     request.session['uplink'] = all_chain
     request.session['downlink'] = downlink
-    request.session['vgw_chains'] = all_vgws
+    request.session['vgw_chains'] = selected_vgw
+    request.session['waste_vgw'] = waste_vgw
     if node_device:
         return redirect('show_chains')
 
@@ -4455,15 +4494,23 @@ def _parsing_vgws_by_node_name(device, login, password):
 
     return vgws
 
-def check_client_on_vgw(contract, vgws, login, password):
+def check_client_on_vgw(contracts, vgws, login, password):
     """Данный метод получает на входе контракт клиента и список тел. шлюзов и проверяет наличие этого контракта
      на тел. шлюзах"""
     selected_vgw = []
+    waste_vgws = []
     for vgw in vgws:
+        print('!!!vgws')
+        print(vgws)
         contracts_on_vgw = _parsing_config_ports_vgw(vgw.get('ports'), login, password)
-        if contract in contracts_on_vgw:
+        print('!!!!contracts_on_vgw')
+        print(contracts_on_vgw)
+        if any(contract in contracts_on_vgw for contract in contracts):
             selected_vgw.append(vgw)
-    return selected_vgw
+        else:
+            vgw.update({'contracts': contracts_on_vgw})
+            waste_vgws.append(vgw)
+    return selected_vgw, waste_vgws
 
 
 def _parsing_config_ports_vgw(href_ports, login, password):
@@ -4479,17 +4526,19 @@ def _parsing_config_ports_vgw(href_ports, login, password):
             if i.get('href') == None:
                 pass
             else:
-                if 'contract' in i.get('href') and i.text not in contracts:
+                if 'contract' in i.get('href') and i.text and i.text not in contracts:
                     contracts.append(i.text)
-
     return contracts
 
 def check_contract_phone_exist(login, password, contract_id):
+    """Данный метод получает ID контракта и парсит страницу Ресурсы, проверяет налиличие ресурсов Телефонный номер
+    и возвращает список точек подключения, на которых есть такой ресурс"""
     url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
     table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
     rows_td = table.find_all('td')
+    print('!!!!poluch rows_td')
     pre_phone_address = []
     for index, td in enumerate(rows_td):
         try:
@@ -4499,8 +4548,14 @@ def check_contract_phone_exist(login, password, contract_id):
             pass
 
     phone_address_index = list(map(lambda x: x+2, pre_phone_address))
-    phone_address = []
+    print('!!!poluch phone_address_index')
+    phone_address = set()
     for i in phone_address_index:
         addr = ','.join(rows_td[i].text.split(',')[:2])
-        phone_address.append(addr)
+        print('!!!poluch addr')
+        print(addr)
+        phone_address.add(addr)
+    print('!!!!!!phone_address')
+    print(phone_address)
+    phone_address = list(phone_address)
     return phone_address
