@@ -19,6 +19,7 @@ class SPP(models.Model):
     complited = models.DateTimeField(auto_now=True)
     process = models.BooleanField(default=False, verbose_name='В работе')
     wait = models.BooleanField(default=False, verbose_name='В ожидании')
+    was_waiting = models.BooleanField(default=False, verbose_name='Была в ожидании')
     user = models.ForeignKey(User, on_delete=models.PROTECT)
 
     def __str__(self):

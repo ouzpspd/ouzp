@@ -512,7 +512,7 @@ def project_tr(request, dID, tID, trID):
             elif 'Видеонаблюдение' in services_plus_desc[index_service]:
                 tag_service.append('video')
             elif 'HotSpot' in services_plus_desc[index_service]:
-                if ('премиум +' or 'премиум+') in services_plus_desc[index_service].lower():
+                if 'премиум +' in services_plus_desc[index_service].lower() or 'премиум+' in services_plus_desc[index_service].lower():
                     premium_plus = True
                 else:
                     premium_plus = False
@@ -2928,6 +2928,7 @@ def remove_spp_wait(request, ticket_spp_id):
 def add_spp_wait(request, ticket_spp_id):
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.wait = True
+    current_ticket_spp.was_waiting = True
     current_ticket_spp.process = False
     current_ticket_spp.save()
     messages.success(request, 'Заявка {} перемещена в ожидание'.format(current_ticket_spp.ticket_k))
@@ -3559,7 +3560,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
             hidden_vars = {}
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
 
-            if ('премиум +' or 'премиум+') in service.lower():
+            if 'премиум +' in service.lower() or 'премиум+' in service.lower():
                 if logic_csw == True:
                     result_services.append(enviroment_csw(sreda, templates))
                 static_vars['указать количество клиентов'] = hotspot_users
@@ -4455,7 +4456,7 @@ def forming_chain_header(request):
     request.session['vgw_chains'] = selected_vgw
     request.session['waste_vgw'] = waste_vgw
     if node_device:
-        return redirect('show_chains')
+        return redirect('head')
 
 
 def _parsing_vgws_by_node_name(device, login, password):
@@ -4559,3 +4560,86 @@ def check_contract_phone_exist(login, password, contract_id):
     print(phone_address)
     phone_address = list(phone_address)
     return phone_address
+
+@cache_check
+def head(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    node_mon = request.session['node_mon']
+    uplink = request.session['uplink']
+    downlink = request.session['downlink']
+    vgw_chains = request.session['vgw_chains']
+    selected_ono = request.session['selected_ono']
+    waste_vgw = request.session['waste_vgw']
+
+    templates = ckb_parse(username, password)
+    result_services = []
+    static_vars = {}
+    hidden_vars = {}
+    stroka = templates.get("Заголовок")
+    static_vars['указать номер договора'] = selected_ono[0][0]
+    static_vars['указать название клиента'] = selected_ono[0][1]
+    static_vars['указать точку подключения'] = selected_ono[0][3]
+    node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК '}
+    for key, item in node_templates.items():
+        if node_mon.endswith(key):
+            finish_node = item + node_mon[:node_mon.index(key)]
+    static_vars['указать узел связи'] = finish_node
+    if uplink == [None]:
+        static_vars['указать название коммутатора'] = selected_ono[0][-2]
+        static_vars['указать порт'] = selected_ono[0][-1]
+    else:
+        static_vars['указать название коммутатора'] = uplink[-1].split()[0]
+        static_vars['указать порт'] = uplink[-1].split()[1]
+        list_stroka_device = []
+        if len(uplink) > 1:
+            for i in range(len(uplink),0):
+                extra_stroka_device = '- {}\n'.format(uplink[i])
+                list_stroka_device.append(extra_stroka_device)
+        elif selected_ono[0][-2].startswith('WDA'):
+            extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
+            list_stroka_device.append(extra_stroka_device)
+            extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+            list_stroka_device.append(extra_stroka_device)
+        elif downlink:
+            for i in range(len(downlink), 0):
+                extra_stroka_device = '- {}\n'.format(downlink[i])
+                list_stroka_device.append(extra_stroka_device)
+
+        extra_extra_stroka_device = ''.join(list_stroka_device)
+        stroka = stroka[:stroka.index('- порт %указать порт%')] + extra_extra_stroka_device + stroka[stroka.index('- порт %указать порт%'):]
+
+    service_shpd = ['DA', 'inet']
+    list_stroka_main_client_service = []
+    for i in selected_ono:
+        if selected_ono[0][0] == i[0]:
+            print('!!!before any head')
+            if any(serv in i[-3] for serv in service_shpd):
+                print('!!!any head')
+                extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                print(extra_stroka_main_client_service)
+                list_stroka_main_client_service.append(extra_stroka_main_client_service)
+
+    extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
+    stroka = stroka[:stroka.index('В данной точке клиент потребляет:')] + extra_extra_stroka_main_client_service + stroka[stroka.index(
+        'В данной точке клиент потребляет:'):]
+
+
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+    result_services = ''.join(result_services)
+
+
+
+    context = {
+        'result_services': result_services,
+        'node_mon': node_mon,
+        'uplink': uplink,
+        'downlink': downlink,
+        'vgw_chains': vgw_chains,
+        'selected_ono': selected_ono,
+        'waste_vgw': waste_vgw
+    }
+    return render(request, 'tickets/head.html', context)
