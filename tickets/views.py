@@ -4590,6 +4590,8 @@ def head(request):
     if uplink == [None]:
         static_vars['указать название коммутатора'] = selected_ono[0][-2]
         static_vars['указать порт'] = selected_ono[0][-1]
+        index_of_device = stroka.index('- порт %указать порт%') + len('- порт %указать порт%') + 1
+        stroka = stroka[:index_of_device] + '\n\n' + stroka[index_of_device:]
     else:
         static_vars['указать название коммутатора'] = uplink[-1].split()[0]
         static_vars['указать порт'] = uplink[-1].split()[1]
@@ -4598,20 +4600,26 @@ def head(request):
             for i in range(len(uplink),0):
                 extra_stroka_device = '- {}\n'.format(uplink[i])
                 list_stroka_device.append(extra_stroka_device)
-        elif selected_ono[0][-2].startswith('WDA'):
-            extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
-            list_stroka_device.append(extra_stroka_device)
-            extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
-            list_stroka_device.append(extra_stroka_device)
+        elif len(uplink) == 1:
+            if selected_ono[0][-2].startswith('WDA'):
+                extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
+                list_stroka_device.append(extra_stroka_device)
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
+            else:
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
         elif downlink:
             for i in range(len(downlink), 0):
                 extra_stroka_device = '- {}\n'.format(downlink[i])
                 list_stroka_device.append(extra_stroka_device)
 
         extra_extra_stroka_device = ''.join(list_stroka_device)
-        stroka = stroka[:stroka.index('- порт %указать порт%')] + extra_extra_stroka_device + stroka[stroka.index('- порт %указать порт%'):]
+        index_of_device = stroka.index('- порт %указать порт%') + len('- порт %указать порт%') + 1
+        stroka = stroka[:index_of_device] + extra_extra_stroka_device + '\n\n' + stroka[index_of_device:]
 
-    service_shpd = ['DA', 'inet']
+    service_shpd = ['DA', 'BB', 'inet']
+    service_portvk = ['portvk']
     list_stroka_main_client_service = []
     for i in selected_ono:
         if selected_ono[0][0] == i[0]:
@@ -4621,10 +4629,22 @@ def head(request):
                 extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                 print(extra_stroka_main_client_service)
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
-
+            elif any(serv in i[-3] for serv in service_portvk):
+                pass
+    if vgw_chains:
+        for i in vgw_chains:
+            model = i.get('model')
+            name = i.get('name')
+            vgw_uplink = i.get('uplink').replace('\r\n', '')
+            room = i.get('type')
+            if model == 'ITM SIP':
+                extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
+            else:
+                extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
+            list_stroka_main_client_service.append(extra_stroka_main_client_service)
     extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
-    stroka = stroka[:stroka.index('В данной точке клиент потребляет:')] + extra_extra_stroka_main_client_service + stroka[stroka.index(
-        'В данной точке клиент потребляет:'):]
+    index_of_service = stroka.index('В данной точке клиент потребляет:') + len('В данной точке клиент потребляет:')+1
+    stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + stroka[index_of_service:]
 
 
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
