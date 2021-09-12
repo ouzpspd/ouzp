@@ -4359,105 +4359,112 @@ def forming_chain_header(request):
     phone_exist = request.session['phone_exist']
     print('!!!phone_exist')
     print(phone_exist)
+    print('!!chain_device')
+    print(chain_device)
+
     chains = _get_chain_data(username, password, chain_device)
-    downlink = _get_downlink(chains, chain_device)
-    node_device = _get_node_device(chains, chain_device)
+    print('!!!chains')
+    print(chains)
+    if chains:
+        downlink = _get_downlink(chains, chain_device)
+        node_device = _get_node_device(chains, chain_device)
 
-    nodes_vgw = []
-    if phone_exist or node_device.endswith(', КК') or node_device.endswith(', WiFi'):
-        vgw_on_node = _get_vgw_on_node(chains, chain_device)
-        if vgw_on_node:
-            nodes_vgw.append(chain_device)
+        nodes_vgw = []
+        if phone_exist or node_device.endswith(', КК') or node_device.endswith(', WiFi'):
+            vgw_on_node = _get_vgw_on_node(chains, chain_device)
+            if vgw_on_node:
+                nodes_vgw.append(chain_device)
 
-    max_level = 20
-    uplink, max_level = _get_uplink(chains, chain_device, max_level)
-    all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
-    print(all_chain)
+        max_level = 20
+        uplink, max_level = _get_uplink(chains, chain_device, max_level)
+        all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
+        print(all_chain)
 
-    selected_client = 'No client'
-    if all_chain[0] == None:
-        node_uplink = node_device
-        if phone_exist:
-            extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
-            print(extra_node_device)
-            if extra_node_device:
-                for extra in extra_node_device:
-                    extra_chains = _get_chain_data(username, password, extra)
-                    extra_vgw = _get_vgw_on_node(extra_chains, extra)
-                    print(extra_vgw)
+        selected_client = 'No client'
+        if all_chain[0] == None:
+            node_uplink = node_device
+            if phone_exist:
+                extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
+                print(extra_node_device)
+                if extra_node_device:
+                    for extra in extra_node_device:
+                        extra_chains = _get_chain_data(username, password, extra)
+                        extra_vgw = _get_vgw_on_node(extra_chains, extra)
+                        print(extra_vgw)
+                        if extra_vgw:
+                            nodes_vgw.append(extra)
+                            print(nodes_vgw)
+
+        else:
+            node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
+            for all_chain_device in all_chain:
+                if all_chain_device.startswith('CSW'): # or all_chain_device.startswith('WDA'):
+                    #extra_vgw = _get_vgw_on_node(chains, all_chain_device)
+                    #node_all_chain_device = _get_node_device(chains, all_chain_device)
+                    #if node_all_chain_device in nodes_vgw:
+                    #    pass
+                    #else:
+                    extra_chains = _get_chain_data(username, password, all_chain_device)
+                    extra_vgw = _get_vgw_on_node(extra_chains, all_chain_device)
                     if extra_vgw:
-                        nodes_vgw.append(extra)
-                        print(nodes_vgw)
+                        nodes_vgw.append(all_chain_device)
+                    #vgws.update({node_all_chain_device: extra_vgw})
+                    extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
+                    if extra_selected_ono:
+                        for i in extra_selected_ono:
+                            selected_ono.append(i)
+        if downlink:
+            print('!!!downlink')
 
-
-
-
-    else:
-        node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
-        for all_chain_device in all_chain:
-            if all_chain_device.startswith('CSW'): # or all_chain_device.startswith('WDA'):
-                #extra_vgw = _get_vgw_on_node(chains, all_chain_device)
-                #node_all_chain_device = _get_node_device(chains, all_chain_device)
-                #if node_all_chain_device in nodes_vgw:
+            for link_device in downlink:
+                #extra_vgw = _get_vgw_on_node(chains, link_device)
+                #node_link_device = _get_node_device(chains, link_device)
+                #if node_link_device in nodes_vgw:
                 #    pass
                 #else:
-                extra_chains = _get_chain_data(username, password, all_chain_device)
-                extra_vgw = _get_vgw_on_node(extra_chains, all_chain_device)
+                extra_vgw = _get_vgw_on_node(chains, link_device)
+                print('!!!extra_vgw')
+                print(extra_vgw)
                 if extra_vgw:
-                    nodes_vgw.append(all_chain_device)
-                #vgws.update({node_all_chain_device: extra_vgw})
-                extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
+                    nodes_vgw.append(link_device)
+                #vgws.update({node_link_device: extra_vgw})
+                extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
                 if extra_selected_ono:
                     for i in extra_selected_ono:
                         selected_ono.append(i)
-    if downlink:
-        print('!!!downlink')
 
-        for link_device in downlink:
-            #extra_vgw = _get_vgw_on_node(chains, link_device)
-            #node_link_device = _get_node_device(chains, link_device)
-            #if node_link_device in nodes_vgw:
-            #    pass
-            #else:
-            extra_vgw = _get_vgw_on_node(chains, link_device)
-            print('!!!extra_vgw')
-            print(extra_vgw)
-            if extra_vgw:
-                nodes_vgw.append(link_device)
-            #vgws.update({node_link_device: extra_vgw})
-            extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
-            if extra_selected_ono:
-                for i in extra_selected_ono:
-                    selected_ono.append(i)
-
-    all_vgws = []
-    if nodes_vgw:
-        print('!!!!!nodes_vgw')
-        print(nodes_vgw)
-        #all_vgws = []
-        for i in nodes_vgw:
-            parsing_vgws = _parsing_vgws_by_node_name(i, username, password)
-            print('!!!!parsing_vgws')
-            print(parsing_vgws)
-            for vgw in parsing_vgws:
-                all_vgws.append(vgw)
-    selected_clients_for_vgw = [client[0] for client in selected_ono]
-    contracts_for_vgw = list(set(selected_clients_for_vgw))
-    print('!!!contracts_for_vgw')
-    print(contracts_for_vgw)
-    print('!!!!all_vgws')
-    print(all_vgws)
-    selected_vgw, waste_vgw = check_client_on_vgw(contracts_for_vgw, all_vgws, username, password)
+        all_vgws = []
+        if nodes_vgw:
+            print('!!!!!nodes_vgw')
+            print(nodes_vgw)
+            #all_vgws = []
+            for i in nodes_vgw:
+                parsing_vgws = _parsing_vgws_by_node_name(i, username, password)
+                print('!!!!parsing_vgws')
+                print(parsing_vgws)
+                for vgw in parsing_vgws:
+                    all_vgws.append(vgw)
+        selected_clients_for_vgw = [client[0] for client in selected_ono]
+        contracts_for_vgw = list(set(selected_clients_for_vgw))
+        print('!!!contracts_for_vgw')
+        print(contracts_for_vgw)
+        print('!!!!all_vgws')
+        print(all_vgws)
+        selected_vgw, waste_vgw = check_client_on_vgw(contracts_for_vgw, all_vgws, username, password)
 
 
-    request.session['node_mon'] = node_uplink
-    request.session['uplink'] = all_chain
-    request.session['downlink'] = downlink
-    request.session['vgw_chains'] = selected_vgw
-    request.session['waste_vgw'] = waste_vgw
-    if node_device:
+        request.session['node_mon'] = node_uplink
+        request.session['uplink'] = all_chain
+        request.session['downlink'] = downlink
+        request.session['vgw_chains'] = selected_vgw
+        request.session['waste_vgw'] = waste_vgw
         return redirect('head')
+    else:
+        return redirect('no_data')
 
+def no_data(request):
+    context = {}
+    return render(request, 'tickets/no_data.html', context)
 
 def _parsing_vgws_by_node_name(device, login, password):
     """Данный метод получает на входе узел связи и по нему парсит страницу с поиском тел. шлюзов, чтобы получить
@@ -4618,19 +4625,41 @@ def head(request):
         index_of_device = stroka.index('- порт %указать порт%') + len('- порт %указать порт%') + 1
         stroka = stroka[:index_of_device] + extra_extra_stroka_device + '\n\n' + stroka[index_of_device:]
 
-    service_shpd = ['DA', 'BB', 'inet']
-    service_portvk = ['portvk']
+    service_shpd = ['DA', 'BB', 'inet', 'Inet']
+    service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
+    service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
+    service_hotspot = ['hotspot']
+    service_itv = ['itv']
     list_stroka_main_client_service = []
     for i in selected_ono:
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
-            if any(serv in i[-3] for serv in service_shpd):
-                print('!!!any head')
-                extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
-                print(extra_stroka_main_client_service)
+            if i[2] == 'IP-адрес или подсеть':
+                if any(serv in i[-3] for serv in service_shpd):
+                    print('!!!any head')
+                    extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    print(extra_stroka_main_client_service)
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                elif any(serv in i[-3].lower() for serv in service_hotspot):
+                    extra_stroka_main_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    print(extra_stroka_main_client_service)
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                elif any(serv in i[-3].lower() for serv in service_itv):
+                    extra_stroka_main_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    print(extra_stroka_main_client_service)
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+            elif i[2] == 'Порт виртуального коммутатора':
+                if any(serv in i[-3].lower() for serv in service_portvk):
+                    extra_stroka_main_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                elif any(serv in i[-3].lower() for serv in service_portvm):
+                    extra_stroka_main_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+            elif i[2] == 'Etherline':
+                extra_stroka_main_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
-            elif any(serv in i[-3] for serv in service_portvk):
-                pass
+
+
     if vgw_chains:
         for i in vgw_chains:
             model = i.get('model')

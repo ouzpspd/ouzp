@@ -64,6 +64,7 @@ urlpatterns = [
     path('forming_head/', forming_header, name='forming_header'),
     path('chain_head/', forming_chain_header, name='forming_chain_header'),
     path('head/', head, name='head'),
+    path('no_data/', no_data, name='no_data'),
 
 
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
