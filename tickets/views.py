@@ -3103,6 +3103,54 @@ def add_tr_exist_cl(request, dID, tID, trID):
 
         return redirect('get_resources')
 
+def project_tr_exist_cl(request, dID, tID, trID):
+    #elif data_sss[2] == 'Не выбран':
+    #    return redirect('tr_view', dID, tID, trID)
+
+    request.session['tID'] = tID
+    request.session['dID'] = dID
+    request.session['trID'] = trID
+
+    ticket_tr_id = request.session['ticket_tr_id']
+    ticket_tr = TR.objects.get(id=ticket_tr_id)
+    oattr = ticket_tr.oattr
+    pps = ticket_tr.pps
+    services_plus_desc = ticket_tr.services
+    wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+    ftth_temp = ['Alpha', 'ОК-1']
+    vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+    if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+
+        #if ((not 'ОК' in oattr) and ('БС ' in oattr)) or (
+        #        (not 'ОК' in oattr) and ('радио' in oattr)) or (
+        #        (not 'ОК' in oattr) and ('радиоканал' in oattr)) or ((not 'ОК' in oattr) and ('антенну' in oattr)):
+        sreda = '3'
+        print('Среда передачи:  Беспроводная среда')
+    elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+        sreda = '4'
+        print('Среда передачи: FTTH')
+    elif any(vo in oattr for vo in vols_temp):
+        #elif ('ОВ' in oattr) or ('ОК' in oattr) or ('ВОЛС' in oattr) or ('волокно' in oattr) or (
+        #        'ОР ' in oattr) or ('ОР№' in oattr) or ('сущ.ОМ' in oattr) or ('оптическ' in oattr):
+        sreda = '2'
+        print('Среда передачи: ВОЛС')
+    else:
+        sreda = '1'
+        print('Среда передачи: UTP')
+
+    request.session['services_plus_desc'] = services_plus_desc
+    request.session['oattr'] = oattr
+    request.session['pps'] = pps
+
+
+    tag_service = []
+    if sreda == '1':
+        tag_service.append('copper')
+    elif sreda == '2' or sreda == '4':
+        tag_service.append('vols')
+    elif sreda == '3':
+        tag_service.append('wireless')
+
 
 def tr_view_save(request, dID, ticket_spp_id, trID):
     #request.session['ticket_spp_id'] = ticket_spp_id
@@ -4807,5 +4855,13 @@ def passage(request):
 
     else:
         head = request.session['head']
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        oattr = ticket_tr.oattr
         passform = PassForm(initial={'type_pass': 'Перенос сервиса'})
-        return render(request, 'tickets/choice_pass.html', {'passform': passform, 'head': head})
+        context = {
+            'passform': passform,
+            'head': head,
+            'oattr': oattr
+        }
+        return render(request, 'tickets/choice_pass.html', context)
