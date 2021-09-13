@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+
+<div class="container">
+    <div class="card mb-2">
+      <h5 class="card-header">Существующее подключение</h5>
+      <div class="card-body">
+        <p class="card-text">{{head|linebreaks}}</p>
+      </div>
+    </div>
+
+</div>
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'passage' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+            {{ passform.as_p }}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+  </div>
+</div>
+</div>
+
+
+
+
+
+
+{%endblock%}

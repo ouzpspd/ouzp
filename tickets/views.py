@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -3058,6 +3058,51 @@ def add_tr(request, dID, tID, trID):
 
         return redirect('project_tr', dID, tID, trID)
 
+def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
+    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки СПП в АРМ.
+    создает заявку ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
+    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
+
+    if ticket_spp.children.filter(ticket_tr=trID):
+        ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
+    else:
+        ticket_tr = TR()
+
+    ticket_tr.ticket_k = ticket_spp
+    ticket_tr.ticket_tr = trID
+    ticket_tr.pps = tr_params['Узел подключения клиента']
+    ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
+    ticket_tr.info_tr = tr_params['Информация для разработки ТР']
+    ticket_tr.services = tr_params['Перечень требуемых услуг']
+    ticket_tr.oattr = tr_params['Решение ОТПМ']
+    ticket_tr.vID = tr_params['vID']
+    ticket_tr.save()
+    ticket_tr_id = ticket_tr.id
+    return ticket_tr_id
+
+@cache_check
+def add_tr_exist_cl(request, dID, tID, trID):
+    """Данный метод получает параметры ТР в СПП(dID, tID, trID), вызывает методы for_tr_view и add_tr_to_db. В случае
+     недоступности данных(for_tr_view) оправляет логиниться. В случае если ТР добавлено в АРМ(add_tr_to_db) отправляет
+    на запрос контракта клиента"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        ticket_spp_id = request.session['ticket_spp_id']
+        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        request.session['ticket_tr_id'] = ticket_tr_id
+        print(request.GET)
+
+        return redirect('get_resources')
+
 
 def tr_view_save(request, dID, ticket_spp_id, trID):
     #request.session['ticket_spp_id'] = ticket_spp_id
@@ -4604,8 +4649,16 @@ def head(request):
         static_vars['указать порт'] = uplink[-1].split()[1]
         list_stroka_device = []
         if len(uplink) > 1:
-            for i in range(len(uplink),0):
+            for i in range(len(uplink)-2, -1, -1):
                 extra_stroka_device = '- {}\n'.format(uplink[i])
+                list_stroka_device.append(extra_stroka_device)
+            if selected_ono[0][-2].startswith('WDA'):
+                extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
+                list_stroka_device.append(extra_stroka_device)
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
+            else:
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
                 list_stroka_device.append(extra_stroka_device)
         elif len(uplink) == 1:
             if selected_ono[0][-2].startswith('WDA'):
@@ -4616,8 +4669,8 @@ def head(request):
             else:
                 extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
                 list_stroka_device.append(extra_stroka_device)
-        elif downlink:
-            for i in range(len(downlink), 0):
+        if downlink:
+            for i in range(len(downlink)-1, -1, -1):
                 extra_stroka_device = '- {}\n'.format(downlink[i])
                 list_stroka_device.append(extra_stroka_device)
 
@@ -4631,6 +4684,7 @@ def head(request):
     service_hotspot = ['hotspot']
     service_itv = ['itv']
     list_stroka_main_client_service = []
+    list_stroka_other_client_service = []
     for i in selected_ono:
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
@@ -4658,6 +4712,31 @@ def head(request):
             elif i[2] == 'Etherline':
                 extra_stroka_main_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
+        else:
+            if i[2] == 'IP-адрес или подсеть':
+                if any(serv in i[-3] for serv in service_shpd):
+                    print('!!!any head')
+                    extra_stroka_other_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    print(extra_stroka_other_client_service)
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                elif any(serv in i[-3].lower() for serv in service_hotspot):
+                    extra_stroka_other_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    print(extra_stroka_other_client_service)
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                elif any(serv in i[-3].lower() for serv in service_itv):
+                    extra_stroka_other_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    print(extra_stroka_other_client_service)
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+            elif i[2] == 'Порт виртуального коммутатора':
+                if any(serv in i[-3].lower() for serv in service_portvk):
+                    extra_stroka_other_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                elif any(serv in i[-3].lower() for serv in service_portvm):
+                    extra_stroka_other_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+            elif i[2] == 'Etherline':
+                extra_stroka_other_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                list_stroka_other_client_service.append(extra_stroka_other_client_service)
 
 
     if vgw_chains:
@@ -4672,14 +4751,36 @@ def head(request):
                 extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
             list_stroka_main_client_service.append(extra_stroka_main_client_service)
     extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
+    extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
     index_of_service = stroka.index('В данной точке клиент потребляет:') + len('В данной точке клиент потребляет:')+1
-    stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + stroka[index_of_service:]
+    stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + '\n' + extra_extra_stroka_other_client_service + stroka[index_of_service:]
+
+    if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
+        if waste_vgw:
+            list_stroka_other_vgw =[]
+            for i in waste_vgw:
+                model = i.get('model')
+                name = i.get('name')
+                vgw_uplink = i.get('uplink').replace('\r\n', '')
+                room = i.get('type')
+                contracts = i.get('contracts')
+                if bool(contracts) == False:
+                    contracts = 'Нет контрактов'
+                if model == 'ITM SIP':
+                    extra_stroka_other_vgw = f'Также есть подключение по IP-транк {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                else:
+                    extra_stroka_other_vgw = f'Также есть тел. шлюз {model} {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                list_stroka_other_vgw.append(extra_stroka_other_vgw)
+            extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
+            stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
+
 
 
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
     result_services = ''.join(result_services)
-
+    head = result_services
+    request.session['head'] = head
 
 
     context = {
@@ -4691,4 +4792,20 @@ def head(request):
         'selected_ono': selected_ono,
         'waste_vgw': waste_vgw
     }
-    return render(request, 'tickets/head.html', context)
+    #return render(request, 'tickets/head.html', context)
+    return redirect('passage')
+
+def passage(request):
+    if request.method == 'POST':
+        passform = PassForm(request.POST)
+
+        if passform.is_valid():
+            type_pass = passform.cleaned_data['type_pass']
+            request.session['type_pass'] = type_pass
+            return redirect('no_data')
+
+
+    else:
+        head = request.session['head']
+        passform = PassForm(initial={'type_pass': 'Перенос сервиса'})
+        return render(request, 'tickets/choice_pass.html', {'passform': passform, 'head': head})

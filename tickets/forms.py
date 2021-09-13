@@ -197,3 +197,13 @@ class ChainForm(forms.Form):
 
 class ListResourcesForm(forms.Form):
     resource = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
+
+class PassForm(forms.Form):
+    #router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    types = [
+        ('Перенос сервиса', 'Перенос сервиса'),
+        ('Перенос сервиса "ШПД в Интернет" с изменением реквизитов', 'Перенос сервиса "ШПД в Интернет" с изменением реквизитов')
+    ]
+    type_pass = forms.CharField(label='Выбор работ',
+                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
