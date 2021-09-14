@@ -1,7 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
 
+<div class="container">
 
+<table class="table table-bordered">
+  <tbody>
+      <tr>
+            <th class="table-secondary text-right" style="width: 25%">Задача в ОТПМ</th>
+            <td class="table-light" style="width: 75%">{{task_otpm|linebreaks}}</td>
+        </tr>
+  </tbody>
+</table>
+
+</div>
+
+
+<div class="container">
 <form action="{% url 'test_formset' %}" method="post">
     {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
     {% csrf_token %}
@@ -58,5 +72,5 @@
         </div>
     </div>
 </form>
-
+</div>
 {% endblock %}

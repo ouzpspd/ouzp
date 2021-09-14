@@ -207,3 +207,12 @@ class PassForm(forms.Form):
     ]
     type_pass = forms.CharField(label='Выбор работ',
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
+
+class PassServForm(forms.Form):
+    from_node = forms.BooleanField(label='Линия от узла связи', required=False,
+                                      widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    resh_oattr = forms.BooleanField(label='По решению ОТПМ', required=False,
+                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    log_change = forms.BooleanField(label='Лог. подключение изменится', required=False,
+                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

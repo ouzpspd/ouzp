@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm, PassServForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -542,6 +542,8 @@ def project_tr(request, dID, tID, trID):
             elif sreda == '3':
                 tag_service.append('wireless')
 
+        type_tr = 'new_cl'
+        request.session['type_tr'] = type_tr
         request.session['tag_service'] = tag_service
         print('!!!!!tagsevice')
         print(tag_service)
@@ -683,10 +685,17 @@ def copper(request):
             port = copperform.cleaned_data['port']
             request.session['logic_csw'] = logic_csw
             request.session['port'] = port
-            if logic_csw == True:
-                return redirect('csw')
-            else:
-                return redirect('data')
+            type_tr = request.session['type_tr']
+            if type_tr == 'new_cl':
+                if logic_csw == True:
+                    return redirect('csw')
+                else:
+                    return redirect('data')
+            elif type_tr == 'exist_cl':
+                tag_service = request.session['tag_service']
+                tag_service.remove('copper')
+                request.session['tag_service'] = tag_service
+                return redirect(tag_service[0])
 
     else:
         user = User.objects.get(username=request.user.username)
@@ -694,13 +703,16 @@ def copper(request):
         username = credent['username']
         password = credent['password']
         pps = request.session['pps']
+        print('!!!!!pps in copper')
+        print(pps)
         services_plus_desc = request.session['services_plus_desc']
-        turnoff = request.session['turnoff']
+        #turnoff = request.session['turnoff']
         sreda = request.session['sreda']
-        tochka = request.session['tochka']
+        #tochka = request.session['tochka']
         oattr = request.session['oattr']
-        counter_line_services = request.session['counter_line_services']
-        spp_link = request.session['spplink']
+        #counter_line_services = request.session['counter_line_services']
+        #spp_link = request.session['spplink']
+
 
         list_switches = parsingByNodename(pps, username, password)
         if list_switches[0] == 'Access denied':
@@ -2160,6 +2172,9 @@ def get_contract_resources(login, password, contract_id):
 
 @cache_check
 def get_resources(request):
+    """Данный метод получает от пользователя номер договора. с помощью метода get_contract_id получает ID договора. С
+    помощью метода get_contract_resources получает ресурсы с контракта. Отправляет пользователя на страницу, где
+    отображаются эти ресурсы"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -3080,76 +3095,7 @@ def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
     ticket_tr_id = ticket_tr.id
     return ticket_tr_id
 
-@cache_check
-def add_tr_exist_cl(request, dID, tID, trID):
-    """Данный метод получает параметры ТР в СПП(dID, tID, trID), вызывает методы for_tr_view и add_tr_to_db. В случае
-     недоступности данных(for_tr_view) оправляет логиниться. В случае если ТР добавлено в АРМ(add_tr_to_db) отправляет
-    на запрос контракта клиента"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    tr_params = for_tr_view(username, password, dID, tID, trID)
-    if tr_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        ticket_spp_id = request.session['ticket_spp_id']
-        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
-        request.session['ticket_tr_id'] = ticket_tr_id
-        print(request.GET)
 
-        return redirect('get_resources')
-
-def project_tr_exist_cl(request, dID, tID, trID):
-    #elif data_sss[2] == 'Не выбран':
-    #    return redirect('tr_view', dID, tID, trID)
-
-    request.session['tID'] = tID
-    request.session['dID'] = dID
-    request.session['trID'] = trID
-
-    ticket_tr_id = request.session['ticket_tr_id']
-    ticket_tr = TR.objects.get(id=ticket_tr_id)
-    oattr = ticket_tr.oattr
-    pps = ticket_tr.pps
-    services_plus_desc = ticket_tr.services
-    wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
-    ftth_temp = ['Alpha', 'ОК-1']
-    vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
-    if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
-
-        #if ((not 'ОК' in oattr) and ('БС ' in oattr)) or (
-        #        (not 'ОК' in oattr) and ('радио' in oattr)) or (
-        #        (not 'ОК' in oattr) and ('радиоканал' in oattr)) or ((not 'ОК' in oattr) and ('антенну' in oattr)):
-        sreda = '3'
-        print('Среда передачи:  Беспроводная среда')
-    elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
-        sreda = '4'
-        print('Среда передачи: FTTH')
-    elif any(vo in oattr for vo in vols_temp):
-        #elif ('ОВ' in oattr) or ('ОК' in oattr) or ('ВОЛС' in oattr) or ('волокно' in oattr) or (
-        #        'ОР ' in oattr) or ('ОР№' in oattr) or ('сущ.ОМ' in oattr) or ('оптическ' in oattr):
-        sreda = '2'
-        print('Среда передачи: ВОЛС')
-    else:
-        sreda = '1'
-        print('Среда передачи: UTP')
-
-    request.session['services_plus_desc'] = services_plus_desc
-    request.session['oattr'] = oattr
-    request.session['pps'] = pps
-
-
-    tag_service = []
-    if sreda == '1':
-        tag_service.append('copper')
-    elif sreda == '2' or sreda == '4':
-        tag_service.append('vols')
-    elif sreda == '3':
-        tag_service.append('wireless')
 
 
 def tr_view_save(request, dID, ticket_spp_id, trID):
@@ -4250,7 +4196,9 @@ from django.forms import formset_factory
 def test_formset(request):
     """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
      только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
-      коммутатором в итоговый список"""
+      коммутатором в итоговый список. Если выбрано более одного или ни одного ресурса возвращает эту же форму повторно.
+      По точке подключения(город, улица) проверяет наличие телефонии на договоре. Отправляет пользователя на страницу
+      формирования заголовка."""
     ono = request.session['ono']
     try:
         phone_address = request.session['phone_address']
@@ -4302,6 +4250,9 @@ def test_formset(request):
                 return redirect('test_formset')
 
     else:
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        task_otpm = ticket_tr.ticket_k.task_otpm
         formset = ListResourcesFormSet()
         ono_for_formset = []
         for resource_for_formset in ono:
@@ -4313,7 +4264,8 @@ def test_formset(request):
         context = {
             'ono_for_formset': ono_for_formset,
             #'contract': contract,
-            'formset': formset
+            'formset': formset,
+            'task_otpm': task_otpm
         }
 
         return render(request, 'tickets/test_formset.html', context)
@@ -4384,7 +4336,9 @@ def _compare_config_ports_client_device(config_ports_client_device, main_client)
 @cache_check
 def forming_header(request):
     """Данный метод проверяет если клиент подключен через CSW или WDA, то проверяет наличие на этих устройтсвах других
-     договоров и если есть такие договоры, то добавляет их ресурсы в список выбранных ресурсов с договора"""
+     договоров с помощью метода _get_extra_selected_ono и если есть такие договоры, то добавляет их ресурсы в список
+      выбранных ресурсов с договора. Отправляет на получение дополнительных данных если клиент подключен через цепочку
+       устройств."""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -4443,6 +4397,8 @@ def _get_all_chain(chains, chain_device, uplink, max_level):
 
 @cache_check
 def forming_chain_header(request):
+    """Данный метод собирает данные обо всех устройствах через которые подключен клиент и отправляет на страницу
+    формирования заголовка из этих данных"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -4663,6 +4619,8 @@ def check_contract_phone_exist(login, password, contract_id):
 
 @cache_check
 def head(request):
+    """Данный метод приводит данные для заголовка в читаемый формат на основе шаблона в КБЗ и отправляет на страницу
+    выбора шаблонов для ТР"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -4733,6 +4691,7 @@ def head(request):
     service_itv = ['itv']
     list_stroka_main_client_service = []
     list_stroka_other_client_service = []
+    readable_services = dict()
     for i in selected_ono:
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
@@ -4741,25 +4700,35 @@ def head(request):
                     print('!!!any head')
                     extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
+                    if list_stroka_main_client_service:
+                        for ind, main in enumerate(list_stroka_main_client_service):
+                            if i[-1] in main:
+                                main = main[:main.index('"(')] + f', услугу "ШПД в интернет" c реквизитами "{i[-4]}"' + main[main.index('"('):]
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
                     extra_stroka_main_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    readable_services.update({'"Хот-спот"': f' c реквизитами "{i[-4]}"'})
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     extra_stroka_main_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    readable_services.update({'"Вебург.ТВ"': f' c реквизитами "{i[-4]}"'})
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
                     extra_stroka_main_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    readable_services.update({'"Порт ВЛС"': f' "{i[-4]}"'})
                 elif any(serv in i[-3].lower() for serv in service_portvm):
                     extra_stroka_main_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    readable_services.update({'"Порт ВМ"': f' "{i[-4]}"'})
             elif i[2] == 'Etherline':
                 extra_stroka_main_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
         else:
             if i[2] == 'IP-адрес или подсеть':
                 if any(serv in i[-3] for serv in service_shpd):
@@ -4798,6 +4767,7 @@ def head(request):
             else:
                 extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
             list_stroka_main_client_service.append(extra_stroka_main_client_service)
+            readable_services.update({'"Телефония"': None})
     extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
     extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
     index_of_service = stroka.index('В данной точке клиент потребляет:') + len('В данной точке клиент потребляет:')+1
@@ -4829,6 +4799,7 @@ def head(request):
     result_services = ''.join(result_services)
     head = result_services
     request.session['head'] = head
+    request.session['readable_services'] = readable_services
 
 
     context = {
@@ -4844,13 +4815,16 @@ def head(request):
     return redirect('passage')
 
 def passage(request):
+    """Данный метод выводит страницу с выбором шаблонов ТР в КБЗ"""
     if request.method == 'POST':
         passform = PassForm(request.POST)
 
         if passform.is_valid():
             type_pass = passform.cleaned_data['type_pass']
+            print('!!!!! type_pass')
+            print(type_pass)
             request.session['type_pass'] = type_pass
-            return redirect('no_data')
+            return redirect('project_tr_exist_cl')
 
 
     else:
@@ -4858,10 +4832,223 @@ def passage(request):
         ticket_tr_id = request.session['ticket_tr_id']
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         oattr = ticket_tr.oattr
+        pps = ticket_tr.pps
+        turnoff = ticket_tr.turnoff
+        #task_otpm = ticket_tr.ticket_k.task_otpm
         passform = PassForm(initial={'type_pass': 'Перенос сервиса'})
         context = {
             'passform': passform,
             'head': head,
-            'oattr': oattr
+            'oattr': oattr,
+            'pps': pps,
+            'turnoff': turnoff,
+            #'task_otpm': task_otpm
         }
         return render(request, 'tickets/choice_pass.html', context)
+
+
+@cache_check
+def add_tr_exist_cl(request, dID, tID, trID):
+    """Данный метод получает параметры ТР в СПП(dID, tID, trID), вызывает методы for_tr_view и add_tr_to_db. В случае
+     недоступности данных(for_tr_view) оправляет логиниться. В случае если ТР добавлено в АРМ(add_tr_to_db) отправляет
+    на запрос контракта клиента"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        ticket_spp_id = request.session['ticket_spp_id']
+        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        request.session['ticket_tr_id'] = ticket_tr_id
+        print(request.GET)
+
+        return redirect('get_resources')
+
+
+def project_tr_exist_cl(request):
+    # elif data_sss[2] == 'Не выбран':
+    #    return redirect('tr_view', dID, tID, trID)
+
+    # request.session['tID'] = tID
+    # request.session['dID'] = dID
+    # request.session['trID'] = trID
+    type_pass = request.session['type_pass']
+    ticket_tr_id = request.session['ticket_tr_id']
+    ticket_tr = TR.objects.get(id=ticket_tr_id)
+    oattr = ticket_tr.oattr
+    pps = ticket_tr.pps
+    pps = pps.strip()
+    turnoff = ticket_tr.turnoff
+    services_plus_desc = ticket_tr.services
+    type_tr = 'exist_cl'
+    wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+    ftth_temp = ['Alpha', 'ОК-1']
+    vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+    if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+
+        # if ((not 'ОК' in oattr) and ('БС ' in oattr)) or (
+        #        (not 'ОК' in oattr) and ('радио' in oattr)) or (
+        #        (not 'ОК' in oattr) and ('радиоканал' in oattr)) or ((not 'ОК' in oattr) and ('антенну' in oattr)):
+        sreda = '3'
+        print('Среда передачи:  Беспроводная среда')
+    elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+        sreda = '4'
+        print('Среда передачи: FTTH')
+    elif any(vo in oattr for vo in vols_temp):
+        # elif ('ОВ' in oattr) or ('ОК' in oattr) or ('ВОЛС' in oattr) or ('волокно' in oattr) or (
+        #        'ОР ' in oattr) or ('ОР№' in oattr) or ('сущ.ОМ' in oattr) or ('оптическ' in oattr):
+        sreda = '2'
+        print('Среда передачи: ВОЛС')
+    else:
+        sreda = '1'
+        print('Среда передачи: UTP')
+
+    tag_service = []
+
+    if type_pass == 'Перенос сервиса':
+        tag_service.append('pass_serv')
+
+    if sreda == '1':
+        tag_service.append('copper')
+    elif sreda == '2' or sreda == '4':
+        tag_service.append('vols')
+    elif sreda == '3':
+        tag_service.append('wireless')
+
+    tag_service.append('exist_cl_data')
+
+    request.session['services_plus_desc'] = services_plus_desc
+    request.session['oattr'] = oattr
+    request.session['pps'] = pps
+    request.session['turnoff'] = turnoff
+    request.session['type_tr'] = type_tr
+    request.session['sreda'] = sreda
+    request.session['tag_service'] = tag_service
+
+    return redirect(tag_service[0])
+
+
+def pass_serv(request):
+    if request.method == 'POST':
+        passservform = PassServForm(request.POST)
+
+        if passservform.is_valid():
+            from_node = passservform.cleaned_data['from_node']
+            resh_oattr = passservform.cleaned_data['resh_oattr']
+            log_change = passservform.cleaned_data['log_change']
+            request.session['from_node'] = from_node
+            request.session['resh_oattr'] = resh_oattr
+            request.session['log_change'] = log_change
+            tag_service = request.session['tag_service']
+            sreda = request.session['sreda']
+            tag_service.remove('pass_serv')
+            if log_change == False:
+                if sreda == '1':
+                    tag_service.remove('copper')
+                elif sreda == '2' or sreda == '4':
+                    tag_service.remove('vols')
+            return redirect(tag_service[0])
+
+
+    else:
+        passservform = PassServForm()
+        context = {
+            'passservform': passservform
+        }
+
+        return render(request, 'tickets/pass_serv.html', context)
+
+
+@cache_check
+def exist_cl_data(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    pps = request.session['pps']
+    #services_plus_desc = request.session['services_plus_desc']
+    #turnoff = request.session['turnoff']
+    sreda = request.session['sreda']
+    readable_services = request.session['readable_services']
+    oattr = request.session['oattr']
+
+
+    templates = ckb_parse(username, password)
+
+
+
+    try:
+        port = request.session['port']
+    except KeyError:
+        port = None
+    try:
+        logic_csw = request.session['logic_csw']
+    except KeyError:
+        logic_csw = None
+    try:
+        from_node = request.session['from_node']
+    except KeyError:
+        from_node = None
+    try:
+        resh_oattr = request.session['resh_oattr']
+    except KeyError:
+        resh_oattr = None
+    try:
+        log_change = request.session['log_change']
+    except KeyError:
+        log_change = None
+    try:
+        list_switches = request.session['list_switches']
+    except KeyError:
+        list_switches = None
+
+    if list_switches:
+        list_kad = []
+        if len(list_switches) == 1:
+            kad = list_switches[0][0]
+        else:
+            for i in range(len(list_switches)):
+                if (list_switches[i][0].startswith('IAS')) or (list_switches[i][0].startswith('AR')):
+                    pass
+                else:
+                    list_kad.append(list_switches[i][0])
+            kad = ' или '.join(list_kad)
+
+    static_vars = {}
+    hidden_vars = {}
+    result_services = []
+    if sreda == '1':
+        print("Присоединение КК к СПД по медной линии связи." + '-' * 20)
+        stroka = templates.get("Перенос присоединения к СПД по медной линии связи.")
+        if from_node:
+            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
+            static_vars['указать узел связи'] = pps
+        if resh_oattr:
+            hidden_vars[' по решению ОАТТР'] = ' по решению ОАТТР'
+        if log_change:
+            hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'
+            static_vars['указать название коммутатора'] = kad
+            static_vars['указать порт коммутатора'] = port
+            static_vars['изменится/не изменится'] = 'изменится'
+        else:
+            static_vars['изменится/не изменится'] = 'не изменится'
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+    #stroka = templates.get("Перенос сервиса %указать сервис%")
+    #list_readable_services = []
+    #for i in readable_services.items():
+    #    readable_services.get(i)
+
+    context = {
+        'result_services': result_services
+
+    }
+
+
+    return render(request, 'tickets/exist_cl_data.html', context)

@@ -1,12 +1,28 @@
 {% extends 'base.html' %}
 {% block content %}
 
+<div class="container">
 
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+          <th class="table-secondary text-right" style="width: 25%" >Узел связи</th>
+          <td class="table-light" style="width: 75%">{{pps}}</td>
+      </tr>
+      <tr>
+            <th class="table-secondary text-right" style="width: 25%" >Отключение</th>
+            <td class="table-light" style="width: 75%">{{turnoff}}</td>
+        </tr>
+
+  </tbody>
+</table>
+
+</div>
 
 
 <div class="container">
     <div class="card mb-2">
-      <h5 class="card-header">Существующее подключение</h5>
+      <h5 class="card-header">Подключение</h5>
       <div class="card-body">
         <p class="card-text">{{head|linebreaks}}</p>
       </div>
@@ -31,7 +47,7 @@
     {% csrf_token %}
     <div class="container">
         <div class="row">
-            <div class="col-4">
+            <div class="col-6">
             {{ passform.as_p }}
             </div>
         </div>
