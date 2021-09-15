@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
 
-
-
-{{result_services}}
+<div class="container">
+    <div class="card mb-2">
+      <h5 class="card-header">Решение ОРТР</h5>
+      <div class="card-body">
+        <p class="card-text">{{result_services|linebreaks}}</p>
+      </div>
+    </div>
+</div>
 
 
 {%endblock%}

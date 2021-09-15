@@ -210,9 +210,7 @@ class PassForm(forms.Form):
 
 
 class PassServForm(forms.Form):
-    from_node = forms.BooleanField(label='Линия от узла связи', required=False,
-                                      widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    resh_oattr = forms.BooleanField(label='По решению ОТПМ', required=False,
-                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    log_change = forms.BooleanField(label='Лог. подключение изменится', required=False,
+    log_change = forms.BooleanField(label='Логическое подключение изменится?', required=False,
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    from_node = forms.BooleanField(label='Монтажные работы от узла связи?', required=False,
+                                      widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

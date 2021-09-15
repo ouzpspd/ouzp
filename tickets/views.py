@@ -773,13 +773,21 @@ def vols(request):
             except KeyError:
                 ppr = None
             request.session['ppr'] = ppr
-            if logic_csw == True:
-                device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
-                request.session['device_client'] = device_client
-                return redirect('csw')
-            else:
-                request.session['device_client'] = device_client
-                return redirect('data')
+
+            type_tr = request.session['type_tr']
+            if type_tr == 'new_cl':
+                if logic_csw == True:
+                    device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
+                    request.session['device_client'] = device_client
+                    return redirect('csw')
+                else:
+                    request.session['device_client'] = device_client
+                    return redirect('data')
+            elif type_tr == 'exist_cl':
+                tag_service = request.session['tag_service']
+                tag_service.remove('vols')
+                request.session['tag_service'] = tag_service
+                return redirect(tag_service[0])
 
 
 
@@ -792,9 +800,9 @@ def vols(request):
         services_plus_desc = request.session['services_plus_desc']
         turnoff = request.session['turnoff']
         sreda = request.session['sreda']
-        tochka = request.session['tochka']
+        #tochka = request.session['tochka']
         oattr = request.session['oattr']
-        counter_line_services = request.session['counter_line_services']
+        #counter_line_services = request.session['counter_line_services']
         spplink = request.session['spplink']
         print('!!!SPPLINK')
         print(spplink)
@@ -4617,6 +4625,17 @@ def check_contract_phone_exist(login, password, contract_id):
     phone_address = list(phone_address)
     return phone_address
 
+
+def _readable(curr_value, readable_services, serv, res):
+    """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
+    if curr_value == None:
+        readable_services.update({serv: f' c реквизитами "{res}"'})
+    elif type(curr_value) == str:
+        readable_services.update({serv: [curr_value, f' c реквизитами "{res}"']})
+    elif type(curr_value) == list:
+        readable_services.update({serv: curr_value.append(f' c реквизитами "{res}"')})
+    return readable_services
+
 @cache_check
 def head(request):
     """Данный метод приводит данные для заголовка в читаемый формат на основе шаблона в КБЗ и отправляет на страницу
@@ -4705,30 +4724,48 @@ def head(request):
                             if i[-1] in main:
                                 main = main[:main.index('"(')] + f', услугу "ШПД в интернет" c реквизитами "{i[-4]}"' + main[main.index('"('):]
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
+                    curr_value = readable_services.get('"ШПД в интернет"')
+                    readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
+                    #if curr_value == None:
+                    #    readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
+                    #elif type(curr_value) == str:
+                    #    readable_services.update({'"ШПД в интернет"': [curr_value, f' c реквизитами "{i[-4]}"']})
+                    #elif type(curr_value) == list:
+                    #    readable_services.update({'"ШПД в интернет"': curr_value.append(f' c реквизитами "{i[-4]}"')})
+                    #readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
                     extra_stroka_main_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    readable_services.update({'"Хот-спот"': f' c реквизитами "{i[-4]}"'})
+                    #readable_services.update({'"Хот-спот"': f' c реквизитами "{i[-4]}"'})
+                    curr_value = readable_services.get('"Хот-спот"')
+                    readable_services = _readable(curr_value, readable_services, '"Хот-спот"', i[-4])
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     extra_stroka_main_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    readable_services.update({'"Вебург.ТВ"': f' c реквизитами "{i[-4]}"'})
+                    #readable_services.update({'"Вебург.ТВ"': f' c реквизитами "{i[-4]}"'})
+                    curr_value = readable_services.get('"Вебург.ТВ"')
+                    readable_services = _readable(curr_value, readable_services, '"Вебург.ТВ"', i[-4])
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
                     extra_stroka_main_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    readable_services.update({'"Порт ВЛС"': f' "{i[-4]}"'})
+                    #readable_services.update({'"Порт ВЛС"': f' "{i[-4]}"'})
+                    curr_value = readable_services.get('"Порт ВЛС"')
+                    readable_services = _readable(curr_value, readable_services, '"Порт ВЛС"', i[-4])
                 elif any(serv in i[-3].lower() for serv in service_portvm):
                     extra_stroka_main_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    readable_services.update({'"Порт ВМ"': f' "{i[-4]}"'})
+                    #readable_services.update({'"Порт ВМ"': f' "{i[-4]}"'})
+                    curr_value = readable_services.get('"Порт ВМ"')
+                    readable_services = _readable(curr_value, readable_services, '"Порт ВМ"', i[-4])
             elif i[2] == 'Etherline':
                 extra_stroka_main_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
+                #readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
+                curr_value = readable_services.get('"ЦКС"')
+                readable_services = _readable(curr_value, readable_services, '"ЦКС"', i[-4])
         else:
             if i[2] == 'IP-адрес или подсеть':
                 if any(serv in i[-3] for serv in service_shpd):
@@ -4797,7 +4834,10 @@ def head(request):
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
     result_services = ''.join(result_services)
-    head = result_services
+    rev_result_services = result_services[::-1]
+    index_of_head = rev_result_services.index('''-----------------------------------------------------------------------------------\n''')
+    rev_result_services = rev_result_services[:index_of_head]
+    head = rev_result_services[::-1]
     request.session['head'] = head
     request.session['readable_services'] = readable_services
 
@@ -4865,6 +4905,8 @@ def add_tr_exist_cl(request, dID, tID, trID):
     else:
         ticket_spp_id = request.session['ticket_spp_id']
         ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
+        request.session['spplink'] = spplink
         request.session['ticket_tr_id'] = ticket_tr_id
         print(request.GET)
 
@@ -4940,10 +4982,8 @@ def pass_serv(request):
 
         if passservform.is_valid():
             from_node = passservform.cleaned_data['from_node']
-            resh_oattr = passservform.cleaned_data['resh_oattr']
             log_change = passservform.cleaned_data['log_change']
             request.session['from_node'] = from_node
-            request.session['resh_oattr'] = resh_oattr
             request.session['log_change'] = log_change
             tag_service = request.session['tag_service']
             sreda = request.session['sreda']
@@ -4977,6 +5017,8 @@ def exist_cl_data(request):
     sreda = request.session['sreda']
     readable_services = request.session['readable_services']
     oattr = request.session['oattr']
+    selected_ono = request.session['selected_ono']
+    head = request.session['head']
 
 
     templates = ckb_parse(username, password)
@@ -4996,10 +5038,6 @@ def exist_cl_data(request):
     except KeyError:
         from_node = None
     try:
-        resh_oattr = request.session['resh_oattr']
-    except KeyError:
-        resh_oattr = None
-    try:
         log_change = request.session['log_change']
     except KeyError:
         log_change = None
@@ -5007,6 +5045,22 @@ def exist_cl_data(request):
         list_switches = request.session['list_switches']
     except KeyError:
         list_switches = None
+    try:
+        speed_port = request.session['speed_port']
+    except KeyError:
+        speed_port = None
+    try:
+        device_pps = request.session['device_pps']
+    except KeyError:
+        device_pps = None
+    try:
+        device_client = request.session['device_client']
+    except KeyError:
+        device_client = None
+    try:
+        ppr = request.session['ppr']
+    except KeyError:
+        ppr = None
 
     if list_switches:
         list_kad = []
@@ -5024,31 +5078,106 @@ def exist_cl_data(request):
     hidden_vars = {}
     result_services = []
     if sreda == '1':
-        print("Присоединение КК к СПД по медной линии связи." + '-' * 20)
+        print("Перенос присоединения к СПД по медной линии связи." + '-' * 20)
         stroka = templates.get("Перенос присоединения к СПД по медной линии связи.")
         if from_node:
             hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
             static_vars['указать узел связи'] = pps
-        if resh_oattr:
+        if oattr:
             hidden_vars[' по решению ОАТТР'] = ' по решению ОАТТР'
         if log_change:
             hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'
+            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
+            static_vars['указать узел связи'] = pps
             static_vars['указать название коммутатора'] = kad
             static_vars['указать порт коммутатора'] = port
             static_vars['изменится/не изменится'] = 'изменится'
         else:
             static_vars['изменится/не изменится'] = 'не изменится'
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif sreda == '2' or sreda == '4':
+        if ppr:
+            print('-' * 20 + '\n' + "Перенос присоединения к СПД по оптической линии связи с простоем связи услуг.")
+            stroka = templates.get("Перенос присоединения к СПД по оптической линии связи с простоем связи услуг.")
+            static_vars['указать № ППР'] = ppr
+            hidden_vars['- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
+        else:
+            print('-' * 20 + '\n' + "Перенос присоединения к СПД по оптической линии связи.")
+            stroka = templates.get("Перенос присоединения к СПД по оптической линии связи.")
 
-    #stroka = templates.get("Перенос сервиса %указать сервис%")
-    #list_readable_services = []
-    #for i in readable_services.items():
-    #    readable_services.get(i)
+        if from_node:
+            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
+            static_vars['указать узел связи'] = pps
+        if log_change:
+            hidden_vars[
+                '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'
+            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
+            hidden_vars['ОНИТС СПД проведение работ:'] = 'ОНИТС СПД проведение работ:'
+            hidden_vars['- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
+            static_vars['указать узел связи'] = pps
+            static_vars['указать название коммутатора'] = kad
+            static_vars['указать порт коммутатора'] = port
+            static_vars['изменится/не изменится'] = 'изменится'
+            static_vars['указать режим работы порта'] = speed_port
+            static_vars['указать конвертер/передатчик на стороне узла связи'] = device_pps
+            static_vars['указать конвертер/передатчик на стороне клиента'] = device_client
+        else:
+            static_vars['изменится/не изменится'] = 'не изменится'
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
-    context = {
-        'result_services': result_services
+    print("Перенос сервиса %указать название сервиса%" + '-' * 20)
+    stroka = templates.get("Перенос сервиса %указать название сервиса%")
+    if stroka:
+        static_vars = {}
+        hidden_vars = {}
 
-    }
+
+        static_vars['указать название сервиса'] = ' '.join(readable_services.keys())
+        if sreda == '2' or sreda == '4':
+            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+        else:
+            static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+        if log_change:
+            hidden_vars['-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
+            services = []
+            for key, value in readable_services.items():
+                if type(value) == str:
+                    services.append(key+' '+value)
+                elif type(value) == list:
+                    services.append(key+''.join(value))
+            static_vars['указать сервис'] = ' '.join(services)
+            hidden_vars['В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
+            hidden_vars['- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
+            hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
+            static_vars['указать существующий КАД'] = selected_ono[0][-2]
+
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+        userlastname = None
+        if request.user.is_authenticated:
+            userlastname = request.user.last_name
+        now = datetime.datetime.now()
+        now = now.strftime("%d.%m.%Y")
+
+        index_template = 1
+        titles = []
+        for i in range(len(result_services)):
+            result_services[i] = '{}. '.format(index_template) + result_services[i]
+            titles.append(result_services[i][:result_services[i].index('---')])
+            index_template += 1
+
+        titles = ''.join(titles)
+        result_services = '\n\n\n'.join(result_services)
+        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n' + head + '\n\n' + titles + '\n' + result_services
+
+        context = {
+            'result_services': result_services
+
+        }
 
 
-    return render(request, 'tickets/exist_cl_data.html', context)
+        return render(request, 'tickets/exist_cl_data.html', context)
+    else:
+        error = 'Нет шаблона "Перенос сервиса %указать название сервиса%"'
+        request.session['error'] = error
+        redirect('no_data')
