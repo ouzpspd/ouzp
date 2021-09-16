@@ -494,43 +494,13 @@ def project_tr(request, dID, tID, trID):
         request.session['dID'] = dID
         request.session['trID'] = trID
 
-        tag_service = []
-        tag_service.append('sppdata')
-        for index_service in range(len(services_plus_desc)):
-            if 'Телефон' in services_plus_desc[index_service]:
-                tag_service.append('phone')
-            elif 'iTV' in services_plus_desc[index_service]:
-                tag_service.append('itv')
-            elif 'Интернет, DHCP' in services_plus_desc[index_service] or 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
-                tag_service.append('shpd')
-            elif 'ЦКС' in services_plus_desc[index_service]:
-                tag_service.append('cks')
-            elif 'Порт ВЛС' in services_plus_desc[index_service]:
-                tag_service.append('portvk')
-            elif 'Порт ВМ' in services_plus_desc[index_service]:
-                tag_service.append('portvm')
-            elif 'Видеонаблюдение' in services_plus_desc[index_service]:
-                tag_service.append('video')
-            elif 'HotSpot' in services_plus_desc[index_service]:
-                if 'премиум +' in services_plus_desc[index_service].lower() or 'премиум+' in services_plus_desc[index_service].lower():
-                    premium_plus = True
-                else:
-                    premium_plus = False
-                hotspot_users = None
-                regex_hotspot_users = ['(\d+)посетит', '(\d+) посетит', '(\d+) польз', '(\d+)польз', '(\d+)чел',
-                                               '(\d+) чел']
-                for regex in regex_hotspot_users:
-                    match_hotspot_users = re.search(regex, services_plus_desc[index_service])
-                    if match_hotspot_users:
-                        hotspot_users = match_hotspot_users.group(1)
-                        break
+        tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
+        tag_service.insert(0, 'sppdata')
 
-                tag_service.append('hotspot')
-                request.session['hotspot_points'] = hotspot_points
-                request.session['hotspot_users'] = hotspot_users
-                request.session['premium_plus'] = premium_plus
-            elif 'ЛВС' in services_plus_desc[index_service]:
-                tag_service.append('local')
+        request.session['hotspot_points'] = hotspot_points
+        request.session['hotspot_users'] = hotspot_users
+        request.session['premium_plus'] = premium_plus
+
 
         if counter_line_services == 0:
             tag_service.append('data')
@@ -891,10 +861,19 @@ def wireless(request):
             request.session['port'] = port
             request.session['logic_csw'] = logic_csw
 
-            if logic_csw == True:
-                return redirect('csw')
-            else:
-                return redirect('data')
+
+
+            type_tr = request.session['type_tr']
+            if type_tr == 'new_cl':
+                if logic_csw == True:
+                    return redirect('csw')
+                else:
+                    return redirect('data')
+            elif type_tr == 'exist_cl':
+                tag_service = request.session['tag_service']
+                tag_service.remove('wireless')
+                request.session['tag_service'] = tag_service
+                return redirect(tag_service[0])
 
 
 
@@ -2418,6 +2397,85 @@ def show_chains(request):
     return render(request, 'tickets/chain.html', context)
 
 
+def _counter_line_services(services_plus_desc):
+    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
+     где требуется линия добавляется спец. символ. Метод возвращает количество требуемых линий"""
+    hotspot_points = None
+    for index_service in range(len(services_plus_desc)):
+        if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+            replace_index = services_plus_desc[index_service]
+            services_plus_desc.remove(replace_index)
+            services_plus_desc.insert(0, replace_index)
+        elif 'Интернет, DHCP' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+            replace_index = services_plus_desc[index_service]
+            services_plus_desc.remove(replace_index)
+            services_plus_desc.insert(0, replace_index)
+        elif 'iTV' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'ЦКС' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'Порт ВЛС' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'Порт ВМ' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'HotSpot' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+            regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
+            for regex in regex_hotspot_point:
+                match_hotspot_point = re.search(regex, services_plus_desc[index_service])
+                if match_hotspot_point:
+                    hotspot_points = match_hotspot_point.group(1)
+                    break
+
+    counter_line_services = 0
+    for i in services_plus_desc:
+        while i.endswith('|'):
+            counter_line_services += 1
+            i = i[:-1]
+    return counter_line_services, hotspot_points
+
+def _tag_service_for_new_serv(services_plus_desc):
+    tag_service = []
+    hotspot_users = None
+    premium_plus = None
+    for index_service in range(len(services_plus_desc)):
+        if 'Телефон' in services_plus_desc[index_service]:
+            tag_service.append('phone')
+        elif 'iTV' in services_plus_desc[index_service]:
+            tag_service.append('itv')
+        elif 'Интернет, DHCP' in services_plus_desc[index_service] or 'Интернет, блок Адресов Сети Интернет' in \
+                services_plus_desc[index_service]:
+            tag_service.append('shpd')
+        elif 'ЦКС' in services_plus_desc[index_service]:
+            tag_service.append('cks')
+        elif 'Порт ВЛС' in services_plus_desc[index_service]:
+            tag_service.append('portvk')
+        elif 'Порт ВМ' in services_plus_desc[index_service]:
+            tag_service.append('portvm')
+        elif 'Видеонаблюдение' in services_plus_desc[index_service]:
+            tag_service.append('video')
+        elif 'HotSpot' in services_plus_desc[index_service]:
+            if 'премиум +' in services_plus_desc[index_service].lower() or 'премиум+' in services_plus_desc[index_service].lower():
+                premium_plus = True
+            else:
+                premium_plus = False
+
+            regex_hotspot_users = ['(\d+)посетит', '(\d+) посетит', '(\d+) польз', '(\d+)польз', '(\d+)чел',
+                                   '(\d+) чел']
+            for regex in regex_hotspot_users:
+                match_hotspot_users = re.search(regex, services_plus_desc[index_service])
+                if match_hotspot_users:
+                    hotspot_users = match_hotspot_users.group(1)
+                    break
+            tag_service.append('hotspot')
+        elif 'ЛВС' in services_plus_desc[index_service]:
+            tag_service.append('local')
+
+    return tag_service, hotspot_users, premium_plus
+
+
 def parse_tr(login, password, url):
     # Получение данных со страницы Тех решения
     #url = input('Ссылка на Тех.решение: ')
@@ -2480,39 +2538,8 @@ def parse_tr(login, password, url):
 
         # проходим по списку услуг чтобы определить количество организуемых линий от СПД и в той услуге, где требуется
         # добавляем спец. символ
-        for index_service in range(len(services_plus_desc)):
-            if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-                replace_index = services_plus_desc[index_service]
-                services_plus_desc.remove(replace_index)
-                services_plus_desc.insert(0, replace_index)
-            elif 'Интернет, DHCP' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-                replace_index = services_plus_desc[index_service]
-                services_plus_desc.remove(replace_index)
-                services_plus_desc.insert(0, replace_index)
-            elif 'iTV' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-            elif 'ЦКС' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-            elif 'Порт ВЛС' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-            elif 'Порт ВМ' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-            elif 'HotSpot' in services_plus_desc[index_service]:
-                services_plus_desc[index_service] += '|'
-                regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
-                for regex in regex_hotspot_point:
-                    match_hotspot_point = re.search(regex, services_plus_desc[index_service])
-                    if match_hotspot_point:
-                        hotspot_points = match_hotspot_point.group(1)
-                        break
+        counter_line_services, hotspot_points = _counter_line_services(services_plus_desc)
 
-        counter_line_services = 0
-        for i in services_plus_desc:
-            while i.endswith('|'):
-                counter_line_services += 1
-                i = i[:-1]
 
         pps = None
         turnoff = None
@@ -2861,6 +2888,8 @@ def add_spp(request, dID):
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
         spp_params = for_spp_view(username, password, dID)
+        print('!!!!spp_params')
+        print(spp_params)
         if spp_params.get('Access denied') == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
@@ -2999,15 +3028,15 @@ def for_spp_view(login, password, dID):
             elif 'Заявка К' in i.find_all('td')[0].text:
                 spp_params['Заявка К'] = ''.join(i.find_all('td')[1].text.split())
             elif 'Менеджер клиента' in i.find_all('td')[0].text:
-                spp_params['Менеджер'] = i.find_all('td')[1].text
+                spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
             elif 'Клиент' in i.find_all('td')[0].text:
-                spp_params['Клиент'] = i.find_all('td')[1].text
+                spp_params['Клиент'] = i.find_all('td')[1].text.strip()
             elif 'Разработка схем/карт' in i.find_all('td')[0].text:
-                spp_params['Менеджер'] = i.find_all('td')[1].text
+                spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
             elif 'Технологи' in i.find_all('td')[0].text:
-                spp_params['Технолог'] = i.find_all('td')[1].text
+                spp_params['Технолог'] = i.find_all('td')[1].text.strip()
             elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
-                spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text
+                spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
             elif 'ТР по упрощенной схеме' in i.find_all('td')[0].text:
                 spp_params['ТР по упрощенной схеме'] = i.find_all('td')[1].text
             elif 'Перечень' in i.find_all('td')[0].text:
@@ -3031,7 +3060,7 @@ def for_spp_view(login, password, dID):
                     sostav.append(all_link)
                 spp_params['Состав Заявки ТР'] = sostav
             elif 'Примечание' in i.find_all('td')[0].text:
-                spp_params['Примечание'] = i.find_all('td')[1].text
+                spp_params['Примечание'] = i.find_all('td')[1].text.strip()
         return spp_params
     else:
         spp_params['Access denied'] = 'Access denied'
@@ -3048,6 +3077,8 @@ def add_tr(request, dID, tID, trID):
     username = credent['username']
     password = credent['password']
     tr_params = for_tr_view(username, password, dID, tID, trID)
+    print('!!!!!tr_params')
+    print(tr_params)
     if tr_params.get('Access denied') == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -3234,9 +3265,9 @@ def for_tr_view(login, password, dID, tID, trID): #login, password
 
 
             elif 'Время на реализацию, дней' in i.find_all('td')[0].text:
-                spp_params['Решение ОТПМ'] = search[index+1].find('td').text
+                spp_params['Решение ОТПМ'] = search[index+1].find('td').text.strip()
                 #spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ'].replace('\r\n', '<br />').replace('\n', '<br />')
-                spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ']
+                #spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ']
             '''elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text and i.find_all('td')[1].find('input'):
                 if i.find_all('td')[1].find('input')['name'] == 'tr_OTO_Pay':
                     spp_params[i.find_all('td')[1].find('input')['name']] = i.find_all('td')[1].find('input')['value']
@@ -4151,9 +4182,17 @@ def enviroment(result_services, sreda, ppr, templates, pps, kad, port, device_cl
 
     elif sreda == '3':
         print("Присоединение к СПД по беспроводной среде передачи данных.")
+
         static_vars = {}
+        if ppr:
+            print('-' * 20 + '\n' + "Присоединение к СПД по беспроводной среде передачи данных с простоем связи услуг.")
+            stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных с простоем связи услуг.")
+            static_vars['указать № ППР'] = ppr
+        else:
+            print('-' * 20 + '\n' + "Присоединение к СПД по беспроводной среде передачи данных.")
+            stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных.")
+        print("Присоединение к СПД по беспроводной среде передачи данных."+'-'*20)
         hidden_vars = {}
-        stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных.")
         static_vars['указать узел связи'] = pps
         static_vars['указать название коммутатора'] = kad
 
@@ -4897,6 +4936,8 @@ def add_tr_exist_cl(request, dID, tID, trID):
     username = credent['username']
     password = credent['password']
     tr_params = for_tr_view(username, password, dID, tID, trID)
+    print('!!!!!tr_params')
+    print(tr_params)
     if tr_params.get('Access denied') == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -4955,6 +4996,8 @@ def project_tr_exist_cl(request):
 
     if type_pass == 'Перенос сервиса':
         tag_service.append('pass_serv')
+    elif type_pass == 'Организация доп. услуги от существующего КК':
+        tag_service.append('add_serv_to_cur_csw')
 
     if sreda == '1':
         tag_service.append('copper')
@@ -5061,6 +5104,10 @@ def exist_cl_data(request):
         ppr = request.session['ppr']
     except KeyError:
         ppr = None
+    try:
+        access_point = request.session['access_point']
+    except KeyError:
+        access_point = None
 
     if list_switches:
         list_kad = []
@@ -5124,7 +5171,27 @@ def exist_cl_data(request):
         else:
             static_vars['изменится/не изменится'] = 'не изменится'
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif sreda == '3':
+        print("Присоединение к СПД по беспроводной среде передачи данных.")
+        static_vars = {}
+        if ppr:
+            print('-' * 20 + '\n' + "Присоединение к СПД по беспроводной среде передачи данных с простоем связи услуг.")
+            stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных с простоем связи услуг.")
+            static_vars['указать № ППР'] = ppr
+        else:
+            print('-' * 20 + '\n' + "Присоединение к СПД по беспроводной среде передачи данных.")
+            stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных.")
+        hidden_vars = {}
+        static_vars['указать узел связи'] = pps
+        static_vars['указать название коммутатора'] = kad
 
+        static_vars['указать порт коммутатора'] = port
+        static_vars['указать модель беспроводных точек'] = access_point
+        if access_point == 'Infinet H11':
+            hidden_vars['- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
+            hidden_vars[' и настройки точек в офисе ОНИТС СПД'] = ' и настройки точек в офисе ОНИТС СПД'
+
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     print("Перенос сервиса %указать название сервиса%" + '-' * 20)
     stroka = templates.get("Перенос сервиса %указать название сервиса%")
     if stroka:
