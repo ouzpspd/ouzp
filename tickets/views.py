@@ -963,11 +963,11 @@ def data(request):
     password = credent['password']
     pps = request.session['pps']
     services_plus_desc = request.session['services_plus_desc']
-    turnoff = request.session['turnoff']
+    #turnoff = request.session['turnoff']
     sreda = request.session['sreda']
-    tochka = request.session['tochka']
+    #tochka = request.session['tochka']
     address = request.session['address']
-    oattr = request.session['oattr']
+    #oattr = request.session['oattr']
 
 
     counter_line_services = request.session['counter_line_services']
@@ -982,204 +982,37 @@ def data(request):
     request.session['templates'] = templates
 
 
-    try:
-        port = request.session['port']
-    except KeyError:
-        port = None
-    try:
-        logic_csw = request.session['logic_csw']
-    except KeyError:
-        logic_csw = None
-    try:
-        device_pps = request.session['device_pps']
-    except KeyError:
-        device_pps = None
-    try:
-        access_point = request.session['access_point']
-    except KeyError:
-        access_point = None
-    try:
-        speed_port = request.session['speed_port']
-    except KeyError:
-        speed_port = None
-    try:
-        device_client = request.session['device_client']
-    except KeyError:
-        device_client = None
-    try:
-        list_switches = request.session['list_switches']
-    except KeyError:
-        list_switches = None
-    try:
-        router_shpd = request.session['router_shpd']
-    except KeyError:
-        router_shpd = None
-    try:
-        type_shpd = request.session['type_shpd']
-    except KeyError:
-        type_shpd = None
-    try:
-        type_cks = request.session['type_cks']
-    except KeyError:
-        type_cks = None
-    try:
-        type_portvk = request.session['type_portvk']
-    except KeyError:
-        type_portvk = None
-    try:
-        type_portvm = request.session['type_portvm']
-    except KeyError:
-        type_portvm = None
-    try:
-        policer_vk = request.session['policer_vk']
-    except KeyError:
-        policer_vk = None
-    try:
-        new_vk = request.session['new_vk']
-    except KeyError:
-        new_vk = None
-    try:
-        exist_vk = request.session['exist_vk']
-    except KeyError:
-        exist_vk = None
-    try:
-        model_csw = request.session['model_csw']
-    except KeyError:
-        model_csw = None
-    try:
-        port_csw = request.session['port_csw']
-    except KeyError:
-        port_csw = None
-    try:
-        logic_csw_1000 = request.session['logic_csw_1000']
-    except KeyError:
-        logic_csw_1000 = None
-    try:
-        pointA = request.session['pointA']
-    except KeyError:
-        pointA = None
-    try:
-        pointB = request.session['pointB']
-    except KeyError:
-        pointB = None
-    try:
-        policer_cks = request.session['policer_cks']
-    except KeyError:
-        policer_cks = None
-    try:
-        policer_vm = request.session['policer_vm']
-    except KeyError:
-        policer_vm = None
-    try:
-        new_vm = request.session['new_vm']
-    except KeyError:
-        new_vm = None
-    try:
-        exist_vm = request.session['exist_vm']
-    except KeyError:
-        exist_vm = None
-    try:
-        vm_inet = request.session['vm_inet']
-    except KeyError:
-        vm_inet = None
-    try:
-        hotspot_points = request.session['hotspot_points']
-    except KeyError:
-        hotspot_points = None
-    try:
-        hotspot_users = request.session['hotspot_users']
-    except KeyError:
-        hotspot_users = None
-    try:
-        exist_client = request.session['exist_client']
-    except KeyError:
-        exist_client = None
 
-    try:
-        camera_number = request.session['camera_number']
-    except KeyError:
-        camera_number = None
-    try:
-        camera_model = request.session['camera_model']
-    except KeyError:
-        camera_model = None
-    try:
-        voice = request.session['voice']
-    except KeyError:
-        voice = None
-    try:
-        deep_archive = request.session['deep_archive']
-    except KeyError:
-        deep_archive = None
-    try:
-        camera_place_one = request.session['camera_place_one']
-    except KeyError:
-        camera_place_one = None
-    try:
-        camera_place_two = request.session['camera_place_two']
-    except KeyError:
-        camera_place_two = None
-    try:
-        vgw = request.session['vgw']
-    except KeyError:
-        vgw = None
-    try:
-        channel_vgw = request.session['channel_vgw']
-    except KeyError:
-        channel_vgw = None
-    try:
-        ports_vgw = request.session['ports_vgw']
-    except KeyError:
-        ports_vgw = None
-    try:
-        local_type = request.session['local_type']
-    except KeyError:
-        local_type = None
-    try:
-        local_ports = request.session['local_ports']
-    except KeyError:
-        local_ports = None
-    try:
-        sks_poe = request.session['sks_poe']
-    except KeyError:
-        sks_poe = None
-    try:
-        sks_router = request.session['sks_router']
-    except KeyError:
-        sks_router = None
-    try:
-        lvs_busy = request.session['lvs_busy']
-    except KeyError:
-        lvs_busy = None
-    try:
-        lvs_switch = request.session['lvs_switch']
-    except KeyError:
-        lvs_switch = None
-    try:
-        ppr = request.session['ppr']
-    except KeyError:
-        ppr = None
-    try:
-        type_itv = request.session['type_itv']
-    except KeyError:
-        type_itv = None
-    try:
-        cnt_itv = request.session['cnt_itv']
-    except KeyError:
-        cnt_itv = None
+    variables = ['port', 'logic_csw', 'device_pps', 'access_point', 'speed_port', 'device_client', 'list_switches', 'router_shpd',
+                 'type_shpd', 'type_cks', 'type_portvk', 'type_portvm', 'policer_vk', 'new_vk', 'exist_vk', 'model_csw', 'port_csw',
+                 'logic_csw_1000', 'pointA', 'pointB', 'policer_cks', 'policer_vm', 'new_vm', 'exist_vm', 'vm_inet', 'hotspot_points',
+                 'hotspot_users', 'exist_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
+                 'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
+                 'ppr', 'type_itv', 'cnt_itv']
+    value_vars = dict()
+
+    for i in variables:
+        try:
+            request.session[i]
+        except KeyError:
+            value_vars.update({i: None})
+        else:
+            value_vars.update({i: request.session[i]})
 
 
 
 
-    titles, result_services, result_services_ots, kad = client_new(list_switches, ppr, templates, counter_line_services,
-                                                                   services_plus_desc, logic_csw, pps, sreda, port, device_client,
-                                                                   device_pps, speed_port, model_csw, port_csw,
-                                         logic_csw_1000, pointA, pointB, policer_cks, policer_vk, new_vk, exist_vk, policer_vm,
-                                         new_vm, exist_vm, vm_inet, hotspot_points, hotspot_users, exist_client,
-                                         camera_number, camera_model, voice, deep_archive, camera_place_one, camera_place_two,
-                                         address, vgw, channel_vgw, ports_vgw, local_type, local_ports, sks_poe, sks_router,
-                                                                   lvs_busy, lvs_switch, access_point, router_shpd, type_shpd, type_itv, cnt_itv,
-                                                                    type_cks, type_portvk, type_portvm)
+
+
+    titles, result_services, result_services_ots, kad = client_new(value_vars['list_switches'], value_vars['ppr'], templates, counter_line_services,
+                                                                   services_plus_desc, value_vars['logic_csw'], pps, sreda, value_vars['port'], value_vars['device_client'],
+                                                                   value_vars['device_pps'], value_vars['speed_port'], value_vars['model_csw'], value_vars['port_csw'],
+                                         value_vars['logic_csw_1000'], value_vars['pointA'], value_vars['pointB'], value_vars['policer_cks'], value_vars['policer_vk'], value_vars['new_vk'], value_vars['exist_vk'], value_vars['policer_vm'],
+                                         value_vars['new_vm'], value_vars['exist_vm'], value_vars['vm_inet'], value_vars['hotspot_points'], value_vars['hotspot_users'], value_vars['exist_client'],
+                                         value_vars['camera_number'], value_vars['camera_model'], value_vars['voice'], value_vars['deep_archive'], value_vars['camera_place_one'], value_vars['camera_place_two'],
+                                         address, value_vars['vgw'], value_vars['channel_vgw'], value_vars['ports_vgw'], value_vars['local_type'], value_vars['local_ports'], value_vars['sks_poe'], value_vars['sks_router'],
+                                                                   value_vars['lvs_busy'], value_vars['lvs_switch'], value_vars['access_point'], value_vars['router_shpd'], value_vars['type_shpd'], value_vars['type_itv'], value_vars['cnt_itv'],
+                                                                    value_vars['type_cks'], value_vars['type_portvk'], value_vars['type_portvm'])
 
     userlastname = None
     if request.user.is_authenticated:
@@ -5019,6 +4852,63 @@ def project_tr_exist_cl(request):
     return redirect(tag_service[0])
 
 
+def add_serv(request):
+    variables = ['port', 'logic_csw', 'device_pps', 'access_point', 'speed_port', 'device_client', 'list_switches',
+                 'router_shpd',
+                 'type_shpd', 'type_cks', 'type_portvk', 'type_portvm', 'policer_vk', 'new_vk', 'exist_vk', 'model_csw',
+                 'port_csw',
+                 'logic_csw_1000', 'pointA', 'pointB', 'policer_cks', 'policer_vm', 'new_vm', 'exist_vm', 'vm_inet',
+                 'hotspot_points',
+                 'hotspot_users', 'exist_client', 'camera_number', 'camera_model', 'voice', 'deep_archive',
+                 'camera_place_one', 'camera_place_two',
+                 'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy',
+                 'lvs_switch',
+                 'ppr', 'type_itv', 'cnt_itv']
+    value_vars = dict()
+
+    for i in variables:
+        try:
+            request.session[i]
+        except KeyError:
+            value_vars.update({i: None})
+        else:
+            value_vars.update({i: request.session[i]})
+
+    titles, result_services, result_services_ots, kad = client_new(value_vars['list_switches'], value_vars['ppr'],
+                                                                   templates, counter_line_services,
+                                                                   services_plus_desc, value_vars['logic_csw'], pps,
+                                                                   sreda, value_vars['port'],
+                                                                   value_vars['device_client'],
+                                                                   value_vars['device_pps'], value_vars['speed_port'],
+                                                                   value_vars['model_csw'], value_vars['port_csw'],
+                                                                   value_vars['logic_csw_1000'], value_vars['pointA'],
+                                                                   value_vars['pointB'], value_vars['policer_cks'],
+                                                                   value_vars['policer_vk'], value_vars['new_vk'],
+                                                                   value_vars['exist_vk'], value_vars['policer_vm'],
+                                                                   value_vars['new_vm'], value_vars['exist_vm'],
+                                                                   value_vars['vm_inet'], value_vars['hotspot_points'],
+                                                                   value_vars['hotspot_users'],
+                                                                   value_vars['exist_client'],
+                                                                   value_vars['camera_number'],
+                                                                   value_vars['camera_model'], value_vars['voice'],
+                                                                   value_vars['deep_archive'],
+                                                                   value_vars['camera_place_one'],
+                                                                   value_vars['camera_place_two'],
+                                                                   address, value_vars['vgw'],
+                                                                   value_vars['channel_vgw'], value_vars['ports_vgw'],
+                                                                   value_vars['local_type'], value_vars['local_ports'],
+                                                                   value_vars['sks_poe'], value_vars['sks_router'],
+                                                                   value_vars['lvs_busy'], value_vars['lvs_switch'],
+                                                                   value_vars['access_point'],
+                                                                   value_vars['router_shpd'], value_vars['type_shpd'],
+                                                                   value_vars['type_itv'], value_vars['cnt_itv'],
+                                                                   value_vars['type_cks'], value_vars['type_portvk'],
+                                                                   value_vars['type_portvm'])
+
+    return redirect('no_data')
+
+
+
 def pass_serv(request):
     if request.method == 'POST':
         passservform = PassServForm(request.POST)
@@ -5199,7 +5089,7 @@ def exist_cl_data(request):
         hidden_vars = {}
 
 
-        static_vars['указать название сервиса'] = ' '.join(readable_services.keys())
+        static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
         if sreda == '2' or sreda == '4':
             static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
         else:
@@ -5212,11 +5102,11 @@ def exist_cl_data(request):
                     services.append(key+' '+value)
                 elif type(value) == list:
                     services.append(key+''.join(value))
-            static_vars['указать сервис'] = ' '.join(services)
+            static_vars['указать сервис'] = ', '.join(services)
             hidden_vars['В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
             hidden_vars['- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
             hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = selected_ono[0][-2]
+            static_vars['указать существующий КАД'] = head.split('\n')[5].split()[2]
 
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
