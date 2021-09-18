@@ -1002,7 +1002,7 @@ def data(request):
     request.session['templates'] = templates
 
 
-    titles, result_services, result_services_ots, kad = client_new(value_vars)
+    titles, result_services, result_services_ots, value_vars  = client_new(value_vars) #kad
 
     userlastname = None
     if request.user.is_authenticated:
@@ -1029,7 +1029,7 @@ def data(request):
         #result_services_ots = result_services_ots.replace('\n', '&#13;&#10;')
         counter_str_ots = result_services_ots.count('\n')
 
-    request.session['kad'] = kad
+    request.session['kad'] = value_vars.get('kad')
     request.session['titles'] = titles
     request.session['result_services'] = result_services
     request.session['counter_str_ortr'] = counter_str_ortr
@@ -3161,6 +3161,7 @@ def in_work_ortr(login, password):
 
 
 def _new_services(result_services, value_vars):
+    result_services_ots = None
     logic_csw = value_vars.get('logic_csw')
     services_plus_desc = value_vars.get('services_plus_desc')
     templates = value_vars.get('templates')
@@ -3534,8 +3535,8 @@ def _new_services(result_services, value_vars):
                 result_services.append(pluralizer_vars(stroka, counter_plur))
 
         elif 'Телефон' in service:
-            hidden_vars = {}
             result_services_ots = []
+            hidden_vars = {}
             static_vars = {}
             vgw = value_vars.get('vgw')
             ports_vgw = value_vars.get('ports_vgw')
@@ -3735,43 +3736,40 @@ def _new_services(result_services, value_vars):
                 result_services.append(pluralizer_vars(stroka, counter_plur))
     return result_services, result_services_ots
 
-def client_new(value_vars):
+def _list_kad(value_vars):
+    """Данный метод формирует список всех КАД на узле в строку"""
+    list_kad = []
 
+    list_switches = value_vars.get('list_switches')
+    if len(list_switches) == 1:
+        kad = list_switches[0][0]
+    else:
+        for i in range(len(list_switches)):
+            if (list_switches[i][0].startswith('IAS')) or (list_switches[i][0].startswith('AR')):
+                pass
+            else:
+                list_kad.append(list_switches[i][0])
+        kad = ' или '.join(list_kad)
+    value_vars.update({'kad': kad})
+    return kad, value_vars
+
+def _readable_node(node_mon):
+    """Данный метод приводит название узла к читаемой форме"""
+    node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК '}
+    for key, item in node_templates.items():
+        if node_mon.endswith(key):
+            finish_node = item + node_mon[:node_mon.index(key)]
+    return finish_node
+
+def _new_enviroment(value_vars):
+    """Данный метод формирует и заполняет шаблоны для нового присоединения с установкой КК"""
     result_services = []
-    result_services_ots = None
     kad = 'Не требуется'
 
     counter_line_services = value_vars.get('counter_line_services')
     if counter_line_services > 0:
-        list_kad = []
-        list_model_kad = []
-
-        list_switches = value_vars.get('list_switches')
-        if len(list_switches) == 1:
-            kad = list_switches[0][0]
-            #model_kad = list_switches[0][1]
-        else:
-            for i in range(len(list_switches)):
-                if (list_switches[i][0].startswith('IAS')) or (list_switches[i][0].startswith('AR')):
-                    pass
-                else:
-                    list_kad.append(list_switches[i][0])
-                    list_model_kad.append(list_switches[i][1])
-            kad = ' или '.join(list_kad)
-            model_kad = ' или '.join(list_model_kad)
-        value_vars.update({'kad': kad})
-
-        pps = value_vars.get('pps')
-        if pps.endswith(', АВ'):
-            pps = 'АВ ' + pps[:pps.index(', АВ')]
-        elif pps.endswith(', КК'):
-            pps = 'КК ' + pps[:pps.index(', КК')]
-        elif pps.endswith(', УА'):
-            pps = 'УПА ' + pps[:pps.index(', УА')]
-        elif pps.endswith(', РУА'):
-            pps = 'РУА ' + pps[:pps.index(', РУА')]
-        else:
-            print('Неверный узел связи')
+        kad, value_vars = _list_kad(value_vars)
+        pps = _readable_node(value_vars.get('pps'))
 
         logic_csw = value_vars.get('logic_csw')
         if counter_line_services == 1 and logic_csw == False:
@@ -3786,8 +3784,8 @@ def client_new(value_vars):
             hidden_vars = {}
             static_vars['указать № порта'] = value_vars.get('port_csw')
             static_vars['указать модель коммутатора'] = value_vars.get('model_csw')
-            static_vars['указать узел связи'] = value_vars.get('pps')
-            static_vars['указать название коммутатора'] = value_vars.get('kad')
+            static_vars['указать узел связи'] = pps
+            static_vars['указать название коммутатора'] = kad
             static_vars['указать порт коммутатора'] = value_vars.get('port')
             logic_csw_1000 = value_vars.get('logic_csw_1000')
             if logic_csw_1000 == True:
@@ -3814,8 +3812,10 @@ def client_new(value_vars):
 
                 static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                 static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-                hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-                hidden_vars['и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                hidden_vars[
+                    '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                hidden_vars[
+                    'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
                 static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
                 static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
 
@@ -3832,21 +3832,28 @@ def client_new(value_vars):
                 static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
                 static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
-                hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
-                hidden_vars['- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'
-                hidden_vars['- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
-                hidden_vars['- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'] = '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'
+                hidden_vars[
+                    '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
+                hidden_vars[
+                    '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'
+                hidden_vars[
+                    '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
+                hidden_vars[
+                    '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'] = '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'
                 if value_vars.get('access_point') == 'Infinet H11':
                     hidden_vars[
                         '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
-                    hidden_vars['После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
+                    hidden_vars[
+                        'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
                 else:
-                    hidden_vars['После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
+                    hidden_vars[
+                        'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    value_vars.update({'kad': kad})
+    return result_services, value_vars
 
-
-    result_services, result_services_ots = _new_services(result_services, value_vars)
-
+def _titles(result_services, result_services_ots):
+    """Данный метод формирует список заголовков из шаблонов в блоках ОРТР и ОТС"""
     index_template = 1
     titles = []
     for i in range(len(result_services)):
@@ -3862,13 +3869,16 @@ def client_new(value_vars):
             titles.append(result_services_ots[i][:result_services_ots[i].index('---')])
             index_template += 1
 
+    return titles
 
-    #titles = ''.join(titles)
-    #result_services = ''.join(result_services)
-    print(titles)
-    print(result_services)
+def client_new(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+     ОТС(заполненые шаблоны) для нового присоединения и новых услуг"""
+    result_services, value_vars = _new_enviroment(value_vars)
+    result_services, result_services_ots = _new_services(result_services, value_vars)
+    titles = _titles(result_services, result_services_ots)
 
-    return titles, result_services, result_services_ots, kad
+    return titles, result_services, result_services_ots, value_vars
 
 
 def analyzer_vars(stroka, static_vars, hidden_vars):
@@ -3985,7 +3995,7 @@ def enviroment(result_services, value_vars):
     sreda = value_vars.get('sreda')
     ppr = value_vars.get('ppr')
     templates = value_vars.get('templates')
-    pps = value_vars.get('pps')
+    pps = _readable_node(value_vars.get('pps'))
     kad = value_vars.get('kad')
     port = value_vars.get('port')
     device_client = value_vars.get('device_client')
