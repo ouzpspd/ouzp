@@ -988,7 +988,8 @@ def data(request):
                  'logic_csw_1000', 'pointA', 'pointB', 'policer_cks', 'policer_vm', 'new_vm', 'exist_vm', 'vm_inet', 'hotspot_points',
                  'hotspot_users', 'exist_hotspot_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
                  'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
-                 'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates']
+                 'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
+                 'readable_services', 'type_pass', 'head']
     value_vars = dict()
 
     for i in variables:
@@ -1001,8 +1002,18 @@ def data(request):
 
     request.session['templates'] = templates
 
+    if value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп. услуги с установкой КК':
+        counter_exist_line = len(value_vars.get('readable_services'))
+        print('!!!type_counter_exis')
+        print(type(counter_exist_line))
+        print('!!!')
+        print(type(value_vars.get('counter_line_services')))
+        counter_line_services = value_vars.get('counter_line_services') + counter_exist_line
+        value_vars.update({'counter_line_services': counter_line_services})
+        titles, result_services, result_services_ots, value_vars = extra_services(value_vars)
 
-    titles, result_services, result_services_ots, value_vars  = client_new(value_vars) #kad
+    else:
+        titles, result_services, result_services_ots, value_vars  = client_new(value_vars) #kad
 
     userlastname = None
     if request.user.is_authenticated:
@@ -4829,7 +4840,7 @@ def project_tr_exist_cl(request):
     pps = pps.strip()
     turnoff = ticket_tr.turnoff
     services_plus_desc = ticket_tr.services
-    type_tr = 'exist_cl'
+
     wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
     ftth_temp = ['Alpha', 'ОК-1']
     vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
@@ -4852,31 +4863,65 @@ def project_tr_exist_cl(request):
         sreda = '1'
         print('Среда передачи: UTP')
 
-    tag_service = []
+    if type_pass == 'Организация доп. услуги с установкой КК':
+        #tag_service.append('add_serv_to_cur_csw')
+        tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
+        counter_line_services, hotspot_points = _counter_line_services(services_plus_desc)
 
-    if type_pass == 'Перенос сервиса':
-        tag_service.append('pass_serv')
-    elif type_pass == 'Организация доп. услуги от существующего КК':
-        tag_service.append('add_serv_to_cur_csw')
 
-    if sreda == '1':
-        tag_service.append('copper')
-    elif sreda == '2' or sreda == '4':
-        tag_service.append('vols')
-    elif sreda == '3':
-        tag_service.append('wireless')
+        request.session['hotspot_points'] = hotspot_points
+        request.session['hotspot_users'] = hotspot_users
+        request.session['premium_plus'] = premium_plus
+        request.session['services_plus_desc'] = services_plus_desc
+        request.session['oattr'] = oattr
+        request.session['pps'] = pps
+        request.session['turnoff'] = turnoff
+        request.session['sreda'] = sreda
+        request.session['counter_line_services'] = counter_line_services
 
-    tag_service.append('exist_cl_data')
+        if counter_line_services == 0:
+            tag_service.append('data')
+        else:
+            if sreda == '1':
+                tag_service.append('copper')
+            elif sreda == '2' or sreda == '4':
+                tag_service.append('vols')
+            elif sreda == '3':
+                tag_service.append('wireless')
 
-    request.session['services_plus_desc'] = services_plus_desc
-    request.session['oattr'] = oattr
-    request.session['pps'] = pps
-    request.session['turnoff'] = turnoff
-    request.session['type_tr'] = type_tr
-    request.session['sreda'] = sreda
-    request.session['tag_service'] = tag_service
+        type_tr = 'new_cl'
+        request.session['type_tr'] = type_tr
+        request.session['tag_service'] = tag_service
+        print('!!!!!tagsevice')
+        print(tag_service)
+        return redirect(tag_service[0])
+    else:
+        type_tr = 'exist_cl'
+        tag_service = []
 
-    return redirect(tag_service[0])
+        if type_pass == 'Перенос сервиса':
+            tag_service.append('pass_serv')
+        elif type_pass == 'Организация доп. услуги от существующего КК':
+            tag_service.append('add_serv_to_cur_csw')
+
+        if sreda == '1':
+            tag_service.append('copper')
+        elif sreda == '2' or sreda == '4':
+            tag_service.append('vols')
+        elif sreda == '3':
+            tag_service.append('wireless')
+
+        tag_service.append('exist_cl_data')
+
+        request.session['services_plus_desc'] = services_plus_desc
+        request.session['oattr'] = oattr
+        request.session['pps'] = pps
+        request.session['turnoff'] = turnoff
+        request.session['type_tr'] = type_tr
+        request.session['sreda'] = sreda
+        request.session['tag_service'] = tag_service
+
+        return redirect(tag_service[0])
 
 
 def add_serv(request):
@@ -5165,3 +5210,53 @@ def exist_cl_data(request):
         error = 'Нет шаблона "Перенос сервиса %указать название сервиса%"'
         request.session['error'] = error
         redirect('no_data')
+
+
+def _passage_services(result_services, value_vars):
+    print("Перенос сервиса %указать название сервиса%" + '-' * 20)
+    templates = value_vars.get('templates')
+    readable_services = value_vars.get('readable_services')
+    sreda = value_vars.get('sreda')
+    log_change = value_vars.get('log_change')
+    head = value_vars.get('head')
+    stroka = templates.get("Перенос сервиса %указать название сервиса%")
+    if stroka:
+        static_vars = {}
+        hidden_vars = {}
+
+        static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
+        if sreda == '2' or sreda == '4':
+            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+        else:
+            static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+        if log_change:
+            hidden_vars[
+                '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
+            services = []
+            for key, value in readable_services.items():
+                if type(value) == str:
+                    services.append(key + ' ' + value)
+                elif type(value) == list:
+                    services.append(key + ''.join(value))
+            static_vars['указать сервис'] = ', '.join(services)
+            hidden_vars[
+                'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
+            hidden_vars[
+                '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
+            hidden_vars[
+                '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
+            static_vars['указать существующий КАД'] = head.split('\n')[5].split()[2]
+
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    return result_services
+
+
+def extra_services(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+     ОТС(заполненые шаблоны) для нового присоединения и новых услуг"""
+    result_services, value_vars = _new_enviroment(value_vars)
+    result_services, result_services_ots = _new_services(result_services, value_vars)
+    result_services = _passage_services(result_services, value_vars)
+    titles = _titles(result_services, result_services_ots)
+
+    return titles, result_services, result_services_ots, value_vars
