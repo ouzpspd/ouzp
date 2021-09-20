@@ -682,6 +682,10 @@ def copper(request):
         oattr = request.session['oattr']
         #counter_line_services = request.session['counter_line_services']
         #spp_link = request.session['spplink']
+        try:
+            type_pass = request.session['type_pass']
+        except KeyError:
+            type_pass = None
 
 
         list_switches = parsingByNodename(pps, username, password)
@@ -710,7 +714,12 @@ def copper(request):
                 list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
 
         request.session['list_switches'] = list_switches
-        copperform = CopperForm(initial={'port': 'свободный'})
+
+        if type_pass:
+            if type_pass == 'Организация доп. услуги с установкой КК':
+                copperform = CopperForm(initial={'port': 'свободный', 'logic_csw': True})
+        else:
+            copperform = CopperForm(initial={'port': 'свободный'})
 
         context = {
             'pps': pps,
@@ -784,6 +793,10 @@ def vols(request):
         print(dID)
         print(tID)
         print(trID)
+        try:
+            type_pass = request.session['type_pass']
+        except KeyError:
+            type_pass = None
 
         list_switches = parsingByNodename(pps, username, password)
         if list_switches[0] == 'Access denied':
@@ -814,20 +827,38 @@ def vols(request):
 
 
         if sreda == '2':
-            volsform = VolsForm(
-                initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
-                         'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
-                         'speed_port': 'Auto',
-                         'port': 'свободный'}
-            )
+            if type_pass:
+                if type_pass == 'Организация доп. услуги с установкой КК':
+                    volsform = VolsForm(
+                        initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
+                                 'device_client': 'оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентское оборудование',
+                                 'speed_port': 'Auto',
+                                 'port': 'свободный',
+                                 'logic_csw': True})
+            else:
+                volsform = VolsForm(
+                    initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
+                             'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                             'speed_port': 'Auto',
+                             'port': 'свободный'})
         elif sreda == '4':
-            volsform = VolsForm(
-                initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
-                         'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
-                         'speed_port': '100FD'}
-            )
+            if type_pass:
+                if type_pass == 'Организация доп. услуги с установкой КК':
+                    volsform = VolsForm(initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
+                                     'device_client': 'оптический передатчик SFP WDM, до 3 км, 1550 нм в клиентское оборудование',
+                                     'speed_port': '100FD',
+                                     'logic_csw': True})
+            else:
+                volsform = VolsForm(
+                        initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
+                                 'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                                 'speed_port': '100FD'})
         else:
-            volsform = VolsForm()
+            if type_pass:
+                if type_pass == 'Организация доп. услуги с установкой КК':
+                    volsform = VolsForm(initial={'logic_csw': True})
+            else:
+                volsform = VolsForm()
         context = {
             'pps': pps,
             'oattr': oattr,
@@ -1007,8 +1038,10 @@ def data(request):
         print('!!!type_counter_exis')
         print(type(counter_exist_line))
         print('!!!')
-        print(type(value_vars.get('counter_line_services')))
+        print(value_vars.get('readable_services'))
+        print(counter_exist_line)
         counter_line_services = value_vars.get('counter_line_services') + counter_exist_line
+        print(counter_line_services)
         value_vars.update({'counter_line_services': counter_line_services})
         titles, result_services, result_services_ots, value_vars = extra_services(value_vars)
 
@@ -1020,15 +1053,15 @@ def data(request):
         userlastname = request.user.last_name
     now = datetime.datetime.now()
     now = now.strftime("%d.%m.%Y")
-
     titles = ''.join(titles)
-    #titles = titles.replace('\n', '&#13;&#10;')
     result_services = '\n\n\n'.join(result_services)
-    #result_services = result_services.replace('\n', '<br />')
-    #result_services = titles + '&#13;&#10;' + result_services
-    result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
+    if value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп. услуги с установкой КК':
+        need = 'Требуется в данной точке организовать доп. услугу.'
+        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n' + value_vars.get('head') + need + '\n\n' + titles + '\n' + result_services
+    else:
+        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
     counter_str_ortr = result_services.count('\n')
-    #counter_str_ortr = result_services.count('&#13;&#10;')
+
 
 
 
@@ -5217,35 +5250,29 @@ def _passage_services(result_services, value_vars):
     templates = value_vars.get('templates')
     readable_services = value_vars.get('readable_services')
     sreda = value_vars.get('sreda')
-    log_change = value_vars.get('log_change')
-    head = value_vars.get('head')
-    stroka = templates.get("Перенос сервиса %указать название сервиса%")
+
+    stroka = templates.get("Перенос сервиса %указать название сервиса% на клиентский коммутатор")
     if stroka:
+        services = []
+        count_exist_serv = 0
+        for key, value in readable_services.items():
+            if type(value) == str:
+                services.append(key + ' ' + value)
+                count_exist_serv += 1
+            elif type(value) == list:
+                services.append(key + ''.join(value))
+                count_exist_serv += len(value)
+        for i in range(count_exist_serv):
+            result_services.append(enviroment_csw(value_vars))
         static_vars = {}
         hidden_vars = {}
-
         static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
         if sreda == '2' or sreda == '4':
             static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
         else:
             static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-        if log_change:
-            hidden_vars[
-                '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
-            services = []
-            for key, value in readable_services.items():
-                if type(value) == str:
-                    services.append(key + ' ' + value)
-                elif type(value) == list:
-                    services.append(key + ''.join(value))
-            static_vars['указать сервис'] = ', '.join(services)
-            hidden_vars[
-                'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
-            hidden_vars[
-                '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
-            hidden_vars[
-                '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = head.split('\n')[5].split()[2]
+        static_vars['указать сервис'] = ', '.join(services)
+
 
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     return result_services
@@ -5253,7 +5280,7 @@ def _passage_services(result_services, value_vars):
 
 def extra_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
-     ОТС(заполненые шаблоны) для нового присоединения и новых услуг"""
+     ОТС(заполненые шаблоны) для организации новых услуг используя существующее присоединение"""
     result_services, value_vars = _new_enviroment(value_vars)
     result_services, result_services_ots = _new_services(result_services, value_vars)
     result_services = _passage_services(result_services, value_vars)
