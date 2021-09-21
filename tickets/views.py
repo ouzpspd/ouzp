@@ -3,7 +3,8 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm, PassServForm
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm,\
+    PassServForm, AddServInstCswForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -1020,7 +1021,7 @@ def data(request):
                  'hotspot_users', 'exist_hotspot_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
                  'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
-                 'readable_services', 'type_pass', 'head']
+                 'readable_services', 'type_pass', 'head', 'type_install_csw']
     value_vars = dict()
 
     for i in variables:
@@ -3806,7 +3807,8 @@ def _readable_node(node_mon):
     return finish_node
 
 def _new_enviroment(value_vars):
-    """Данный метод формирует и заполняет шаблоны для нового присоединения с установкой КК"""
+    """Данный метод проверяет необходимость установки КК, если такая необходимость есть формирует и заполняет шаблон
+     для установки КК, если нет необходимости отправляет на метод, который формирует шаблон отдельной линии"""
     result_services = []
     kad = 'Не требуется'
 
@@ -3837,62 +3839,133 @@ def _new_enviroment(value_vars):
             else:
                 static_vars['100/1000'] = '100'
             templates = value_vars.get('templates')
-            sreda = value_vars.get('sreda')
-            if sreda == '1':
-                print("Присоединение КК к СПД по медной линии связи." + '-' * 20)
+            if value_vars.get('type_install_csw'):
                 stroka = templates.get("Установка клиентского коммутатора")
-                static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-                static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                hidden_vars['МКО:'] = 'МКО:'
+                hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
+                hidden_vars['- Согласовать время проведение работ.'] = '- Согласовать время проведение работ.'
 
-            elif sreda == '2' or sreda == '4':
-                if value_vars.get('ppr'):
-                    print('-' * 20 + '\n' + "Присоединение КК к СПД по оптической линии ")
-                    stroka = templates.get("Установка клиентского коммутатора")
-                    static_vars['указать № ППР'] = value_vars.get('ppr')
-                else:
-                    print('-' * 20 + '\n' + "Установка клиентского коммутатора по оптической линии связи")
-                    stroka = templates.get("Установка клиентского коммутатора")
+                if value_vars.get('type_install_csw') == 'Медная линия и порт не меняются':
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif value_vars.get('type_install_csw') == 'ВОЛС и порт не меняются':
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                    hidden_vars['и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                    static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                    if logic_csw_1000 == True:
+                        hidden_vars[
+                        '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                        hidden_vars[
+                        '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif value_vars.get('type_install_csw') == 'Перевод на гигабит по меди на текущем узле':
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+                    hidden_vars['- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'] = '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'
+                    hidden_vars['- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+                    hidden_vars['Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
+                    hidden_vars['Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+                    static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
 
-                static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
-                static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-                hidden_vars[
-                    '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-                hidden_vars[
-                    'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-                static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
-                static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                    static_vars['указать название старого коммутатора'] = value_vars.get('head').split('\n')[5].split()[2]
+                    # нужно еще старый порт как-то указать
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif value_vars.get('type_install_csw') == 'Перевод на гигабит по ВОЛС на текущем узле':
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                    hidden_vars[
+                        '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'] = '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'
+                    hidden_vars[
+                        '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+                    hidden_vars[
+                        'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
+                    hidden_vars[
+                        'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
 
-                if logic_csw_1000 == True:
+                    hidden_vars['и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                    static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+                    static_vars['указать название старого коммутатора'] = value_vars.get('head').split('\n')[5].split()[
+                        2]
+                    # нужно еще старый порт как-то указать
                     hidden_vars[
                         '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
                     hidden_vars[
                         '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif value_vars.get('type_install_csw') == 'Перевод на гигабит переключение с меди на ВОЛС' or value_vars.get('type_install_csw') == 'Перевод на гигабит на новый узел':
 
-            elif sreda == '3':
-                print("Присоединение к СПД по беспроводной среде передачи данных.")
-                stroka = templates.get("Установка клиентского коммутатора")
-                static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
-                static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-                static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
-                hidden_vars[
-                    '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
-                hidden_vars[
-                    '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'
-                hidden_vars[
-                    '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
-                hidden_vars[
-                    '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'] = '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'
-                if value_vars.get('access_point') == 'Infinet H11':
+                    static_vars['указать название старого коммутатора'] = value_vars.get('head').split('\n')[5].split()[
+                        2]
+                    # нужно еще старый порт как-то указать
                     hidden_vars[
-                        '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
+                        'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
                     hidden_vars[
-                        'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
-                else:
+                        'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+                    hidden_vars['- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'
+                    static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                    hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
                     hidden_vars[
-                        'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                        '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                    hidden_vars[
+                        '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            else:
+                sreda = value_vars.get('sreda')
+                if sreda == '1':
+                    print("Присоединение КК к СПД по медной линии связи." + '-' * 20)
+                    stroka = templates.get("Установка клиентского коммутатора")
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+                    static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+                elif sreda == '2' or sreda == '4':
+                    if value_vars.get('ppr'):
+                        print('-' * 20 + '\n' + "Присоединение КК к СПД по оптической линии ")
+                        stroka = templates.get("Установка клиентского коммутатора")
+                        static_vars['указать № ППР'] = value_vars.get('ppr')
+                    else:
+                        print('-' * 20 + '\n' + "Установка клиентского коммутатора по оптической линии связи")
+                        stroka = templates.get("Установка клиентского коммутатора")
+
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                    static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+                    hidden_vars[
+                        '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                    hidden_vars[
+                        'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                    static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+                    static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+
+                    if logic_csw_1000 == True:
+                        hidden_vars[
+                            '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                        hidden_vars[
+                            '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+                elif sreda == '3':
+                    print("Присоединение к СПД по беспроводной среде передачи данных.")
+                    stroka = templates.get("Установка клиентского коммутатора")
+                    static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+                    static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
+                    hidden_vars[
+                        '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
+                    hidden_vars[
+                        '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'
+                    hidden_vars[
+                        '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
+                    hidden_vars[
+                        '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'] = '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'
+                    if value_vars.get('access_point') == 'Infinet H11':
+                        hidden_vars[
+                            '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
+                        hidden_vars[
+                            'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
+                    else:
+                        hidden_vars[
+                            'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     value_vars.update({'kad': kad})
     return result_services, value_vars
 
@@ -4900,7 +4973,7 @@ def project_tr_exist_cl(request):
         #tag_service.append('add_serv_to_cur_csw')
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
         counter_line_services, hotspot_points = _counter_line_services(services_plus_desc)
-
+        tag_service.insert(0, 'add_serv_with_install_csw')
 
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
@@ -4912,7 +4985,7 @@ def project_tr_exist_cl(request):
         request.session['sreda'] = sreda
         request.session['counter_line_services'] = counter_line_services
 
-        if counter_line_services == 0:
+        """if counter_line_services == 0:
             tag_service.append('data')
         else:
             if sreda == '1':
@@ -4920,7 +4993,7 @@ def project_tr_exist_cl(request):
             elif sreda == '2' or sreda == '4':
                 tag_service.append('vols')
             elif sreda == '3':
-                tag_service.append('wireless')
+                tag_service.append('wireless')"""
 
         type_tr = 'new_cl'
         request.session['type_tr'] = type_tr
@@ -5287,3 +5360,28 @@ def extra_services(value_vars):
     titles = _titles(result_services, result_services_ots)
 
     return titles, result_services, result_services_ots, value_vars
+
+def add_serv_with_install_csw(request):
+    if request.method == 'POST':
+        add_serv_inst_csw_form = AddServInstCswForm(request.POST)
+
+        if add_serv_inst_csw_form.is_valid():
+            type_install_csw = add_serv_inst_csw_form.cleaned_data['type_install_csw']
+            request.session['type_install_csw'] = type_install_csw
+            tag_service = request.session['tag_service']
+            tag_service.remove('add_serv_with_install_csw')
+            if type_install_csw == 'Медная линия и порт не меняются' or type_install_csw == 'Перевод на гигабит по меди на текущем узле':
+                tag_service.append('copper')
+            else:
+                tag_service.append('vols')
+            request.session['tag_service'] = tag_service
+            return redirect(tag_service[0])
+
+    else:
+
+        add_serv_inst_csw_form = AddServInstCswForm()
+        context = {
+            'add_serv_inst_csw_form': add_serv_inst_csw_form
+        }
+
+        return render(request, 'tickets/add_serv_inst_csw_form.html', context)

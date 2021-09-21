@@ -70,8 +70,7 @@ urlpatterns = [
     path('project_tr_exist_cl/', project_tr_exist_cl, name='project_tr_exist_cl'),
     path('pass_serv/', pass_serv, name='pass_serv'),
     path('exist_cl_data/', exist_cl_data, name='exist_cl_data'),
-
-
+    path('add_serv_with_install_csw/', add_serv_with_install_csw, name='add_serv_with_install_csw'),
 
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
 ]

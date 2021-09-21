@@ -216,3 +216,14 @@ class PassServForm(forms.Form):
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     from_node = forms.BooleanField(label='Монтажные работы от узла связи?', required=False,
                                       widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
+
+
+class AddServInstCswForm(forms.Form):
+    types = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),
+             ('ВОЛС и порт не меняются', 'ВОЛС и порт не меняются'),
+             ('Перевод на гигабит переключение с меди на ВОЛС', 'Перевод на гигабит переключение с меди на ВОЛС'),
+             ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
+             ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
+             ('Перевод на гигабит на новый узел', 'Перевод на гигабит на новый узел')]
+    type_install_csw = forms.CharField(label='Варианты установки КК', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
