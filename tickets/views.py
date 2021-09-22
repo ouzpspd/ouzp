@@ -1021,7 +1021,7 @@ def data(request):
                  'hotspot_users', 'exist_hotspot_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
                  'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
-                 'readable_services', 'type_pass', 'head', 'type_install_csw']
+                 'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono']
     value_vars = dict()
 
     for i in variables:
@@ -3866,8 +3866,8 @@ def _new_enviroment(value_vars):
                     hidden_vars['Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
                     static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
 
-                    static_vars['указать название старого коммутатора'] = value_vars.get('head').split('\n')[5].split()[2]
-                    # нужно еще старый порт как-то указать
+                    static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
+                    static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif value_vars.get('type_install_csw') == 'Перевод на гигабит по ВОЛС на текущем узле':
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
@@ -3879,12 +3879,14 @@ def _new_enviroment(value_vars):
                         'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
                     hidden_vars[
                         'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
-
+                    hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                    static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
                     hidden_vars['и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                    static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_client')
                     static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-                    static_vars['указать название старого коммутатора'] = value_vars.get('head').split('\n')[5].split()[
-                        2]
-                    # нужно еще старый порт как-то указать
+
+                    static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
+                    static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
                     hidden_vars[
                         '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
                     hidden_vars[
@@ -3892,9 +3894,8 @@ def _new_enviroment(value_vars):
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif value_vars.get('type_install_csw') == 'Перевод на гигабит переключение с меди на ВОЛС' or value_vars.get('type_install_csw') == 'Перевод на гигабит на новый узел':
 
-                    static_vars['указать название старого коммутатора'] = value_vars.get('head').split('\n')[5].split()[
-                        2]
-                    # нужно еще старый порт как-то указать
+                    static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
+                    static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
                     hidden_vars[
                         'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
                     hidden_vars[
@@ -3903,6 +3904,10 @@ def _new_enviroment(value_vars):
                     static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                     hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
+                    hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                    static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+                    hidden_vars['и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                    static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
                     hidden_vars[
                         '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
                     hidden_vars[
@@ -4683,8 +4688,8 @@ def head(request):
     if uplink == [None]:
         static_vars['указать название коммутатора'] = selected_ono[0][-2]
         static_vars['указать порт'] = selected_ono[0][-1]
-        index_of_device = stroka.index('- порт %указать порт%') + len('- порт %указать порт%') + 1
-        stroka = stroka[:index_of_device] + '\n\n' + stroka[index_of_device:]
+        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
+        stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
     else:
         static_vars['указать название коммутатора'] = uplink[-1].split()[0]
         static_vars['указать порт'] = uplink[-1].split()[1]
@@ -4716,8 +4721,10 @@ def head(request):
                 list_stroka_device.append(extra_stroka_device)
 
         extra_extra_stroka_device = ''.join(list_stroka_device)
-        index_of_device = stroka.index('- порт %указать порт%') + len('- порт %указать порт%') + 1
-        stroka = stroka[:index_of_device] + extra_extra_stroka_device + '\n\n' + stroka[index_of_device:]
+        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
+        stroka = stroka[:index_of_device] + extra_extra_stroka_device + ' \n' + stroka[index_of_device:]
+    print('!!!!stroka s \n\n')
+    print(stroka)
 
     service_shpd = ['DA', 'BB', 'inet', 'Inet']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
@@ -4727,6 +4734,7 @@ def head(request):
     list_stroka_main_client_service = []
     list_stroka_other_client_service = []
     readable_services = dict()
+    counter_exist_line = set()
     for i in selected_ono:
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
@@ -4742,6 +4750,7 @@ def head(request):
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('"ШПД в интернет"')
                     readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
                     #if curr_value == None:
                     #    readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
                     #elif type(curr_value) == str:
@@ -4756,6 +4765,7 @@ def head(request):
                     #readable_services.update({'"Хот-спот"': f' c реквизитами "{i[-4]}"'})
                     curr_value = readable_services.get('"Хот-спот"')
                     readable_services = _readable(curr_value, readable_services, '"Хот-спот"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     extra_stroka_main_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
@@ -4763,6 +4773,7 @@ def head(request):
                     #readable_services.update({'"Вебург.ТВ"': f' c реквизитами "{i[-4]}"'})
                     curr_value = readable_services.get('"Вебург.ТВ"')
                     readable_services = _readable(curr_value, readable_services, '"Вебург.ТВ"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
                     extra_stroka_main_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]})\n'
@@ -4770,18 +4781,21 @@ def head(request):
                     #readable_services.update({'"Порт ВЛС"': f' "{i[-4]}"'})
                     curr_value = readable_services.get('"Порт ВЛС"')
                     readable_services = _readable(curr_value, readable_services, '"Порт ВЛС"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_portvm):
                     extra_stroka_main_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     #readable_services.update({'"Порт ВМ"': f' "{i[-4]}"'})
                     curr_value = readable_services.get('"Порт ВМ"')
                     readable_services = _readable(curr_value, readable_services, '"Порт ВМ"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Etherline':
                 extra_stroka_main_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 #readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
                 curr_value = readable_services.get('"ЦКС"')
                 readable_services = _readable(curr_value, readable_services, '"ЦКС"', i[-4])
+                counter_exist_line.add(f'{i[-2]} {i[-1]}')
         else:
             if i[2] == 'IP-адрес или подсеть':
                 if any(serv in i[-3] for serv in service_shpd):
@@ -4789,24 +4803,30 @@ def head(request):
                     extra_stroka_other_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     print(extra_stroka_other_client_service)
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
                     extra_stroka_other_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     print(extra_stroka_other_client_service)
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     extra_stroka_other_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     print(extra_stroka_other_client_service)
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
                     extra_stroka_other_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_portvm):
                     extra_stroka_other_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Etherline':
                 extra_stroka_other_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                 list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                counter_exist_line.add(f'{i[-2]} {i[-1]}')
 
 
     if vgw_chains:
@@ -4817,8 +4837,10 @@ def head(request):
             room = i.get('type')
             if model == 'ITM SIP':
                 extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
+                counter_exist_line.add(f'{vgw_uplink}')
             else:
                 extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
+                counter_exist_line.add(f'{vgw_uplink}')
             list_stroka_main_client_service.append(extra_stroka_main_client_service)
             readable_services.update({'"Телефония"': None})
     extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
@@ -4845,7 +4867,11 @@ def head(request):
             extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
             stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
 
-
+    counter_exist_line = len(counter_exist_line)
+    if (not selected_ono[0][-2].startswith('CSW') or not selected_ono[0][-2].startswith('WDA')) and counter_exist_line > 1:
+        pass
+    else:
+        hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
 
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
@@ -4856,6 +4882,7 @@ def head(request):
     head = rev_result_services[::-1]
     request.session['head'] = head
     request.session['readable_services'] = readable_services
+    request.session['counter_exist_line'] = counter_exist_line
 
 
     context = {
@@ -5370,7 +5397,11 @@ def add_serv_with_install_csw(request):
             request.session['type_install_csw'] = type_install_csw
             tag_service = request.session['tag_service']
             tag_service.remove('add_serv_with_install_csw')
-            if type_install_csw == 'Медная линия и порт не меняются' or type_install_csw == 'Перевод на гигабит по меди на текущем узле':
+            if type_install_csw == 'Медная линия и порт не меняются':
+                tag_service.append('data')
+            elif type_install_csw == 'ВОЛС и порт не меняются':
+                tag_service.append('data')
+            elif type_install_csw == 'Перевод на гигабит по меди на текущем узле':
                 tag_service.append('copper')
             else:
                 tag_service.append('vols')
