@@ -240,8 +240,13 @@ class ChangeServForm(forms.Form):
              ("Организация услуги ЦКС Etherline trunk'ом с простоем связи.", "Организация услуги ЦКС Etherline trunk'ом с простоем связи.")]
     type_change_service = forms.CharField(label='Варианты ТР', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
-class ChangeShpdForm(forms.Form):
-    router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    types = [('access', 'access'), ('trunk', 'trunk')]
-    type_shpd = forms.CharField(label='Режим порта',
-                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+class ChangeParamsForm(forms.Form):
+    new_mask = forms.IntegerField(max_value=32, required=False, label='Количество камер',
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    types_port = [("access'ом (native vlan)", "access'ом (native vlan)"), ("trunk", "trunk"), ("в неизменном виде", "в неизменном виде")]
+    change_type_port_exist_serv = forms.CharField(required=False, label='Режим порта существующей услуги',
+                                 widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
+    change_type_port_new_serv = forms.CharField(required=False, label='Режим порта новой услуги',
+                                           widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
+    routed_ip = forms.CharField(max_length=20, required=False, label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    routed_vrf = forms.CharField(max_length=50, required=False, label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))

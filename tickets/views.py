@@ -4,7 +4,7 @@ from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm,\
-    PassServForm, AddServInstCswForm, ChangeServForm, ChangeShpdForm
+    PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -1902,39 +1902,6 @@ def shpd(request):
                 services_shpd.append(service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
         return render(request, 'tickets/shpd.html', {'shpdform': shpdform, 'services_shpd': services_shpd})
-
-def change_shpd(request):
-    if request.method == 'POST':
-        changeshpdform = ChangeShpdForm(request.POST)
-
-        if changeshpdform.is_valid():
-            router_shpd = changeshpdform.cleaned_data['router']
-            type_shpd = changeshpdform.cleaned_data['type_shpd']
-            if type_shpd == 'trunk':
-                request.session['counter_line_services'] = 1
-            request.session['router_shpd'] = router_shpd
-            request.session['type_shpd'] = type_shpd
-            tag_service = request.session['tag_service']
-            tag_service.remove('shpd')
-            request.session['tag_service'] = tag_service
-            return redirect(tag_service[0])
-
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        type_change_service = request.session['type_change_service']
-        services_shpd = []
-        for service in services_plus_desc:
-            if 'Интернет, DHCP' in service or 'Интернет, блок Адресов Сети Интернет' in service:
-                services_shpd.append(service)
-        changeshpdform = ChangeShpdForm(initial={'shpd': 'access'})
-        context = {
-            'changeshpdform': changeshpdform,
-            'type_change_service': type_change_service,
-            'services_plus_desc': services_plus_desc,
-        }
-        return render(request, 'tickets/shpd.html', context)
-
 
 
 def portvk(request):
@@ -5671,3 +5638,42 @@ def change_serv(request):
         }
 
         return render(request, 'tickets/change_serv.html', context)
+
+def change_params_serv(request):
+    if request.method == 'POST':
+        changeparamsform = ChangeParamsForm(request.POST)
+
+        if changeparamsform.is_valid():
+            new_mask = changeparamsform.cleaned_data['new_mask']
+            change_type_port_exist_serv = changeparamsform.cleaned_data['change_type_port_exist_serv']
+            change_type_port_new_serv = changeparamsform.cleaned_data['change_type_port_new_serv']
+            routed_ip = changeparamsform.cleaned_data['routed_ip']
+            routed_vrf = changeparamsform.cleaned_data['routed_vrf']
+
+            request.session['new_mask'] = new_mask
+            request.session['change_type_port_exist_serv'] = change_type_port_exist_serv
+            request.session['change_type_port_new_serv'] = change_type_port_new_serv
+            request.session['routed_ip'] = routed_ip
+            request.session['routed_vrf'] = routed_vrf
+            tag_service = request.session['tag_service']
+            tag_service.remove('change_serv')
+            type_change_service = request.session['type_change_service']
+            if type_change_service == "Организация услуги ЦКС Etherline trunk'ом с простоем связи.":
+                tag_service.append('cks')
+            elif type_change_service == "Организация услуги порт ВЛС trunk'ом с простоем связи.":
+                tag_service.append('portvk')
+            elif type_change_service == "Организация услуги порт виртуального маршрутизатора trunk'ом с простоем связи.":
+                tag_service.append('portvm')
+            tag_service.append('data')
+            request.session['tag_service'] = tag_service
+            return redirect(tag_service[0])
+
+    else:
+        type_change_service = request.session['type_change_service']
+        changeparamsform = ChangeParamsForm()
+        context = {
+            'changeparamsform': changeparamsform,
+            'type_change_service': type_change_service
+        }
+
+        return render(request, 'tickets/change_params_serv.html', context)
