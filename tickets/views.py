@@ -4,7 +4,7 @@ from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm,\
-    PassServForm, AddServInstCswForm
+    PassServForm, AddServInstCswForm, ChangeServForm, ChangeShpdForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -1902,6 +1902,38 @@ def shpd(request):
                 services_shpd.append(service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
         return render(request, 'tickets/shpd.html', {'shpdform': shpdform, 'services_shpd': services_shpd})
+
+def change_shpd(request):
+    if request.method == 'POST':
+        changeshpdform = ChangeShpdForm(request.POST)
+
+        if changeshpdform.is_valid():
+            router_shpd = changeshpdform.cleaned_data['router']
+            type_shpd = changeshpdform.cleaned_data['type_shpd']
+            if type_shpd == 'trunk':
+                request.session['counter_line_services'] = 1
+            request.session['router_shpd'] = router_shpd
+            request.session['type_shpd'] = type_shpd
+            tag_service = request.session['tag_service']
+            tag_service.remove('shpd')
+            request.session['tag_service'] = tag_service
+            return redirect(tag_service[0])
+
+
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        type_change_service = request.session['type_change_service']
+        services_shpd = []
+        for service in services_plus_desc:
+            if 'Интернет, DHCP' in service or 'Интернет, блок Адресов Сети Интернет' in service:
+                services_shpd.append(service)
+        changeshpdform = ChangeShpdForm(initial={'shpd': 'access'})
+        context = {
+            'changeshpdform': changeshpdform,
+            'type_change_service': type_change_service,
+            'services_plus_desc': services_plus_desc,
+        }
+        return render(request, 'tickets/shpd.html', context)
 
 
 
@@ -5037,30 +5069,27 @@ def project_tr_exist_cl(request):
     pps = pps.strip()
     turnoff = ticket_tr.turnoff
     services_plus_desc = ticket_tr.services
+    if oattr:
+        wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+        ftth_temp = ['Alpha', 'ОК-1']
+        vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+        if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+            sreda = '3'
+            print('Среда передачи:  Беспроводная среда')
+        elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+            sreda = '4'
+            print('Среда передачи: FTTH')
+        elif any(vo in oattr for vo in vols_temp):
+            sreda = '2'
+            print('Среда передачи: ВОЛС')
+        else:
+            sreda = '1'
+            print('Среда передачи: UTP')
 
-    wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
-    ftth_temp = ['Alpha', 'ОК-1']
-    vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
-    if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
-
-        # if ((not 'ОК' in oattr) and ('БС ' in oattr)) or (
-        #        (not 'ОК' in oattr) and ('радио' in oattr)) or (
-        #        (not 'ОК' in oattr) and ('радиоканал' in oattr)) or ((not 'ОК' in oattr) and ('антенну' in oattr)):
-        sreda = '3'
-        print('Среда передачи:  Беспроводная среда')
-    elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
-        sreda = '4'
-        print('Среда передачи: FTTH')
-    elif any(vo in oattr for vo in vols_temp):
-        # elif ('ОВ' in oattr) or ('ОК' in oattr) or ('ВОЛС' in oattr) or ('волокно' in oattr) or (
-        #        'ОР ' in oattr) or ('ОР№' in oattr) or ('сущ.ОМ' in oattr) or ('оптическ' in oattr):
-        sreda = '2'
-        print('Среда передачи: ВОЛС')
-    else:
-        sreda = '1'
-        print('Среда передачи: UTP')
-
-    if type_pass == 'Организация доп. услуги с установкой КК':
+    if type_pass == 'Изменение/организация сервисов без монтаж. работ':
+        tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
+        tag_service.insert(0, 'change_serv')
+    elif type_pass == 'Организация доп. услуги с установкой КК':
         #tag_service.append('add_serv_to_cur_csw')
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
         counter_line_services, hotspot_points = _counter_line_services(services_plus_desc)
@@ -5162,36 +5191,7 @@ def add_serv(request):
         else:
             value_vars.update({i: request.session[i]})
 
-    '''titles, result_services, result_services_ots, kad = client_new(value_vars, value_vars['list_switches'], value_vars['ppr'],
-                                                                   templates, counter_line_services,
-                                                                   services_plus_desc, value_vars['logic_csw'], pps,
-                                                                   sreda, value_vars['port'],
-                                                                   value_vars['device_client'],
-                                                                   value_vars['device_pps'], value_vars['speed_port'],
-                                                                   value_vars['model_csw'], value_vars['port_csw'],
-                                                                   value_vars['logic_csw_1000'], value_vars['pointA'],
-                                                                   value_vars['pointB'], value_vars['policer_cks'],
-                                                                   value_vars['policer_vk'], value_vars['new_vk'],
-                                                                   value_vars['exist_vk'], value_vars['policer_vm'],
-                                                                   value_vars['new_vm'], value_vars['exist_vm'],
-                                                                   value_vars['vm_inet'], value_vars['hotspot_points'],
-                                                                   value_vars['hotspot_users'],
-                                                                   value_vars['exist_hotspot_client'],
-                                                                   value_vars['camera_number'],
-                                                                   value_vars['camera_model'], value_vars['voice'],
-                                                                   value_vars['deep_archive'],
-                                                                   value_vars['camera_place_one'],
-                                                                   value_vars['camera_place_two'],
-                                                                   address, value_vars['vgw'],
-                                                                   value_vars['channel_vgw'], value_vars['ports_vgw'],
-                                                                   value_vars['local_type'], value_vars['local_ports'],
-                                                                   value_vars['sks_poe'], value_vars['sks_router'],
-                                                                   value_vars['lvs_busy'], value_vars['lvs_switch'],
-                                                                   value_vars['access_point'],
-                                                                   value_vars['router_shpd'], value_vars['type_shpd'],
-                                                                   value_vars['type_itv'], value_vars['cnt_itv'],
-                                                                   value_vars['type_cks'], value_vars['type_portvk'],
-                                                                   value_vars['type_portvm'])'''
+
 
     return redirect('no_data')
 
@@ -5258,7 +5258,7 @@ def _passage_services(result_services, value_vars):
                 '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
             hidden_vars[
                 '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[5].split()[2]
+            static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     return result_services
@@ -5520,7 +5520,7 @@ def exist_cl_data(request):
             hidden_vars['В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
             hidden_vars['- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
             hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = head.split('\n')[5].split()[2]
+            static_vars['указать существующий КАД'] = head.split('\n')[4].split()[2]
 
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
@@ -5586,6 +5586,16 @@ def _passage_services_on_csw(result_services, value_vars):
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     return result_services
 
+def change_services(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+     ОТС(заполненые шаблоны) для организации новых услуг или изменения существующих без монтаж. работ"""
+    #result_services, result_services_ots = _new_services(result_services, value_vars)
+    result_services, result_services_ots = _change_services(result_services, value_vars)
+    result_services_ots = None
+    titles = _titles(result_services, result_services_ots)
+
+    return titles, result_services, result_services_ots, value_vars
+
 
 def extra_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
@@ -5638,3 +5648,26 @@ def add_serv_with_install_csw(request):
         }
 
         return render(request, 'tickets/add_serv_inst_csw_form.html', context)
+
+
+def change_serv(request):
+    if request.method == 'POST':
+        changeservform = ChangeServForm(request.POST)
+
+        if changeservform.is_valid():
+            type_change_service = changeservform.cleaned_data['type_change_service']
+            request.session['type_change_service'] = type_change_service
+            tag_service = request.session['tag_service']
+            tag_service.remove('change_serv')
+            tag_service.append('data')
+            request.session['tag_service'] = tag_service
+            return redirect(tag_service[0])
+
+    else:
+
+        changeservform = ChangeServForm()
+        context = {
+            'changeservform': changeservform
+        }
+
+        return render(request, 'tickets/change_serv.html', context)

@@ -203,6 +203,7 @@ class PassForm(forms.Form):
     #router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [
         ('Перенос сервиса', 'Перенос сервиса'),
+        ('Изменение/организация сервисов без монтаж. работ', 'Изменение/организация сервисов без монтаж. работ'),
         ('Перенос существующих сервисов', 'Перенос существующих сервисов'),
         ('Перенос сервиса "ШПД в Интернет" с изменением реквизитов', 'Перенос сервиса "ШПД в Интернет" с изменением реквизитов'),
         ('Организация доп. услуги с установкой КК', 'Организация доп. услуги с установкой КК'),
@@ -228,3 +229,19 @@ class AddServInstCswForm(forms.Form):
              ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
              ('Перевод на гигабит/перенос на новый узел', 'Перевод на гигабит/перенос на новый узел')]
     type_install_csw = forms.CharField(label='Варианты установки КК', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
+
+class ChangeServForm(forms.Form):
+    types = [("Организация услуги ШПД в интернет trunk'ом.", "Организация услуги ШПД в интернет trunk'ом."),
+             ("Организация услуги ШПД в интернет trunk'ом с простоем связи.", "Организация услуги ШПД в интернет trunk'ом с простоем связи."),
+             ("Изменение существующей cхемы организации ШПД", "Изменение существующей cхемы организации ШПД"),
+             ("Замена connected подсети на connected подсеть", "Замена connected подсети на connected подсеть"),
+             ("Организация дополнительной подсети (connected).", "Организация дополнительной подсети (connected)."),
+             ("Организация услуги ЦКС Etherline trunk'ом с простоем связи.", "Организация услуги ЦКС Etherline trunk'ом с простоем связи.")]
+    type_change_service = forms.CharField(label='Варианты ТР', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
+class ChangeShpdForm(forms.Form):
+    router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    types = [('access', 'access'), ('trunk', 'trunk')]
+    type_shpd = forms.CharField(label='Режим порта',
+                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
