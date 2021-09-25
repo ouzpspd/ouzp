@@ -1,10 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block content %}
 
-</body>
-</html>
+<div class="container">
+    <div class="card mb-2">
+        <h5 class="card-header">Параметры</h5>
+            <div class="card-body">
+<form action="{% url 'change_params_serv' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        {% if turnoff_trunk %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
+                    {{changeparamsform.new_mask}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changeparamsform.change_type_port_exist_serv.id_for_label}}">Режим порта существующей услуги</label>
+                    {{changeparamsform.change_type_port_exist_serv}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changeparamsform.change_type_port_new_serv.id_for_label}}">Режим порта новой услуги</label>
+                    {{changeparamsform.change_type_port_new_serv}}
+                </div>
+            </div>
+        </div>
+        {% elif only_mask %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
+                    {{changeparamsform.new_mask}}
+                </div>
+            </div>
+        </div>
+        {% elif routed %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
+                    {{changeparamsform.new_mask}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changeparamsform.routed_ip.id_for_label}}">Ip-адрес</label>
+                    {{changeparamsform.routed_ip}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changeparamsform.routed_vrf.id_for_label}}">VRF</label>
+                    {{changeparamsform.routed_vrf}}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        </div>
+        <div class="row mt-1">
+            <div class="d-grid gap-2 col-4">
+                <button type="submit" class="btn btn-primary">Продолжить</button>
+            </div>
+        </div>
+
+    </div>
+</form>
+            </div>
+    </div>
+</div>

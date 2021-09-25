@@ -1060,6 +1060,8 @@ def data(request):
         titles, result_services, result_services_ots, value_vars = extra_services(value_vars)
     elif value_vars.get('type_pass') == 'Перенос существующих сервисов':
         titles, result_services, result_services_ots, value_vars = passage_services(value_vars)
+    elif value_vars.get('type_pass') == 'Изменение/организация сервисов без монтаж. работ':
+        titles, result_services, result_services_ots, value_vars = change_services(value_vars)
     else:
         titles, result_services, result_services_ots, value_vars  = client_new(value_vars) #kad
 
@@ -5056,6 +5058,13 @@ def project_tr_exist_cl(request):
     if type_pass == 'Изменение/организация сервисов без монтаж. работ':
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
         tag_service.insert(0, 'change_serv')
+
+        type_tr = 'new_cl'
+        request.session['type_tr'] = type_tr
+        request.session['tag_service'] = tag_service
+        print('!!!!!tagsevice')
+        print(tag_service)
+        return redirect(tag_service[0])
     elif type_pass == 'Организация доп. услуги с установкой КК':
         #tag_service.append('add_serv_to_cur_csw')
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
@@ -5557,7 +5566,7 @@ def change_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для организации новых услуг или изменения существующих без монтаж. работ"""
     #result_services, result_services_ots = _new_services(result_services, value_vars)
-    result_services, result_services_ots = _change_services(result_services, value_vars)
+    result_services = _change_services(value_vars)
     result_services_ots = None
     titles = _titles(result_services, result_services_ots)
 
@@ -5626,7 +5635,11 @@ def change_serv(request):
             request.session['type_change_service'] = type_change_service
             tag_service = request.session['tag_service']
             tag_service.remove('change_serv')
-            tag_service.append('data')
+            if type_change_service == "Организация доп IPv6":
+                tag_service.append('data')
+            else:
+                tag_service.insert(0, 'change_params_serv')
+
             request.session['tag_service'] = tag_service
             return redirect(tag_service[0])
 
@@ -5656,24 +5669,52 @@ def change_params_serv(request):
             request.session['routed_ip'] = routed_ip
             request.session['routed_vrf'] = routed_vrf
             tag_service = request.session['tag_service']
-            tag_service.remove('change_serv')
-            type_change_service = request.session['type_change_service']
-            if type_change_service == "Организация услуги ЦКС Etherline trunk'ом с простоем связи.":
-                tag_service.append('cks')
-            elif type_change_service == "Организация услуги порт ВЛС trunk'ом с простоем связи.":
-                tag_service.append('portvk')
-            elif type_change_service == "Организация услуги порт виртуального маршрутизатора trunk'ом с простоем связи.":
-                tag_service.append('portvm')
+            tag_service.remove('change_params_serv')
+            if new_mask:
+                tag_service.remove('shpd')
+
             tag_service.append('data')
             request.session['tag_service'] = tag_service
             return redirect(tag_service[0])
 
     else:
         type_change_service = request.session['type_change_service']
+        types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
+                               "Организация ЦКС trunk'ом с простоем",
+                               "Организация порта ВЛС trunk'ом с простоем",
+                               "Организация порта ВМ trunk'ом с простоем"]
+        if type_change_service in types_turnoff_trunk:
+            turnoff_trunk = True
+        else:
+            turnoff_trunk = False
+        types_only_mask = ["Организация порта ВМ trunk'ом",
+                           "Организация порта ВЛС trunk'ом",
+                           "Организация ЦКС trunk'ом",
+                           "Организация доп connected",
+                           "Замена connected на connected",
+                           "Изменение cхемы организации ШПД",
+                           "Организация ШПД trunk'ом"]
+        if type_change_service in types_only_mask:
+            only_mask = True
+        else:
+            only_mask = False
+        if type_change_service == "Организация доп маршрутизируемой":
+            routed = True
+        else:
+            routed = False
+
         changeparamsform = ChangeParamsForm()
         context = {
             'changeparamsform': changeparamsform,
-            'type_change_service': type_change_service
+            'type_change_service': type_change_service,
+            'turnoff_trunk': turnoff_trunk,
+            'only_mask': only_mask,
+            'routed': routed
         }
 
         return render(request, 'tickets/change_params_serv.html', context)
+
+
+def _change_services(value_vars):
+    result_services = []
+    return result_services
