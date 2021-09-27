@@ -1034,7 +1034,11 @@ def data(request):
                  'hotspot_users', 'exist_hotspot_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
                  'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
-                 'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change']
+                 'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
+                 'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service']
+
+
+
     value_vars = dict()
 
     for i in variables:
@@ -1835,7 +1839,11 @@ def cks(request):
             type_cks = cksform.cleaned_data['type_cks']
             if type_cks == 'trunk':
                 request.session['counter_line_services'] = 1
-
+            #try:
+            #    points_cks = request.session['all_cks_in_tr']
+            #except KeyError:
+            #    all_cks_in_tr = dict()
+            #all_cks_in_tr.update({})
             request.session['pointA'] = pointA
             request.session['pointB'] = pointB
             request.session['policer_cks'] = policer_cks
@@ -1848,6 +1856,7 @@ def cks(request):
 
     else:
         services_plus_desc = request.session['services_plus_desc']
+
         services_cks = []
         for service in services_plus_desc:
             if 'ЦКС' in service:
@@ -5717,4 +5726,109 @@ def change_params_serv(request):
 
 def _change_services(value_vars):
     result_services = []
+    services_plus_desc = value_vars.get('services_plus_desc')
+    type_change_service = value_vars.get('type_change_service')
+    templates = value_vars.get('templates')
+    if type_change_service == "Организация ШПД trunk'ом":
+        stroka = templates.get("Организация услуги ШПД в интернет trunk'ом.")
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать маску'] = value_vars.get('new_mask')
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Организация ШПД trunk'ом с простоем":
+        stroka = templates.get("Организация услуги ШПД в интернет trunk'ом с простоем связи.")
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать маску'] = value_vars.get('new_mask')
+        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+        static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_exist_serv')
+        static_vars["access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_new_serv')
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Изменение cхемы организации ШПД":
+        stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %указать сущ. маску% на подсеть с маской %указать нов. маску%")
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать нов. маску'] = value_vars.get('new_mask')
+        static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][0][-3:]
+        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+        static_vars['изменится/не изменится'] = 'не изменится'
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Замена connected на connected":
+        stroka = templates.get("Замена существующей connected подсети на connected подсеть с %большей/меньшей% маской")
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать нов. маску'] = value_vars.get('new_mask')
+        static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][0][-3:]
+        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+        static_vars['изменится/не изменится'] = 'не изменится'
+        if int(static_vars['указать нов. маску'][1:]) > int(static_vars['указать нов. маску'][1:]):
+            static_vars['большей/меньшей'] = 'меньшей'
+        else:
+            static_vars['большей/меньшей'] = 'большей'
+        static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
+        match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
+        svi = match_svi.group(1)
+        static_vars['указать номер SVI'] = svi
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Организация доп connected.":
+        stroka = templates.get('Организация дополнительной подсети (connected)')
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать нов. маску'] = value_vars.get('new_mask')
+        static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
+        match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
+        svi = match_svi.group(1)
+        static_vars['указать номер SVI'] = svi
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Организация доп маршрутизируемой":
+        stroka = templates.get("Организация маршрутизируемого непрерывного блока адресов сети интернет")
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать нов. маску'] = value_vars.get('new_mask')
+        static_vars['указать ip-адрес'] = value_vars.get('routed_ip')
+        static_vars['указать название vrf'] = value_vars.get('routed_vrf')
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Организация доп IPv6":
+        stroka = templates.get('Предоставление возможности прямой маршрутизации IPv6 дополнительно к существующему IPv4 подключению')
+        static_vars = {}
+        hidden_vars = {}
+        match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
+        svi = match_svi.group(1)
+        static_vars['указать номер SVI'] = svi
+        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+    elif type_change_service == "Организация ЦКС trunk'ом":
+        static_vars = {}
+        hidden_vars = {}
+        static_vars['указать точку "A"'] = value_vars.get('pointA')
+        static_vars['указать точку "B"'] = value_vars.get('pointB')
+        static_vars['полисером Subinterface/портом подключения'] = value_vars.get('policer_cks')
+        for service in services_plus_desc:
+            if 'ЦКС' in service:
+                rate = _get_policer(service)
+        static_vars['указать полосу'] = rate
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif type_change_service == "Организация ЦКС trunk'ом с простоем":
+        pass
+    elif type_change_service == "Организация порта ВЛС trunk'ом":
+        pass
+    elif type_change_service == "Организация порта ВЛС trunk'ом с простоем":
+        pass
+    elif type_change_service == "Организация порта ВМ trunk'ом":
+        pass
+    elif type_change_service == "Организация порта ВМ trunk'ом с простоем":
+        pass
     return result_services
+
+
+def _get_policer(service):
+    if '1000' in service:
+        policer = '1 Гбит/с'
+    elif '100' in service:
+        policer = '100 Мбит/с'
+    elif '10' in service:
+        policer = '10 Мбит/с'
+    elif '1' in service:
+        policer = '1 Гбит/с'
+    else:
+        policer = 'Неизвестная полоса'
+    return policer
