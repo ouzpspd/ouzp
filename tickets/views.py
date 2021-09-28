@@ -188,14 +188,14 @@ def match_cks(tochka, login, password):
         # print(match_cks)
         for i in match_cks:
             list_cks.append(i.group(1))
-        for i in itertools.combinations(list_cks,
-                                        2):  # берет по очереди по 2 элемента списка не включая дубли и перевертыши
-            list_strok.append(i[0] + ' - ' + i[1])
+        #for i in itertools.combinations(list_cks,
+        #                                2):  # берет по очереди по 2 элемента списка не включая дубли и перевертыши
+        #    list_strok.append(i[0] + ' - ' + i[1])
 
-        return list_strok
+        return list_cks
     else:
-        list_strok.append('Access denied')
-        return list_strok
+        list_cks.append('Access denied')
+        return list_cks
 
 
 
@@ -1035,7 +1035,8 @@ def data(request):
                  'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
-                 'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service']
+                 'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
+                 'all_cks_in_tr']
 
 
 
@@ -1839,28 +1840,32 @@ def cks(request):
             type_cks = cksform.cleaned_data['type_cks']
             if type_cks == 'trunk':
                 request.session['counter_line_services'] = 1
-            #try:
-            #    points_cks = request.session['all_cks_in_tr']
-            #except KeyError:
-            #    all_cks_in_tr = dict()
+            try:
+                all_cks_in_tr = request.session['all_cks_in_tr']
+            except KeyError:
+                all_cks_in_tr = dict()
             #all_cks_in_tr.update({})
-            request.session['pointA'] = pointA
-            request.session['pointB'] = pointB
-            request.session['policer_cks'] = policer_cks
-            request.session['type_cks'] = type_cks
+            #request.session['pointA'] = pointA
+            #request.session['pointB'] = pointB
+            #request.session['policer_cks'] = policer_cks
+            #request.session['type_cks'] = type_cks
             tag_service = request.session['tag_service']
+            service = tag_service[0]['cks']
+            all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks, 'type_cks': type_cks}})
             tag_service.pop(0)
             request.session['tag_service'] = tag_service
+            request.session['all_cks_in_tr'] = all_cks_in_tr
             return redirect(next(iter(tag_service[0])))
 
 
     else:
-        services_plus_desc = request.session['services_plus_desc']
-
-        services_cks = []
-        for service in services_plus_desc:
-            if 'ЦКС' in service:
-                services_cks.append(service)
+        #services_plus_desc = request.session['services_plus_desc']
+        tag_service = request.session['tag_service']
+        service = tag_service[0]['cks']
+        #services_cks = []
+        #for service in services_plus_desc:
+        #    if 'ЦКС' in service:
+        #        services_cks.append(service)
 
         user = User.objects.get(username=request.user.username)
         credent = cache.get(user)
@@ -1868,24 +1873,26 @@ def cks(request):
         password = credent['password']
 
 
-
-        tochka = request.session['tochka']
-        list_strok = match_cks(tochka, username, password)
-        if list_strok[0] == 'Access denied':
+        try:
+            tochka = request.session['tochka']
+            list_cks = match_cks(tochka, username, password)
+        except KeyError:
+            list_cks = request.session['cks_points']
+        if list_cks[0] == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
             response['Location'] += '?next={}'.format(request.path)
             return response
         else:
-            if len(list_strok) == 1:
-                pointsCKS = list_strok[0].split('-')
-                pointA = pointsCKS[0]
-                pointB = pointsCKS[1]
+            if len(list_cks) == 2:
+                #pointsCKS = list_strok[0].split('-')
+                pointA = list_cks[0]
+                pointB = list_cks[1]
                 cksform = CksForm(initial={'pointA': pointA, 'pointB': pointB})
-                return render(request, 'tickets/cks.html', {'cksform': cksform, 'services_cks': services_cks})
+                return render(request, 'tickets/cks.html', {'cksform': cksform, 'services_cks': service})
             else:
                 cksform = CksForm()
-                return render(request, 'tickets/cks.html', {'cksform': cksform, 'list_strok': list_strok, 'services_cks': services_cks})
+                return render(request, 'tickets/cks.html', {'cksform': cksform, 'list_strok': list_cks, 'services_cks': service})
 
 
 def shpd(request):
@@ -3319,28 +3326,29 @@ def _new_services(result_services, value_vars):
 
             static_vars = {}
             hidden_vars = {}
+            all_cks_in_tr = value_vars.get('all_cks_in_tr')
+            if all_cks_in_tr.get(service):
+                static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
+                static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+                static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
+                static_vars['указать полосу'] = _get_policer(service)
+                #if '1000' in service:
+                #    static_vars['указать полосу'] = '1 Гбит/с'
+                #elif '100' in service:
+                #    static_vars['указать полосу'] = '100 Мбит/с'
+                #lif '10' in service:
+                #   static_vars['указать полосу'] = '10 Мбит/с'
+                #lif '1' in service:
+                #   static_vars['указать полосу'] = '1 Гбит/с'
+                #lse:
+                #    static_vars['указать полосу'] = 'Неизвестная полоса'
 
-            static_vars['указать точку "A"'] = value_vars.get('pointA')
-            static_vars['указать точку "B"'] = value_vars.get('pointB')
-            static_vars['полисером Subinterface/портом подключения'] = value_vars.get('policer_cks')
-
-            if '1000' in service:
-                static_vars['указать полосу'] = '1 Гбит/с'
-            elif '100' in service:
-                static_vars['указать полосу'] = '100 Мбит/с'
-            elif '10' in service:
-                static_vars['указать полосу'] = '10 Мбит/с'
-            elif '1' in service:
-                static_vars['указать полосу'] = '1 Гбит/с'
-            else:
-                static_vars['указать полосу'] = 'Неизвестная полоса'
-
-            if value_vars.get('type_cks') == 'access':
-                stroka = templates.get("Организация услуги ЦКС Etherline access'ом.")
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-            elif value_vars.get('type_cks') == 'trunk':
-                stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом.")
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                if all_cks_in_tr.get(service)['type_cks'] == 'access':
+                    stroka = templates.get("Организация услуги ЦКС Etherline access'ом.")
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif all_cks_in_tr.get(service)['type_cks'] == 'trunk':
+                    stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом.")
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
 
         elif 'Порт ВЛС' in service:
@@ -5047,7 +5055,18 @@ def project_tr_exist_cl(request):
     pps = pps.strip()
     turnoff = ticket_tr.turnoff
     services_plus_desc = ticket_tr.services
+    points_for_cks = ticket_tr.ticket_k.des_tr
+    cks_points = []
+    for point in points_for_cks:
+        if next(iter(point.keys())).startswith('г.'):
+            cks_points.append(next(iter(point.keys())).split('ул.')[1])
+    print('!!!!points_for_cks')
+    print(points_for_cks)
+    request.session['cks_points'] = cks_points
+    request.session['services_plus_desc'] = services_plus_desc
+    request.session['pps'] = pps
     if oattr:
+        request.session['oattr'] = oattr
         wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
         ftth_temp = ['Alpha', 'ОК-1']
         vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
@@ -5063,6 +5082,8 @@ def project_tr_exist_cl(request):
         else:
             sreda = '1'
             print('Среда передачи: UTP')
+    else:
+        request.session['oattr'] = None
 
     if type_pass == 'Изменение/организация сервисов без монтаж. работ':
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
@@ -5567,7 +5588,7 @@ def change_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для организации новых услуг или изменения существующих без монтаж. работ"""
     #result_services, result_services_ots = _new_services(result_services, value_vars)
-    result_services = _change_services(value_vars)
+    result_services, value_vars = _change_services(value_vars)
     result_services_ots = None
     titles = _titles(result_services, result_services_ots)
 
@@ -5637,6 +5658,8 @@ def change_serv(request):
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             if type_change_service == "Организация доп IPv6":
+                tag_service.append({'data': None})
+            elif any(serv in type_change_service for serv in ['ЦКС', 'ВЛС', 'ВМ']):
                 tag_service.append({'data': None})
             else:
                 tag_service.insert(0, {'change_params_serv': None})
@@ -5792,16 +5815,27 @@ def _change_services(value_vars):
         stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом.")
         static_vars = {}
         hidden_vars = {}
-        static_vars['указать точку "A"'] = value_vars.get('pointA')
-        static_vars['указать точку "B"'] = value_vars.get('pointB')
-        static_vars['полисером Subinterface/портом подключения'] = value_vars.get('policer_cks')
-        for service in services_plus_desc:
-            if 'ЦКС' in service:
-                rate = _get_policer(service)
-        static_vars['указать полосу'] = rate
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        all_cks_in_tr = value_vars.get('all_cks_in_tr')
+        if all_cks_in_tr:
+            service = next(iter(all_cks_in_tr.keys()))
+            static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
+            static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+            static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
+            static_vars['указать полосу'] = _get_policer(service)
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif type_change_service == "Организация ЦКС trunk'ом с простоем":
-        pass
+        stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом с простоем связи.")
+        static_vars = {}
+        hidden_vars = {}
+        all_cks_in_tr = value_vars.get('all_cks_in_tr')
+        if all_cks_in_tr:
+            service = next(iter(all_cks_in_tr.keys()))
+            static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
+            static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+            static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
+            static_vars['указать полосу'] = _get_policer(service)
+            static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][4]
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif type_change_service == "Организация порта ВЛС trunk'ом":
         pass
     elif type_change_service == "Организация порта ВЛС trunk'ом с простоем":
@@ -5810,10 +5844,13 @@ def _change_services(value_vars):
         pass
     elif type_change_service == "Организация порта ВМ trunk'ом с простоем":
         pass
-    return result_services
+    kad = value_vars.get('selected_ono')[0][-2]
+    value_vars.update({'kad': kad})
+    return result_services, value_vars
 
 
 def _get_policer(service):
+    """Данный метод в строке услуги определяет скорость услуги"""
     if '1000' in service:
         policer = '1 Гбит/с'
     elif '100' in service:
