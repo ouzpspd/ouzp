@@ -116,6 +116,7 @@ class VolsForm(forms.Form):
     speed = [('100FD', '100FD'), ('Auto', 'Auto')]
     device_pps = forms.CharField(label='На стороне ППС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     device_client = forms.CharField(label='На стороне клиента', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
     speed_port = forms.CharField(label='Скорость порта', widget=forms.Select(choices=speed, attrs={'class': 'form-control'}))
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -123,6 +124,7 @@ class VolsForm(forms.Form):
 
 
 class CopperForm(forms.Form):
+    kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
@@ -132,6 +134,7 @@ class WirelessForm(forms.Form):
              ('Nanostation M5', 'Nanostation M5'),
              ('Infinet H11', 'Infinet H11')]
     access_point = forms.CharField(label='Точки доступа', widget=forms.Select(choices=ap_types, attrs={'class': 'form-control'}))
+    kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

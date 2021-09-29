@@ -6,10 +6,9 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_cks|length}}">Услуг{{ services_cks|length|pluralize:"а,и" }}</th>
-        {% for service in services_cks%}
-        <td class="table-light" style="width: 75%">{{service}}</td>
-        {% endfor %}
+        <th class="table-secondary text-right" style="width: 25%">Услуга</th>
+        <td class="table-light" style="width: 75%">{{services_cks}}</td>
+
     </tr>
   </tbody>
 </table>

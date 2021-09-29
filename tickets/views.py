@@ -654,8 +654,10 @@ def copper(request):
             print(copperform.cleaned_data)
             logic_csw = copperform.cleaned_data['logic_csw']
             port = copperform.cleaned_data['port']
+            kad = copperform.cleaned_data['kad']
             request.session['logic_csw'] = logic_csw
             request.session['port'] = port
+            request.session['kad'] = kad
             type_tr = request.session['type_tr']
             if type_tr == 'new_cl':
                 if logic_csw == True:
@@ -699,28 +701,39 @@ def copper(request):
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
 
+        switch_name = []
         for i in range(len(list_switches)):
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-            if switch_ports_var == None:
+            if list_switches[i][-1] == '-':
                 pass
             else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+                if switch_ports_var == None:
+                    pass
+                else:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+            switch_name.append(list_switches[i][0])
+        print(('!!!!switch_name'))
+        print(switch_name)
+        if len(switch_name) == 1:
+            switches_name = switch_name[0]
+        else:
+            switches_name = ' или '.join(switch_name)
 
         request.session['list_switches'] = list_switches
 
         if type_pass:
             if type_pass == 'Организация доп. услуги с установкой КК':
-                copperform = CopperForm(initial={'port': 'свободный', 'logic_csw': True})
+                copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный', 'logic_csw': True})
         else:
-            copperform = CopperForm(initial={'port': 'свободный'})
+            copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный'})
 
         context = {
             'pps': pps,
@@ -743,11 +756,13 @@ def vols(request):
             device_pps = volsform.cleaned_data['device_pps']
             logic_csw = volsform.cleaned_data['logic_csw']
             port = volsform.cleaned_data['port']
+            kad = volsform.cleaned_data['kad']
             speed_port = volsform.cleaned_data['speed_port']
             request.session['device_pps'] = device_pps
             request.session['logic_csw'] = logic_csw
             request.session['port'] = port
             request.session['speed_port'] = speed_port
+            request.session['kad'] = kad
             try:
                 ppr = volsform.cleaned_data['ppr']
             except KeyError:
@@ -809,20 +824,29 @@ def vols(request):
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
 
+        switch_name = []
         for i in range(len(list_switches)):
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-            if switch_ports_var == None:
+            if list_switches[i][-1] == '-':
                 pass
             else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+                if switch_ports_var == None:
+                    pass
+                else:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+            switch_name.append(list_switches[i][0])
+        if len(switch_name) == 1:
+            switches_name = switch_name[0]
+        else:
+            switches_name = ' или '.join(switch_name)
 
         request.session['list_switches'] = list_switches
 
@@ -834,18 +858,21 @@ def vols(request):
                         initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
                                  'device_client': 'оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентское оборудование',
                                  'speed_port': 'Auto',
+                                 'kad': switches_name,
                                  'port': 'свободный',
                                  'logic_csw': True})
                 elif type_pass == 'Перенос существующих сервисов':
                     volsform = VolsForm(
                         initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
                                  'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                                 'kad': switches_name,
                                  'speed_port': 'Auto',
                                  'port': 'свободный'})
             else:
                 volsform = VolsForm(
                     initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
                              'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                             'kad': switches_name,
                              'speed_port': 'Auto',
                              'port': 'свободный'})
         elif sreda == '4':
@@ -853,18 +880,21 @@ def vols(request):
                 if type_pass == 'Организация доп. услуги с установкой КК':
                     volsform = VolsForm(initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
                                      'device_client': 'оптический передатчик SFP WDM, до 3 км, 1550 нм в клиентское оборудование',
+                                                 'kad': switches_name,
                                      'speed_port': '100FD',
                                      'logic_csw': True})
                 elif type_pass == 'Перенос существующих сервисов':
                     volsform = VolsForm(
                         initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
                                  'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                                 'kad': switches_name,
                                  'speed_port': '100FD',
                                  'port': 'свободный'})
             else:
                 volsform = VolsForm(
                         initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
                                  'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                                 'kad': switches_name,
                                  'speed_port': '100FD'})
         else:
             if type_pass:
@@ -895,6 +925,7 @@ def wireless(request):
             print(wirelessform.cleaned_data)
             access_point = wirelessform.cleaned_data['access_point']
             port = wirelessform.cleaned_data['port']
+            kad = wirelessform.cleaned_data['kad']
             logic_csw = wirelessform.cleaned_data['logic_csw']
             try:
                 ppr = wirelessform.cleaned_data['ppr']
@@ -903,6 +934,7 @@ def wireless(request):
             request.session['ppr'] = ppr
             request.session['access_point'] = access_point
             request.session['port'] = port
+            request.session['kad'] = kad
             request.session['logic_csw'] = logic_csw
 
 
@@ -945,24 +977,33 @@ def wireless(request):
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
 
+        switch_name = []
         for i in range(len(list_switches)):
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-            if switch_ports_var == None:
+            if list_switches[i][-1] == '-':
                 pass
             else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+                if switch_ports_var == None:
+                    pass
+                else:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+            switch_name.append(list_switches[i][0])
+        if len(switch_name) == 1:
+            switches_name = switch_name[0]
+        else:
+            switches_name = ' или '.join(switch_name)
 
         request.session['list_switches'] = list_switches
 
-        wirelessform = WirelessForm(initial={'port': 'свободный'})
+        wirelessform = WirelessForm(initial={'kad': switches_name, 'port': 'свободный'})
         context = {
             'pps': pps,
             'oattr': oattr,
@@ -1036,7 +1077,7 @@ def data(request):
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
-                 'all_cks_in_tr']
+                 'all_cks_in_tr', 'kad']
 
 
 
@@ -2676,9 +2717,19 @@ def parsingByNodename(node_name, login, password):
 
 
             list_switches = []
+            #for i in range(len(clear_name_model)):
+            for i in range(len(match_name_model)):
+                print('!!!')
+                print(i)
+                if match_name_model[i] not in clear_name_model:
+                    list_switches.append(
+                        [match_name_model[i][0], match_name_model[i][1], match_ip[i], match_uplink[i],
+                         match_status_desc[i][0], match_status_desc[i][1], '-', '-', '-', '-', '-'])
+
             for i in range(len(clear_name_model)):
                 print('!!!')
                 print(i)
+
                 #list_switches.append([clear_name_model[i][0], clear_name_model[i][1], match_node[i], clear_ip[i], clear_uplink[i], list_ports[i]])
                 list_switches.append(
                     [clear_name_model[i][0], clear_name_model[i][1], clear_ip[i], clear_uplink[i], clear_status_desc[i][0], clear_status_desc[i][1],
@@ -3849,7 +3900,11 @@ def _new_enviroment(value_vars):
 
     counter_line_services = value_vars.get('counter_line_services')
     if counter_line_services > 0:
-        kad, value_vars = _list_kad(value_vars)
+        #kad, value_vars = _list_kad(value_vars)
+        kad = value_vars.get('kad')
+        print("!!!!!value_vars.get('kad')")
+        print(kad)
+        #value_vars.update({'kad': kad})
         pps = _readable_node(value_vars.get('pps'))
 
         logic_csw = value_vars.get('logic_csw')
@@ -3934,7 +3989,7 @@ def _new_enviroment(value_vars):
                         hidden_vars[
                             'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    value_vars.update({'kad': kad})
+
     return result_services, value_vars
 
 
