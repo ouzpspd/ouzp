@@ -1077,7 +1077,7 @@ def data(request):
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
-                 'all_cks_in_tr', 'kad']
+                 'all_cks_in_tr', 'kad', 'all_portvk_in_tr']
 
 
 
@@ -1975,14 +1975,25 @@ def portvk(request):
             if type_portvk == 'trunk':
                 request.session['counter_line_services'] = 1
 
+            try:
+                all_portvk_in_tr = request.session['all_portvk_in_tr']
+            except KeyError:
+                all_portvk_in_tr = dict()
 
-            request.session['policer_vk'] = policer_vk
-            request.session['new_vk'] = new_vk
-            request.session['exist_vk'] = exist_vk
-            request.session['type_portvk'] = type_portvk
             tag_service = request.session['tag_service']
+            service = tag_service[0]['portvk']
+            all_portvk_in_tr.update({service:{'new_vk': new_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk, 'type_portvk': type_portvk}})
             tag_service.pop(0)
             request.session['tag_service'] = tag_service
+            request.session['all_portvk_in_tr'] = all_portvk_in_tr
+
+            #request.session['policer_vk'] = policer_vk
+            #request.session['new_vk'] = new_vk
+            #request.session['exist_vk'] = exist_vk
+            #request.session['type_portvk'] = type_portvk
+            #tag_service = request.session['tag_service']
+            #tag_service.pop(0)
+            #request.session['tag_service'] = tag_service
             return redirect(next(iter(tag_service[0])))
 
 
@@ -3410,30 +3421,22 @@ def _new_services(result_services, value_vars):
                 pass
             static_vars = {}
             hidden_vars = {}
-            if value_vars.get('new_vk') == True:
-                stroka = templates.get("Организация услуги ВЛС")
-                result_services.append(stroka)
-                static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
-            else:
-                static_vars['указать ресурс ВЛС на договоре в Cordis'] = value_vars.get('exist_vk')
-            if '1000' in service:
-                static_vars['указать полосу'] = '1 Гбит/с'
-            elif '100' in service:
-                static_vars['указать полосу'] = '100 Мбит/с'
-            elif '10' in service:
-                static_vars['указать полосу'] = '10 Мбит/с'
-            elif '1' in service:
-                static_vars['указать полосу'] = '1 Гбит/с'
-            else:
-                static_vars['указать полосу'] = 'Неизвестная полоса'
-
-            static_vars['полисером на Subinterface/на порту подключения'] = value_vars.get('policer_vk')
-            if value_vars.get('type_portvk') == 'access':
-                stroka = templates.get("Организация услуги порт ВЛС access'ом.")
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-            elif value_vars.get('type_portvk') == 'trunk':
-                stroka = templates.get("Организация услуги порт ВСЛ trunk'ом.")
-                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
+            if all_portvk_in_tr.get(service):
+                if all_portvk_in_tr.get(service)['new_vk'] == True:
+                    stroka = templates.get("Организация услуги ВЛС")
+                    result_services.append(stroka)
+                    static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
+                else:
+                    static_vars['указать ресурс ВЛС на договоре в Cordis'] = all_portvk_in_tr.get(service)['exist_vk']
+                static_vars['указать полосу'] = _get_policer(service)
+                static_vars['полисером на Subinterface/на порту подключения'] = all_portvk_in_tr.get(service)['policer_vk']
+                if all_portvk_in_tr.get(service)['type_portvk'] == 'access':
+                    stroka = templates.get("Организация услуги порт ВЛС access'ом.")
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif all_portvk_in_tr.get(service)['type_portvk'] == 'trunk':
+                    stroka = templates.get("Организация услуги порт ВЛC trunk'ом.")
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
 
         elif 'Порт ВМ' in service:
@@ -5892,7 +5895,20 @@ def _change_services(value_vars):
             static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][4]
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif type_change_service == "Организация порта ВЛС trunk'ом":
-        pass
+        static_vars = {}
+        hidden_vars = {}
+        all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
+        service = next(iter(all_portvk_in_tr.keys()))
+        if all_portvk_in_tr.get(service)['new_vk'] == True:
+            stroka = templates.get("Организация услуги ВЛС")
+            result_services.append(stroka)
+            static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
+        else:
+            static_vars['указать ресурс ВЛС на договоре в Cordis'] = all_portvk_in_tr.get(service)['exist_vk']
+        stroka = templates.get("Организация услуги порт ВЛC trunk'ом.")
+        static_vars['указать полосу'] = _get_policer(service)
+        static_vars['полисером на Subinterface/на порту подключения'] = all_portvk_in_tr.get(service)['policer_vk']
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif type_change_service == "Организация порта ВЛС trunk'ом с простоем":
         pass
     elif type_change_service == "Организация порта ВМ trunk'ом":
