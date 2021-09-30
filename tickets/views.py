@@ -4448,8 +4448,11 @@ def test_formset(request):
 def job_formset(request):
     """Данный метод получает спискок услуг из ТР. Формирует форму, в которой пользователь выбирает, что необходимо
      сделать с услугой(перенос, изменение, организация) и формируется соответствующие списки услуг."""
+    head = request.session['head']
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
+    oattr = ticket_tr.oattr
+    pps = ticket_tr.pps
     services = ticket_tr.services
     ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
     if request.method == 'POST':
@@ -4492,6 +4495,9 @@ def job_formset(request):
 
         formset = ListJobsFormSet()
         context = {
+            'head': head,
+            'oattr': oattr,
+            'pps': pps,
             'services': services,
             #'contract': contract,
             'formset': formset
