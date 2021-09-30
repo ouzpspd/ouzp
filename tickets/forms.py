@@ -201,6 +201,16 @@ class ChainForm(forms.Form):
 class ListResourcesForm(forms.Form):
     resource = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
+class ListJobsForm(forms.Form):
+    types = [
+        ('Перенос сервиса', 'Перенос сервиса'),
+        ('Изменение сервиса', 'Изменение сервиса'),
+        ('Организация сервиса', 'Организация сервиса'),
+        ('Не требуется', 'Не требуется'),
+    ]
+    jobs = forms.CharField(label='',
+                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
 
 class PassForm(forms.Form):
     #router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

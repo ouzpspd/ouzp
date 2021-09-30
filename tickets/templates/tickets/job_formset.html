@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+<form action="{% url 'job_formset' %}" method="post">
+    {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+                <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col"></th>
+                          <th scope="col"></th>
+                          <th scope="col">Услуга</th>
+
+                        </tr>
+                      </thead>
+                      <tbody>
+                      {% for form in formset %}
+
+                        <tr>
+                          <th scope="row">{{forloop.counter}}</th>
+                          <td>{{ form.as_p }}</td>
+
+                              {% for element in services %}
+                                {% if forloop.counter == forloop.parentloop.counter %}
+                              <td>
+                                {{element}}
+                                  </td>
+                                {% endif %}
+                              {% endfor %}
+
+                        </tr>
+                      {% endfor %}
+                      </tbody>
+                </table>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+{% endblock %}

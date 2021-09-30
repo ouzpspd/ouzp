@@ -4,7 +4,7 @@ from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm,\
-    PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm
+    PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm, ListJobsForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -148,14 +148,17 @@ def stash(sw, model, login, password):
                 config_ports_device[i.group(1)] = [desc, vlan]
 
 
-        elif 'D-Link' in model:
+        elif 'D-Link' in model and model != 'D-Link DIR-100':
             port_list = None
             config_ports_device = {}
             regex_description = 'config ports (\d+) (?:.+?) description (\".*?\")\n'
             match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
             for i in match_description:
                 config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
-            regex_free = 'config vlan stub add untagged (\S+)'
+            if '1100' in model:
+                regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
+            else:
+                regex_free = 'config vlan stub add untagged (\S+)'
             match_free = re.search(regex_free, switch)
             port_free = []
             for i in match_free.group(1).split(','):
@@ -4381,6 +4384,8 @@ def test_formset(request):
         if formset.is_valid():
 
             data = formset.cleaned_data
+            print('!!!!!!!!datatest_formset')
+            print(data)
             selected_ono = []
             unselected_ono = []
             selected = zip(ono, data)
@@ -4438,6 +4443,61 @@ def test_formset(request):
         }
 
         return render(request, 'tickets/test_formset.html', context)
+
+
+def job_formset(request):
+    """Данный метод получает спискок услуг из ТР. Формирует форму, в которой пользователь выбирает, что необходимо
+     сделать с услугой(перенос, изменение, организация) и формируется соответствующие списки услуг."""
+    ticket_tr_id = request.session['ticket_tr_id']
+    ticket_tr = TR.objects.get(id=ticket_tr_id)
+    services = ticket_tr.services
+    ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
+    if request.method == 'POST':
+        formset = ListJobsFormSet(request.POST)
+        if formset.is_valid():
+            pass_job_services = []
+            change_job_services = []
+            new_job_services = []
+            data = formset.cleaned_data
+            print('!!!!!services')
+            print(services)
+            print('!!!!!datajobservices')
+            print(data)
+            selected = zip(services, data)
+            for services, data in selected:
+                if data == {'jobs': 'Перенос сервиса'}:
+                    pass_job_services.append(services)
+                elif data == {'jobs': 'Изменение сервиса'}:
+                    change_job_services.append(services)
+                elif data == {'jobs': 'Организация сервиса'}:
+                    new_job_services.append(services)
+                elif data == {'jobs': 'Не требуется'}:
+                    pass
+            request.session['pass_job_services'] = pass_job_services
+            request.session['change_job_services'] = change_job_services
+            request.session['new_job_services'] = new_job_services
+
+            context = {
+                'pass_job_services': pass_job_services,
+                'change_job_services': change_job_services,
+                'new_job_services': new_job_services,
+                'data': data
+            }
+
+
+
+            return render(request, 'tickets/no_data.html', context)
+
+    else:
+
+        formset = ListJobsFormSet()
+        context = {
+            'services': services,
+            #'contract': contract,
+            'formset': formset
+        }
+
+        return render(request, 'tickets/job_formset.html', context)
 
 
 def _parsing_id_client_device_by_device_name(name, login, password):
@@ -5035,7 +5095,8 @@ def head(request):
         'waste_vgw': waste_vgw
     }
     #return render(request, 'tickets/head.html', context)
-    return redirect('passage')
+    #return redirect('passage')
+    return redirect('job_formset')
 
 def passage(request):
     """Данный метод выводит страницу с выбором шаблонов ТР в КБЗ"""

@@ -73,6 +73,7 @@ urlpatterns = [
     path('add_serv_with_install_csw/', add_serv_with_install_csw, name='add_serv_with_install_csw'),
     path('change_serv/', change_serv, name='change_serv'),
     path('change_params_serv/', change_params_serv, name='change_params_serv'),
+    path('job_formset/', job_formset, name='job_formset'),
 
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
 ]
