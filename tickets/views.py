@@ -3286,7 +3286,7 @@ def in_work_ortr(login, password):
         #search_demand_stat = soup.find_all('td', class_='demand_stat')
 
         for index in range(len(search_demand_num2)-1):
-            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Гумеров Р.Т.']:
+            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Гумеров Р.Т.']:
                 pass
             else:
 
@@ -4458,9 +4458,13 @@ def job_formset(request):
     if request.method == 'POST':
         formset = ListJobsFormSet(request.POST)
         if formset.is_valid():
-            pass_job_services = []
+            pass_with_csw_job_services = []
+            pass_without_csw_job_services = []
+            pass_no_spd_job_services = []
             change_job_services = []
-            new_job_services = []
+            new_with_csw_job_services = []
+            new_without_csw_job_services = []
+            new_no_spd_jobs_services = []
             data = formset.cleaned_data
             print('!!!!!services')
             print(services)
@@ -4468,28 +4472,40 @@ def job_formset(request):
             print(data)
             selected = zip(services, data)
             for services, data in selected:
-                if data == {'jobs': 'Перенос сервиса'}:
-                    pass_job_services.append(services)
+                if data == {'jobs': 'Организация сервиса(СПД) без уст. КК'}:
+                    new_without_csw_job_services.append(services)
+                elif data == {'jobs': 'Организация сервиса(СПД) с уст. КК'}:
+                    new_with_csw_job_services.append(services)
+                elif data == {'jobs': 'Организация сервиса(не СПД)'}:
+                    new_no_spd_jobs_services.append(services)
+                elif data == {'jobs': 'Перенос сервиса(СПД) без КК'}:
+                    pass_without_csw_job_services.append(services)
+                elif data == {'jobs': 'Перенос сервиса(СПД) с КК'}:
+                    pass_with_csw_job_services.append(services)
+                elif data == {'jobs': 'Перенос сервиса(не СПД)'}:
+                    pass_no_spd_job_services.append(services)
                 elif data == {'jobs': 'Изменение сервиса'}:
                     change_job_services.append(services)
-                elif data == {'jobs': 'Организация сервиса'}:
-                    new_job_services.append(services)
                 elif data == {'jobs': 'Не требуется'}:
                     pass
-            request.session['pass_job_services'] = pass_job_services
+            request.session['new_without_csw_job_services'] = new_without_csw_job_services
+            request.session['new_with_csw_job_services'] = new_with_csw_job_services
+            request.session['new_no_spd_jobs_services'] = new_no_spd_jobs_services
+            request.session['pass_without_csw_job_services'] = pass_without_csw_job_services
+            request.session['pass_with_csw_job_services'] = pass_with_csw_job_services
+            request.session['pass_no_spd_job_services'] = pass_no_spd_job_services
             request.session['change_job_services'] = change_job_services
-            request.session['new_job_services'] = new_job_services
 
-            context = {
-                'pass_job_services': pass_job_services,
-                'change_job_services': change_job_services,
-                'new_job_services': new_job_services,
-                'data': data
-            }
-
+            #context = {
+            #    'pass_job_services': pass_job_services,
+            #    'change_job_services': change_job_services,
+            #    'new_job_services': new_job_services,
+            #   'data': data
+            #
 
 
-            return render(request, 'tickets/no_data.html', context)
+            return redirect('passage')
+            #return render(request, 'tickets/no_data.html', context)
 
     else:
 
@@ -5088,6 +5104,8 @@ def head(request):
     head = rev_result_services[::-1]
     request.session['head'] = head.strip()
     request.session['readable_services'] = readable_services
+    print('!!!!readable_services')
+    print(readable_services)
     request.session['counter_exist_line'] = counter_exist_line
 
 
@@ -5169,9 +5187,7 @@ def project_tr_exist_cl(request):
     # elif data_sss[2] == 'Не выбран':
     #    return redirect('tr_view', dID, tID, trID)
 
-    # request.session['tID'] = tID
-    # request.session['dID'] = dID
-    # request.session['trID'] = trID
+
     type_pass = request.session['type_pass']
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
@@ -5209,6 +5225,81 @@ def project_tr_exist_cl(request):
             print('Среда передачи: UTP')
     else:
         request.session['oattr'] = None
+    selected_ono = request.session['selected_ono']
+    new_without_csw_job_services = request.session['new_without_csw_job_services']
+    new_with_csw_job_services = request.session['new_with_csw_job_services']
+    pass_without_csw_job_services = request.session['pass_without_csw_job_services']
+    pass_with_csw_job_services = request.session['pass_with_csw_job_services']
+    all_job_spd = []
+    if new_without_csw_job_services:
+        all_job_spd.append(new_without_csw_job_services)
+    if new_with_csw_job_services:
+        all_job_spd.append(new_with_csw_job_services)
+    if pass_without_csw_job_services:
+        all_job_spd.append(pass_without_csw_job_services)
+    else:
+        all_job_spd.append(pass_with_csw_job_services)
+
+    new_no_spd_jobs_services = request.session['new_no_spd_jobs_services']
+    pass_no_spd_job_services = request.session['pass_no_spd_job_services']
+    change_job_services = request.session['change_job_services']
+
+    #перенос одного сервиса
+    #if pass_without_csw_job_services
+    all_job_spd.remove(pass_without_csw_job_services)
+    if not all(all_job_spd):
+        if selected_ono[0][-2].startswith('CSW'):
+            pass # перенести только этот сервис
+        else:
+            type_pass = 'Перенос существующих сервисов'
+            type_tr = 'new_cl'
+            tag_service = []
+            tag_service.append({'pass_serv': None})
+            if sreda == '1':
+                tag_service.append({'copper': None})
+            elif sreda == '2' or sreda == '4':
+                tag_service.append({'vols': None})
+            elif sreda == '3':
+                tag_service.append({'wireless': None})
+        #return redirect(next(iter(tag_service[0])))
+    #перенос существующих сервисов и организация нов сервисов отдельными линиями
+    elif new_without_csw_job_services and not all(all_job_spd.remove(new_without_csw_job_services)): # это не будет работать
+        type_pass = 'Перенос существующих сервисов'
+        type_tr = 'new_cl'
+        tag_service = []
+        tag_service.append({'pass_serv': None})
+        if sreda == '1':
+            tag_service.append({'copper': None})
+        elif sreda == '2' or sreda == '4':
+            tag_service.append({'vols': None})
+        elif sreda == '3':
+            tag_service.append({'wireless': None})
+        # как то добавить нов услугу с подключением к спд
+        return redirect(next(iter(tag_service[0])))
+    # перенос существующих сервисов и организация нов сервисов через новый КК
+    elif new_with_csw_job_services and not all(all_job_spd.remove(new_with_csw_job_services)): # это не будет работать
+        tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(new_with_csw_job_services)
+        counter_line_services, hotspot_points = _counter_line_services(new_with_csw_job_services)
+        tag_service.insert(0, {'add_serv_with_install_csw': None})
+
+        request.session['hotspot_points'] = hotspot_points
+        request.session['hotspot_users'] = hotspot_users
+        request.session['premium_plus'] = premium_plus
+        request.session['services_plus_desc'] = services_plus_desc
+        request.session['oattr'] = oattr
+        request.session['pps'] = pps
+        request.session['turnoff'] = turnoff
+        request.session['sreda'] = sreda
+        request.session['counter_line_services'] = counter_line_services
+
+        type_tr = 'new_cl'
+        request.session['type_tr'] = type_tr
+        request.session['tag_service'] = tag_service
+        print('!!!!!tagsevice')
+        print(tag_service)
+        return redirect(next(iter(tag_service[0])))
+
+
 
     if type_pass == 'Изменение/организация сервисов без монтаж. работ':
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
