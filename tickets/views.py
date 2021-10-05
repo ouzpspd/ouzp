@@ -1113,7 +1113,10 @@ def data(request):
         value_vars.update({'result_services_ots': result_services_ots})
     if value_vars.get('type_pass') and 'Перенос существующих сервисов' in value_vars.get('type_pass'):
         print('!!!!!!perenossss')
+        counter_line_services = value_vars.get('counter_line_services')
+        value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
         result_services, result_services_ots, value_vars = passage_services(value_vars)
+        value_vars.update({'counter_line_services': counter_line_services})
         value_vars.update({'result_services': result_services})
         value_vars.update({'result_services_ots': result_services_ots})
     if value_vars.get('type_pass') and 'Организация доп.услуги без установки КК' in value_vars.get('type_pass'):
@@ -1128,7 +1131,7 @@ def data(request):
         value_vars.update({'counter_line_services': 0})
         value_vars.update({'services_plus_desc': value_vars.get('new_no_spd_jobs_services')})
         result_services, result_services_ots, value_vars = client_new(value_vars)
-    else:
+    if not value_vars.get('type_pass'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
 
     titles = _titles(result_services, result_services_ots)
@@ -1139,11 +1142,14 @@ def data(request):
     now = now.strftime("%d.%m.%Y")
     titles = ''.join(titles)
     result_services = '\n\n\n'.join(result_services)
-    if value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп. услуги с установкой КК':
+    if value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп.услуги с установкой КК':
         need = 'Требуется в данной точке организовать доп. услугу.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     elif value_vars.get('type_pass') and value_vars.get('type_pass') == 'Перенос существующих сервисов':
         need = 'Требуется перенести услугу в новую точку подключения.'
+        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
+    elif value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп.услуги без установки КК':
+        need = 'Требуется в данной точке организовать доп. услугу.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     else:
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
@@ -5303,7 +5309,8 @@ def project_tr_exist_cl(request):
 
 
 
-        if not new_with_csw_job_services and not pass_without_csw_job_services:
+        #if not pass_without_csw_job_services and not new_with_csw_job_services and :
+        if counter_line_services > 0:
             if sreda == '1':
                 tag_service.append({'copper': None})
             elif sreda == '2' or sreda == '4':
@@ -5540,7 +5547,10 @@ def _passage_services(result_services, value_vars):
     return result_services
 
 def _passage_enviroment(value_vars):
-    result_services = []
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
     sreda = value_vars.get('sreda')
     templates = value_vars.get('templates')
     pps = _readable_node(value_vars.get('pps'))
