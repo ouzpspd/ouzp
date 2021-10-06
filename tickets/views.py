@@ -1096,8 +1096,9 @@ def data(request):
         if value_vars.get('logic_csw'):
             counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
             print(counter_line_services)
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             value_vars.update({'counter_line_services': counter_line_services})
-            titles, result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
+            result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
         else:
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -1105,12 +1106,20 @@ def data(request):
         value_vars.update({'result_services_ots': result_services_ots})
     if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         print('!!!!!!perenossss')
-        counter_line_services = value_vars.get('counter_line_services')
-        value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
-        result_services, result_services_ots, value_vars = passage_services(value_vars)
-        value_vars.update({'counter_line_services': counter_line_services})
-        value_vars.update({'result_services': result_services})
-        value_vars.update({'result_services_ots': result_services_ots})
+        if value_vars.get('logic_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
+            pass
+        elif value_vars.get('logic_csw'):
+            counter_line_services = value_vars.get('counter_exist_line')
+            print(counter_line_services)
+            value_vars.update({'counter_line_services': counter_line_services})
+            result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
+        else:
+            counter_line_services = value_vars.get('counter_line_services')
+            value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
+            result_services, result_services_ots, value_vars = passage_services(value_vars)
+            value_vars.update({'counter_line_services': counter_line_services})
+            value_vars.update({'result_services': result_services})
+            value_vars.update({'result_services_ots': result_services_ots})
     if value_vars.get('type_pass') and 'Организация доп.услуги без установки КК' in value_vars.get('type_pass'):
         print('!!!!!!extra bez csw')
         value_vars.update({'services_plus_desc': value_vars.get('new_without_csw_job_services')})
@@ -5903,9 +5912,15 @@ def extra_services_with_install_csw(value_vars):
     result_services, value_vars = exist_enviroment_install_csw(value_vars)
     result_services, result_services_ots = _new_services(result_services, value_vars)
     result_services = _passage_services_on_csw(result_services, value_vars)
-    titles = _titles(result_services, result_services_ots)
+    return result_services, result_services_ots, value_vars
 
-    return titles, result_services, result_services_ots, value_vars
+def passage_services_with_install_csw(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+     ОТС(заполненые шаблоны) для организации новых услуг дополнительно к существующему подключению"""
+    result_services, value_vars = exist_enviroment_install_csw(value_vars)
+    result_services = _passage_services_on_csw(result_services, value_vars)
+    result_services_ots = None
+    return result_services, result_services_ots, value_vars
 
 def passage_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
