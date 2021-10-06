@@ -656,17 +656,29 @@ def copper(request):
         if copperform.is_valid():
             print(copperform.cleaned_data)
             logic_csw = copperform.cleaned_data['logic_csw']
+            logic_replace_csw = copperform.cleaned_data['logic_replace_csw']
+            logic_change_gi_csw = copperform.cleaned_data['logic_change_gi_csw']
             port = copperform.cleaned_data['port']
             kad = copperform.cleaned_data['kad']
             request.session['logic_csw'] = logic_csw
+            request.session['logic_csw'] = logic_replace_csw
+            request.session['logic_csw'] = logic_change_gi_csw
             request.session['port'] = port
             request.session['kad'] = kad
             type_tr = request.session['type_tr']
+
             if type_tr == 'new_cl':
                 if logic_csw == True:
-                    return redirect('csw')
+                    try:
+                        request.session['new_with_csw_job_services']
+                    except KeyError:
+                        return redirect('csw')
+                    else:
+                        return redirect('add_serv_with_install_csw')
                 else:
                     return redirect('data')
+
+
             elif type_tr == 'exist_cl':
                 tag_service = request.session['tag_service']
                 tag_service.pop(0)
@@ -732,13 +744,7 @@ def copper(request):
 
         request.session['list_switches'] = list_switches
 
-        if type_pass:
-            if 'Организация доп.услуги с установкой КК' in type_pass:
-                copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный', 'logic_csw': True})
-            else:
-                copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный'})
-        else:
-            copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный'})
+        copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный'})
 
         context = {
             'pps': pps,
@@ -760,11 +766,15 @@ def vols(request):
             device_client = volsform.cleaned_data['device_client']
             device_pps = volsform.cleaned_data['device_pps']
             logic_csw = volsform.cleaned_data['logic_csw']
+            logic_replace_csw = volsform.cleaned_data['logic_replace_csw']
+            logic_change_gi_csw = volsform.cleaned_data['logic_change_gi_csw']
             port = volsform.cleaned_data['port']
             kad = volsform.cleaned_data['kad']
             speed_port = volsform.cleaned_data['speed_port']
             request.session['device_pps'] = device_pps
             request.session['logic_csw'] = logic_csw
+            request.session['logic_replace_csw'] = logic_replace_csw
+            request.session['logic_change_gi_csw'] = logic_change_gi_csw
             request.session['port'] = port
             request.session['speed_port'] = speed_port
             request.session['kad'] = kad
@@ -779,7 +789,13 @@ def vols(request):
                 if logic_csw == True:
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
                     request.session['device_client'] = device_client
-                    return redirect('csw')
+                    try:
+                        request.session['new_with_csw_job_services']
+                    except KeyError:
+                        return redirect('csw')
+                    else:
+                        return redirect('add_serv_with_install_csw')
+
                 else:
                     request.session['device_client'] = device_client
                     return redirect('data')
@@ -857,56 +873,22 @@ def vols(request):
 
 
         if sreda == '2':
-            if type_pass:
-                if 'Организация доп.услуги с установкой КК' in type_pass:
-                    volsform = VolsForm(
-                        initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
-                                 'device_client': 'оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентское оборудование',
-                                 'speed_port': 'Auto',
-                                 'kad': switches_name,
-                                 'port': 'свободный',
-                                 'logic_csw': True})
-                else:
-                    volsform = VolsForm(
-                        initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
-                                 'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
-                                 'kad': switches_name,
-                                 'speed_port': 'Auto',
-                                 'port': 'свободный'})
-            else:
-                volsform = VolsForm(
+
+            volsform = VolsForm(
                     initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
                              'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
                              'kad': switches_name,
                              'speed_port': 'Auto',
                              'port': 'свободный'})
         elif sreda == '4':
-            if type_pass:
-                if 'Организация доп.услуги с установкой КК' in type_pass:
-                    volsform = VolsForm(initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
-                                     'device_client': 'оптический передатчик SFP WDM, до 3 км, 1550 нм в клиентское оборудование',
-                                                 'kad': switches_name,
-                                     'speed_port': '100FD',
-                                     'logic_csw': True})
-                else:
-                    volsform = VolsForm(
-                        initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
-                                 'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
-                                 'kad': switches_name,
-                                 'speed_port': '100FD',
-                                 'port': 'свободный'})
-            else:
-                volsform = VolsForm(
+            volsform = VolsForm(
                         initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
                                  'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
                                  'kad': switches_name,
                                  'speed_port': '100FD'})
         else:
-            if type_pass:
-                if 'Организация доп.услуги с установкой КК' in type_pass:
-                    volsform = VolsForm(initial={'logic_csw': True})
-            else:
-                volsform = VolsForm()
+            volsform = VolsForm()
+
         context = {
             'pps': pps,
             'oattr': oattr,
@@ -932,6 +914,8 @@ def wireless(request):
             port = wirelessform.cleaned_data['port']
             kad = wirelessform.cleaned_data['kad']
             logic_csw = wirelessform.cleaned_data['logic_csw']
+            logic_replace_csw = wirelessform.cleaned_data['logic_replace_csw']
+            logic_change_gi_csw = wirelessform.cleaned_data['logic_change_gi_csw']
             try:
                 ppr = wirelessform.cleaned_data['ppr']
             except KeyError:
@@ -941,6 +925,8 @@ def wireless(request):
             request.session['port'] = port
             request.session['kad'] = kad
             request.session['logic_csw'] = logic_csw
+            request.session['logic_replace_csw'] = logic_replace_csw
+            request.session['logic_change_gi_csw'] = logic_change_gi_csw
 
 
 
@@ -1028,9 +1014,11 @@ def csw(request):
             model_csw = cswform.cleaned_data['model_csw']
             port_csw = cswform.cleaned_data['port_csw']
             logic_csw_1000 = cswform.cleaned_data['logic_csw_1000']
+            exist_speed_csw = cswform.cleaned_data['exist_speed_csw']
             request.session['model_csw'] = model_csw
             request.session['port_csw'] = port_csw
             request.session['logic_csw_1000'] = logic_csw_1000
+            request.session['exist_speed_csw'] = exist_speed_csw
             request.session['logic_csw'] = True
             return redirect('data')
     else:
@@ -1082,7 +1070,7 @@ def data(request):
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
-                 'pass_without_csw_job_services', 'new_no_spd_jobs_services']
+                 'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services']
 
 
 
@@ -1098,20 +1086,24 @@ def data(request):
 
     request.session['templates'] = templates
 
-    if value_vars.get('type_pass') and 'Организация доп.услуги с установкой КК' in value_vars.get('type_pass'):
+    if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
         #counter_exist_line = value_vars.get('counter_exist_line')
         #print('!!!type_counter_exis')
         #print(type(counter_exist_line))
         #print('!!!')
         #print(value_vars.get('readable_services'))
         #print(counter_exist_line)
-        counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
-        print(counter_line_services)
-        value_vars.update({'counter_line_services': counter_line_services})
-        titles, result_services, result_services_ots, value_vars = extra_services(value_vars)
+        if value_vars.get('logic_csw'):
+            counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
+            print(counter_line_services)
+            value_vars.update({'counter_line_services': counter_line_services})
+            titles, result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
+        else:
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
+            result_services, result_services_ots, value_vars = client_new(value_vars)
         value_vars.update({'result_services': result_services})
         value_vars.update({'result_services_ots': result_services_ots})
-    if value_vars.get('type_pass') and 'Перенос существующих сервисов' in value_vars.get('type_pass'):
+    if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         print('!!!!!!perenossss')
         counter_line_services = value_vars.get('counter_line_services')
         value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
@@ -1142,10 +1134,10 @@ def data(request):
     now = now.strftime("%d.%m.%Y")
     titles = ''.join(titles)
     result_services = '\n\n\n'.join(result_services)
-    if value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп.услуги с установкой КК':
+    if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
         need = 'Требуется в данной точке организовать доп. услугу.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
-    elif value_vars.get('type_pass') and value_vars.get('type_pass') == 'Перенос существующих сервисов':
+    elif value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         need = 'Требуется перенести услугу в новую точку подключения.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     elif value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп.услуги без установки КК':
@@ -1698,10 +1690,20 @@ def phone(request):
             channel_vgw = phoneform.cleaned_data['channel_vgw']
             ports_vgw = phoneform.cleaned_data['ports_vgw']
             services_plus_desc = request.session['services_plus_desc']
+            try:
+                new_with_csw_job_services = request.session['new_with_csw_job_services']
+            except KeyError:
+                new_with_csw_job_services = None
+
             tag_service = request.session['tag_service']
             for index_service in range(len(services_plus_desc)):
                 if 'Телефон' in services_plus_desc[index_service]:
                     if type_phone == 'ak':
+                        if new_with_csw_job_services:
+                            for ind in range(len(new_with_csw_job_services)):
+                                if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
+                                    new_with_csw_job_services[ind] += '|'
+                                    new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '|'
                         counter_line_services = request.session['counter_line_services']
                         counter_line_services += 1
@@ -1724,8 +1726,18 @@ def phone(request):
                                 tag_service.insert(1, {'copper': None})
 
                     elif type_phone == 'ap':
+                        if new_with_csw_job_services:
+                            for ind in range(len(new_with_csw_job_services)):
+                                if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
+                                    new_with_csw_job_services[ind] += '/'
+                                    new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '/'
                     elif type_phone == 'ab':
+                        if new_with_csw_job_services:
+                            for ind in range(len(new_with_csw_job_services)):
+                                if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
+                                    new_with_csw_job_services[ind] += '\\'
+                                    new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '\\'
             request.session['services_plus_desc'] = services_plus_desc
             request.session['vgw'] = vgw
@@ -4502,28 +4514,28 @@ def job_formset(request):
             print(data)
             selected = zip(services, data)
             for services, data in selected:
-                if data == {'jobs': 'Организация сервиса(СПД) без уст. КК'}:
-                    new_without_csw_job_services.append(services)
-                elif data == {'jobs': 'Организация сервиса(СПД) с уст. КК'}:
+                #if data == {'jobs': 'Организация сервиса(СПД) без уст. КК'}:
+                #    new_without_csw_job_services.append(services)
+                if data == {'jobs': 'Организация/Изменение, СПД'}:
                     new_with_csw_job_services.append(services)
-                elif data == {'jobs': 'Организация сервиса(не СПД)'}:
+                elif data == {'jobs': 'Организация, не СПД'}:
                     new_no_spd_jobs_services.append(services)
-                elif data == {'jobs': 'Перенос сервиса(СПД) без КК'}:
+                elif data == {'jobs': 'Перенос, СПД'}:
                     pass_without_csw_job_services.append(services)
-                elif data == {'jobs': 'Перенос сервиса(СПД) с КК'}:
-                    pass_with_csw_job_services.append(services)
-                elif data == {'jobs': 'Перенос сервиса(не СПД)'}:
-                    pass_no_spd_job_services.append(services)
-                elif data == {'jobs': 'Изменение сервиса'}:
+                #elif data == {'jobs': 'Перенос сервиса(СПД) с КК'}:
+                #    pass_with_csw_job_services.append(services)
+                #elif data == {'jobs': 'Перенос сервиса(не СПД)'}:
+                #    pass_no_spd_job_services.append(services)
+                elif data == {'jobs': 'Изменение, не СПД'}:
                     change_job_services.append(services)
                 elif data == {'jobs': 'Не требуется'}:
                     pass
-            request.session['new_without_csw_job_services'] = new_without_csw_job_services
+            #request.session['new_without_csw_job_services'] = new_without_csw_job_services
             request.session['new_with_csw_job_services'] = new_with_csw_job_services
             request.session['new_no_spd_jobs_services'] = new_no_spd_jobs_services
             request.session['pass_without_csw_job_services'] = pass_without_csw_job_services
-            request.session['pass_with_csw_job_services'] = pass_with_csw_job_services
-            request.session['pass_no_spd_job_services'] = pass_no_spd_job_services
+            #request.session['pass_with_csw_job_services'] = pass_with_csw_job_services
+            #request.session['pass_no_spd_job_services'] = pass_no_spd_job_services
             request.session['change_job_services'] = change_job_services
 
             #context = {
@@ -5256,14 +5268,14 @@ def project_tr_exist_cl(request):
     else:
         request.session['oattr'] = None
     selected_ono = request.session['selected_ono']
-    new_without_csw_job_services = request.session['new_without_csw_job_services']
+
     new_with_csw_job_services = request.session['new_with_csw_job_services']
     pass_without_csw_job_services = request.session['pass_without_csw_job_services']
-    pass_with_csw_job_services = request.session['pass_with_csw_job_services']
+
 
 
     new_no_spd_jobs_services = request.session['new_no_spd_jobs_services']
-    pass_no_spd_job_services = request.session['pass_no_spd_job_services']
+    #pass_no_spd_job_services = request.session['pass_no_spd_job_services']
     change_job_services = request.session['change_job_services']
 
     #перенос одного сервиса
@@ -5277,7 +5289,7 @@ def project_tr_exist_cl(request):
     type_pass = []
     tag_service = []
     if pass_without_csw_job_services:
-        type_pass.append('Перенос существующих сервисов')
+        type_pass.append('Перенос, СПД')
 
 
         tag_service.append({'pass_serv': None})
@@ -5290,60 +5302,55 @@ def project_tr_exist_cl(request):
         #return redirect(next(iter(tag_service[0])))
     #перенос существующих сервисов и организация нов сервисов отдельными линиями
 
-    if new_without_csw_job_services:
-        type_pass = 'Организация доп.услуги без установки КК'
-
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_without_csw_job_services)
-        counter_line_services, hotspot_points = _counter_line_services(new_without_csw_job_services)
-        for tag in tags:
-            tag_service.append(tag)
-
-        request.session['hotspot_points'] = hotspot_points
-        request.session['hotspot_users'] = hotspot_users
-        request.session['premium_plus'] = premium_plus
-        request.session['services_plus_desc'] = services_plus_desc
-
-
-        request.session['counter_line_services'] = counter_line_services
-
-
-
-
-        #if not pass_without_csw_job_services and not new_with_csw_job_services and :
-        if counter_line_services > 0:
-            if sreda == '1':
-                tag_service.append({'copper': None})
-            elif sreda == '2' or sreda == '4':
-                tag_service.append({'vols': None})
-            elif sreda == '3':
-                tag_service.append({'wireless': None})
-        print('!!!check new_with_csw_job_services')
-        print(type(new_with_csw_job_services))
-        print('!!!check pass_without_csw_job_services')
-        print(type(pass_without_csw_job_services))
-
-
 
     # перенос существующих сервисов и организация нов сервисов через новый КК
     if new_with_csw_job_services:
-        type_pass.append('Организация доп.услуги с установкой КК')
+        type_pass.append('Организация/Изменение, СПД')
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_with_csw_job_services)
-        tag_service.append({'add_serv_with_install_csw': None})
+        #tag_service.append({'add_serv_with_install_csw': None})
         for tag in tags:
             tag_service.append(tag)
         counter_line_services, hotspot_points = _counter_line_services(new_with_csw_job_services)
         #tag_service.insert(0, {'add_serv_with_install_csw': None})
 
+        if new_no_spd_jobs_services:
+            type_pass.append('Организация, не СПД')
+            tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_no_spd_jobs_services)
+            for tag in tags:
+                tag_service.append(tag)
+
+        if change_job_services:
+            type_pass.append('Изменение, не СПД')
+            tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
+            for tag in tags:
+                tag_service.append(tag)
+
+        if sreda == '1':
+            tag_service.append({'copper': None})
+        elif sreda == '2' or sreda == '4':
+            tag_service.append({'vols': None})
+        elif sreda == '3':
+            tag_service.append({'wireless': None})
+
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
         request.session['premium_plus'] = premium_plus
+        request.session['counter_line_services'] = counter_line_services
         request.session['services_plus_desc'] = services_plus_desc
 
 
         request.session['counter_line_services'] = counter_line_services
-    if new_no_spd_jobs_services:
-        type_pass.append('Организация сервиса(не СПД)')
+
+    if new_no_spd_jobs_services and not new_with_csw_job_services:
+        type_pass.append('Организация, не СПД')
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_no_spd_jobs_services)
+        for tag in tags:
+            tag_service.append(tag)
+
+    if change_job_services and not new_with_csw_job_services:
+        type_pass.append('Изменение, не СПД')
+
+        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
             tag_service.append(tag)
 
@@ -5357,6 +5364,9 @@ def project_tr_exist_cl(request):
     request.session['type_pass'] = type_pass
     request.session['tag_service'] = tag_service
     return redirect(next(iter(tag_service[0])))
+
+
+
 
 
 
@@ -5490,12 +5500,15 @@ def pass_serv(request):
                 pass
 
             else:
-                if sreda == '1':
-                    tag_service.append({'copper': None})
-                elif sreda == '2' or sreda == '4':
-                    tag_service.append({'vols': None})
-                elif sreda == '3':
-                    tag_service.append({'wireless': None})
+                if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
+                    pass
+                else:
+                    if sreda == '1':
+                        tag_service.append({'copper': None})
+                    elif sreda == '2' or sreda == '4':
+                        tag_service.append({'vols': None})
+                    elif sreda == '3':
+                        tag_service.append({'wireless': None})
             if len(tag_service) == 0:
                 tag_service.append({'data': None})
 
@@ -5525,16 +5538,17 @@ def _passage_services(result_services, value_vars):
             static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
         else:
             static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+        services = []
+        for key, value in readable_services.items():
+            if type(value) == str:
+                services.append(key + ' ' + value)
+            elif type(value) == list:
+                services.append(key + ''.join(value))
+        static_vars['указать сервис'] = ', '.join(services)
         if value_vars.get('log_change'):
             hidden_vars[
                 '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
-            services = []
-            for key, value in readable_services.items():
-                if type(value) == str:
-                    services.append(key + ' ' + value)
-                elif type(value) == list:
-                    services.append(key + ''.join(value))
-            static_vars['указать сервис'] = ', '.join(services)
+
             hidden_vars[
                 'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
             hidden_vars[
@@ -5883,7 +5897,7 @@ def change_services(value_vars):
     return titles, result_services, result_services_ots, value_vars
 
 
-def extra_services(value_vars):
+def extra_services_with_install_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для организации новых услуг дополнительно к существующему подключению"""
     result_services, value_vars = exist_enviroment_install_csw(value_vars)
@@ -5896,12 +5910,18 @@ def extra_services(value_vars):
 def passage_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для переноса услуг"""
-    if value_vars.get('counter_exist_line') > 1:
+    #if value_vars.get('counter_exist_line') > 1:
+    if value_vars.get('log_change'):
         result_services, value_vars = _new_enviroment(value_vars)
     else:
         result_services, value_vars = _passage_enviroment(value_vars)
+    #else:
+    #    result_services, value_vars = _passage_enviroment(value_vars)
     result_services = _passage_services(result_services, value_vars)
-    result_services_ots = None
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
     return result_services, result_services_ots, value_vars
 
 
@@ -5912,18 +5932,8 @@ def add_serv_with_install_csw(request):
         if add_serv_inst_csw_form.is_valid():
             type_install_csw = add_serv_inst_csw_form.cleaned_data['type_install_csw']
             request.session['type_install_csw'] = type_install_csw
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if type_install_csw == 'Медная линия и порт не меняются':
-                tag_service.append({'csw': None})
-            elif type_install_csw == 'ВОЛС и порт не меняются':
-                tag_service.append({'csw': None})
-            elif type_install_csw == 'Перевод на гигабит по меди на текущем узле':
-                tag_service.append({'copper': None})
-            else:
-                tag_service.append({'vols': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+
+            return redirect('csw')
 
     else:
 

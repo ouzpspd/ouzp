@@ -121,12 +121,20 @@ class VolsForm(forms.Form):
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
+                                           widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
+                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 
 class CopperForm(forms.Form):
     kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
+                                   widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
+                                   widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 class WirelessForm(forms.Form):
     ap_types = [('AirGrid 23 M5 или LiteBeam LBE-M5-23', 'LiteBeam LBE-M5-23'),
@@ -138,12 +146,18 @@ class WirelessForm(forms.Form):
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
+                                           widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
+                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 
 class CswForm(forms.Form):
     types_csw = [('D-Link DGS-1100-06/ME', 'D-Link DGS-1100-06/ME'), ('24-портовый коммутатор', '24-портовый коммутатор')]
     types_port = [('5', '5'), ('6', '6'), ('указанный ОНИТС СПД', 'указанный ОНИТС СПД')]
+    types_speed_csw = [('Нет', 'Нет'), ('100', '100'), ('1000', '1000')]
     logic_csw_1000 = forms.BooleanField(label='Запуск КК на магистрали 1 Гбит/с', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    exist_speed_csw = forms.CharField(label='Существующая магистраль', widget=forms.Select(choices=types_speed_csw, attrs={'class': 'form-control'}))
     model_csw = forms.CharField(label='Модель', widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
     port_csw = forms.CharField(label='Порт', widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
 
@@ -203,13 +217,10 @@ class ListResourcesForm(forms.Form):
 
 class ListJobsForm(forms.Form):
     types = [
-        ('Организация сервиса(СПД) без уст. КК', 'Организация сервиса(СПД) без уст. КК'),
-        ('Организация сервиса(СПД) с уст. КК', 'Организация сервиса(СПД) с уст. КК'),
-        ('Организация сервиса(не СПД)', 'Организация сервиса(не СПД)'),
-        ('Перенос сервиса(СПД) без КК', 'Перенос сервиса(СПД) без КК'),
-        ('Перенос сервиса(СПД) с КК', 'Перенос сервиса(СПД) с КК'),
-        ('Перенос сервиса(не СПД)', 'Перенос сервиса(не СПД)'),
-        ('Изменение сервиса', 'Изменение сервиса'),
+        ('Организация/Изменение, СПД', 'Организация/Изменение, СПД'),
+        ('Организация, не СПД', 'Организация, не СПД'),
+        ('Изменение, не СПД', 'Изменение, не СПД'),
+        ('Перенос, СПД', 'Перенос, СПД'),
         ('Не требуется', 'Не требуется'),
     ]
     jobs = forms.CharField(label='',
