@@ -28,7 +28,7 @@ REDIS_LOCATION = os.getenv('REDIS_LOCATION')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = ['localhost', '192.168.56.102']
 
 DATABASES = {
     'default': {

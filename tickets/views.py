@@ -4043,7 +4043,7 @@ def _new_enviroment(value_vars):
                         hidden_vars[
                             'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-
+    value_vars.update({'kad': kad})
     return result_services, value_vars
 
 
@@ -4953,7 +4953,7 @@ def head(request):
     static_vars['указать номер договора'] = selected_ono[0][0]
     static_vars['указать название клиента'] = selected_ono[0][1]
     static_vars['указать точку подключения'] = selected_ono[0][3]
-    node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК '}
+    node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК ', ', WiFi': 'WiFi '}
     for key, item in node_templates.items():
         if node_mon.endswith(key):
             finish_node = item + node_mon[:node_mon.index(key)]
