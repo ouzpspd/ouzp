@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, PassForm,\
+    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
     PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm, ListJobsForm
 
 from django.contrib import messages
@@ -1070,7 +1070,7 @@ def data(request):
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
-                 'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services']
+                 'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log']
 
 
 
@@ -4999,7 +4999,7 @@ def head(request):
     print('!!!!stroka s \n\n')
     print(stroka)
 
-    service_shpd = ['DA', 'BB', 'inet', 'Inet']
+    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
     service_hotspot = ['hotspot']
@@ -5173,37 +5173,6 @@ def head(request):
     #return redirect('passage')
     return redirect('job_formset')
 
-def passage(request):
-    """Данный метод выводит страницу с выбором шаблонов ТР в КБЗ"""
-    if request.method == 'POST':
-        passform = PassForm(request.POST)
-
-        if passform.is_valid():
-            type_pass = passform.cleaned_data['type_pass']
-            print('!!!!! type_pass')
-            print(type_pass)
-            request.session['type_pass'] = type_pass
-            return redirect('project_tr_exist_cl')
-
-
-    else:
-        head = request.session['head']
-        ticket_tr_id = request.session['ticket_tr_id']
-        ticket_tr = TR.objects.get(id=ticket_tr_id)
-        oattr = ticket_tr.oattr
-        pps = ticket_tr.pps
-        turnoff = ticket_tr.turnoff
-        #task_otpm = ticket_tr.ticket_k.task_otpm
-        passform = PassForm(initial={'type_pass': 'Перенос сервиса'})
-        context = {
-            'passform': passform,
-            'head': head,
-            'oattr': oattr,
-            'pps': pps,
-            'turnoff': turnoff,
-            #'task_otpm': task_otpm
-        }
-        return render(request, 'tickets/choice_pass.html', context)
 
 
 @cache_check
@@ -5495,8 +5464,12 @@ def pass_serv(request):
         if passservform.is_valid():
             from_node = passservform.cleaned_data['from_node']
             log_change = passservform.cleaned_data['log_change']
+            type_passage = passservform.cleaned_data['type_passage']
+            change_log = passservform.cleaned_data['change_log']
             request.session['from_node'] = from_node
             request.session['log_change'] = log_change
+            request.session['type_passage'] = type_passage
+            request.session['change_log'] = change_log
             tag_service = request.session['tag_service']
             sreda = request.session['sreda']
             tag_service.pop(0)

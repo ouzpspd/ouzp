@@ -227,25 +227,26 @@ class ListJobsForm(forms.Form):
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 
-class PassForm(forms.Form):
-    #router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    types = [
-        ('Перенос сервиса', 'Перенос сервиса'),
-        ('Изменение/организация сервисов без монтаж. работ', 'Изменение/организация сервисов без монтаж. работ'),
-        ('Перенос существующих сервисов', 'Перенос существующих сервисов'),
-        ('Перенос сервиса "ШПД в Интернет" с изменением реквизитов', 'Перенос сервиса "ШПД в Интернет" с изменением реквизитов'),
-        ('Организация доп. услуги с установкой КК', 'Организация доп. услуги с установкой КК'),
-        ('Организация доп. услуги от существующего КК', 'Организация доп. услуги от существующего КК'),
-    ]
-    type_pass = forms.CharField(label='Выбор работ',
-                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-
-
 class PassServForm(forms.Form):
     log_change = forms.BooleanField(label='Логическое подключение изменится?', required=False,
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     from_node = forms.BooleanField(label='Монтажные работы от узла связи?', required=False,
                                       widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    types_passage = [
+        ('Перенос сервиса в новую точку', 'Перенос сервиса в новую точку'),
+        ('Перенос точки подключения', 'Перенос точки подключения'),
+        ('Перенос логического подключения', 'Перенос логического подключения'),
+        ('Перевод на гигабит', 'Перевод на гигабит'),
+    ]
+    type_passage = forms.CharField(label='Варианты переноса',
+                                widget=forms.Select(choices=types_passage, attrs={'class': 'form-control'}))
+    types_change_log = [
+        ('Порт и КАД не меняется', 'Порт и КАД не меняется'),
+        ('Порт меняется, КАД не меняется', 'Порт меняется, КАД не меняется'),
+        ('Порт и КАД меняется', 'Порт и КАД меняется'),
+    ]
+    change_log = forms.CharField(label='Изменение логики при работах',
+                                 widget=forms.Select(choices=types_change_log, attrs={'class': 'form-control'}))
 
 
 
