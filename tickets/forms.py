@@ -232,6 +232,15 @@ class PassServForm(forms.Form):
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     from_node = forms.BooleanField(label='Монтажные работы от узла связи?', required=False,
                                       widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
+    types_exist_sreda = [
+        ('1', 'UTP'),
+        ('2', 'ВОЛС'),
+        ('4', 'FTTH'),
+        ('3', 'WiFi'),
+    ]
+    exist_sreda = forms.CharField(label='Подключен по',
+                                   widget=forms.Select(choices=types_exist_sreda, attrs={'class': 'form-control'}))
     types_passage = [
         ('Перенос сервиса в новую точку', 'Перенос сервиса в новую точку'),
         ('Перенос точки подключения', 'Перенос точки подключения'),

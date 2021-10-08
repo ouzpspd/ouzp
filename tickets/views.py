@@ -5551,10 +5551,56 @@ def _passage_enviroment(value_vars):
     templates = value_vars.get('templates')
     pps = _readable_node(value_vars.get('pps'))
     port = value_vars.get('port')
-    if value_vars.get('log_change'):
-        kad, value_vars = _list_kad(value_vars)
-    else:
+    device_pps = value_vars['device_pps']
+    device_client = value_vars['device_client']
+    selected_ono = value_vars.get('selected_ono')
+    if 'Порт и КАД не меняется' == value_vars.get('change_log'):
         kad = value_vars.get('selected_ono')[0][-2]
+    else:
+        kad, value_vars = _list_kad(value_vars)
+
+    stroka = templates.get("Изменение присоединения к СПД")
+    static_vars = {}
+    hidden_vars = {}
+    if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения':
+        if value_vars.get('change_log') == 'Порт и КАД не меняется':
+            hidden_vars['- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
+            if value_vars.get('exist_sreda') == 'UTP':
+                static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+            else:
+                static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+            hidden_vars['в новой точке подключения '] = 'в новой точке подключения '
+            hidden_vars['- Логическое подключение клиента не изменится.'] = '- Логическое подключение клиента не изменится.'
+        elif value_vars.get('change_log') == 'Порт меняется, КАД не меняется' or value_vars.get('change_log') == 'Порт и КАД меняется':
+            hidden_vars[
+                '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
+            if sreda == '1':
+                static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+            else:
+                static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+                hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                static_vars['указать узел связи'] = pps
+                static_vars['указать конвертер/передатчик на стороне узла связи'] = device_pps
+            hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
+            static_vars['указать узел связи'] = pps
+            hidden_vars['в новой точке подключения '] = 'в новой точке подключения '
+            hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
+            static_vars['указать название коммутатора'] = kad
+            static_vars['указать порт коммутатора'] = port
+            hidden_vars['Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
+            static_vars['указать старый порт коммутатора'] = selected_ono[0][-1]
+            static_vars['указать название старого коммутатора'] = selected_ono[0][-2]
+            hidden_vars['Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+            static_vars['указать порт коммутатора'] = port
+            static_vars['указать название коммутатора'] = kad
+    elif value_vars.get('type_passage') == 'Перенос логического подключения':
+        hidden_vars[
+            '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
+        if sreda == '1':
+            static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+        else:
+            static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+
 
 
     static_vars = {}
@@ -5898,13 +5944,15 @@ def passage_services_with_install_csw(value_vars):
 def passage_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для переноса услуг"""
-    #if value_vars.get('counter_exist_line') > 1:
-    if value_vars.get('log_change'):
+    if value_vars.get('counter_exist_line') > 1 and value_vars.get('Перенос точки подключения') and not value_vars.get('selected_ono')[0][-2].startswith('CSW'):
+    #if value_vars.get('log_change'):
         result_services, value_vars = _new_enviroment(value_vars)
     else:
         result_services, value_vars = _passage_enviroment(value_vars)
     #else:
     #    result_services, value_vars = _passage_enviroment(value_vars)
+
+
     result_services = _passage_services(result_services, value_vars)
     if value_vars.get('result_services_ots'):
         result_services_ots = value_vars.get('result_services_ots')
