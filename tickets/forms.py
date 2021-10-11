@@ -228,10 +228,6 @@ class ListJobsForm(forms.Form):
 
 
 class PassServForm(forms.Form):
-    log_change = forms.BooleanField(label='Логическое подключение изменится?', required=False,
-                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    from_node = forms.BooleanField(label='Монтажные работы от узла связи?', required=False,
-                                      widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
     types_exist_sreda = [
         ('1', 'UTP'),
@@ -251,8 +247,8 @@ class PassServForm(forms.Form):
                                 widget=forms.Select(choices=types_passage, attrs={'class': 'form-control'}))
     types_change_log = [
         ('Порт и КАД не меняется', 'Порт и КАД не меняется'),
-        ('Порт меняется, КАД не меняется', 'Порт меняется, КАД не меняется'),
-        ('Порт и КАД меняется', 'Порт и КАД меняется'),
+        ('Порт меняется, узел не меняется', 'Порт меняется, узел не меняется'),
+        ('Узел меняется', 'Узел меняется'),
     ]
     change_log = forms.CharField(label='Изменение логики при работах',
                                  widget=forms.Select(choices=types_change_log, attrs={'class': 'form-control'}))
