@@ -247,13 +247,22 @@ class PassServForm(forms.Form):
                                 widget=forms.Select(choices=types_passage, attrs={'class': 'form-control'}))
     types_change_log = [
         ('Порт и КАД не меняется', 'Порт и КАД не меняется'),
-        ('Порт меняется, узел не меняется', 'Порт меняется, узел не меняется'),
-        ('Узел меняется', 'Узел меняется'),
+        ('Порт/КАД меняются', 'Порт/КАД меняются'),
     ]
     change_log = forms.CharField(label='Изменение логики при работах',
                                  widget=forms.Select(choices=types_change_log, attrs={'class': 'form-control'}))
 
 
+
+class ChangeLogShpdForm(forms.Form):
+    types_change_log_shpd = [
+        ('существующая адресация', 'существующая адресация'),
+        ('Новая подсеть /30', 'Новая подсеть /30'),
+        ('Новая подсеть /32', 'Новая подсеть /32'),
+    ]
+    change_log_shpd = forms.CharField(label='Изменение схемы ШПД',
+                                      widget=forms.Select(choices=types_change_log_shpd,
+                                                          attrs={'class': 'form-control'}))
 
 class AddServInstCswForm(forms.Form):
     types = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),

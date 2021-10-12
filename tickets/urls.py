@@ -70,6 +70,7 @@ urlpatterns = [
     path('pass_serv/', pass_serv, name='pass_serv'),
     path('exist_cl_data/', exist_cl_data, name='exist_cl_data'),
     path('add_serv_with_install_csw/', add_serv_with_install_csw, name='add_serv_with_install_csw'),
+    path('change_log_shpd/', change_log_shpd, name='change_log_shpd'),
     path('change_serv/', change_serv, name='change_serv'),
     path('change_params_serv/', change_params_serv, name='change_params_serv'),
     path('job_formset/', job_formset, name='job_formset'),

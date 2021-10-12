@@ -4,7 +4,7 @@ from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
-    PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm, ListJobsForm
+    PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -1072,7 +1072,7 @@ def data(request):
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
-                 'exist_sreda']
+                 'exist_sreda', 'change_log_shpd']
 
 
 
@@ -1122,7 +1122,10 @@ def data(request):
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
         else:
             counter_line_services = value_vars.get('counter_line_services')
-            value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
+            if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+                value_vars.update({'counter_line_services': 1})
+            else:
+                value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
             result_services, result_services_ots, value_vars = passage_services(value_vars)
             value_vars.update({'counter_line_services': counter_line_services})
             value_vars.update({'result_services': result_services})
@@ -5252,6 +5255,8 @@ def project_tr_exist_cl(request):
             print('Среда передачи: UTP')
     else:
         request.session['oattr'] = None
+        sreda = '1'
+        request.session['sreda'] = '1'
     selected_ono = request.session['selected_ono']
 
     new_with_csw_job_services = request.session['new_with_csw_job_services']
@@ -5458,11 +5463,30 @@ def add_serv(request):
         else:
             value_vars.update({i: request.session[i]})
 
-
-
     return redirect('no_data')
 
 
+
+def change_log_shpd(request):
+    if request.method == 'POST':
+        changelogshpdform = ChangeLogShpdForm(request.POST)
+
+        if changelogshpdform.is_valid():
+            change_log_shpd = changelogshpdform.cleaned_data['change_log_shpd']
+            request.session['change_log_shpd'] = change_log_shpd
+            tag_service = request.session['tag_service']
+            print('!!!!tag_service')
+            print(tag_service)
+            tag_service.pop(0)
+            return redirect(next(iter(tag_service[0])))
+
+    else:
+        changelogshpdform = ChangeLogShpdForm()
+        context = {
+            'changelogshpdform': changelogshpdform
+        }
+
+        return render(request, 'tickets/change_log_shpd.html', context)
 
 def pass_serv(request):
     if request.method == 'POST':
@@ -5472,10 +5496,13 @@ def pass_serv(request):
             type_passage = passservform.cleaned_data['type_passage']
             change_log = passservform.cleaned_data['change_log']
             exist_sreda = passservform.cleaned_data['exist_sreda']
+            types_change_log_shpd = passservform.cleaned_data['types_change_log_shpd']
             request.session['type_passage'] = type_passage
             request.session['change_log'] = change_log
             request.session['exist_sreda'] = exist_sreda
+            request.session['types_change_log_shpd'] = types_change_log_shpd
             tag_service = request.session['tag_service']
+            readable_services = request.session['readable_services']
             print('!!!!tag_service')
             print(tag_service)
             sreda = request.session['sreda']
@@ -5484,6 +5511,8 @@ def pass_serv(request):
                 pass
 
             else:
+                if 'ШПД в Интернет' in readable_services.keys():
+                    tag_service.insert(0, {'change_log_shpd': None})
                 if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                     pass
                 else:
@@ -5520,7 +5549,8 @@ def _passage_services(result_services, value_vars):
     else:
         static_vars['ОИПМ/ОИПД'] = 'ОИПД'
     if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения':
-        stroka = templates.get("Перенос сервиса %указать название сервиса%")
+        stroka = templates.get("Перенос сервиса в новую точку подключения")
+        #if value_vars.get('change_log_shpd') and value_vars.get('change_log_shpd') != 'существующая адресация':
         services = []
         if value_vars.get('type_passage') == 'Перенос точки подключения':
             for key, value in readable_services.items():
@@ -5528,17 +5558,25 @@ def _passage_services(result_services, value_vars):
                     services.append(key + ' ' + value)
                 elif type(value) == list:
                     services.append(key + ''.join(value))
+            static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
         elif value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
             for key, value in readable_services.items():
                 if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
                     services.append(key + ' ' + value)
+                    static_vars['указать название сервиса'] = key
                 elif type(value) == list:
                     for val in value:
                         if value_vars.get('selected_ono')[0][-4] in val:
-                            services.append(key + ''.join(value))
+                            services.append(key + ' ' + val)
+                            static_vars['указать название сервиса'] = key
+
+        print('!!!!readable_services')
+        print(readable_services)
+        print('!!!!services')
+        print(services)
         static_vars['указать сервис'] = ', '.join(services)
-        static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
-        if value_vars.get('log_change'):
+
+        if value_vars.get('change_log') != 'Порт и КАД не меняется':
             hidden_vars[
                 '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
 
@@ -5549,6 +5587,8 @@ def _passage_services(result_services, value_vars):
             hidden_vars[
                 '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
             static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
+
+
 
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif value_vars.get('type_passage') == 'Перенос логического подключения':
@@ -5629,7 +5669,7 @@ def _passage_enviroment(value_vars):
                 static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
             hidden_vars['в новой точке подключения '] = 'в новой точке подключения '
             hidden_vars['- Логическое подключение клиента не изменится.'] = '- Логическое подключение клиента не изменится.'
-        elif value_vars.get('change_log') == 'Порт меняется, узел не меняется' or value_vars.get('change_log') == 'Узел меняется':
+        elif value_vars.get('change_log') == 'Порт/КАД меняются':
             hidden_vars[
                 '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
             if sreda == '1':
@@ -6081,8 +6121,7 @@ def passage_services_with_install_csw(value_vars):
 def passage_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для переноса услуг"""
-    if value_vars.get('counter_exist_line') > 1 and value_vars.get('Перенос точки подключения') and not value_vars.get('selected_ono')[0][-2].startswith('CSW'):
-    #if value_vars.get('log_change'):
+    if (value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения') and value_vars.get('change_log') != 'Порт и КАД не меняется':
         result_services, value_vars = _new_enviroment(value_vars)
     else:
         result_services, value_vars = _passage_enviroment(value_vars)
