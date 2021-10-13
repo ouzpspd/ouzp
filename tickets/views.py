@@ -151,28 +151,34 @@ def stash(sw, model, login, password):
         elif 'D-Link' in model and model != 'D-Link DIR-100':
             port_list = None
             config_ports_device = {}
-            regex_description = 'config ports (\d+) (?:.+?) description (\".*?\")\n'
+            regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
             match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
             for i in match_description:
-                config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
+                if '-' in i.group(1):
+                    start, stop = [int(j) for j in i.group(1).split('-')]
+                    for one_desc in list(range(start, stop + 1)):
+                        config_ports_device['Port {}'.format(one_desc)] = [i.group(2), '-']
+                else:
+                    config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
             if '1100' in model:
                 regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
             else:
                 regex_free = 'config vlan stub add untagged (\S+)'
             match_free = re.search(regex_free, switch)
             port_free = []
-            for i in match_free.group(1).split(','):
-                if '-' in i:
-                    start, stop = [int(j) for j in i.split('-')]
-                    port_free += list(range(start, stop+1))
-                else:
-                    port_free.append(int(i))
+            if match_free:
+                for i in match_free.group(1).split(','):
+                    if '-' in i:
+                        start, stop = [int(j) for j in i.split('-')]
+                        port_free += list(range(start, stop+1))
+                    else:
+                        port_free.append(int(i))
 
-            for i in port_free:
-                if config_ports_device.get('Port {}'.format(i)):
-                    config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
-                else:
-                    config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
+                for i in port_free:
+                    if config_ports_device.get('Port {}'.format(i)):
+                        config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
+                    else:
+                        config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
 
     return config_ports_device
 
