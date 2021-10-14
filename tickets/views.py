@@ -148,28 +148,37 @@ def stash(sw, model, login, password):
                 config_ports_device[i.group(1)] = [desc, vlan]
 
 
-        elif 'D-Link' in model:
+        elif 'D-Link' in model and model != 'D-Link DIR-100':
             port_list = None
             config_ports_device = {}
-            regex_description = 'config ports (\d+) (?:.+?) description (\".*?\")\n'
+            regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
             match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
             for i in match_description:
-                config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
-            regex_free = 'config vlan stub add untagged (\S+)'
+                if '-' in i.group(1):
+                    start, stop = [int(j) for j in i.group(1).split('-')]
+                    for one_desc in list(range(start, stop + 1)):
+                        config_ports_device['Port {}'.format(one_desc)] = [i.group(2), '-']
+                else:
+                    config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
+            if '1100' in model:
+                regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
+            else:
+                regex_free = 'config vlan stub add untagged (\S+)'
             match_free = re.search(regex_free, switch)
             port_free = []
-            for i in match_free.group(1).split(','):
-                if '-' in i:
-                    start, stop = [int(j) for j in i.split('-')]
-                    port_free += list(range(start, stop+1))
-                else:
-                    port_free.append(int(i))
+            if match_free:
+                for i in match_free.group(1).split(','):
+                    if '-' in i:
+                        start, stop = [int(j) for j in i.split('-')]
+                        port_free += list(range(start, stop+1))
+                    else:
+                        port_free.append(int(i))
 
-            for i in port_free:
-                if config_ports_device.get('Port {}'.format(i)):
-                    config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
-                else:
-                    config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
+                for i in port_free:
+                    if config_ports_device.get('Port {}'.format(i)):
+                        config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
+                    else:
+                        config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
 
     return config_ports_device
 
@@ -513,7 +522,7 @@ def project_tr(request, dID, tID, trID):
             elif 'Видеонаблюдение' in services_plus_desc[index_service]:
                 tag_service.append('video')
             elif 'HotSpot' in services_plus_desc[index_service]:
-                if ('премиум +' or 'премиум+') in services_plus_desc[index_service].lower():
+                if 'премиум +' in services_plus_desc[index_service].lower() or 'премиум+' in services_plus_desc[index_service].lower():
                     premium_plus = True
                 else:
                     premium_plus = False
@@ -2354,6 +2363,7 @@ def parsingByNodename(node_name, login, password):
             regex_name_model = '\"netswitch-name\\\\\" >\\\\r\\\\n\s+?(\S+?[ekb|ntg|kur])\\\\r\\\\n\s+?</a>\\\\r\\\\n\s+?\\\\r\\\\n</td><td>(.+?)</td><td>\\\\r\\\\n\s+?<a href=\\\\\"/stu/Node'
             match_name_model = re.findall(regex_name_model, switch)
 
+
             # Выявление индексов устройств с признаком SW и CSW
             clear_name_model = []
             clear_index = []
@@ -2361,6 +2371,7 @@ def parsingByNodename(node_name, login, password):
                 if match_name_model[i][0][:3] == 'CSW' or match_name_model[i][0][:2] == 'SW':
                     clear_index.append(i)
                     clear_name_model.append(match_name_model[i])
+
 
             # в regex добавлены знаки ?, чтобы отключить жадность. в выводе match список кортежей
 
@@ -2390,9 +2401,7 @@ def parsingByNodename(node_name, login, password):
             clear_status_desc = []
             for i in clear_index:
                 clear_status_desc.append(match_status_desc[i])
-            print('!!!!!')
-            print('clear_status_desc')
-            print(clear_status_desc)
+
 
             # в выводе match список uplink - строк
 
@@ -2406,6 +2415,8 @@ def parsingByNodename(node_name, login, password):
 
             for i in clear_index:
                 clear_switch_id.append(match_switch_id[i])
+            print('!!!!clear_switch_id')
+            print(clear_switch_id)
             for i in clear_switch_id:
                 ports = {}
 
@@ -2458,10 +2469,22 @@ def parsingByNodename(node_name, login, password):
 
 
             list_switches = []
+            #for i in range(len(clear_name_model)):
+            for i in range(len(match_name_model)):
+                print('!!!')
+                print(i)
+                if match_name_model[i] not in clear_name_model:
+                    list_switches.append(
+                        [match_name_model[i][0], match_name_model[i][1], match_ip[i], match_uplink[i],
+                         match_status_desc[i][0], match_status_desc[i][1].replace('&quot;','"'), '-', '-', '-', '-', '-'])
+
             for i in range(len(clear_name_model)):
+                print('!!!')
+                print(i)
+
                 #list_switches.append([clear_name_model[i][0], clear_name_model[i][1], match_node[i], clear_ip[i], clear_uplink[i], list_ports[i]])
                 list_switches.append(
-                    [clear_name_model[i][0], clear_name_model[i][1], clear_ip[i], clear_uplink[i], clear_status_desc[i][0], clear_status_desc[i][1],
+                    [clear_name_model[i][0], clear_name_model[i][1], clear_ip[i], clear_uplink[i], clear_status_desc[i][0], clear_status_desc[i][1].replace('&quot;','"'),
                      list_ports[i]['Всего портов'], list_ports[i]['Занятых клиентами'], list_ports[i]['Занятых линками'], list_ports[i]['Доступные'], configport_switches[i]])
 
             print('!!!!')
@@ -2660,6 +2683,7 @@ def remove_spp_wait(request, ticket_spp_id):
 def add_spp_wait(request, ticket_spp_id):
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.wait = True
+    current_ticket_spp.was_waiting = True
     current_ticket_spp.process = False
     current_ticket_spp.save()
     messages.success(request, 'Заявка {} перемещена в ожидание'.format(current_ticket_spp.ticket_k))
@@ -3045,6 +3069,8 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
             static_vars['указать узел связи'] = pps
             static_vars['указать название коммутатора'] = kad
             static_vars['указать порт коммутатора'] = port
+            hidden_vars['- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'
+            hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
             if logic_csw_1000 == True:
                 static_vars['100/1000'] = '1000'
             else:
@@ -3291,7 +3317,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
             hidden_vars = {}
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
 
-            if ('премиум +' or 'премиум+') in service.lower():
+            if 'премиум +' in service.lower() or 'премиум+' in service.lower():
                 if logic_csw == True:
                     result_services.append(enviroment_csw(sreda, templates))
                 static_vars['указать количество клиентов'] = hotspot_users

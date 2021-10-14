@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 class SPP(models.Model):
     dID = models.CharField(max_length=10)
     ticket_k = models.CharField(max_length=15, verbose_name='Заявка К')
-    client = models.CharField(max_length=100, verbose_name='Клиент')
+    client = models.CharField(max_length=200, verbose_name='Клиент')
     type_ticket = models.CharField(max_length=20, verbose_name='Тип заявки')
     manager = models.CharField(max_length=100, verbose_name='Менеджер')
     technolog = models.CharField(max_length=100, verbose_name='Технолог')
@@ -19,6 +19,7 @@ class SPP(models.Model):
     complited = models.DateTimeField(auto_now=True)
     process = models.BooleanField(default=False, verbose_name='В работе')
     wait = models.BooleanField(default=False, verbose_name='В ожидании')
+    was_waiting = models.BooleanField(default=False, verbose_name='Была в ожидании')
     user = models.ForeignKey(User, on_delete=models.PROTECT)
 
     def __str__(self):
