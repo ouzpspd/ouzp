@@ -2,6 +2,37 @@
 {% block content %}
 
 <div class="container">
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+            <td class="table-light" style="width: 75%">{{pps}}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+
+<div class="container">
+
+            <div class="card mb-2">
+                <h5 class="card-header">Решение ОТПМ</h5>
+            <div class="card-body">
+                <p class="card-text">{{oattr|linebreaksbr}}</p>
+            </div>
+            </div>
+</div>
+
+<div class="container">
+
+            <div class="card mb-2">
+                <h5 class="card-header">Подключение</h5>
+            <div class="card-body">
+                <p class="card-text">{{head|linebreaksbr}}</p>
+            </div>
+            </div>
+</div>
+
+<div class="container">
 <div class="card mb-2">
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">

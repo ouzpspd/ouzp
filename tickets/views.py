@@ -666,30 +666,38 @@ def copper(request):
             logic_change_gi_csw = copperform.cleaned_data['logic_change_gi_csw']
             port = copperform.cleaned_data['port']
             kad = copperform.cleaned_data['kad']
+            readable_services = request.session['readable_services']
+            tag_service = request.session['tag_service']
             request.session['logic_csw'] = logic_csw
-            request.session['logic_csw'] = logic_replace_csw
-            request.session['logic_csw'] = logic_change_gi_csw
+            request.session['logic_replace_csw'] = logic_replace_csw
+            request.session['logic_change_gi_csw'] = logic_change_gi_csw
             request.session['port'] = port
             request.session['kad'] = kad
             type_tr = request.session['type_tr']
+            tag_service.pop(0)
 
-            if type_tr == 'new_cl':
-                if logic_csw == True:
-                    try:
-                        request.session['new_with_csw_job_services']
-                    except KeyError:
-                        return redirect('csw')
-                    else:
-                        return redirect('add_serv_with_install_csw')
-                else:
-                    return redirect('data')
-
-
-            elif type_tr == 'exist_cl':
-                tag_service = request.session['tag_service']
-                tag_service.pop(0)
-                request.session['tag_service'] = tag_service
+            if '"ШПД в интернет"' in readable_services.keys():
+                tag_service.append({'change_log_shpd': None})
                 return redirect(next(iter(tag_service[0])))
+
+            if logic_csw == True:
+                try:
+                    request.session['new_with_csw_job_services']
+                except KeyError:
+                    #return redirect('csw')
+                    tag_service.append({'csw': None})
+                    return redirect(next(iter(tag_service[0])))
+                else:
+                    #return redirect('add_serv_with_install_csw')
+                    tag_service.append({'add_serv_with_install_csw': None})
+                    return redirect(next(iter(tag_service[0])))
+            else:
+                #return redirect('data')
+                tag_service.append({'data': None})
+                return redirect(next(iter(tag_service[0])))
+
+
+
 
     else:
         user = User.objects.get(username=request.user.username)
@@ -1026,7 +1034,11 @@ def csw(request):
             request.session['logic_csw_1000'] = logic_csw_1000
             request.session['exist_speed_csw'] = exist_speed_csw
             request.session['logic_csw'] = True
-            return redirect('data')
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            #return redirect('data')
+            tag_service.append({'data': None})
+            return redirect(next(iter(tag_service[0])))
     else:
         sreda = request.session['sreda']
         if sreda == '2' or sreda == '4':
@@ -2701,6 +2713,7 @@ def parsingByNodename(node_name, login, password):
             # Получение данных об узле КАД
             regex_node = 'netswitch-nodeName\\\\\">\\\\r\\\\n\s+(.+?[АВ|КК|УА|РУА])\\\\r\\\\n '
             match_node = re.findall(regex_node, switch)
+
             # в regex добавлены знаки ?, чтобы отключить жадность. в выводе match список узлов - строк
 
             # Получение данных об ip-адресе КАД
@@ -2799,7 +2812,7 @@ def parsingByNodename(node_name, login, password):
                 if match_name_model[i] not in clear_name_model:
                     list_switches.append(
                         [match_name_model[i][0], match_name_model[i][1], match_ip[i], match_uplink[i],
-                         match_status_desc[i][0], match_status_desc[i][1], '-', '-', '-', '-', '-'])
+                         match_status_desc[i][0], match_status_desc[i][1].replace('&quot;','"'), '-', '-', '-', '-', '-'])
 
             for i in range(len(clear_name_model)):
                 print('!!!')
@@ -2807,7 +2820,7 @@ def parsingByNodename(node_name, login, password):
 
                 #list_switches.append([clear_name_model[i][0], clear_name_model[i][1], match_node[i], clear_ip[i], clear_uplink[i], list_ports[i]])
                 list_switches.append(
-                    [clear_name_model[i][0], clear_name_model[i][1], clear_ip[i], clear_uplink[i], clear_status_desc[i][0], clear_status_desc[i][1],
+                    [clear_name_model[i][0], clear_name_model[i][1], clear_ip[i], clear_uplink[i], clear_status_desc[i][0], clear_status_desc[i][1].replace('&quot;','"'),
                      list_ports[i]['Всего портов'], list_ports[i]['Занятых клиентами'], list_ports[i]['Занятых линками'], list_ports[i]['Доступные'], configport_switches[i]])
 
             print('!!!!')
@@ -3993,6 +4006,9 @@ def _new_enviroment(value_vars):
             static_vars['указать узел связи'] = pps
             static_vars['указать название коммутатора'] = kad
             static_vars['указать порт коммутатора'] = value_vars.get('port')
+            hidden_vars[
+                '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'
+            hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
             logic_csw_1000 = value_vars.get('logic_csw_1000')
             if logic_csw_1000 == True:
                 static_vars['100/1000'] = '1000'
@@ -5519,8 +5535,8 @@ def pass_serv(request):
             else:
                 print('!!!!!!readable_services.keys()')
                 print(readable_services.keys())
-                if '"ШПД в интернет"' in readable_services.keys():
-                    tag_service.insert(0, {'change_log_shpd': None})
+                #if '"ШПД в интернет"' in readable_services.keys():
+                #    tag_service.insert(0, {'change_log_shpd': None})
 
                 if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                     pass
@@ -5539,9 +5555,16 @@ def pass_serv(request):
 
 
     else:
+        oattr = request.session['oattr']
+        pps = request.session['pps']
+        head = request.session['head']
         passservform = PassServForm()
         context = {
-            'passservform': passservform
+            'passservform': passservform,
+            'oattr': oattr,
+            'pps': pps,
+            'head': head
+
         }
 
         return render(request, 'tickets/pass_serv.html', context)
@@ -5960,7 +5983,7 @@ def _passage_enviroment(value_vars):
     return result_services, value_vars
 
 
-@cache_check
+"""@cache_check
 def exist_cl_data(request):
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
@@ -6158,7 +6181,7 @@ def exist_cl_data(request):
     else:
         error = 'Нет шаблона "Перенос сервиса %указать название сервиса%"'
         request.session['error'] = error
-        redirect('no_data')
+        redirect('no_data')"""
 
 
 def _passage_services_on_csw(result_services, value_vars):
