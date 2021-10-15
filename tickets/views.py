@@ -152,7 +152,7 @@ def stash(sw, model, login, password):
             port_list = None
             config_ports_device = {}
             regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
-            match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
+            match_description = re.finditer(regex_description, switch)
             for i in match_description:
                 if '-' in i.group(1):
                     start, stop = [int(j) for j in i.group(1).split('-')]
@@ -2996,7 +2996,7 @@ def in_work_ortr(login, password):
         #search_demand_stat = soup.find_all('td', class_='demand_stat')
 
         for index in range(len(search_demand_num2)-1):
-            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Гумеров Р.Т.']:
+            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Гумеров Р.Т.']:
                 pass
             else:
 
