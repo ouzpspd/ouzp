@@ -152,8 +152,11 @@ def stash(sw, model, login, password):
             port_list = None
             config_ports_device = {}
             regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
-            match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
+            match_description = re.finditer(regex_description, switch)
             for i in match_description:
+                print('!!!!!i.group')
+                print(i.group(1))
+                print(i.group(2))
                 if '-' in i.group(1):
                     start, stop = [int(j) for j in i.group(1).split('-')]
                     for one_desc in list(range(start, stop + 1)):
@@ -666,7 +669,7 @@ def copper(request):
             logic_change_gi_csw = copperform.cleaned_data['logic_change_gi_csw']
             port = copperform.cleaned_data['port']
             kad = copperform.cleaned_data['kad']
-            readable_services = request.session['readable_services']
+
             tag_service = request.session['tag_service']
             request.session['logic_csw'] = logic_csw
             request.session['logic_replace_csw'] = logic_replace_csw
@@ -676,19 +679,42 @@ def copper(request):
             type_tr = request.session['type_tr']
             tag_service.pop(0)
 
-            if '"ШПД в интернет"' in readable_services.keys():
-                tag_service.append({'change_log_shpd': None})
-                return redirect(next(iter(tag_service[0])))
+
+            try:
+                type_pass = request.session['type_pass']
+            except KeyError:
+                pass
+            else:
+                if 'Перенос, СПД' in type_pass:
+                    type_passage = request.session['type_passage']
+                    if type_passage == 'Перенос сервиса в новую точку':
+                        selected_ono = request.session['selected_ono']
+                        selected_service = selected_ono[0][-3]
+                        service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+                        if any(serv in selected_service for serv in service_shpd):
+                            tag_service.append({'change_log_shpd': None})
+                    elif type_passage == 'Перенос логического подключения':
+                        pass
+                    else:
+                        readable_services = request.session['readable_services']
+                        if '"ШПД в интернет"' in readable_services.keys():
+                            tag_service.append({'change_log_shpd': None})
+                elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
+                    readable_services = request.session['readable_services']
+                    if '"ШПД в интернет"' in readable_services.keys():
+                        tag_service.append({'change_log_shpd': None})
+
 
             if logic_csw == True:
                 try:
-                    request.session['new_with_csw_job_services']
+                    request.session['type_pass']
+                    #request.session['new_with_csw_job_services']
                 except KeyError:
                     #return redirect('csw')
                     tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
                 else:
-                    #return redirect('add_serv_with_install_csw')
+
                     tag_service.append({'add_serv_with_install_csw': None})
                     return redirect(next(iter(tag_service[0])))
             else:
@@ -792,13 +818,61 @@ def vols(request):
             request.session['port'] = port
             request.session['speed_port'] = speed_port
             request.session['kad'] = kad
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
             try:
                 ppr = volsform.cleaned_data['ppr']
             except KeyError:
                 ppr = None
             request.session['ppr'] = ppr
 
-            type_tr = request.session['type_tr']
+            try:
+                type_pass = request.session['type_pass']
+            except KeyError:
+                pass
+            else:
+                if 'Перенос, СПД' in type_pass:
+                    type_passage = request.session['type_passage']
+                    if type_passage == 'Перенос сервиса в новую точку':
+                        selected_ono = request.session['selected_ono']
+                        selected_service = selected_ono[0][-3]
+                        service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+                        if any(serv in selected_service for serv in service_shpd):
+                            tag_service.append({'change_log_shpd': None})
+                    elif type_passage == 'Перенос логического подключения':
+                        pass
+                    else:
+                        readable_services = request.session['readable_services']
+                        if '"ШПД в интернет"' in readable_services.keys():
+                            tag_service.append({'change_log_shpd': None})
+                elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
+                    readable_services = request.session['readable_services']
+                    if '"ШПД в интернет"' in readable_services.keys():
+                        tag_service.append({'change_log_shpd': None})
+
+
+            if logic_csw == True:
+                device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
+                request.session['device_client'] = device_client
+                try:
+                    request.session['type_pass']
+                    #request.session['new_with_csw_job_services']
+                except KeyError:
+                    #return redirect('csw')
+                    tag_service.append({'csw': None})
+                    return redirect(next(iter(tag_service[0])))
+                else:
+
+                    tag_service.append({'add_serv_with_install_csw': None})
+                    return redirect(next(iter(tag_service[0])))
+            else:
+                request.session['device_client'] = device_client
+                #return redirect('data')
+                tag_service.append({'data': None})
+                return redirect(next(iter(tag_service[0])))
+
+
+            """type_tr = request.session['type_tr']
             if type_tr == 'new_cl':
                 if logic_csw == True:
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
@@ -812,12 +886,8 @@ def vols(request):
 
                 else:
                     request.session['device_client'] = device_client
-                    return redirect('data')
-            elif type_tr == 'exist_cl':
-                tag_service = request.session['tag_service']
-                tag_service.pop(0)
-                request.session['tag_service'] = tag_service
-                return redirect(next(iter(tag_service[0])))
+                    return redirect('data')"""
+
 
 
 
@@ -5503,8 +5573,12 @@ def change_log_shpd(request):
             return redirect(next(iter(tag_service[0])))
 
     else:
+        head = request.session['head']
+        kad = request.session['kad']
         changelogshpdform = ChangeLogShpdForm()
         context = {
+            'head': head,
+            'kad': kad,
             'changelogshpdform': changelogshpdform
         }
 
@@ -5586,50 +5660,6 @@ def _passage_services(result_services, value_vars):
         services = []
         service_shpd_change = []
         if value_vars.get('type_passage') == 'Перенос точки подключения':
-            for key, value in readable_services.items():
-                if type(value) == str:
-                    if key != '"ШПД в интернет"':
-                        services.append(key + ' ' + value)
-                    else:
-                        if value_vars.get('change_log_shpd') == 'существующая адресация':
-                            services.append(key + ' ' + value)
-                        else:
-                            if value_vars.get('change_log_shpd') == 'Новая подсеть /32':
-                                if '/32' in value:
-                                    len_index = len(' c реквизитами ')
-                                    subnet_clear = value[len_index:]
-                                    service_shpd_change.append(subnet_clear)
-                                    services.append(key)
-
-                elif type(value) == list:
-                    if key != '"ШПД в интернет"':
-                        services.append(key + ''.join(value))
-                    else:
-                        if value_vars.get('change_log_shpd') != 'существующая адресация':
-                            services.append(key + ''.join(value))
-                        else:
-                            if value_vars.get('change_log_shpd') == 'Новая подсеть /32':
-                                for val in value:
-                                    if '/32' in val:
-                                        len_index = len(' c реквизитами ')
-                                        subnet_clear = value[len_index:]
-                                        service_shpd_change.append(subnet_clear)
-                                        if len(value) == len(service_shpd_change):
-                                            services.append(key)
-                                    else:
-                                        services.append(key + ' ' + val)
-            if service_shpd_change:
-
-                hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
-                hidden_vars['ОНИТС СПД подготовиться к работам:'] = 'ОНИТС СПД подготовиться к работам:'
-                hidden_vars['- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'] = '- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'
-                static_vars['указать новую маску'] = '/30' if value_vars.get('change_log_shpd') == 'Новая подсеть /30' else '/32'
-                hidden_vars['-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
-                hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
-                hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
-                static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
-
-            static_vars['указать сервис'] = ', '.join(services)
             if value_vars.get('change_log') != 'Порт и КАД не меняется':
                 hidden_vars[
                     '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
@@ -5642,9 +5672,59 @@ def _passage_services(result_services, value_vars):
                     '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
                 static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
+                for key, value in readable_services.items():
+                    if type(value) == str:
+                        if key != '"ШПД в интернет"':
+                            services.append(key + ' ' + value)
+                        else:
+                            if value_vars.get('change_log_shpd') == 'существующая адресация':
+                                services.append(key + ' ' + value)
+                            else:
+                                if value_vars.get('change_log_shpd') == 'Новая подсеть /32':
+                                    if '/32' in value:
+                                        len_index = len(' c реквизитами ')
+                                        subnet_clear = value[len_index:]
+                                        service_shpd_change.append(subnet_clear)
+                                        services.append(key)
 
+                    elif type(value) == list:
+                        if key != '"ШПД в интернет"':
+                            services.append(key + ''.join(value))
+                        else:
+                            if value_vars.get('change_log_shpd') != 'существующая адресация':
+                                services.append(key + ''.join(value))
+                            else:
+                                if value_vars.get('change_log_shpd') == 'Новая подсеть /32':
+                                    for val in value:
+                                        if '/32' in val:
+                                            len_index = len(' c реквизитами ')
+                                            subnet_clear = value[len_index:]
+                                            service_shpd_change.append(subnet_clear)
+                                            if len(value) == len(service_shpd_change):
+                                                services.append(key)
+                                        else:
+                                            services.append(key + ' ' + val)
+                if service_shpd_change:
+
+                    hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
+                    hidden_vars['ОНИТС СПД подготовиться к работам:'] = 'ОНИТС СПД подготовиться к работам:'
+                    hidden_vars['- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'] = '- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'
+                    static_vars['указать новую маску'] = '/30' if value_vars.get('change_log_shpd') == 'Новая подсеть /30' else '/32'
+                    hidden_vars['-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
+                    hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
+                    hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
+                    static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
+
+            else:
+                for key, value in readable_services.items():
+                    if type(value) == str:
+                        services.append(key + ' ' + value)
+                    elif type(value) == list:
+                        services.append(key + ''.join(value))
+            static_vars['указать сервис'] = ', '.join(services)
             static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
         elif value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
             for key, value in readable_services.items():
                 if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
@@ -5657,44 +5737,41 @@ def _passage_services(result_services, value_vars):
                             static_vars['указать название сервиса'] = key
             print(('!!!!!services'))
             print(services)
-            if services[0].startswith('"ШПД в интернет"'):
-                if value_vars.get('change_log_shpd') != 'существующая адресация':
-                    hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
-                    hidden_vars['ОНИТС СПД подготовиться к работам:'] = 'ОНИТС СПД подготовиться к работам:'
-                    hidden_vars['- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'] = '- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'
-                    static_vars['указать новую маску'] = '/30' if value_vars.get('change_log_shpd') == 'Новая подсеть /30' else '/32'
-                    static_vars['указать сервис'] = static_vars['указать название сервиса']
-                    hidden_vars['-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
-                    hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
-                    hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
-                    static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
-                else:
-                    static_vars['указать сервис'] = ', '.join(services)
 
+            if value_vars.get('change_log') != 'Порт и КАД не меняется':
+                hidden_vars[
+                    '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
 
+                hidden_vars[
+                    'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
+                hidden_vars[
+                    '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
+                hidden_vars[
+                    '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
+                static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
+                if services[0].startswith('"ШПД в интернет"'):
+                    if value_vars.get('change_log_shpd') != 'существующая адресация':
+                        hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
+                        hidden_vars['ОНИТС СПД подготовиться к работам:'] = 'ОНИТС СПД подготовиться к работам:'
+                        hidden_vars['- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'] = '- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'
+                        static_vars['указать новую маску'] = '/30' if value_vars.get('change_log_shpd') == 'Новая подсеть /30' else '/32'
+                        static_vars['указать сервис'] = static_vars['указать название сервиса']
+                        hidden_vars['-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
+                        hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
+                        hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
+                        static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
+                    else:
+                        static_vars['указать сервис'] = ', '.join(services)
+            else:
+                static_vars['указать сервис'] = ', '.join(services)
 
-        print('!!!!readable_services')
-        print(readable_services)
-        print('!!!!services')
-        print(services)
-
-
-        if value_vars.get('change_log') != 'Порт и КАД не меняется':
-            hidden_vars[
-                '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
-
-            hidden_vars[
-                'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
-            hidden_vars[
-                '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
-            hidden_vars[
-                '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
-
-
-
+            print('!!!!readable_services')
+            print(readable_services)
+            print('!!!!services')
+            print(services)
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
     elif value_vars.get('type_passage') == 'Перенос логического подключения':
         stroka = templates.get("Перенос логического подключения клиента на %указать узел связи%")
         if value_vars.get('type_ticket') == 'ПТО':
@@ -5732,6 +5809,7 @@ def _passage_services(result_services, value_vars):
             hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
         static_vars['указать сервис'] = ', '.join(services)
         static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
+        static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
         static_vars['указать узел связи'] = value_vars.get('pps')
         static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
