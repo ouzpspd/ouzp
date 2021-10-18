@@ -818,6 +818,8 @@ def vols(request):
             request.session['port'] = port
             request.session['speed_port'] = speed_port
             request.session['kad'] = kad
+            print('!!!!def vols kad')
+            print(kad)
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             try:
@@ -5024,12 +5026,20 @@ def check_contract_phone_exist(login, password, contract_id):
 
 def _readable(curr_value, readable_services, serv, res):
     """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
-    if curr_value == None:
-        readable_services.update({serv: f' c реквизитами "{res}"'})
-    elif type(curr_value) == str:
-        readable_services.update({serv: [curr_value, f' c реквизитами "{res}"']})
-    elif type(curr_value) == list:
-        readable_services.update({serv: curr_value.append(f' c реквизитами "{res}"')})
+    if serv in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+        if curr_value == None:
+            readable_services.update({serv: f' "{res}"'})
+        elif type(curr_value) == str:
+            readable_services.update({serv: [curr_value, f' "{res}"']})
+        elif type(curr_value) == list:
+            readable_services.update({serv: curr_value.append(f' "{res}"')})
+    else:
+        if curr_value == None:
+            readable_services.update({serv: f'c реквизитами "{res}"'})
+        elif type(curr_value) == str:
+            readable_services.update({serv: [curr_value, f'c реквизитами "{res}"']})
+        elif type(curr_value) == list:
+            readable_services.update({serv: curr_value.append(f'c реквизитами "{res}"')})
     return readable_services
 
 @cache_check
@@ -5134,42 +5144,42 @@ def head(request):
                     #    readable_services.update({'"ШПД в интернет"': curr_value.append(f' c реквизитами "{i[-4]}"')})
                     #readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_main_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     #readable_services.update({'"Хот-спот"': f' c реквизитами "{i[-4]}"'})
-                    curr_value = readable_services.get('"Хот-спот"')
-                    readable_services = _readable(curr_value, readable_services, '"Хот-спот"', i[-4])
+                    curr_value = readable_services.get('Хот-спот')
+                    readable_services = _readable(curr_value, readable_services, 'Хот-спот', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_main_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     #readable_services.update({'"Вебург.ТВ"': f' c реквизитами "{i[-4]}"'})
-                    curr_value = readable_services.get('"Вебург.ТВ"')
-                    readable_services = _readable(curr_value, readable_services, '"Вебург.ТВ"', i[-4])
+                    curr_value = readable_services.get('Вебург.ТВ')
+                    readable_services = _readable(curr_value, readable_services, 'Вебург.ТВ', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
-                    extra_stroka_main_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     #readable_services.update({'"Порт ВЛС"': f' "{i[-4]}"'})
-                    curr_value = readable_services.get('"Порт ВЛС"')
-                    readable_services = _readable(curr_value, readable_services, '"Порт ВЛС"', i[-4])
+                    curr_value = readable_services.get('Порт ВЛС')
+                    readable_services = _readable(curr_value, readable_services, 'Порт ВЛС', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_portvm):
-                    extra_stroka_main_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     #readable_services.update({'"Порт ВМ"': f' "{i[-4]}"'})
-                    curr_value = readable_services.get('"Порт ВМ"')
-                    readable_services = _readable(curr_value, readable_services, '"Порт ВМ"', i[-4])
+                    curr_value = readable_services.get('Порт ВМ')
+                    readable_services = _readable(curr_value, readable_services, 'Порт ВМ', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Etherline':
-                extra_stroka_main_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]})\n'
+                extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 #readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
-                curr_value = readable_services.get('"ЦКС"')
-                readable_services = _readable(curr_value, readable_services, '"ЦКС"', i[-4])
+                curr_value = readable_services.get('ЦКС')
+                readable_services = _readable(curr_value, readable_services, 'ЦКС', i[-4])
                 counter_exist_line.add(f'{i[-2]} {i[-1]}')
         else:
             if i[2] == 'IP-адрес или подсеть':
@@ -5180,26 +5190,26 @@ def head(request):
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_other_client_service = f'- услугу "Хот-спот" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     print(extra_stroka_other_client_service)
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_other_client_service = f'- услугу "Вебург.ТВ" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     print(extra_stroka_other_client_service)
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
-                    extra_stroka_other_client_service = f'- услугу "Порт ВЛС" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_portvm):
-                    extra_stroka_other_client_service = f'- услугу "Порт ВМ" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Etherline':
-                extra_stroka_other_client_service = f'- услугу "ЦКС" "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                extra_stroka_other_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                 list_stroka_other_client_service.append(extra_stroka_other_client_service)
                 counter_exist_line.add(f'{i[-2]} {i[-1]}')
 
@@ -5871,7 +5881,8 @@ def _passage_enviroment(value_vars):
     if 'Порт и КАД не меняется' == value_vars.get('change_log'):
         kad = value_vars.get('selected_ono')[0][-2]
     else:
-        kad, value_vars = _list_kad(value_vars)
+        #kad, value_vars = _list_kad(value_vars)
+        kad = value_vars.get('kad')
 
     stroka = templates.get("Изменение присоединения к СПД")
     static_vars = {}
