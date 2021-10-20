@@ -231,7 +231,7 @@ def login_for_service(request):
                 credent = dict()
                 credent.update({'username': username})
                 credent.update({'password': password})
-                cache.set(user, credent, timeout=3600)
+                cache.set(user, credent, timeout=10800)
                 #prim = request.META.get('HTTP_REFERER')
                 #print(prim)
                 #cache.set_many({'username': username, 'password': password}, timeout=60)
