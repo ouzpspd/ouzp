@@ -3527,7 +3527,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
                             'базовым набором сервисов / расширенным набором сервисов'] = 'расширенным набором сервисов'
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
-                    if ports_vgw == 1:
+                    if ports_vgw == '1':
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
                         static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
@@ -3545,7 +3545,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
 
                     static_vars['указать количество телефонных линий'] = channel_vgw
                     static_vars['указать количество каналов'] = channel_vgw
-                    if ports_vgw == 1:
+                    if channel_vgw == '1':
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
                         static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
@@ -3572,7 +3572,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
                     static_vars['указать количество портов'] = ports_vgw
-                    if ports_vgw == 1:
+                    if ports_vgw == '1':
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
                         static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
@@ -3589,7 +3589,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
 
                     static_vars['указать количество телефонных линий'] = channel_vgw
                     static_vars['указать количество каналов'] = channel_vgw
-                    if ports_vgw == 1:
+                    if channel_vgw == '1':
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
                         static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
@@ -3611,7 +3611,7 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
                     static_vars['указать количество портов'] = ports_vgw
-                    if ports_vgw == 1:
+                    if ports_vgw == '1':
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
                         static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
@@ -3627,6 +3627,10 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
 
                     static_vars['указать количество телефонных линий'] = channel_vgw
                     static_vars['указать количество каналов'] = channel_vgw
+                    if channel_vgw == '1':
+                        static_vars['указать порты тел. шлюза'] = '1'
+                    else:
+                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                     regex_counter = 'Организовать (\d+)'
                     match_counter = re.search(regex_counter, stroka)
