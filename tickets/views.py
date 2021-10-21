@@ -1166,7 +1166,7 @@ def data(request):
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
-                 'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw']
+                 'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw']
 
 
 
@@ -4331,13 +4331,39 @@ def exist_enviroment_passage_csw(value_vars):
         static_vars['указать ППР'] = value_vars.get('ppr')
     if value_vars.get('sreda') == '3':
         hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
-        if value_vars.get('access_point') and value_vars.get('access_point') == 'Infinet H11':
+        if value_vars.get('access_point') == 'Infinet H11':
             hidden_vars['- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
             hidden_vars['После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
         else:
             hidden_vars['После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
+        hidden_vars[
+            '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОТПМ.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОТПМ.'
+        static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
+        hidden_vars['- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
+        hidden_vars['- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'] = '- Совместно с ОИПД подключить к СПД и запустить беспроводные станции (WDS/WDA).'
     if name_exist_csw.split('-')[1] != kad.split('-')[1]:
         hidden_vars['- Перед проведением работ запросить ОНИТС СПД сменить реквизиты клиентского коммутатора %указать название клиентского коммутатора% [и тел. шлюза %указать название тел шлюза%] на ZIP.'] = '- Перед проведением работ запросить ОНИТС СПД сменить реквизиты клиентского коммутатора %указать название клиентского коммутатора% [и тел. шлюза %указать название тел шлюза%] на ZIP.'
+        hidden_vars[
+            '- Выделить для клиентского коммутатора[ и тел. шлюза %указать название тел шлюза%] новые реквизиты управления.'] = '- Выделить для клиентского коммутатора[ и тел. шлюза %указать название тел шлюза%] новые реквизиты управления.'
+        hidden_vars['- Сменить реквизиты клиентского коммутатора [и тел. шлюза %указать название тел шлюза%].'] = '- Сменить реквизиты клиентского коммутатора [и тел. шлюза %указать название тел шлюза%].'
+        vgws = []
+        if value_vars.get('vgw_chains'):
+            for i in value_vars.get('vgw_chains'):
+                if i.get('model') != 'ITM SIP':
+                    vgws.append(i.get('name'))
+        if value_vars.get('waste_vgw'):
+            for i in value_vars.get('waste_vgw'):
+                if i.get('model') != 'ITM SIP':
+                    vgws.append(i.get('name'))
+        if vgws and len(vgws) == 1:
+            hidden_vars['и тел. шлюза %указать название тел шлюза%'] = 'и тел. шлюза %указать название тел шлюза%'
+            static_vars['указать название тел шлюза'] = ', '.join(vgws)
+        elif vgws and len(vgws) > 1:
+            hidden_vars['и тел. шлюза %указать название тел шлюза%'] = 'и тел. шлюзов %указать название тел шлюза%'
+            static_vars['указать название тел шлюза'] = ', '.join(vgws)
+    hidden_vars['- Выделить для клиентского коммутатора[ и тел. шлюза %указать название тел шлюза%] новые реквизиты управления.'] = '- Выделить для клиентского коммутатора[ и тел. шлюза %указать название тел шлюза%] новые реквизиты управления.'
+
+
 
 
 
@@ -5292,6 +5318,8 @@ def head(request):
 
 
     if vgw_chains:
+        print('!!!vgw_chains')
+        print(vgw_chains)
         for i in vgw_chains:
             model = i.get('model')
             name = i.get('name')
@@ -5962,6 +5990,10 @@ def _passage_enviroment(value_vars):
         kad = value_vars.get('kad')
 
     stroka = templates.get("Изменение присоединения к СПД")
+    #
+    #  надо сюда как то воткнуть шаблон переноса КК и перевода КК когда не меняется порт и кад.
+    # типа if value_vars.get('change_log') == 'Порт и КАД не меняется' and value_vars.get('selected_ono')[0][-2].startswith('CSW'):
+    #
     static_vars = {}
     hidden_vars = {}
     if sreda == '2' or sreda == '4':
