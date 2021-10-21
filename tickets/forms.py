@@ -123,6 +123,8 @@ class VolsForm(forms.Form):
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
                                            widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
+                                          widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
                                               widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
@@ -133,6 +135,8 @@ class CopperForm(forms.Form):
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
+                                             widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
@@ -148,6 +152,8 @@ class WirelessForm(forms.Form):
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
                                            widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
+                                          widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
                                               widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 

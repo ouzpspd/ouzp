@@ -667,12 +667,14 @@ def copper(request):
             logic_csw = copperform.cleaned_data['logic_csw']
             logic_replace_csw = copperform.cleaned_data['logic_replace_csw']
             logic_change_gi_csw = copperform.cleaned_data['logic_change_gi_csw']
+            logic_change_csw = copperform.cleaned_data['logic_change_csw']
             port = copperform.cleaned_data['port']
             kad = copperform.cleaned_data['kad']
 
             tag_service = request.session['tag_service']
             request.session['logic_csw'] = logic_csw
             request.session['logic_replace_csw'] = logic_replace_csw
+            request.session['logic_change_csw'] = logic_change_csw
             request.session['logic_change_gi_csw'] = logic_change_gi_csw
             request.session['port'] = port
             request.session['kad'] = kad
@@ -807,6 +809,7 @@ def vols(request):
             device_pps = volsform.cleaned_data['device_pps']
             logic_csw = volsform.cleaned_data['logic_csw']
             logic_replace_csw = volsform.cleaned_data['logic_replace_csw']
+            logic_change_csw = volsform.cleaned_data['logic_change_csw']
             logic_change_gi_csw = volsform.cleaned_data['logic_change_gi_csw']
             port = volsform.cleaned_data['port']
             kad = volsform.cleaned_data['kad']
@@ -815,6 +818,7 @@ def vols(request):
             request.session['logic_csw'] = logic_csw
             request.session['logic_replace_csw'] = logic_replace_csw
             request.session['logic_change_gi_csw'] = logic_change_gi_csw
+            request.session['logic_change_csw'] = logic_change_csw
             request.session['port'] = port
             request.session['speed_port'] = speed_port
             request.session['kad'] = kad
@@ -1001,6 +1005,7 @@ def wireless(request):
             kad = wirelessform.cleaned_data['kad']
             logic_csw = wirelessform.cleaned_data['logic_csw']
             logic_replace_csw = wirelessform.cleaned_data['logic_replace_csw']
+            logic_change_csw = wirelessform.cleaned_data['logic_change_csw']
             logic_change_gi_csw = wirelessform.cleaned_data['logic_change_gi_csw']
             try:
                 ppr = wirelessform.cleaned_data['ppr']
@@ -1013,7 +1018,7 @@ def wireless(request):
             request.session['logic_csw'] = logic_csw
             request.session['logic_replace_csw'] = logic_replace_csw
             request.session['logic_change_gi_csw'] = logic_change_gi_csw
-
+            request.session['logic_change_csw'] = logic_change_csw
 
 
             type_tr = request.session['type_tr']
@@ -1151,7 +1156,6 @@ def data(request):
 
 
 
-
     variables = ['port', 'logic_csw', 'device_pps', 'access_point', 'speed_port', 'device_client', 'list_switches', 'router_shpd',
                  'type_shpd', 'type_cks', 'type_portvk', 'type_portvm', 'policer_vk', 'new_vk', 'exist_vk', 'model_csw', 'port_csw',
                  'logic_csw_1000', 'pointA', 'pointB', 'policer_cks', 'policer_vm', 'new_vm', 'exist_vm', 'vm_inet', 'hotspot_points',
@@ -1162,7 +1166,7 @@ def data(request):
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
-                 'exist_sreda', 'change_log_shpd']
+                 'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw']
 
 
 
@@ -1196,6 +1200,9 @@ def data(request):
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
+        elif value_vars.get('logic_change_csw'):
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
+            result_services, result_services_ots, value_vars = extra_services_with_passage_csw(value_vars)
         else:
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -1203,13 +1210,19 @@ def data(request):
         value_vars.update({'result_services_ots': result_services_ots})
     if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         print('!!!!!!perenossss')
-        if value_vars.get('logic_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
+        if (value_vars.get('logic_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')) or (value_vars.get('logic_change_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')):
             pass
         elif value_vars.get('logic_csw'):
             counter_line_services = value_vars.get('counter_exist_line')
             print(counter_line_services)
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
+        elif value_vars.get('logic_change_csw'):
+            #counter_line_services = value_vars.get('counter_exist_line') может и надо будет что-то добавить
+            counter_line_services = 0 # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
+            print(counter_line_services)
+            value_vars.update({'counter_line_services': counter_line_services})
+            result_services, result_services_ots, value_vars = passage_services_with_passage_csw(value_vars)
         else:
             counter_line_services = value_vars.get('counter_line_services')
             if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перевод на гигабит':
@@ -4278,6 +4291,62 @@ def exist_enviroment_install_csw(value_vars):
     value_vars.update({'kad': kad})
     return result_services, value_vars
 
+def exist_enviroment_passage_csw(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+
+    static_vars = {}
+    hidden_vars = {}
+    kad = value_vars.get('kad')
+    pps = _readable_node(value_vars.get('pps'))
+    static_vars['указать узел связи'] = pps
+    static_vars['указать название коммутатора'] = kad
+    static_vars['указать модель коммутатора'] = value_vars.get('model_csw')
+    static_vars['указать № порта'] = value_vars.get('port_csw')
+    name_exist_csw = value_vars.get('selected_ono')[0][-2]
+    static_vars['указать название клиентского коммутатора'] = name_exist_csw
+    if value_vars.get('type_pass') == 'Перенос точки подключения':
+        if value_vars.get('logic_change_gi_csw'):
+            static_vars[
+                'перенесен в новую точку подключения/переведен на гигабит/переключен на узел'] = 'перенесен в новую точку подключения, переведен на гигабит'
+        else:
+            static_vars['перенесен в новую точку подключения/переведен на гигабит/переключен на узел'] = 'перенесен в новую точку подключения'
+    elif value_vars.get('type_pass') == 'Перенос логического подключения':
+        static_vars['перенесен в новую точку подключения/переведен на гигабит/переключен на узел'] = 'переключен на узел {}'.format(pps)
+    elif value_vars.get('type_pass') == 'Перевод на гигабит':
+        static_vars['перенесен в новую точку подключения/переведен на гигабит/переключен на узел'] = 'переведен на гигабит'
+    logic_csw_1000 = value_vars.get('logic_csw_1000')
+    if logic_csw_1000 == True:
+        static_vars['100/1000'] = '1000'
+    else:
+        static_vars['100/1000'] = '100'
+    if not value_vars.get('type_pass') == 'Перенос точки подключения' and not value_vars.get('type_ticket') == 'ПТО':
+        hidden_vars['МКО:'] = 'МКО:'
+        hidden_vars['- Проинформировать клиента о простое сервисов на время проведения работ.'] = '- Проинформировать клиента о простое сервисов на время проведения работ.'
+        hidden_vars['- Согласовать время проведение работ.'] = '- Согласовать время проведение работ.'
+    if value_vars.get('ppr'):
+        hidden_vars['- Согласовать проведение работ - ППР %указать ППР%.'] = '- Согласовать проведение работ - ППР %указать ППР%.'
+        static_vars['указать ППР'] = value_vars.get('ppr')
+    if value_vars.get('sreda') == '3':
+        hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
+        if value_vars.get('access_point') and value_vars.get('access_point') == 'Infinet H11':
+            hidden_vars['- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
+            hidden_vars['После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
+        else:
+            hidden_vars['После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
+    if name_exist_csw.split('-')[1] != kad.split('-')[1]:
+        hidden_vars['- Перед проведением работ запросить ОНИТС СПД сменить реквизиты клиентского коммутатора %указать название клиентского коммутатора% [и тел. шлюза %указать название тел шлюза%] на ZIP.'] = '- Перед проведением работ запросить ОНИТС СПД сменить реквизиты клиентского коммутатора %указать название клиентского коммутатора% [и тел. шлюза %указать название тел шлюза%] на ZIP.'
+
+
+
+
+    templates = value_vars.get('templates')
+
+    stroka = templates.get("%Перенос/Перевод на гигабит% клиентского коммутатора")
+
+
 
 def _titles(result_services, result_services_ots):
     """Данный метод формирует список заголовков из шаблонов в блоках ОРТР и ОТС"""
@@ -6348,6 +6417,14 @@ def extra_services_with_install_csw(value_vars):
     result_services = _passage_services_on_csw(result_services, value_vars)
     return result_services, result_services_ots, value_vars
 
+
+def extra_services_with_passage_csw(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+         ОТС(заполненые шаблоны) для переноса КК и организации от него новых услуг"""
+    pass
+
+
+
 def passage_services_with_install_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для организации новых услуг дополнительно к существующему подключению"""
@@ -6355,6 +6432,11 @@ def passage_services_with_install_csw(value_vars):
     result_services = _passage_services_on_csw(result_services, value_vars)
     result_services_ots = None
     return result_services, result_services_ots, value_vars
+
+def passage_services_with_passage_csw(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+             ОТС(заполненые шаблоны) для переноса КК"""
+    result_services, value_vars = exist_enviroment_install_csw(value_vars)
 
 def passage_services(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
