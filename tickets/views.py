@@ -1049,7 +1049,7 @@ def wireless(request):
                         tag_service.append({'change_log_shpd': None})
 
 
-            if logic_csw == True or logic_change_csw == True:
+            if logic_csw == True:
                 try:
                     request.session['type_pass']
                     #request.session['new_with_csw_job_services']
@@ -1060,6 +1060,10 @@ def wireless(request):
                 else:
 
                     tag_service.append({'add_serv_with_install_csw': None})
+                    return redirect(next(iter(tag_service[0])))
+            elif logic_change_csw == True:
+                if type_pass:
+                    tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
             else:
                 tag_service.append({'data': None})
@@ -1155,7 +1159,12 @@ def csw(request):
             request.session['port_csw'] = port_csw
             request.session['logic_csw_1000'] = logic_csw_1000
             request.session['exist_speed_csw'] = exist_speed_csw
-            request.session['logic_csw'] = True
+            try:
+                request.session['type_install_csw']
+            except KeyError:
+                pass
+            else:
+                request.session['logic_csw'] = True
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             #return redirect('data')
@@ -1267,7 +1276,8 @@ def data(request):
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
         elif value_vars.get('logic_change_csw'):
             #counter_line_services = value_vars.get('counter_exist_line') может и надо будет что-то добавить
-            counter_line_services = 0 # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
+            counter_line_services = value_vars.get('counter_exist_line') # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
+            print('counter_line_services')
             print(counter_line_services)
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = passage_services_with_passage_csw(value_vars)
@@ -4344,7 +4354,7 @@ def exist_enviroment_passage_csw(value_vars):
         result_services = value_vars.get('result_services')
     else:
         result_services = []
-
+    print('exist_enviroment_passage_csw')
     static_vars = {}
     hidden_vars = {}
     kad = value_vars.get('kad')
@@ -6491,6 +6501,7 @@ def _passage_services_on_csw(result_services, value_vars):
     print("Перенос сервиса %указать название сервиса%" + '-' * 20)
     templates = value_vars.get('templates')
     readable_services = value_vars.get('readable_services')
+
     sreda = value_vars.get('sreda')
 
     stroka = templates.get("Перенос сервиса %указать название сервиса% на клиентский коммутатор")
@@ -6558,6 +6569,7 @@ def passage_services_with_passage_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
              ОТС(заполненые шаблоны) для переноса КК"""
     result_services, value_vars = exist_enviroment_passage_csw(value_vars)
+    result_services = _passage_services_on_csw(result_services, value_vars)
     result_services_ots = None
     return result_services, result_services_ots, value_vars
 
