@@ -36,6 +36,7 @@ urlpatterns = [
     path('register', register, name='register'),
     path('login/', user_login, name='login'),
     path('logout/', user_logout, name='logout'),
+    path('change_password/', change_password, name='change_password'),
     path('login_for_service/', login_for_service, name='login_for_service'),
     path('ortr', ortr, name='ortr'),
     path('<int:dID>/', spp_view, name='spp_view'),

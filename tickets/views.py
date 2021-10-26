@@ -13,6 +13,9 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404
 
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+
 
 def register(request):
     """Данный метод отвечает за регистрацию пользователей в АРМ"""
@@ -53,6 +56,22 @@ def user_logout(request):
     """Данный метод отвечает за выход авторизованного пользователя"""
     logout(request)
     return redirect('login')
+
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Ваш пароль обновлен!')
+            return redirect('change_password')
+        else:
+            messages.error(request, 'Ошибка')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'tickets/change_password.html', {
+        'form': form
+    })
 
 
 def index(request):
@@ -876,9 +895,10 @@ def vols(request):
                     tag_service.append({'add_serv_with_install_csw': None})
                     return redirect(next(iter(tag_service[0])))
             elif logic_change_csw == True or logic_change_gi_csw == True:
-                device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
                 request.session['device_client'] = device_client
                 if type_pass:
+                    if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
+                        tag_service.insert(0, {'pass_serv': None})
                     tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
             else:
@@ -889,7 +909,7 @@ def vols(request):
 
 
 
-            if logic_csw == True:
+            """if logic_csw == True:
                 try:
                     request.session['type_pass']
                     #request.session['new_with_csw_job_services']
@@ -907,7 +927,7 @@ def vols(request):
                     return redirect(next(iter(tag_service[0])))
             else:
                 tag_service.append({'data': None})
-                return redirect(next(iter(tag_service[0])))
+                return redirect(next(iter(tag_service[0])))"""
 
 
             """type_tr = request.session['type_tr']
@@ -1286,7 +1306,7 @@ def data(request):
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
-        elif value_vars.get('logic_change_csw'):
+        elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             result_services, result_services_ots, value_vars = extra_services_with_passage_csw(value_vars)
         else:
@@ -2606,6 +2626,8 @@ def _counter_line_services(services_plus_desc):
     """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
      где требуется линия добавляется спец. символ. Метод возвращает количество требуемых линий"""
     hotspot_points = None
+    print('!!!!before services_plus_desc')
+    print(services_plus_desc)
     for index_service in range(len(services_plus_desc)):
         if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
             services_plus_desc[index_service] += '|'
@@ -2639,7 +2661,9 @@ def _counter_line_services(services_plus_desc):
         while i.endswith('|'):
             counter_line_services += 1
             i = i[:-1]
-    return counter_line_services, hotspot_points
+    print('!!!!after services_plus_desc')
+    print(services_plus_desc)
+    return counter_line_services, hotspot_points, services_plus_desc
 
 def _tag_service_for_new_serv(services_plus_desc):
     tag_service = []
@@ -2743,7 +2767,7 @@ def parse_tr(login, password, url):
 
         # проходим по списку услуг чтобы определить количество организуемых линий от СПД и в той услуге, где требуется
         # добавляем спец. символ
-        counter_line_services, hotspot_points = _counter_line_services(services_plus_desc)
+        counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(services_plus_desc)
 
 
         pps = None
@@ -3429,6 +3453,7 @@ def for_tr_view(login, password, dID, tID, trID): #login, password
                     for k in services:
                         var_list.append(k.text)
                     service = ' '.join(var_list)
+                    service = service[:-1]
                     total_services.append(service)
 
                 spp_params['Перечень требуемых услуг'] = total_services
@@ -3555,7 +3580,7 @@ def in_work_ortr(login, password):
 
 def _new_services(result_services, value_vars):
     result_services_ots = None
-    logic_csw = value_vars.get('logic_csw')
+    logic_csw = True if value_vars.get('logic_csw') or value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw') else False
     services_plus_desc = value_vars.get('services_plus_desc')
     templates = value_vars.get('templates')
     sreda = value_vars.get('sreda')
@@ -3641,6 +3666,9 @@ def _new_services(result_services, value_vars):
             static_vars = {}
             hidden_vars = {}
             all_cks_in_tr = value_vars.get('all_cks_in_tr')
+            print('!!!!!!all_cks_in_tr')
+            print(all_cks_in_tr)
+            print(service)
             if all_cks_in_tr.get(service):
                 static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
                 static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
@@ -3658,6 +3686,8 @@ def _new_services(result_services, value_vars):
                 #    static_vars['указать полосу'] = 'Неизвестная полоса'
 
                 if all_cks_in_tr.get(service)['type_cks'] == 'access':
+                    print("all_cks_in_tr.get(service)['pointA']")
+                    print(all_cks_in_tr.get(service)['pointA'])
                     stroka = templates.get("Организация услуги ЦКС Etherline access'ом.")
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif all_cks_in_tr.get(service)['type_cks'] == 'trunk':
@@ -4584,7 +4614,7 @@ def exist_enviroment_passage_csw(value_vars):
 
             if value_vars.get('exist_sreda') == '2':
                 hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-
+                static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
         else:
             if value_vars.get('exist_sreda') == '1' or value_vars.get('exist_sreda') != value_vars.get('sreda'):
                 hidden_vars[
@@ -4611,7 +4641,7 @@ def exist_enviroment_passage_csw(value_vars):
         elif sreda == '2' or sreda == '4':
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-            hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            #hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
             static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
             #hidden_vars[
             #    'и %установить в него/задействовать существующий%'] = 'и %установить в него/задействовать существующий%'
@@ -4850,7 +4880,10 @@ def enviroment_csw(value_vars):
     hidden_vars = {}
     stroka = templates.get("Присоединение к СПД по медной линии связи.")
     static_vars['указать узел связи'] = 'клиентского коммутатора'
-    static_vars['указать название коммутатора'] = 'установленный по решению выше'
+    if value_vars.get('logic_csw'):
+        static_vars['указать название коммутатора'] = 'установленный по решению выше'
+    else:
+        static_vars['указать название коммутатора'] = value_vars.get('selected_ono')[0][-2]
     static_vars['указать порт коммутатора'] = 'свободный'
     if sreda == '2' or sreda == '4':
         static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
@@ -5759,12 +5792,13 @@ def project_tr_exist_cl(request):
     # перенос существующих сервисов и организация нов сервисов через новый КК
     if new_with_csw_job_services:
         type_pass.append('Организация/Изменение, СПД')
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_with_csw_job_services)
         #tag_service.append({'add_serv_with_install_csw': None})
+        counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(new_with_csw_job_services)
+        new_with_csw_job_services = services_plus_desc
+        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_with_csw_job_services)
         for tag in tags:
             tag_service.append(tag)
-        counter_line_services, hotspot_points = _counter_line_services(new_with_csw_job_services)
-        #tag_service.insert(0, {'add_serv_with_install_csw': None})
+        request.session['new_with_csw_job_services'] = new_with_csw_job_services
 
         if new_no_spd_jobs_services:
             type_pass.append('Организация, не СПД')
@@ -5970,33 +6004,37 @@ def pass_serv(request):
 
             tag_service = request.session['tag_service']
             readable_services = request.session['readable_services']
+            type_pass = request.session['type_pass']
             print('!!!!tag_service')
             print(tag_service)
             sreda = request.session['sreda']
             tag_service.pop(0)
-            if change_log == 'Порт и КАД не меняется':
-                pass
-
+            if 'Перенос, СПД' not in type_pass:
+                return redirect(next(iter(tag_service[0])))
             else:
-                print('!!!!!!readable_services.keys()')
-                print(readable_services.keys())
-                #if '"ШПД в интернет"' in readable_services.keys():
-                #    tag_service.insert(0, {'change_log_shpd': None})
-
-                if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
+                if change_log == 'Порт и КАД не меняется':
                     pass
-                else:
-                    if sreda == '1':
-                        tag_service.append({'copper': None})
-                    elif sreda == '2' or sreda == '4':
-                        tag_service.append({'vols': None})
-                    elif sreda == '3':
-                        tag_service.append({'wireless': None})
-            if len(tag_service) == 0:
-                tag_service.append({'data': None})
-            print(tag_service)
 
-            return redirect(next(iter(tag_service[0])))
+                else:
+                    print('!!!!!!readable_services.keys()')
+                    print(readable_services.keys())
+                    #if '"ШПД в интернет"' in readable_services.keys():
+                    #    tag_service.insert(0, {'change_log_shpd': None})
+
+                    if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
+                        pass
+                    else:
+                        if sreda == '1':
+                            tag_service.append({'copper': None})
+                        elif sreda == '2' or sreda == '4':
+                            tag_service.append({'vols': None})
+                        elif sreda == '3':
+                            tag_service.append({'wireless': None})
+                if len(tag_service) == 0:
+                    tag_service.append({'data': None})
+                print(tag_service)
+
+                return redirect(next(iter(tag_service[0])))
 
 
     else:
@@ -6710,7 +6748,10 @@ def extra_services_with_install_csw(value_vars):
 def extra_services_with_passage_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
          ОТС(заполненые шаблоны) для переноса КК и организации от него новых услуг"""
-    pass
+    result_services, value_vars = exist_enviroment_passage_csw(value_vars)
+    result_services, result_services_ots = _new_services(result_services, value_vars)
+    result_services_ots = None
+    return result_services, result_services_ots, value_vars
 
 
 
