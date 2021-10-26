@@ -12,6 +12,9 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404
 
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+
 
 
 def register(request):
@@ -53,6 +56,22 @@ def user_logout(request):
     """Данный метод отвечает за выход авторизованного пользователя"""
     logout(request)
     return redirect('login')
+
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Ваш пароль обновлен!')
+            return redirect('change_password')
+        else:
+            messages.error(request, 'Ошибка')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'tickets/change_password.html', {
+        'form': form
+    })
 
 
 def index(request):
