@@ -683,68 +683,80 @@ def copper(request):
 
         if copperform.is_valid():
             print(copperform.cleaned_data)
-            logic_csw = copperform.cleaned_data['logic_csw']
-            logic_replace_csw = copperform.cleaned_data['logic_replace_csw']
-            logic_change_gi_csw = copperform.cleaned_data['logic_change_gi_csw']
-            logic_change_csw = copperform.cleaned_data['logic_change_csw']
-            port = copperform.cleaned_data['port']
-            kad = copperform.cleaned_data['kad']
-
+            correct_sreda = copperform.cleaned_data['correct_sreda']
+            sreda = request.session['sreda']
             tag_service = request.session['tag_service']
-            request.session['logic_csw'] = logic_csw
-            request.session['logic_replace_csw'] = logic_replace_csw
-            request.session['logic_change_csw'] = logic_change_csw
-            request.session['logic_change_gi_csw'] = logic_change_gi_csw
-            request.session['port'] = port
-            request.session['kad'] = kad
-            type_tr = request.session['type_tr']
             tag_service.pop(0)
+            if correct_sreda == sreda:
+                logic_csw = copperform.cleaned_data['logic_csw']
+                logic_replace_csw = copperform.cleaned_data['logic_replace_csw']
+                logic_change_gi_csw = copperform.cleaned_data['logic_change_gi_csw']
+                logic_change_csw = copperform.cleaned_data['logic_change_csw']
+                port = copperform.cleaned_data['port']
+                kad = copperform.cleaned_data['kad']
+
+                tag_service = request.session['tag_service']
+                request.session['logic_csw'] = logic_csw
+                request.session['logic_replace_csw'] = logic_replace_csw
+                request.session['logic_change_csw'] = logic_change_csw
+                request.session['logic_change_gi_csw'] = logic_change_gi_csw
+                request.session['port'] = port
+                request.session['kad'] = kad
+                type_tr = request.session['type_tr']
 
 
-            try:
-                type_pass = request.session['type_pass']
-            except KeyError:
-                pass
-            else:
-                if 'Перенос, СПД' in type_pass:
-                    type_passage = request.session['type_passage']
-                    if type_passage == 'Перенос сервиса в новую точку':
-                        selected_ono = request.session['selected_ono']
-                        selected_service = selected_ono[0][-3]
-                        service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
-                        if any(serv in selected_service for serv in service_shpd):
-                            tag_service.append({'change_log_shpd': None})
-                    elif type_passage == 'Перенос логического подключения':
-                        pass
-                    else:
+
+                try:
+                    type_pass = request.session['type_pass']
+                except KeyError:
+                    pass
+                else:
+                    if 'Перенос, СПД' in type_pass:
+                        type_passage = request.session['type_passage']
+                        if type_passage == 'Перенос сервиса в новую точку':
+                            selected_ono = request.session['selected_ono']
+                            selected_service = selected_ono[0][-3]
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+                            if any(serv in selected_service for serv in service_shpd):
+                                tag_service.append({'change_log_shpd': None})
+                        elif type_passage == 'Перенос логического подключения':
+                            pass
+                        else:
+                            readable_services = request.session['readable_services']
+                            if '"ШПД в интернет"' in readable_services.keys():
+                                tag_service.append({'change_log_shpd': None})
+                    elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
                         if '"ШПД в интернет"' in readable_services.keys():
                             tag_service.append({'change_log_shpd': None})
-                elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
-                    readable_services = request.session['readable_services']
-                    if '"ШПД в интернет"' in readable_services.keys():
-                        tag_service.append({'change_log_shpd': None})
 
 
-            if logic_csw == True:
-                try:
-                    request.session['type_pass']
-                    #request.session['new_with_csw_job_services']
-                except KeyError:
-                    #return redirect('csw')
-                    tag_service.append({'csw': None})
-                    return redirect(next(iter(tag_service[0])))
+                if logic_csw == True:
+                    try:
+                        request.session['type_pass']
+                        #request.session['new_with_csw_job_services']
+                    except KeyError:
+                        #return redirect('csw')
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                    else:
+
+                        tag_service.append({'add_serv_with_install_csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                elif logic_change_csw == True or logic_change_gi_csw == True:
+                    if type_pass:
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
                 else:
-
-                    tag_service.append({'add_serv_with_install_csw': None})
-                    return redirect(next(iter(tag_service[0])))
-            elif logic_change_csw == True or logic_change_gi_csw == True:
-                if type_pass:
-                    tag_service.append({'csw': None})
+                    #return redirect('data')
+                    tag_service.append({'data': None})
                     return redirect(next(iter(tag_service[0])))
             else:
-                #return redirect('data')
-                tag_service.append({'data': None})
+                if correct_sreda == '3':
+                    tag_service.insert(0, {'wireless': None})
+                elif correct_sreda == '2' or correct_sreda == '4':
+                    tag_service.insert(0, {'vols': None})
+                request.session['sreda'] = correct_sreda
                 return redirect(next(iter(tag_service[0])))
 
 
@@ -809,7 +821,7 @@ def copper(request):
 
         request.session['list_switches'] = list_switches
 
-        copperform = CopperForm(initial={'kad': switches_name, 'port': 'свободный'})
+        copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
 
         context = {
             'pps': pps,
@@ -828,84 +840,98 @@ def vols(request):
 
         if volsform.is_valid():
             print(volsform.cleaned_data)
-            device_client = volsform.cleaned_data['device_client']
-            device_pps = volsform.cleaned_data['device_pps']
-            logic_csw = volsform.cleaned_data['logic_csw']
-            logic_replace_csw = volsform.cleaned_data['logic_replace_csw']
-            logic_change_csw = volsform.cleaned_data['logic_change_csw']
-            logic_change_gi_csw = volsform.cleaned_data['logic_change_gi_csw']
-            port = volsform.cleaned_data['port']
-            kad = volsform.cleaned_data['kad']
-            speed_port = volsform.cleaned_data['speed_port']
-            request.session['device_pps'] = device_pps
-            request.session['logic_csw'] = logic_csw
-            request.session['logic_replace_csw'] = logic_replace_csw
-            request.session['logic_change_gi_csw'] = logic_change_gi_csw
-            request.session['logic_change_csw'] = logic_change_csw
-            request.session['port'] = port
-            request.session['speed_port'] = speed_port
-            request.session['kad'] = kad
-            print('!!!!def vols kad')
-            print(kad)
+            correct_sreda = volsform.cleaned_data['correct_sreda']
+            sreda = request.session['sreda']
             tag_service = request.session['tag_service']
             tag_service.pop(0)
-            try:
-                ppr = volsform.cleaned_data['ppr']
-            except KeyError:
-                ppr = None
-            request.session['ppr'] = ppr
+            if correct_sreda == sreda:
+                device_client = volsform.cleaned_data['device_client']
+                device_pps = volsform.cleaned_data['device_pps']
+                logic_csw = volsform.cleaned_data['logic_csw']
+                logic_replace_csw = volsform.cleaned_data['logic_replace_csw']
+                logic_change_csw = volsform.cleaned_data['logic_change_csw']
+                logic_change_gi_csw = volsform.cleaned_data['logic_change_gi_csw']
+                port = volsform.cleaned_data['port']
+                kad = volsform.cleaned_data['kad']
+                speed_port = volsform.cleaned_data['speed_port']
+                request.session['device_pps'] = device_pps
+                request.session['logic_csw'] = logic_csw
+                request.session['logic_replace_csw'] = logic_replace_csw
+                request.session['logic_change_gi_csw'] = logic_change_gi_csw
+                request.session['logic_change_csw'] = logic_change_csw
+                request.session['port'] = port
+                request.session['speed_port'] = speed_port
+                request.session['kad'] = kad
+                print('!!!!def vols kad')
+                print(kad)
 
-            try:
-                type_pass = request.session['type_pass']
-            except KeyError:
-                pass
-            else:
-                if 'Перенос, СПД' in type_pass:
-                    type_passage = request.session['type_passage']
-                    if type_passage == 'Перенос сервиса в новую точку' or type_passage == 'Перевод на гигабит':
-                        selected_ono = request.session['selected_ono']
-                        selected_service = selected_ono[0][-3]
-                        service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
-                        if any(serv in selected_service for serv in service_shpd):
-                            tag_service.append({'change_log_shpd': None})
-                    elif type_passage == 'Перенос логического подключения':
-                        pass # чаще это ПТО заявки и по-умолчанию меняем /32, не спрашивая
-                    else:
+
+                try:
+                    ppr = volsform.cleaned_data['ppr']
+                except KeyError:
+                    ppr = None
+                request.session['ppr'] = ppr
+
+                try:
+                    type_pass = request.session['type_pass']
+                except KeyError:
+                    pass
+                else:
+                    if 'Перенос, СПД' in type_pass:
+                        type_passage = request.session['type_passage']
+                        if type_passage == 'Перенос сервиса в новую точку' or type_passage == 'Перевод на гигабит':
+                            selected_ono = request.session['selected_ono']
+                            selected_service = selected_ono[0][-3]
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+                            if any(serv in selected_service for serv in service_shpd):
+                                tag_service.append({'change_log_shpd': None})
+                        elif type_passage == 'Перенос логического подключения':
+                            pass # чаще это ПТО заявки и по-умолчанию меняем /32, не спрашивая
+                        else:
+                            readable_services = request.session['readable_services']
+                            if '"ШПД в интернет"' in readable_services.keys():
+                                tag_service.append({'change_log_shpd': None})
+                    elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
                         if '"ШПД в интернет"' in readable_services.keys():
                             tag_service.append({'change_log_shpd': None})
-                elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
-                    readable_services = request.session['readable_services']
-                    if '"ШПД в интернет"' in readable_services.keys():
-                        tag_service.append({'change_log_shpd': None})
 
 
-            if logic_csw == True:
-                device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
-                request.session['device_client'] = device_client
-                try:
-                    request.session['type_pass']
-                    #request.session['new_with_csw_job_services']
-                except KeyError:
-                    #return redirect('csw')
-                    tag_service.append({'csw': None})
-                    return redirect(next(iter(tag_service[0])))
+                if logic_csw == True:
+                    device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
+                    request.session['device_client'] = device_client
+                    try:
+                        request.session['type_pass']
+                        #request.session['new_with_csw_job_services']
+                    except KeyError:
+                        #return redirect('csw')
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                    else:
+
+                        tag_service.append({'add_serv_with_install_csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                elif logic_change_csw == True or logic_change_gi_csw == True:
+                    request.session['device_client'] = device_client
+                    if type_pass:
+                        if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
+                            tag_service.insert(0, {'pass_serv': None})
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
                 else:
-
-                    tag_service.append({'add_serv_with_install_csw': None})
-                    return redirect(next(iter(tag_service[0])))
-            elif logic_change_csw == True or logic_change_gi_csw == True:
-                request.session['device_client'] = device_client
-                if type_pass:
-                    if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
-                        tag_service.insert(0, {'pass_serv': None})
-                    tag_service.append({'csw': None})
+                    request.session['device_client'] = device_client
+                    #return redirect('data')
+                    tag_service.append({'data': None})
                     return redirect(next(iter(tag_service[0])))
             else:
-                request.session['device_client'] = device_client
-                #return redirect('data')
-                tag_service.append({'data': None})
+                if correct_sreda == '1':
+                    tag_service.insert(0, {'copper': None})
+                elif correct_sreda == '2' or correct_sreda == '4':
+                    tag_service.insert(0, {'vols': None})
+                request.session['sreda'] = correct_sreda
                 return redirect(next(iter(tag_service[0])))
+
+
 
 
 
@@ -1017,14 +1043,16 @@ def vols(request):
         if sreda == '2':
 
             volsform = VolsForm(
-                    initial={'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
+                    initial={'correct_sreda': '2',
+                            'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
                              'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
                              'kad': switches_name,
                              'speed_port': 'Auto',
                              'port': 'свободный'})
         elif sreda == '4':
             volsform = VolsForm(
-                        initial={'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
+                        initial={'correct_sreda': '4',
+                                'device_pps': 'оптический передатчик SFP WDM, до 3 км, 1310 нм',
                                  'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
                                  'kad': switches_name,
                                  'speed_port': '100FD'})
@@ -1052,75 +1080,85 @@ def wireless(request):
 
         if wirelessform.is_valid():
             print(wirelessform.cleaned_data)
-            access_point = wirelessform.cleaned_data['access_point']
-            port = wirelessform.cleaned_data['port']
-            kad = wirelessform.cleaned_data['kad']
-            logic_csw = wirelessform.cleaned_data['logic_csw']
-            logic_replace_csw = wirelessform.cleaned_data['logic_replace_csw']
-            logic_change_csw = wirelessform.cleaned_data['logic_change_csw']
-            logic_change_gi_csw = wirelessform.cleaned_data['logic_change_gi_csw']
-            try:
-                ppr = wirelessform.cleaned_data['ppr']
-            except KeyError:
-                ppr = None
-            request.session['ppr'] = ppr
-            request.session['access_point'] = access_point
-            request.session['port'] = port
-            request.session['kad'] = kad
-            request.session['logic_csw'] = logic_csw
-            request.session['logic_replace_csw'] = logic_replace_csw
-            request.session['logic_change_gi_csw'] = logic_change_gi_csw
-            request.session['logic_change_csw'] = logic_change_csw
-
+            correct_sreda = wirelessform.cleaned_data['correct_sreda']
+            sreda = request.session['sreda']
             tag_service = request.session['tag_service']
             tag_service.pop(0)
+            if correct_sreda == sreda:
+                access_point = wirelessform.cleaned_data['access_point']
+                port = wirelessform.cleaned_data['port']
+                kad = wirelessform.cleaned_data['kad']
+                logic_csw = wirelessform.cleaned_data['logic_csw']
+                logic_replace_csw = wirelessform.cleaned_data['logic_replace_csw']
+                logic_change_csw = wirelessform.cleaned_data['logic_change_csw']
+                logic_change_gi_csw = wirelessform.cleaned_data['logic_change_gi_csw']
+                try:
+                    ppr = wirelessform.cleaned_data['ppr']
+                except KeyError:
+                    ppr = None
+                request.session['ppr'] = ppr
+                request.session['access_point'] = access_point
+                request.session['port'] = port
+                request.session['kad'] = kad
+                request.session['logic_csw'] = logic_csw
+                request.session['logic_replace_csw'] = logic_replace_csw
+                request.session['logic_change_gi_csw'] = logic_change_gi_csw
+                request.session['logic_change_csw'] = logic_change_csw
 
 
-            try:
-                type_pass = request.session['type_pass']
-            except KeyError:
-                pass
-            else:
-                if 'Перенос, СПД' in type_pass:
-                    type_passage = request.session['type_passage']
-                    if type_passage == 'Перенос сервиса в новую точку' or type_passage == 'Перевод на гигабит':
-                        selected_ono = request.session['selected_ono']
-                        selected_service = selected_ono[0][-3]
-                        service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
-                        if any(serv in selected_service for serv in service_shpd):
-                            tag_service.append({'change_log_shpd': None})
-                    elif type_passage == 'Перенос логического подключения':
-                        pass # чаще это ПТО заявки и по-умолчанию меняем /32, не спрашивая
-                    else:
+
+
+                try:
+                    type_pass = request.session['type_pass']
+                except KeyError:
+                    pass
+                else:
+                    if 'Перенос, СПД' in type_pass:
+                        type_passage = request.session['type_passage']
+                        if type_passage == 'Перенос сервиса в новую точку' or type_passage == 'Перевод на гигабит':
+                            selected_ono = request.session['selected_ono']
+                            selected_service = selected_ono[0][-3]
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+                            if any(serv in selected_service for serv in service_shpd):
+                                tag_service.append({'change_log_shpd': None})
+                        elif type_passage == 'Перенос логического подключения':
+                            pass # чаще это ПТО заявки и по-умолчанию меняем /32, не спрашивая
+                        else:
+                            readable_services = request.session['readable_services']
+                            if '"ШПД в интернет"' in readable_services.keys():
+                                tag_service.append({'change_log_shpd': None})
+                    elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
                         if '"ШПД в интернет"' in readable_services.keys():
                             tag_service.append({'change_log_shpd': None})
-                elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
-                    readable_services = request.session['readable_services']
-                    if '"ШПД в интернет"' in readable_services.keys():
-                        tag_service.append({'change_log_shpd': None})
 
 
-            if logic_csw == True:
-                try:
-                    request.session['type_pass']
-                    #request.session['new_with_csw_job_services']
-                except KeyError:
-                    #return redirect('csw')
-                    tag_service.append({'csw': None})
-                    return redirect(next(iter(tag_service[0])))
+                if logic_csw == True:
+                    try:
+                        request.session['type_pass']
+                        #request.session['new_with_csw_job_services']
+                    except KeyError:
+                        #return redirect('csw')
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                    else:
+
+                        tag_service.append({'add_serv_with_install_csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                elif logic_change_csw == True:
+                    if type_pass:
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
                 else:
-
-                    tag_service.append({'add_serv_with_install_csw': None})
-                    return redirect(next(iter(tag_service[0])))
-            elif logic_change_csw == True:
-                if type_pass:
-                    tag_service.append({'csw': None})
+                    tag_service.append({'data': None})
                     return redirect(next(iter(tag_service[0])))
             else:
-                tag_service.append({'data': None})
+                if correct_sreda == '1':
+                    tag_service.insert(0, {'copper': None})
+                elif correct_sreda == '2' or correct_sreda == '4':
+                    tag_service.insert(0, {'vols': None})
+                request.session['sreda'] = correct_sreda
                 return redirect(next(iter(tag_service[0])))
-
 
             """type_tr = request.session['type_tr']
             if type_tr == 'new_cl':
@@ -1186,7 +1224,7 @@ def wireless(request):
 
         request.session['list_switches'] = list_switches
 
-        wirelessform = WirelessForm(initial={'kad': switches_name, 'port': 'свободный'})
+        wirelessform = WirelessForm(initial={'correct_sreda': '3', 'kad': switches_name, 'port': 'свободный'})
         context = {
             'pps': pps,
             'oattr': oattr,
@@ -5502,6 +5540,7 @@ def head(request):
     print(stroka)
 
     service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+    service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
     service_hotspot = ['hotspot']
@@ -5514,7 +5553,21 @@ def head(request):
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
             if i[2] == 'IP-адрес или подсеть':
-                if any(serv in i[-3] for serv in service_shpd):
+                if any(serv in i[-3] for serv in service_shpd_bgp):
+                    extra_stroka_main_client_service = f'- услугу "Подключение по BGP" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    print(extra_stroka_main_client_service)
+                    if list_stroka_main_client_service:
+                        for ind, main in enumerate(list_stroka_main_client_service):
+                            if i[-1] in main:
+                                main = main[
+                                       :main.index('"(')] + f', услугу "Подключение по BGP" c реквизитами "{i[-4]}"' + main[
+                                                                                                                   main.index(
+                                                                                                                       '"('):]
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('"Подключение по BGP"')
+                    readable_services = _readable(curr_value, readable_services, '"Подключение по BGP"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3] for serv in service_shpd):
                     print('!!!any head')
                     extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
@@ -5526,13 +5579,6 @@ def head(request):
                     curr_value = readable_services.get('"ШПД в интернет"')
                     readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                    #if curr_value == None:
-                    #    readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
-                    #elif type(curr_value) == str:
-                    #    readable_services.update({'"ШПД в интернет"': [curr_value, f' c реквизитами "{i[-4]}"']})
-                    #elif type(curr_value) == list:
-                    #    readable_services.update({'"ШПД в интернет"': curr_value.append(f' c реквизитами "{i[-4]}"')})
-                    #readable_services.update({'"ШПД в интернет"': f' c реквизитами "{i[-4]}"'})
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
                     extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
@@ -5721,16 +5767,28 @@ def project_tr_exist_cl(request):
     pps = ticket_tr.pps
     pps = pps.strip()
     turnoff = ticket_tr.turnoff
+    task_otpm = ticket_tr.ticket_k.task_otpm
     services_plus_desc = ticket_tr.services
-    points_for_cks = ticket_tr.ticket_k.des_tr
+    des_tr = ticket_tr.ticket_k.des_tr
+    print('!!!!!!ticket_tr')
+    print(ticket_tr.ticket_tr)
+    print(type(ticket_tr.ticket_tr))
+    for i in range(len(des_tr)):
+        if ticket_tr.ticket_tr in next(iter(des_tr[i].keys())):
+            address = next(iter(des_tr[i - 1].keys()))
+            address = address.replace(', д.', ' ')
+            print('!!!!!address')
+            print(address)
+    request.session['address'] = address
     cks_points = []
-    for point in points_for_cks:
+    for point in des_tr:
         if next(iter(point.keys())).startswith('г.'):
             cks_points.append(next(iter(point.keys())).split('ул.')[1])
     print('!!!!points_for_cks')
-    print(points_for_cks)
+    print(des_tr)
     request.session['cks_points'] = cks_points
     request.session['services_plus_desc'] = services_plus_desc
+    request.session['task_otpm'] = task_otpm
     request.session['pps'] = pps
     if oattr:
         request.session['oattr'] = oattr

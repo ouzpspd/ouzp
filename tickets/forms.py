@@ -114,6 +114,14 @@ class VolsForm(forms.Form):
              ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм'),
              ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 20 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм')]
     speed = [('100FD', '100FD'), ('Auto', 'Auto')]
+    types_correct_sreda = [
+        ('1', 'UTP'),
+        ('2', 'ВОЛС'),
+        ('4', 'FTTH'),
+        ('3', 'WiFi'),
+    ]
+    correct_sreda = forms.CharField(label='Среда передачи',
+                                  widget=forms.Select(choices=types_correct_sreda, attrs={'class': 'form-control'}))
     device_pps = forms.CharField(label='На стороне ППС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     device_client = forms.CharField(label='На стороне клиента', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -130,6 +138,14 @@ class VolsForm(forms.Form):
 
 
 class CopperForm(forms.Form):
+    types_correct_sreda = [
+        ('1', 'UTP'),
+        ('2', 'ВОЛС'),
+        ('4', 'FTTH'),
+        ('3', 'WiFi'),
+    ]
+    correct_sreda = forms.CharField(label='Среда передачи',
+                                    widget=forms.Select(choices=types_correct_sreda, attrs={'class': 'form-control'}))
     kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
     logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -145,6 +161,14 @@ class WirelessForm(forms.Form):
              ('AirGrid 27 M5', 'AirGrid 27 M5'),
              ('Nanostation M5', 'Nanostation M5'),
              ('Infinet H11', 'Infinet H11')]
+    types_correct_sreda = [
+        ('1', 'UTP'),
+        ('2', 'ВОЛС'),
+        ('4', 'FTTH'),
+        ('3', 'WiFi'),
+    ]
+    correct_sreda = forms.CharField(label='Среда передачи',
+                                    widget=forms.Select(choices=types_correct_sreda, attrs={'class': 'form-control'}))
     access_point = forms.CharField(label='Точки доступа', widget=forms.Select(choices=ap_types, attrs={'class': 'form-control'}))
     kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
     port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
