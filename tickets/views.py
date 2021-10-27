@@ -5539,7 +5539,7 @@ def head(request):
     print('!!!!stroka s \n\n')
     print(stroka)
 
-    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -']
+    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
     service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
