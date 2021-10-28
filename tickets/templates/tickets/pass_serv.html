@@ -13,23 +13,34 @@
 </div>
 
 <div class="container">
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
 
-            <div class="card mb-2">
-                <h5 class="card-header">Решение ОТПМ</h5>
-            <div class="card-body">
-                <p class="card-text">{{oattr|linebreaksbr}}</p>
-            </div>
-            </div>
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+  <div class="card mb-2">
+    <div class="card-header" id="headingTwo">
+      <h5 class="mb-0">
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+      </h5>
+    </div>
+    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+
 </div>
-
-<div class="container">
-
-            <div class="card mb-2">
-                <h5 class="card-header">Подключение</h5>
-            <div class="card-body">
-                <p class="card-text">{{head|linebreaksbr}}</p>
-            </div>
-            </div>
 </div>
 
 <div class="container">

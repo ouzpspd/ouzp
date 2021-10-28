@@ -16,35 +16,53 @@
 
 
 <div class="container">
-    <div class="card mb-2">
-      <h5 class="card-header">Подключение</h5>
-      <div class="card-body">
-        <p class="card-text">{{head|linebreaksbr}}</p>
-      </div>
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
     </div>
 
-
-
-    <div class="card mb-2">
-      <h5 class="card-header">Решение ОТПМ</h5>
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
       <div class="card-body">
-        <p class="card-text">{{oattr|linebreaksbr}}</p>
+        {{head|linebreaksbr}}
       </div>
     </div>
+  </div>
+  <div class="card mb-2">
+    <div class="card-header" id="headingTwo">
+      <h5 class="mb-0">
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+      </h5>
+    </div>
+    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
 
 </div>
+</div>
+
+
 
 <div class="container">
+    <div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+
 <form action="{% url 'job_formset' %}" method="post">
     {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
     {% csrf_token %}
     <div class="container">
         <div class="row">
-                <table class="table">
+                <table class="table table-striped">
                       <thead>
                         <tr>
-                          <th scope="col"></th>
-                          <th scope="col"></th>
+                          {%comment%}<th scope="col"></th>{%endcomment%}
+                          <th scope="col">Вид работ</th>
                           <th scope="col">Услуга</th>
 
                         </tr>
@@ -53,7 +71,7 @@
                       {% for form in formset %}
 
                         <tr>
-                          <th scope="row">{{forloop.counter}}</th>
+                          {%comment%}<th scope="row">{{forloop.counter}}</th>{%endcomment%}
                           <td>{{ form.as_p }}</td>
 
                               {% for element in services %}
@@ -76,5 +94,7 @@
         </div>
     </div>
 </form>
+</div>
+    </div>
 </div>
 {% endblock %}

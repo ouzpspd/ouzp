@@ -28,11 +28,11 @@
                 <table class="table table-striped">
                       <thead>
                         <tr>
+                          {%comment%}<th scope="col"></th>{%endcomment%}
                           <th scope="col"></th>
-                          <th scope="col"></th>
-                          <th scope="col">Ресурс</th>
-                            <th scope="col">Точка подключения</th>
-                            <th scope="col">Реквизиты</th>
+                          <th scope="col">Точка подключения</th>
+                            <th scope="col">Ресурс</th>
+                            <th scope="col">Описание</th>
                             <th scope="col">КАД</th>
                             <th scope="col">Порт</th>
                         </tr>
@@ -41,7 +41,7 @@
                       {% for form in formset %}
 
                         <tr>
-                          <th scope="row">{{forloop.counter}}</th>
+                          {%comment%}<th scope="row">{{forloop.counter}}</th>{%endcomment%}
                           <td>{{ form.as_p }}</td>
 
                               {% for element in ono_for_formset %}

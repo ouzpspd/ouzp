@@ -293,7 +293,7 @@ class ChangeLogShpdForm(forms.Form):
         #('Сменить /30 на /32', 'Сменить /30 на /32'),
         #('Сменить /32 на /30', 'Сменить /32 на /30'),
     ]
-    change_log_shpd = forms.CharField(label='Изменение схемы ШПД',
+    change_log_shpd = forms.CharField(label='Изменение схемы ШПД для подсетей с маской /32',
                                       widget=forms.Select(choices=types_change_log_shpd,
                                                           attrs={'class': 'form-control'}))
 

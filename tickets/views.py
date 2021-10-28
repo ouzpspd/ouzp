@@ -1331,27 +1331,10 @@ def data(request):
     type_ticket = ticket_tr.ticket_k.type_ticket
     value_vars.update({'type_ticket': type_ticket})
 
-    if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
-        #counter_exist_line = value_vars.get('counter_exist_line')
-        #print('!!!type_counter_exis')
-        #print(type(counter_exist_line))
-        #print('!!!')
-        #print(value_vars.get('readable_services'))
-        #print(counter_exist_line)
-        if value_vars.get('logic_csw'):
-            counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
-            print(counter_line_services)
-            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
-            value_vars.update({'counter_line_services': counter_line_services})
-            result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
-        elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
-            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
-            result_services, result_services_ots, value_vars = extra_services_with_passage_csw(value_vars)
-        else:
-            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
-            result_services, result_services_ots, value_vars = client_new(value_vars)
-        value_vars.update({'result_services': result_services})
-        value_vars.update({'result_services_ots': result_services_ots})
+    readable_services = value_vars.get('readable_services')
+    print('!!!!!readable_services in def data')
+    print(readable_services)
+
     if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         print('!!!!!!perenossss')
         print('!!!!logic_change_csw')
@@ -1381,6 +1364,23 @@ def data(request):
             value_vars.update({'counter_line_services': counter_line_services})
             value_vars.update({'result_services': result_services})
             value_vars.update({'result_services_ots': result_services_ots})
+
+    if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
+        if value_vars.get('logic_csw'):
+            counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
+            print(counter_line_services)
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
+            value_vars.update({'counter_line_services': counter_line_services})
+            result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
+        elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
+            result_services, result_services_ots, value_vars = extra_services_with_passage_csw(value_vars)
+        else:
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
+            result_services, result_services_ots, value_vars = client_new(value_vars)
+        value_vars.update({'result_services': result_services})
+        value_vars.update({'result_services_ots': result_services_ots})
+
     if value_vars.get('type_pass') and 'Организация доп.услуги без установки КК' in value_vars.get('type_pass'):
         print('!!!!!!extra bez csw')
         value_vars.update({'services_plus_desc': value_vars.get('new_without_csw_job_services')})
@@ -4462,12 +4462,33 @@ def exist_enviroment_passage_csw(value_vars):
     sreda = value_vars.get('sreda')
     pps = _readable_node(value_vars.get('pps'))
     templates = value_vars.get('templates')
+    readable_services = value_vars.get('readable_services')
+    change_log_shpd = value_vars.get('change_log_shpd')
     static_vars['указать узел связи'] = pps
     static_vars['указать название коммутатора'] = kad
     static_vars['указать модель коммутатора'] = value_vars.get('model_csw')
     static_vars['указать № порта'] = value_vars.get('port_csw')
     name_exist_csw = value_vars.get('selected_ono')[0][-2]
     static_vars['указать название клиентского коммутатора'] = name_exist_csw
+
+    services, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, change_log_shpd)
+    print('!!!!services')
+    print(services)
+    print('!!!!service_shpd_change')
+    print(service_shpd_change)
+    if service_shpd_change:
+        hidden_vars['- Выделить новую адресацию с маской %указать новую маску% вместо %указать существующий ресурс%.'] = '- Выделить новую адресацию с маской %указать новую маску% вместо %указать существующий ресурс%.'
+        static_vars['указать новую маску'] = '/32' if change_log_shpd == 'Новая подсеть /32' else '/30'
+        static_vars['указать существующий ресурс'] = ' '.join(services)
+        hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
+        hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
+
+    if sreda == '2' or sreda == '4':
+        static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+        static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+        static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+    else:
+        static_vars['ОИПМ/ОИПД'] = 'ОИПД'
     if value_vars.get('type_passage') == 'Перенос точки подключения':
         if value_vars.get('logic_change_gi_csw'):
             static_vars[
@@ -4529,7 +4550,7 @@ def exist_enviroment_passage_csw(value_vars):
         hidden_vars['Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
         static_vars['указать порт коммутатора'] = port
         hidden_vars['- Перенести в новое помещении клиента коммутатор %указать название клиентского коммутатора%.'] = '- Перенести в новое помещении клиента коммутатор %указать название клиентского коммутатора%.'
-        hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%. Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%. Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
+        hidden_vars['- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
         #hidden_vars['- Перенести в новое помещении клиента коммутатор %указать название клиентского коммутатора% [и %установить в него/задействовать существующий%] %указать конвертер/передатчик на стороне клиента%. Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- Перенести в новое помещении клиента коммутатор %указать название клиентского коммутатора% [и %установить в него/задействовать существующий%] %указать конвертер/передатчик на стороне клиента%. Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
         hidden_vars['- Переключить услуги клиента "порт в порт".'] = '- Переключить услуги клиента "порт в порт".'
 
@@ -4542,6 +4563,8 @@ def exist_enviroment_passage_csw(value_vars):
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
             hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            if sreda != value_vars.get('exist_sreda'):
+                hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'
             #hidden_vars[
                 #'и %установить в него/задействовать существующий%'] = 'и %установить в него/задействовать существующий%'
             #if (value_vars.get('exist_sreda') == '2' and sreda == '2') or (
@@ -4594,13 +4617,10 @@ def exist_enviroment_passage_csw(value_vars):
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
             hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            #hidden_vars[
-            #    'и %установить в него/задействовать существующий%'] = 'и %установить в него/задействовать существующий%'
-            #if (value_vars.get('exist_sreda') == '2' and sreda == '2') or (
-            #        value_vars.get('exist_sreda') == '4' and sreda == '4'):
-            #    static_vars['установить в него/задействовать существующий'] = 'задействовать существующий'
-            #lse:
-            #    static_vars['установить в него/задействовать существующий'] = 'установить в него'
+            if value_vars.get('exist_sreda') == '1' or value_vars.get('exist_sreda') == '3':
+                hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'
+                hidden_vars['- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
+
         elif sreda == '3':
             hidden_vars[
                 '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
@@ -4652,14 +4672,13 @@ def exist_enviroment_passage_csw(value_vars):
 
             if value_vars.get('exist_sreda') == '2':
                 hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-                static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+
         else:
             if value_vars.get('exist_sreda') == '1' or value_vars.get('exist_sreda') != value_vars.get('sreda'):
-                hidden_vars[
-                    '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%. Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%. Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
-                static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
-            else:
-
+                hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'
+                hidden_vars['- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
+                #static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            if value_vars.get('exist_sreda') == '2' or value_vars.get('exist_sreda') == '4':
                 hidden_vars[
                     '- Запросить ОНИТС СПД перенастроить режим работы магистрального порта на клиентском коммутаторе %указать название клиентского коммутатора%.'] = '- Запросить ОНИТС СПД перенастроить режим работы магистрального порта на клиентском коммутаторе %указать название клиентского коммутатора%.'
             hidden_vars[
@@ -4668,19 +4687,19 @@ def exist_enviroment_passage_csw(value_vars):
             hidden_vars[
                 '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
             hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            #static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
 
 
         if sreda == '1':
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
-            static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+            #static_vars['ОИПМ/ОИПД'] = 'ОИПД'
 
         elif sreda == '2' or sreda == '4':
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
             #hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+            #static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
             #hidden_vars[
             #    'и %установить в него/задействовать существующий%'] = 'и %установить в него/задействовать существующий%'
             #if (value_vars.get('exist_sreda') == '2' and sreda == '2') or (
@@ -5013,11 +5032,12 @@ def test_formset(request):
         formset = ListResourcesFormSet()
         ono_for_formset = []
         for resource_for_formset in ono:
-            resource_for_formset.pop(5)
+            resource_for_formset.pop(2)
             resource_for_formset.pop(1)
             resource_for_formset.pop(0)
             ono_for_formset.append(resource_for_formset)
-
+        print('!!!!!ono_for_formset')
+        print(ono_for_formset)
         context = {
             'ono_for_formset': ono_for_formset,
             #'contract': contract,
@@ -5571,12 +5591,21 @@ def head(request):
                     print('!!!any head')
                     extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
-                    if list_stroka_main_client_service:
-                        for ind, main in enumerate(list_stroka_main_client_service):
-                            if i[-1] in main:
-                                main = main[:main.index('"(')] + f', услугу "ШПД в интернет" c реквизитами "{i[-4]}"' + main[main.index('"('):]
+                    #if list_stroka_main_client_service:
+                    #    print('!!!!list_stroka_main_client_service')
+                    #    print(list_stroka_main_client_service)
+                    #    for ind, main in enumerate(list_stroka_main_client_service):
+                    #        print('!!!main')
+                    #        print(main)
+                    #        if i[-1] in main:
+                    #           main = main[:main.index('"(')] + f', услугу "ШПД в интернет" c реквизитами "{i[-4]}"' + main[main.index('"('):]
+                    #        print(main)
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    print('!!!!!list_stroka_main_client_service')
+                    print(list_stroka_main_client_service)
                     curr_value = readable_services.get('"ШПД в интернет"')
+                    print('!!!!!curr_value')
+                    print(curr_value)
                     readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
@@ -5648,7 +5677,8 @@ def head(request):
                 extra_stroka_other_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                 list_stroka_other_client_service.append(extra_stroka_other_client_service)
                 counter_exist_line.add(f'{i[-2]} {i[-1]}')
-
+        print('!!!readable_services after readable')
+        print(readable_services)
 
     if vgw_chains:
         print('!!!vgw_chains')
@@ -5707,7 +5737,7 @@ def head(request):
     head = rev_result_services[::-1]
     request.session['head'] = head.strip()
     request.session['readable_services'] = readable_services
-    print('!!!!readable_services')
+    print('!!!!readable_services in def head')
     print(readable_services)
     request.session['counter_exist_line'] = counter_exist_line
 
@@ -6111,10 +6141,54 @@ def pass_serv(request):
         return render(request, 'tickets/pass_serv.html', context)
 
 
+def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
+    """Данный метод принимает услуги(название + значение) и значение изменения адресации. Определяет услуги с DHCP.
+     Если адресация меняется в массив services добавляет название услуги ШПД без подсети. В массив service_shpd_change
+      добавляет подсети с DHCP"""
+    print('!!!!!readable_services')
+    print(readable_services)
+    services = []
+    service_shpd_change = []
+    for key, value in readable_services.items():
+        if type(value) == str:
+            if key != '"ШПД в интернет"':
+                services.append(key + ' ' + value)
+            else:
+                if change_log_shpd == 'существующая адресация':
+                    services.append(key + ' ' + value)
+                else:
+                    if change_log_shpd == 'Новая подсеть /32':
+                        if '/32' in value:
+                            len_index = len(' c реквизитами ')
+                            subnet_clear = value[len_index:]
+                            service_shpd_change.append(subnet_clear)
+                            services.append(key)
+
+        elif type(value) == list:
+            if key != '"ШПД в интернет"':
+                services.append(key + ''.join(value))
+            else:
+                if change_log_shpd == 'существующая адресация':
+                    services.append(key + ''.join(value))
+                else:
+                    if change_log_shpd == 'Новая подсеть /32':
+                        for val in value:
+                            if '/32' in val:
+                                len_index = len(' c реквизитами ')
+                                subnet_clear = value[len_index:]
+                                service_shpd_change.append(subnet_clear)
+                                if len(value) == len(service_shpd_change):
+                                    services.append(key)
+                            else:
+                                services.append(key + ' ' + val)
+    return services, service_shpd_change
+
+
 def _passage_services(result_services, value_vars):
     templates = value_vars.get('templates')
     sreda = value_vars.get('sreda')
     readable_services = value_vars.get('readable_services')
+    change_log_shpd = value_vars.get('change_log_shpd')
     static_vars = {}
     hidden_vars = {}
     if sreda == '2' or sreda == '4':
@@ -6139,38 +6213,7 @@ def _passage_services(result_services, value_vars):
                     '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
                 static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
-                for key, value in readable_services.items():
-                    if type(value) == str:
-                        if key != '"ШПД в интернет"':
-                            services.append(key + ' ' + value)
-                        else:
-                            if value_vars.get('change_log_shpd') == 'существующая адресация':
-                                services.append(key + ' ' + value)
-                            else:
-                                if value_vars.get('change_log_shpd') == 'Новая подсеть /32':
-                                    if '/32' in value:
-                                        len_index = len(' c реквизитами ')
-                                        subnet_clear = value[len_index:]
-                                        service_shpd_change.append(subnet_clear)
-                                        services.append(key)
-
-                    elif type(value) == list:
-                        if key != '"ШПД в интернет"':
-                            services.append(key + ''.join(value))
-                        else:
-                            if value_vars.get('change_log_shpd') != 'существующая адресация':
-                                services.append(key + ''.join(value))
-                            else:
-                                if value_vars.get('change_log_shpd') == 'Новая подсеть /32':
-                                    for val in value:
-                                        if '/32' in val:
-                                            len_index = len(' c реквизитами ')
-                                            subnet_clear = value[len_index:]
-                                            service_shpd_change.append(subnet_clear)
-                                            if len(value) == len(service_shpd_change):
-                                                services.append(key)
-                                        else:
-                                            services.append(key + ' ' + val)
+                services, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, change_log_shpd)
                 if service_shpd_change:
 
                     hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
@@ -6183,6 +6226,7 @@ def _passage_services(result_services, value_vars):
                     static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
 
             else:
+                services = []
                 for key, value in readable_services.items():
                     if type(value) == str:
                         services.append(key + ' ' + value)
