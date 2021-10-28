@@ -4479,7 +4479,7 @@ def exist_enviroment_passage_csw(value_vars):
     if service_shpd_change:
         hidden_vars['- Выделить новую адресацию с маской %указать новую маску% вместо %указать существующий ресурс%.'] = '- Выделить новую адресацию с маской %указать новую маску% вместо %указать существующий ресурс%.'
         static_vars['указать новую маску'] = '/32' if change_log_shpd == 'Новая подсеть /32' else '/30'
-        static_vars['указать существующий ресурс'] = ' '.join(services)
+        static_vars['указать существующий ресурс'] = ' '.join(service_shpd_change)
         hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
         hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
 
@@ -5480,14 +5480,16 @@ def _readable(curr_value, readable_services, serv, res):
         elif type(curr_value) == str:
             readable_services.update({serv: [curr_value, f' "{res}"']})
         elif type(curr_value) == list:
-            readable_services.update({serv: curr_value.append(f' "{res}"')})
+            curr_value.append(f' "{res}"')
+            readable_services.update({serv: curr_value})
     else:
         if curr_value == None:
             readable_services.update({serv: f'c реквизитами "{res}"'})
         elif type(curr_value) == str:
             readable_services.update({serv: [curr_value, f'c реквизитами "{res}"']})
         elif type(curr_value) == list:
-            readable_services.update({serv: curr_value.append(f'c реквизитами "{res}"')})
+            curr_value.append(f'c реквизитами "{res}"')
+            readable_services.update({serv: curr_value})
     return readable_services
 
 @cache_check
@@ -6157,30 +6159,29 @@ def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
                 if change_log_shpd == 'существующая адресация':
                     services.append(key + ' ' + value)
                 else:
-                    if change_log_shpd == 'Новая подсеть /32':
-                        if '/32' in value:
-                            len_index = len(' c реквизитами ')
-                            subnet_clear = value[len_index:]
-                            service_shpd_change.append(subnet_clear)
-                            services.append(key)
+                    if '/32' in value:
+                        len_index = len('c реквизитами ')
+                        subnet_clear = val[len_index:]
+                        service_shpd_change.append(subnet_clear)
+                        services.append(key)
 
         elif type(value) == list:
             if key != '"ШПД в интернет"':
-                services.append(key + ''.join(value))
+                services.append(key + ', '.join(value))
             else:
                 if change_log_shpd == 'существующая адресация':
-                    services.append(key + ''.join(value))
+                    services.append(key + ', '.join(value))
                 else:
-                    if change_log_shpd == 'Новая подсеть /32':
-                        for val in value:
-                            if '/32' in val:
-                                len_index = len(' c реквизитами ')
-                                subnet_clear = value[len_index:]
-                                service_shpd_change.append(subnet_clear)
-                                if len(value) == len(service_shpd_change):
-                                    services.append(key)
-                            else:
-                                services.append(key + ' ' + val)
+                    #if change_log_shpd == 'Новая подсеть /32':
+                    for val in value:
+                        if '/32' in val:
+                            len_index = len('c реквизитами ')
+                            subnet_clear = val[len_index:]
+                            service_shpd_change.append(subnet_clear)
+                            if len(value) == len(service_shpd_change):
+                                services.append(key)
+                        else:
+                            services.append(key + ' ' + val)
     return services, service_shpd_change
 
 
