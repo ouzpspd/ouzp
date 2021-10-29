@@ -1390,13 +1390,18 @@ def data(request):
         value_vars.update({'result_services': result_services})
         value_vars.update({'result_services_ots': result_services_ots})
 
+    if value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
+        print('!!!!!!change')
+        result_services, result_services_ots, value_vars = change_services(value_vars)
+
+
     if value_vars.get('type_pass') and 'Организация доп.услуги без установки КК' in value_vars.get('type_pass'):
         print('!!!!!!extra bez csw')
         value_vars.update({'services_plus_desc': value_vars.get('new_without_csw_job_services')})
         result_services, result_services_ots, value_vars = client_new(value_vars)
     if value_vars.get('type_pass') and 'Изменение/организация сервисов без монтаж. работ' in value_vars.get('type_pass'):
-        print('!!!!!!change')
-        titles, result_services, result_services_ots, value_vars = change_services(value_vars)
+        pass
+
     if value_vars.get('type_pass') and 'Организация сервиса(не СПД)' in value_vars.get('type_pass'):
         print('!!!!!!!!!no spddddd')
         value_vars.update({'counter_line_services': 0})
@@ -1419,8 +1424,8 @@ def data(request):
     elif value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         need = 'Требуется перенести услугу в новую точку подключения.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
-    elif value_vars.get('type_pass') and value_vars.get('type_pass') == 'Организация доп.услуги без установки КК':
-        need = 'Требуется в данной точке организовать доп. услугу.'
+    elif value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
+        need = 'Требуется в данной точке изменить услугу.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     else:
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
@@ -5935,6 +5940,7 @@ def project_tr_exist_cl(request):
 
     if change_job_services and not new_with_csw_job_services:
         type_pass.append('Изменение, не СПД')
+        tag_service.insert(0, {'change_serv': None})
 
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
@@ -6855,9 +6861,9 @@ def change_services(value_vars):
     #result_services, result_services_ots = _new_services(result_services, value_vars)
     result_services, value_vars = _change_services(value_vars)
     result_services_ots = None
-    titles = _titles(result_services, result_services_ots)
+    #titles = _titles(result_services, result_services_ots)
 
-    return titles, result_services, result_services_ots, value_vars
+    return result_services, result_services_ots, value_vars
 
 
 def extra_services_with_install_csw(value_vars):
@@ -6981,8 +6987,8 @@ def change_params_serv(request):
             tag_service.pop(0)
             #if new_mask:
             #    tag_service.remove('shpd')
-
-            tag_service.append({'data': None})
+            if len(tag_service) == 0:
+                tag_service.append({'data': None})
             request.session['tag_service'] = tag_service
             return redirect(next(iter(tag_service[0])))
 
@@ -7005,6 +7011,9 @@ def change_params_serv(request):
                            "Организация ШПД trunk'ом"]
         if type_change_service in types_only_mask:
             only_mask = True
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
         else:
             only_mask = False
         if type_change_service == "Организация доп маршрутизируемой":
@@ -7049,7 +7058,7 @@ def _change_services(value_vars):
         static_vars = {}
         hidden_vars = {}
         static_vars['указать нов. маску'] = value_vars.get('new_mask')
-        static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][0][-3:]
+        static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
         static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
         static_vars['изменится/не изменится'] = 'не изменится'
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
@@ -7142,8 +7151,11 @@ def _change_services(value_vars):
         pass
     elif type_change_service == "Организация порта ВМ trunk'ом с простоем":
         pass
-    kad = value_vars.get('selected_ono')[0][-2]
-    value_vars.update({'kad': kad})
+    print('!!!value_vars.get(kad) ')
+    print(value_vars.get('kad'))
+    if value_vars.get('kad') == None:
+        kad = value_vars.get('selected_ono')[0][-2]
+        value_vars.update({'kad': kad})
     return result_services, value_vars
 
 
