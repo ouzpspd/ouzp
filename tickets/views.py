@@ -6993,6 +6993,7 @@ def change_params_serv(request):
             return redirect(next(iter(tag_service[0])))
 
     else:
+        head = request.session['head']
         type_change_service = request.session['type_change_service']
         types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
                                "Организация ЦКС trunk'ом с простоем",
@@ -7018,11 +7019,15 @@ def change_params_serv(request):
             only_mask = False
         if type_change_service == "Организация доп маршрутизируемой":
             routed = True
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
         else:
             routed = False
 
         changeparamsform = ChangeParamsForm()
         context = {
+            'head': head,
             'changeparamsform': changeparamsform,
             'type_change_service': type_change_service,
             'turnoff_trunk': turnoff_trunk,
@@ -7079,15 +7084,18 @@ def _change_services(value_vars):
         svi = match_svi.group(1)
         static_vars['указать номер SVI'] = svi
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация доп connected.":
+    elif type_change_service == "Организация доп connected":
         stroka = templates.get('Организация дополнительной подсети (connected)')
         static_vars = {}
         hidden_vars = {}
         static_vars['указать нов. маску'] = value_vars.get('new_mask')
         static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
         match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
-        svi = match_svi.group(1)
-        static_vars['указать номер SVI'] = svi
+        if match_svi.group(1):
+            svi = match_svi.group(1)
+            static_vars['указать номер SVI'] = svi
+        else:
+            static_vars['указать номер SVI'] = '%Неизвестный SVI%'
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif type_change_service == "Организация доп маршрутизируемой":
         stroka = templates.get("Организация маршрутизируемого непрерывного блока адресов сети интернет")
