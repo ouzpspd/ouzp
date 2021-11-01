@@ -1316,7 +1316,7 @@ def data(request):
                  'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
-                 'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'type_change_service',
+                 'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'types_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw']
@@ -5071,6 +5071,44 @@ def job_formset(request):
     oattr = ticket_tr.oattr
     pps = ticket_tr.pps
     services = ticket_tr.services
+    services_con = []
+    for service in services:
+        if service.startswith('Телефон'):
+            for i in range(len(services_con)):
+                if services_con[i].startswith('Телефон'):
+                    services_con[i] = services_con[i] +' '+ service[len('Телефон'):]
+                    break
+                else:
+                    if i == len(services_con)-1:
+                        services_con.append(service)
+        elif service.startswith('ЛВС'):
+            for i in range(len(services_con)):
+                if services_con[i].startswith('ЛВС'):
+                    services_con[i] = services_con[i] +' '+ service[len('ЛВС'):]
+                    break
+                else:
+                    if i == len(services_con)-1:
+                        services_con.append(service)
+
+        elif service.startswith('Видеонаблюдение'):
+            for i in range(len(services_con)):
+                if services_con[i].startswith('Видеонаблюдение'):
+                    services_con[i] = services_con[i] +' '+ service[len('Видеонаблюдение'):]
+                    break
+                else:
+                    if i == len(services_con) - 1:
+                        services_con.append(service)
+        elif service.startswith('Hotspot'):
+            for i in range(len(services_con)):
+                if services_con[i].startswith('Hotspot'):
+                    services_con[i] = services_con[i] +' '+ service[len('Hotspot'):]
+                    break
+                else:
+                    if i == len(services_con) - 1:
+                        services_con.append(service)
+        else:
+            services_con.append(service)
+    services = services_con
     ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
     if request.method == 'POST':
         formset = ListJobsFormSet(request.POST)
@@ -5912,9 +5950,12 @@ def project_tr_exist_cl(request):
 
         if change_job_services:
             type_pass.append('Изменение, не СПД')
+            print('!!!change_job_services in proj')
+            print(change_job_services)
             tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
             for tag in tags:
-                tag_service.append(tag)
+                tag_service.insert(0, tag)
+                tag_service.insert(0, {'change_serv': None})
 
         if sreda == '1':
             tag_service.append({'copper': None})
@@ -5938,16 +5979,20 @@ def project_tr_exist_cl(request):
         for tag in tags:
             tag_service.append(tag)
 
-    if change_job_services and not new_with_csw_job_services:
+    if change_job_services and not new_with_csw_job_services and not pass_without_csw_job_services:
         type_pass.append('Изменение, не СПД')
-        tag_service.insert(0, {'change_serv': None})
+        print('!!!change_job_services in proj')
+        print(change_job_services)
 
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
-            tag_service.append(tag)
+            tag_service.insert(0, tag)
+            tag_service.insert(0, {'change_serv': None})
+        tag_service.append({'data': None})
 
 
-
+    print('!!!tag_service in proj')
+    print(tag_service)
     request.session['type_tr'] = type_tr
     request.session['oattr'] = oattr
     request.session['pps'] = pps
@@ -6860,8 +6905,11 @@ def change_services(value_vars):
      ОТС(заполненые шаблоны) для организации новых услуг или изменения существующих без монтаж. работ"""
     #result_services, result_services_ots = _new_services(result_services, value_vars)
     result_services, value_vars = _change_services(value_vars)
-    result_services_ots = None
-    #titles = _titles(result_services, result_services_ots)
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
+
 
     return result_services, result_services_ots, value_vars
 
@@ -6945,16 +6993,22 @@ def change_serv(request):
 
         if changeservform.is_valid():
             type_change_service = changeservform.cleaned_data['type_change_service']
-            request.session['type_change_service'] = type_change_service
+            try:
+                types_change_service = request.session['types_change_service']
+            except KeyError:
+                types_change_service = []
+            types_change_service.append('_'+type_change_service)    # добавляю землю, что отличать потом в change_params_serv
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             if type_change_service == "Организация доп IPv6":
+                types_change_service.pop()
+                types_change_service.append(type_change_service)
                 tag_service.append({'data': None})
-            elif any(serv in type_change_service for serv in ['ЦКС', 'ВЛС', 'ВМ']):
-                tag_service.append({'data': None})
+            #elif any(serv in type_change_service for serv in ['ЦКС', 'ВЛС', 'ВМ']):
+            #    tag_service.append({'data': None})
             else:
                 tag_service.insert(0, {'change_params_serv': None})
-
+            request.session['types_change_service'] = types_change_service
             request.session['tag_service'] = tag_service
             return redirect(next(iter(tag_service[0])))
 
@@ -6994,36 +7048,53 @@ def change_params_serv(request):
 
     else:
         head = request.session['head']
-        type_change_service = request.session['type_change_service']
-        types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
-                               "Организация ЦКС trunk'ом с простоем",
-                               "Организация порта ВЛС trunk'ом с простоем",
-                               "Организация порта ВМ trunk'ом с простоем"]
-        if type_change_service in types_turnoff_trunk:
-            turnoff_trunk = True
-        else:
-            turnoff_trunk = False
-        types_only_mask = ["Организация порта ВМ trunk'ом",
-                           "Организация порта ВЛС trunk'ом",
-                           "Организация ЦКС trunk'ом",
-                           "Организация доп connected",
-                           "Замена connected на connected",
-                           "Изменение cхемы организации ШПД",
-                           "Организация ШПД trunk'ом"]
-        if type_change_service in types_only_mask:
-            only_mask = True
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-        else:
-            only_mask = False
-        if type_change_service == "Организация доп маршрутизируемой":
-            routed = True
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-        else:
-            routed = False
+        types_change_service = request.session['types_change_service']
+        for i in range(len(types_change_service)):
+            if types_change_service[i].startswith('_'):
+                type_change_service = types_change_service[i][1:]
+                types_change_service[i] = type_change_service
+                types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
+                                       "Организация ЦКС trunk'ом с простоем",
+                                       "Организация порта ВЛС trunk'ом с простоем",
+                                       "Организация порта ВМ trunk'ом с простоем"]
+                if type_change_service in types_turnoff_trunk:
+                    turnoff_trunk = True
+                else:
+                    turnoff_trunk = False
+                types_cks_vk_vm_trunk = [
+                    "Организация порта ВМ trunk'ом",
+                    "Организация порта ВЛС trunk'ом",
+                    "Организация ЦКС trunk'ом"
+                ]
+                if type_change_service in types_cks_vk_vm_trunk:
+                    tag_service = request.session['tag_service']
+                    tag_service.pop(0)
+
+                    request.session['tag_service'] = tag_service
+                    print('!!!!!!tag_service in change_param')
+                    print(tag_service)
+                    return redirect(next(iter(tag_service[0])))
+
+                types_only_mask = ["Организация доп connected",
+                                   "Замена connected на connected",
+                                   "Изменение cхемы организации ШПД",
+                                   "Организация ШПД trunk'ом"]
+                if type_change_service in types_only_mask:
+                    only_mask = True
+                    tag_service = request.session['tag_service']
+                    tag_service.pop(0)
+                    request.session['tag_service'] = tag_service
+                else:
+                    only_mask = False
+                if type_change_service == "Организация доп маршрутизируемой":
+                    routed = True
+                    tag_service = request.session['tag_service']
+                    tag_service.pop(0)
+                    request.session['tag_service'] = tag_service
+                else:
+                    routed = False
+        print('!!!!!type_change_service')
+        print(type_change_service)
 
         changeparamsform = ChangeParamsForm()
         context = {
@@ -7039,126 +7110,141 @@ def change_params_serv(request):
 
 
 def _change_services(value_vars):
-    result_services = []
-    services_plus_desc = value_vars.get('services_plus_desc')
-    type_change_service = value_vars.get('type_change_service')
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    change_job_services = value_vars.get('change_job_services')
+    types_change_service = value_vars.get('types_change_service')
     templates = value_vars.get('templates')
-    if type_change_service == "Организация ШПД trunk'ом":
-        stroka = templates.get("Организация услуги ШПД в интернет trunk'ом.")
-        static_vars = {}
-        hidden_vars = {}
-        static_vars['указать маску'] = value_vars.get('new_mask')
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация ШПД trunk'ом с простоем":
-        stroka = templates.get("Организация услуги ШПД в интернет trunk'ом с простоем связи.")
-        static_vars = {}
-        hidden_vars = {}
-        static_vars['указать маску'] = value_vars.get('new_mask')
-        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-        static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_exist_serv')
-        static_vars["access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_new_serv')
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Изменение cхемы организации ШПД":
-        stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %указать сущ. маску% на подсеть с маской %указать нов. маску%")
-        static_vars = {}
-        hidden_vars = {}
-        static_vars['указать нов. маску'] = value_vars.get('new_mask')
-        static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
-        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-        static_vars['изменится/не изменится'] = 'не изменится'
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Замена connected на connected":
-        stroka = templates.get("Замена существующей connected подсети на connected подсеть с %большей/меньшей% маской")
-        static_vars = {}
-        hidden_vars = {}
-        static_vars['указать нов. маску'] = value_vars.get('new_mask')
-        static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][0][-3:]
-        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-        static_vars['изменится/не изменится'] = 'не изменится'
-        if int(static_vars['указать нов. маску'][1:]) > int(static_vars['указать нов. маску'][1:]):
-            static_vars['большей/меньшей'] = 'меньшей'
-        else:
-            static_vars['большей/меньшей'] = 'большей'
-        static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
-        match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
-        svi = match_svi.group(1)
-        static_vars['указать номер SVI'] = svi
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация доп connected":
-        stroka = templates.get('Организация дополнительной подсети (connected)')
-        static_vars = {}
-        hidden_vars = {}
-        static_vars['указать нов. маску'] = value_vars.get('new_mask')
-        static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
-        match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
-        if match_svi.group(1):
-            svi = match_svi.group(1)
-            static_vars['указать номер SVI'] = svi
-        else:
-            static_vars['указать номер SVI'] = '%Неизвестный SVI%'
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация доп маршрутизируемой":
-        stroka = templates.get("Организация маршрутизируемого непрерывного блока адресов сети интернет")
-        static_vars = {}
-        hidden_vars = {}
-        static_vars['указать нов. маску'] = value_vars.get('new_mask')
-        static_vars['указать ip-адрес'] = value_vars.get('routed_ip')
-        static_vars['указать название vrf'] = value_vars.get('routed_vrf')
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация доп IPv6":
-        stroka = templates.get('Предоставление возможности прямой маршрутизации IPv6 дополнительно к существующему IPv4 подключению')
-        static_vars = {}
-        hidden_vars = {}
-        match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
-        svi = match_svi.group(1)
-        static_vars['указать номер SVI'] = svi
-        static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-    elif type_change_service == "Организация ЦКС trunk'ом":
-        stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом.")
-        static_vars = {}
-        hidden_vars = {}
-        all_cks_in_tr = value_vars.get('all_cks_in_tr')
-        if all_cks_in_tr:
-            service = next(iter(all_cks_in_tr.keys()))
-            static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
-            static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
-            static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
-            static_vars['указать полосу'] = _get_policer(service)
+    print('!!!!!!!types_change_service in _change_services')
+    print(types_change_service)
+    for type_change_service in types_change_service:
+
+        if type_change_service == "Организация ШПД trunk'ом":
+            stroka = templates.get("Организация услуги ШПД в интернет trunk'ом.")
+            static_vars = {}
+            hidden_vars = {}
+            static_vars['указать маску'] = value_vars.get('new_mask')
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация ЦКС trunk'ом с простоем":
-        stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом с простоем связи.")
-        static_vars = {}
-        hidden_vars = {}
-        all_cks_in_tr = value_vars.get('all_cks_in_tr')
-        if all_cks_in_tr:
-            service = next(iter(all_cks_in_tr.keys()))
-            static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
-            static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
-            static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
-            static_vars['указать полосу'] = _get_policer(service)
-            static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][4]
+        elif type_change_service == "Организация ШПД trunk'ом с простоем":
+            stroka = templates.get("Организация услуги ШПД в интернет trunk'ом с простоем связи.")
+            static_vars = {}
+            hidden_vars = {}
+            static_vars['указать маску'] = value_vars.get('new_mask')
+            static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+            static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_exist_serv')
+            static_vars["access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_new_serv')
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация порта ВЛС trunk'ом":
-        static_vars = {}
-        hidden_vars = {}
-        all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
-        service = next(iter(all_portvk_in_tr.keys()))
-        if all_portvk_in_tr.get(service)['new_vk'] == True:
-            stroka = templates.get("Организация услуги ВЛС")
-            result_services.append(stroka)
-            static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
-        else:
-            static_vars['указать ресурс ВЛС на договоре в Cordis'] = all_portvk_in_tr.get(service)['exist_vk']
-        stroka = templates.get("Организация услуги порт ВЛC trunk'ом.")
-        static_vars['указать полосу'] = _get_policer(service)
-        static_vars['полисером на Subinterface/на порту подключения'] = all_portvk_in_tr.get(service)['policer_vk']
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif type_change_service == "Организация порта ВЛС trunk'ом с простоем":
-        pass
-    elif type_change_service == "Организация порта ВМ trunk'ом":
-        pass
-    elif type_change_service == "Организация порта ВМ trunk'ом с простоем":
-        pass
+        elif type_change_service == "Изменение cхемы организации ШПД":
+            stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %указать сущ. маску% на подсеть с маской %указать нов. маску%")
+            static_vars = {}
+            hidden_vars = {}
+            static_vars['указать нов. маску'] = value_vars.get('new_mask')
+            static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
+            static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+            static_vars['изменится/не изменится'] = 'не изменится'
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Замена connected на connected":
+            stroka = templates.get("Замена существующей connected подсети на connected подсеть с %большей/меньшей% маской")
+            static_vars = {}
+            hidden_vars = {}
+            static_vars['указать нов. маску'] = value_vars.get('new_mask')
+            static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
+            static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+            static_vars['изменится/не изменится'] = 'не изменится'
+            if int(static_vars['указать нов. маску'][1:]) > int(static_vars['указать нов. маску'][1:]):
+                static_vars['большей/меньшей'] = 'меньшей'
+            else:
+                static_vars['большей/меньшей'] = 'большей'
+            static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
+            match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
+            if match_svi:
+                svi = match_svi.group(1)
+                static_vars['указать номер SVI'] = svi
+            else:
+                static_vars['указать номер SVI'] = '%Неизвестный SVI%'
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация доп connected":
+            stroka = templates.get('Организация дополнительной подсети (connected)')
+            static_vars = {}
+            hidden_vars = {}
+            static_vars['указать нов. маску'] = value_vars.get('new_mask')
+            static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
+            match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
+            if match_svi:
+                svi = match_svi.group(1)
+                static_vars['указать номер SVI'] = svi
+            else:
+                static_vars['указать номер SVI'] = '%Неизвестный SVI%'
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация доп маршрутизируемой":
+            stroka = templates.get("Организация маршрутизируемого непрерывного блока адресов сети интернет")
+            static_vars = {}
+            hidden_vars = {}
+            static_vars['указать нов. маску'] = value_vars.get('new_mask')
+            static_vars['указать ip-адрес'] = value_vars.get('routed_ip')
+            static_vars['указать название vrf'] = value_vars.get('routed_vrf')
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация доп IPv6":
+            stroka = templates.get('Предоставление возможности прямой маршрутизации IPv6 дополнительно к существующему IPv4 подключению')
+            static_vars = {}
+            hidden_vars = {}
+            match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
+            if match_svi:
+                svi = match_svi.group(1)
+                static_vars['указать номер SVI'] = svi
+            else:
+                static_vars['указать номер SVI'] = '%Неизвестный SVI%'
+            static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация ЦКС trunk'ом":
+            for service in change_job_services:
+                stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом.")
+                static_vars = {}
+                hidden_vars = {}
+                all_cks_in_tr = value_vars.get('all_cks_in_tr')
+                if all_cks_in_tr:
+                    #service = next(iter(all_cks_in_tr.keys()))
+                    static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
+                    static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+                    static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
+                    static_vars['указать полосу'] = _get_policer(service)
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация ЦКС trunk'ом с простоем":
+            stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом с простоем связи.")
+            static_vars = {}
+            hidden_vars = {}
+            all_cks_in_tr = value_vars.get('all_cks_in_tr')
+            if all_cks_in_tr:
+                service = next(iter(all_cks_in_tr.keys()))
+                static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
+                static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+                static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
+                static_vars['указать полосу'] = _get_policer(service)
+                static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][4]
+                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация порта ВЛС trunk'ом":
+            static_vars = {}
+            hidden_vars = {}
+            all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
+            service = next(iter(all_portvk_in_tr.keys()))
+            if all_portvk_in_tr.get(service)['new_vk'] == True:
+                stroka = templates.get("Организация услуги ВЛС")
+                result_services.append(stroka)
+                static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
+            else:
+                static_vars['указать ресурс ВЛС на договоре в Cordis'] = all_portvk_in_tr.get(service)['exist_vk']
+            stroka = templates.get("Организация услуги порт ВЛC trunk'ом.")
+            static_vars['указать полосу'] = _get_policer(service)
+            static_vars['полисером на Subinterface/на порту подключения'] = all_portvk_in_tr.get(service)['policer_vk']
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif type_change_service == "Организация порта ВЛС trunk'ом с простоем":
+            pass
+        elif type_change_service == "Организация порта ВМ trunk'ом":
+            pass
+        elif type_change_service == "Организация порта ВМ trunk'ом с простоем":
+            pass
     print('!!!value_vars.get(kad) ')
     print(value_vars.get('kad'))
     if value_vars.get('kad') == None:
