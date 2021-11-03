@@ -62,6 +62,7 @@ urlpatterns = [
     path('chain/', get_chain, name='get_chain'),
     path('show-chains/', show_chains, name='show_chains'),
     path('test/', test_formset, name='test_formset'),
+    path('static_formset/', static_formset, name='static_formset'),
     path('forming_head/', forming_header, name='forming_header'),
     path('chain_head/', forming_chain_header, name='forming_chain_header'),
     path('head/', head, name='head'),

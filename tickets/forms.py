@@ -205,6 +205,9 @@ class CksForm(forms.Form):
     types = [('access', 'access'), ('trunk', 'trunk')]
     type_cks = forms.CharField(label='Режим порта',
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    types_exist_service = [('в неизменном виде', 'в неизменном виде'), ("access(native)", "access(native)"), ('trunk', 'trunk')]
+    exist_service = forms.CharField(label='Режим порта существующей услуги',
+                           widget=forms.Select(choices=types_exist_service, attrs={'class': 'form-control'}))
 
 class PortVKForm(forms.Form):
     new_vk = forms.BooleanField(label='Новая ВЛС', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -255,6 +258,13 @@ class ListJobsForm(forms.Form):
     ]
     jobs = forms.CharField(label='',
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
+
+class TemplatesHiddenForm(forms.Form):
+    hidden = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
+class TemplatesStaticForm(forms.Form):
+    static = forms.CharField(label='', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 
 class PassServForm(forms.Form):
