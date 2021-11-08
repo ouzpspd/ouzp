@@ -741,20 +741,37 @@ def copper(request):
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
 
+        #for i in range(len(list_switches)):
+        #    switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+        #    if switch_ports_var == None:
+        #        pass
+        #    else:
+        #        for port in switch_ports_var.keys():
+        #            if list_switches[i][10].get(port) == None:
+        #                switch_ports_var[port].insert(0, '-')
+        #                switch_ports_var[port].insert(0, '-')
+        #                list_switches[i][10].update({port: switch_ports_var[port]})
+        #            else:
+        #                for from_dev in switch_ports_var[port]:
+        #                    list_switches[i][10][port].append(from_dev)
+        #        list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
         for i in range(len(list_switches)):
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-            if switch_ports_var == None:
+            if list_switches[i][-1] == '-':
                 pass
             else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+                if switch_ports_var == None:
+                    pass
+                else:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
 
         request.session['list_switches'] = list_switches
         copperform = CopperForm(initial={'port': 'свободный'})
@@ -834,21 +851,37 @@ def vols(request):
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
 
+        # for i in range(len(list_switches)):
+        #     switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+        #     if switch_ports_var == None:
+        #         pass
+        #     else:
+        #         for port in switch_ports_var.keys():
+        #             if list_switches[i][10].get(port) == None:
+        #                 switch_ports_var[port].insert(0, '-')
+        #                 switch_ports_var[port].insert(0, '-')
+        #                 list_switches[i][10].update({port: switch_ports_var[port]})
+        #             else:
+        #                 for from_dev in switch_ports_var[port]:
+        #                     list_switches[i][10][port].append(from_dev)
+        #         list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
         for i in range(len(list_switches)):
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-            if switch_ports_var == None:
+            if list_switches[i][-1] == '-':
                 pass
             else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
-
+                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+                if switch_ports_var == None:
+                    pass
+                else:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
         request.session['list_switches'] = list_switches
 
 
@@ -931,20 +964,37 @@ def wireless(request):
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
 
+        # for i in range(len(list_switches)):
+        #     switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+        #     if switch_ports_var == None:
+        #         pass
+        #     else:
+        #         for port in switch_ports_var.keys():
+        #             if list_switches[i][10].get(port) == None:
+        #                 switch_ports_var[port].insert(0, '-')
+        #                 switch_ports_var[port].insert(0, '-')
+        #                 list_switches[i][10].update({port: switch_ports_var[port]})
+        #             else:
+        #                 for from_dev in switch_ports_var[port]:
+        #                     list_switches[i][10][port].append(from_dev)
+        #         list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
         for i in range(len(list_switches)):
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-            if switch_ports_var == None:
+            if list_switches[i][-1] == '-':
                 pass
             else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+                if switch_ports_var == None:
+                    pass
+                else:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
 
         request.session['list_switches'] = list_switches
 
