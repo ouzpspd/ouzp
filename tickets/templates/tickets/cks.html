@@ -33,10 +33,51 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-4">
-            {{ cksform.as_p }}
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.pointA.id_for_label}}">Точка A</label>
+                    {{cksform.pointA}}
+                </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.pointB.id_for_label}}">Точка B</label>
+                    {{cksform.pointB}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.policer_cks.id_for_label}}">Ограничение</label>
+                    {{cksform.policer_cks}}
+                </div>
+            </div>
+        </div>
+
+
+        {% if trunk_turnoff_off %}
+        {% elif trunk_turnoff_on %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.exist_service.id_for_label}}">Режим порта существующей услуги</label>
+                    {{cksform.exist_service}}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.type_cks.id_for_label}}">Режим порта</label>
+                    {{cksform.type_cks}}
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="row mt-3">
             <div class="col-4">
                 <button type="submit" class="btn btn-primary btn-block">Продолжить</button>

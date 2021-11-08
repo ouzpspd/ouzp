@@ -203,10 +203,10 @@ class CksForm(forms.Form):
     type_police = [('полисером Subinterface', 'полисером Subinterface'), ('портом подключения', 'портом подключения'), ('не требуется', 'не требуется')]
     policer_cks = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
-    type_cks = forms.CharField(label='Режим порта',
+    type_cks = forms.CharField(label='Режим порта', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     types_exist_service = [('в неизменном виде', 'в неизменном виде'), ("access(native)", "access(native)"), ('trunk', 'trunk')]
-    exist_service = forms.CharField(label='Режим порта существующей услуги',
+    exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                            widget=forms.Select(choices=types_exist_service, attrs={'class': 'form-control'}))
 
 class PortVKForm(forms.Form):
