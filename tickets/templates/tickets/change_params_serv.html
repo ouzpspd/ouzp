@@ -27,34 +27,8 @@
 <form action="{% url 'change_params_serv' %}" method="post">
     {% csrf_token %}
     <div class="container">
-        {% if turnoff_trunk %}
-        <div class="row">
-            <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
-                    {{changeparamsform.new_mask}}
-                </div>
-            </div>
-        </div>
 
-        <div class="row">
-            <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{changeparamsform.change_type_port_exist_serv.id_for_label}}">Режим порта существующей услуги</label>
-                    {{changeparamsform.change_type_port_exist_serv}}
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{changeparamsform.change_type_port_new_serv.id_for_label}}">Режим порта новой услуги</label>
-                    {{changeparamsform.change_type_port_new_serv}}
-                </div>
-            </div>
-        </div>
-        {% elif only_mask %}
+        {% if only_mask %}
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">

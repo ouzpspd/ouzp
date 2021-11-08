@@ -337,10 +337,10 @@ class ChangeServForm(forms.Form):
 class ChangeParamsForm(forms.Form):
     new_mask = forms.CharField(max_length=2, required=False, label='Новая маска',
                                        widget=forms.TextInput(attrs={'class': 'form-control'}))
-    types_port = [("access'ом (native vlan)", "access'ом (native vlan)"), ("trunk", "trunk"), ("в неизменном виде", "в неизменном виде")]
-    change_type_port_exist_serv = forms.CharField(required=False, label='Режим порта существующей услуги',
-                                 widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
-    change_type_port_new_serv = forms.CharField(required=False, label='Режим порта новой услуги',
-                                           widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
+    #types_port = [("access'ом (native vlan)", "access'ом (native vlan)"), ("trunk", "trunk"), ("в неизменном виде", "в неизменном виде")]
+    #change_type_port_exist_serv = forms.CharField(required=False, label='Режим порта существующей услуги',
+    #                             widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
+    #change_type_port_new_serv = forms.CharField(required=False, label='Режим порта новой услуги',
+    #                                       widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
     routed_ip = forms.CharField(max_length=20, required=False, label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
     routed_vrf = forms.CharField(max_length=50, required=False, label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))

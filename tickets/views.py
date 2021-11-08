@@ -7231,14 +7231,14 @@ def change_params_serv(request):
 
         if changeparamsform.is_valid():
             new_mask = changeparamsform.cleaned_data['new_mask']
-            change_type_port_exist_serv = changeparamsform.cleaned_data['change_type_port_exist_serv']
-            change_type_port_new_serv = changeparamsform.cleaned_data['change_type_port_new_serv']
+            #change_type_port_exist_serv = changeparamsform.cleaned_data['change_type_port_exist_serv']
+            #change_type_port_new_serv = changeparamsform.cleaned_data['change_type_port_new_serv']
             routed_ip = changeparamsform.cleaned_data['routed_ip']
             routed_vrf = changeparamsform.cleaned_data['routed_vrf']
 
             request.session['new_mask'] = new_mask
-            request.session['change_type_port_exist_serv'] = change_type_port_exist_serv
-            request.session['change_type_port_new_serv'] = change_type_port_new_serv
+            #request.session['change_type_port_exist_serv'] = change_type_port_exist_serv
+            #request.session['change_type_port_new_serv'] = change_type_port_new_serv
             request.session['routed_ip'] = routed_ip
             request.session['routed_vrf'] = routed_vrf
             tag_service = request.session['tag_service']
@@ -7254,29 +7254,32 @@ def change_params_serv(request):
         head = request.session['head']
         types_change_service = request.session['types_change_service']
         for i in range(len(types_change_service)):
-            #if types_change_service[i].startswith('_'):
-
-                #type_change_service = types_change_service[i][1:]
-                #types_change_service[i] = type_change_service
-            types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
-                                       "Организация ЦКС trunk'ом с простоем",
-                                       "Организация порта ВЛС trunk'ом с простоем",
-                                       "Организация порта ВМ trunk'ом с простоем"]
-            if next(iter(types_change_service[i].keys())) in types_turnoff_trunk:
-                #if type_change_service in types_turnoff_trunk:
-                turnoff_trunk = True
-            else:
-                turnoff_trunk = False
+            # types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
+            #                            "Организация ЦКС trunk'ом с простоем",
+            #                            "Организация порта ВЛС trunk'ом с простоем",
+            #                            "Организация порта ВМ trunk'ом с простоем"]
+            # if next(iter(types_change_service[i].keys())) in types_turnoff_trunk:
+            #     tag_service.pop(0)
+            #
+            #     request.session['tag_service'] = tag_service
+            #     print('!!!!!!tag_service in change_param')
+            #     print(tag_service)
             types_cks_vk_vm_trunk = [
                     "Организация порта ВМ trunk'ом",
                     "Организация порта ВЛС trunk'ом",
-                    "Организация ЦКС trunk'ом"
+                    "Организация ЦКС trunk'ом",
+                "Организация ШПД trunk'ом",
+                "Организация ШПД trunk'ом с простоем",
+                "Организация ЦКС trunk'ом с простоем",
+                "Организация порта ВЛС trunk'ом с простоем",
+                "Организация порта ВМ trunk'ом с простоем"
                 ]
                 #if type_change_service in types_cks_vk_vm_trunk:
             if next(iter(types_change_service[i].keys())) in types_cks_vk_vm_trunk:
                 tag_service = request.session['tag_service']
                 tag_service.pop(0)
-
+                if next(iter(types_change_service[i].keys())) == "Организация ШПД trunk'ом":
+                    tag_service.pop(0)
                 request.session['tag_service'] = tag_service
                 print('!!!!!!tag_service in change_param')
                 print(tag_service)
@@ -7284,8 +7287,8 @@ def change_params_serv(request):
 
             types_only_mask = ["Организация доп connected",
                                    "Замена connected на connected",
-                                   "Изменение cхемы организации ШПД",
-                                   "Организация ШПД trunk'ом"]
+                                   "Изменение cхемы организации ШПД"
+                                   ]#"Организация ШПД trunk'ом"]
             if next(iter(types_change_service[i].keys())) in types_only_mask:
                 only_mask = True
                 tag_service = request.session['tag_service']
@@ -7300,6 +7303,8 @@ def change_params_serv(request):
                 request.session['tag_service'] = tag_service
             else:
                 routed = False
+        #if not any([only_mask, routed]):
+
         #print('!!!!!type_change_service')
         #print(type_change_service)
 
@@ -7308,7 +7313,7 @@ def change_params_serv(request):
             'head': head,
             'changeparamsform': changeparamsform,
             #'type_change_service': type_change_service,
-            'turnoff_trunk': turnoff_trunk,
+            #'turnoff_trunk': turnoff_trunk,
             'only_mask': only_mask,
             'routed': routed
         }
@@ -7333,13 +7338,29 @@ def _change_services(value_vars):
             stroka = templates.get("Организация услуги ШПД в интернет trunk'ом.")
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать маску'] = value_vars.get('new_mask')
+            mask_service = next(iter(type_change_service.values()))
+            if 'Интернет, блок Адресов Сети Интернет' in mask_service:
+                if ('29' in mask_service) or (' 8' in mask_service):
+                    static_vars['указать маску'] = '/29'
+                elif ('28' in mask_service) or ('16' in mask_service):
+                    static_vars['указать маску'] = '/28'
+                else:
+                    static_vars['указать маску'] = '/30'
+
+
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация ШПД trunk'ом с простоем":
             stroka = templates.get("Организация услуги ШПД в интернет trunk'ом с простоем связи.")
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать маску'] = value_vars.get('new_mask')
+            mask_service = next(iter(type_change_service.values()))
+            if 'Интернет, блок Адресов Сети Интернет' in mask_service:
+                if ('29' in mask_service) or (' 8' in mask_service):
+                    static_vars['указать маску'] = '/29'
+                elif ('28' in mask_service) or ('16' in mask_service):
+                    static_vars['указать маску'] = '/28'
+                else:
+                    static_vars['указать маску'] = '/30'
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
             static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_exist_serv')
             static_vars["access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_new_serv')
