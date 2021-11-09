@@ -205,9 +205,9 @@ class CksForm(forms.Form):
     types = [('access', 'access'), ('trunk', 'trunk')]
     type_cks = forms.CharField(label='Режим порта', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    types_exist_service = [('в неизменном виде', 'в неизменном виде'), ("access(native)", "access(native)"), ('trunk', 'trunk')]
+    #types_exist_service = [("access(native)", "access(native)"), ('trunk', 'trunk')]
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
-                           widget=forms.Select(choices=types_exist_service, attrs={'class': 'form-control'}))
+                           widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class PortVKForm(forms.Form):
     new_vk = forms.BooleanField(label='Новая ВЛС', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -215,8 +215,10 @@ class PortVKForm(forms.Form):
     type_police = [('полисером на Subinterface', 'полисером на Subinterface'), ('на порту подключения', 'на порту подключения'), ('не требуется', 'не требуется')]
     policer_vk = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
-    type_portvk = forms.CharField(label='Режим порта',
+    type_portvk = forms.CharField(label='Режим порта', required=False,
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
+                                    widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class PortVMForm(forms.Form):
     new_vm = forms.BooleanField(label='Новый ВМ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -225,8 +227,10 @@ class PortVMForm(forms.Form):
     policer_vm = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     vm_inet = forms.BooleanField(required=False, label='С доступом в Интернет', widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
-    type_portvm = forms.CharField(label='Режим порта',
+    type_portvm = forms.CharField(label='Режим порта', required=False,
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    exist_service_vm = forms.CharField(label='Режим порта существующей услуги', required=False,
+                                    widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class VideoForm(forms.Form):
     camera_number = forms.IntegerField(max_value=9, label='Количество камер',
