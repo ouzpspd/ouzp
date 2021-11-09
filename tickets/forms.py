@@ -339,8 +339,14 @@ class ChangeServForm(forms.Form):
     type_change_service = forms.CharField(label='Варианты ТР', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class ChangeParamsForm(forms.Form):
-    new_mask = forms.CharField(max_length=2, required=False, label='Новая маска',
-                                       widget=forms.TextInput(attrs={'class': 'form-control'}))
+    types_mask = [('/32', '/32'),
+                  ('/30', '/30'),
+                  ('/29', '/29'),
+                  ('/28', '/28')]
+    new_mask = forms.CharField(label='Новая маска', required=False,
+                                       widget=forms.Select(choices=types_mask, attrs={'class': 'form-control'}))
+    #new_mask = forms.CharField(max_length=2, required=False, label='Новая маска',
+    #                                   widget=forms.TextInput(attrs={'class': 'form-control'}))
     #types_port = [("access'ом (native vlan)", "access'ом (native vlan)"), ("trunk", "trunk"), ("в неизменном виде", "в неизменном виде")]
     #change_type_port_exist_serv = forms.CharField(required=False, label='Режим порта существующей услуги',
     #                             widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))

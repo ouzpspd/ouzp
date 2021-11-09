@@ -1428,7 +1428,8 @@ def data(request):
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'types_change_service',
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
-                 'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw']
+                 'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
+                 'exist_service_vm']
 
 
 
@@ -2491,6 +2492,7 @@ def portvm(request):
             policer_vm = portvmform.cleaned_data['policer_vm']
             vm_inet = portvmform.cleaned_data['vm_inet']
             type_portvm = portvmform.cleaned_data['type_portvm']
+            exist_service_vm = portvmform.cleaned_data['exist_service_vm']
             if type_portvm == 'trunk':
                 request.session['counter_line_services'] = 1
 
@@ -2499,6 +2501,7 @@ def portvm(request):
             request.session['exist_vm'] = exist_vm
             request.session['vm_inet'] = vm_inet
             request.session['type_portvm'] = type_portvm
+            request.session['exist_service_vm'] = exist_service_vm
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             request.session['tag_service'] = tag_service
@@ -2511,8 +2514,15 @@ def portvm(request):
         for service in services_plus_desc:
             if 'Порт ВМ' in service:
                 services_vm.append(service)
+        types_change_service = request.session.get('types_change_service')
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         portvmform = PortVMForm()
-        return render(request, 'tickets/portvm.html', {'portvmform': portvmform, 'services_vm': services_vm})
+        context = {'portvmform': portvmform,
+                   'services_vm': services_vm,
+                   'trunk_turnoff_on': trunk_turnoff_on,
+                   'trunk_turnoff_off': trunk_turnoff_off
+                   }
+        return render(request, 'tickets/portvm.html', context)
 
 
 def video(request):
@@ -6878,207 +6888,6 @@ def _passage_enviroment(value_vars):
     return result_services, value_vars
 
 
-"""@cache_check
-def exist_cl_data(request):
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    pps = request.session['pps']
-    #services_plus_desc = request.session['services_plus_desc']
-    #turnoff = request.session['turnoff']
-    sreda = request.session['sreda']
-    readable_services = request.session['readable_services']
-    oattr = request.session['oattr']
-    selected_ono = request.session['selected_ono']
-    head = request.session['head']
-
-
-    templates = ckb_parse(username, password)
-
-
-    try:
-        port = request.session['port']
-    except KeyError:
-        port = None
-    try:
-        logic_csw = request.session['logic_csw']
-    except KeyError:
-        logic_csw = None
-    try:
-        from_node = request.session['from_node']
-    except KeyError:
-        from_node = None
-    try:
-        log_change = request.session['log_change']
-    except KeyError:
-        log_change = None
-    try:
-        list_switches = request.session['list_switches']
-    except KeyError:
-        list_switches = None
-    try:
-        speed_port = request.session['speed_port']
-    except KeyError:
-        speed_port = None
-    try:
-        device_pps = request.session['device_pps']
-    except KeyError:
-        device_pps = None
-    try:
-        device_client = request.session['device_client']
-    except KeyError:
-        device_client = None
-    try:
-        ppr = request.session['ppr']
-    except KeyError:
-        ppr = None
-    try:
-        access_point = request.session['access_point']
-    except KeyError:
-        access_point = None
-
-    if list_switches:
-        list_kad = []
-        if len(list_switches) == 1:
-            kad = list_switches[0][0]
-        else:
-            for i in range(len(list_switches)):
-                if (list_switches[i][0].startswith('IAS')) or (list_switches[i][0].startswith('AR')):
-                    pass
-                else:
-                    list_kad.append(list_switches[i][0])
-            kad = ' или '.join(list_kad)
-
-    static_vars = {}
-    hidden_vars = {}
-    result_services = []
-    if sreda == '1':
-        print("Перенос присоединения к СПД по медной линии связи." + '-' * 20)
-        stroka = templates.get("Перенос присоединения к СПД по медной линии связи.")
-        if from_node:
-            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
-            static_vars['указать узел связи'] = pps
-        if oattr:
-            hidden_vars[' по решению ОАТТР'] = ' по решению ОАТТР'
-        if log_change:
-            hidden_vars['- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'
-            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
-            static_vars['указать узел связи'] = pps
-            static_vars['указать название коммутатора'] = kad
-            static_vars['указать порт коммутатора'] = port
-            static_vars['изменится/не изменится'] = 'изменится'
-        else:
-            static_vars['изменится/не изменится'] = 'не изменится'
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif sreda == '2' or sreda == '4':
-        if ppr:
-            print('-' * 20 + '\n' + "Перенос присоединения к СПД по оптической линии связи с простоем связи услуг.")
-            stroka = templates.get("Перенос присоединения к СПД по оптической линии связи с простоем связи услуг.")
-            static_vars['указать № ППР'] = ppr
-            hidden_vars['- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
-        else:
-            print('-' * 20 + '\n' + "Перенос присоединения к СПД по оптической линии связи.")
-            stroka = templates.get("Перенос присоединения к СПД по оптической линии связи.")
-
-        if from_node:
-            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
-            static_vars['указать узел связи'] = pps
-        if log_change:
-            hidden_vars[
-                '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт выбрать %указать порт коммутатора%.'
-            hidden_vars[' от %указать узел связи%'] = ' от %указать узел связи%'
-            hidden_vars['ОНИТС СПД проведение работ:'] = 'ОНИТС СПД проведение работ:'
-            hidden_vars['- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
-            static_vars['указать узел связи'] = pps
-            static_vars['указать название коммутатора'] = kad
-            static_vars['указать порт коммутатора'] = port
-            static_vars['изменится/не изменится'] = 'изменится'
-            static_vars['указать режим работы порта'] = speed_port
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = device_pps
-            static_vars['указать конвертер/передатчик на стороне клиента'] = device_client
-        else:
-            static_vars['изменится/не изменится'] = 'не изменится'
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    elif sreda == '3':
-        print("Присоединение к СПД по беспроводной среде передачи данных.")
-        static_vars = {}
-        if ppr:
-            print('-' * 20 + '\n' + "Присоединение к СПД по беспроводной среде передачи данных с простоем связи услуг.")
-            stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных с простоем связи услуг.")
-            static_vars['указать № ППР'] = ppr
-        else:
-            print('-' * 20 + '\n' + "Присоединение к СПД по беспроводной среде передачи данных.")
-            stroka = templates.get("Присоединение к СПД по беспроводной среде передачи данных.")
-        hidden_vars = {}
-        static_vars['указать узел связи'] = pps
-        static_vars['указать название коммутатора'] = kad
-
-        static_vars['указать порт коммутатора'] = port
-        static_vars['указать модель беспроводных точек'] = access_point
-        if access_point == 'Infinet H11':
-            hidden_vars['- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet H11 для их настройки.'
-            hidden_vars[' и настройки точек в офисе ОНИТС СПД'] = ' и настройки точек в офисе ОНИТС СПД'
-
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    print("Перенос сервиса %указать название сервиса%" + '-' * 20)
-    stroka = templates.get("Перенос сервиса %указать название сервиса%")
-    if stroka:
-        static_vars = {}
-        hidden_vars = {}
-
-
-        static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
-        if sreda == '2' or sreda == '4':
-            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
-        else:
-            static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-        if log_change:
-            hidden_vars['-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
-            services = []
-            for key, value in readable_services.items():
-                if type(value) == str:
-                    services.append(key+' '+value)
-                elif type(value) == list:
-                    services.append(key+''.join(value))
-            static_vars['указать сервис'] = ', '.join(services)
-            hidden_vars['В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
-            hidden_vars['- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
-            hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = head.split('\n')[4].split()[2]
-
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-
-        userlastname = None
-        if request.user.is_authenticated:
-            userlastname = request.user.last_name
-        now = datetime.datetime.now()
-        now = now.strftime("%d.%m.%Y")
-
-        index_template = 1
-        titles = []
-        for i in range(len(result_services)):
-            result_services[i] = '{}. '.format(index_template) + result_services[i]
-            titles.append(result_services[i][:result_services[i].index('---')])
-            index_template += 1
-
-        titles = ''.join(titles)
-        result_services = '\n\n\n'.join(result_services)
-        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n' + head + '\n\n' + titles + '\n' + result_services
-
-        context = {
-            'result_services': result_services
-
-        }
-
-
-        return render(request, 'tickets/exist_cl_data.html', context)
-    else:
-        error = 'Нет шаблона "Перенос сервиса %указать название сервиса%"'
-        request.session['error'] = error
-        redirect('no_data')"""
-
-
 def _passage_services_on_csw(result_services, value_vars):
     print("Перенос сервиса %указать название сервиса%" + '-' * 20)
     templates = value_vars.get('templates')
@@ -7267,16 +7076,7 @@ def change_params_serv(request):
         head = request.session['head']
         types_change_service = request.session['types_change_service']
         for i in range(len(types_change_service)):
-            # types_turnoff_trunk = ["Организация ШПД trunk'ом с простоем",
-            #                            "Организация ЦКС trunk'ом с простоем",
-            #                            "Организация порта ВЛС trunk'ом с простоем",
-            #                            "Организация порта ВМ trunk'ом с простоем"]
-            # if next(iter(types_change_service[i].keys())) in types_turnoff_trunk:
-            #     tag_service.pop(0)
-            #
-            #     request.session['tag_service'] = tag_service
-            #     print('!!!!!!tag_service in change_param')
-            #     print(tag_service)
+
             types_cks_vk_vm_trunk = [
                     "Организация порта ВМ trunk'ом",
                     "Организация порта ВЛС trunk'ом",
@@ -7316,10 +7116,7 @@ def change_params_serv(request):
                 request.session['tag_service'] = tag_service
             else:
                 routed = False
-        #if not any([only_mask, routed]):
 
-        #print('!!!!!type_change_service')
-        #print(type_change_service)
 
         changeparamsform = ChangeParamsForm()
         context = {
@@ -7400,14 +7197,46 @@ def _change_services(value_vars):
                     stroka = templates.get("Организация услуги порт ВЛC trunk'ом.")
                 else:
                     if all_portvk_in_tr.get(service)['exist_service'] == 'trunk':
-                        static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "trunk'ом"
+                        static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "tag'ом"
                     else:
                         static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
+                    static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
+                    static_vars["access'ом (native vlan)/trunk'ом"] = "tag'ом"
                     stroka = templates.get("Организация услуги порт ВЛС trunk'ом с простоем связи.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 print('!!!!result_services')
                 print(result_services)
 
+        elif next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом с простоем":
+            static_vars = {}
+            hidden_vars = {}
+            service = next(iter(type_change_service.values()))
+            if value_vars.get('new_vm') == True:
+                stroka = templates.get("Организация услуги виртуальный маршрутизатор")
+                result_services.append(stroka)
+                static_vars['указать название ВМ'] = ', организованного по решению выше,'
+            else:
+                static_vars['указать название ВМ'] = value_vars.get('exist_vm')
+            static_vars['указать полосу'] = _get_policer(service)
+            static_vars['полисером на SVI/на порту подключения'] = value_vars.get('policer_vm')
+            if value_vars.get('vm_inet') == True:
+                static_vars['без доступа в интернет/с доступом в интернет'] = 'с доступом в интернет'
+            else:
+                static_vars['без доступа в интернет/с доступом в интернет'] = 'без доступа в интернет'
+                hidden_vars[
+                    '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'] = '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'
+
+            if type_change_service == "Организация порта ВМ trunk'ом":
+                stroka = templates.get("Организация услуги порт виртуального маршрутизатора trunk'ом.")
+            else:
+                if value_vars.get('exist_service_vm') == 'trunk':
+                    static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "tag'ом"
+                else:
+                    static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
+                static_vars["access'ом (native vlan)/trunk'ом"] = "tag'ом"
+                static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
+                stroka = templates.get("Организация услуги порт виртуального маршрутизатора trunk'ом с простоем связи.")
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
             stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %указать сущ. маску% на подсеть с маской %указать нов. маску%")
             static_vars = {}
@@ -7470,7 +7299,7 @@ def _change_services(value_vars):
                 static_vars['указать номер SVI'] = '%Неизвестный SVI%'
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-        elif next(iter(type_change_service.keys())) == "Организация ЦКС trunk'ом" or "Организация ЦКС trunk'ом с простоем":
+        elif next(iter(type_change_service.keys())) == "Организация ЦКС trunk'ом" or next(iter(type_change_service.keys())) == "Организация ЦКС trunk'ом с простоем":
             static_vars = {}
             hidden_vars = {}
             all_cks_in_tr = value_vars.get('all_cks_in_tr')
@@ -7487,37 +7316,11 @@ def _change_services(value_vars):
                         static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "trunk'ом"
                     else:
                         static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
+                    static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
                     stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом с простоем связи.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
-        elif type_change_service == "Организация порта ВМ trunk'ом" or "Организация порта ВМ trunk'ом с простоем":
-            static_vars = {}
-            hidden_vars = {}
-            service = next(iter(type_change_service.values()))
-            if value_vars.get('new_vm') == True:
-                stroka = templates.get("Организация услуги виртуальный маршрутизатор")
-                result_services.append(stroka)
-                static_vars['указать название ВМ'] = ', организованного по решению выше,'
-            else:
-                static_vars['указать название ВМ'] = value_vars.get('exist_vm')
-            static_vars['указать полосу'] = _get_policer(service)
-            static_vars['полисером на SVI/на порту подключения'] = value_vars.get('policer_vm')
-            if value_vars.get('vm_inet') == True:
-                static_vars['без доступа в интернет/с доступом в интернет'] = 'с доступом в интернет'
-            else:
-                static_vars['без доступа в интернет/с доступом в интернет'] = 'без доступа в интернет'
-                hidden_vars[
-                    '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'] = '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'
 
-            if type_change_service == "Организация порта ВМ trunk'ом":
-                stroka = templates.get("Организация услуги порт виртуального маршрутизатора trunk'ом.")
-            else:
-                if value_vars.get('exist_service_vm') == 'trunk':
-                    static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "tag'ом"
-                else:
-                    static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
-                stroka = templates.get("Организация услуги порт виртуального маршрутизатора trunk'ом с простоем связи.")
-            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
     print('!!!value_vars.get(kad) ')
     print(value_vars.get('kad'))
