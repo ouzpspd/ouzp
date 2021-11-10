@@ -82,7 +82,24 @@ WSGI_APPLICATION = 'OuzpServer.wsgi.application'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 
-
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': '/home/padavan/djangosites/OuzpServerDev/ouzp/log.log',
+        },
+    },
+    'loggers': {
+        'tickets': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+}
 
 
 #CHANNEL_LAYERS = {

@@ -7,6 +7,7 @@ from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm
     PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm
 
+import logging
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
@@ -16,6 +17,8 @@ from django.http import Http404
 
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
+
+logger = logging.getLogger(__name__)
 
 
 def register(request):
