@@ -83,21 +83,44 @@
   </tbody>
 </table>
   </div>
+</div>
+<div class="container">
     {% for key, value in ticket_tr.items %}
         {% if 'ОТПМ' in key %}
-        <div class="row mb-2">
-
-            <div class="card">
-              <div class="card-header">
-                Решение ОТПМ
-              </div>
+        <div class="card mb-2">
+              <h5 class="card-header">Решение ОТПМ</h5>
               <div class="card-body">
-                {{value|linebreaksbr}}
+                  {% if value %}
+                    <p class="card-text">{{value|linebreaksbr}}</p>
+                  {% else %}
+                  <p class="card-text">Нет решения</p>
+                  {% endif %}
               </div>
-            </div>
+        </div>
+        {% elif 'ОРТР' in key %}
+        <div class="card mb-2">
+            <h5 class="card-header">Решение ОРТР</h5>
+              <div class="card-body">
+                  {% if value %}
+                    <p class="card-text">{{value|linebreaksbr}}</p>
+                  {% else %}
+                  <p class="card-text">Нет решения</p>
+                  {% endif %}
+              </div>
+        </div>
+        {% elif 'ОТС' in key and value%}
+        <div class="card mb-2">
+            <h5 class="card-header">Решение ОТС</h5>
+
+              <div class="card-body">
+
+                    <p class="card-text">{{value|linebreaksbr}}</p>
+
+              </div>
         </div>
         {% endif %}
     {% endfor %}
+
 
 </div>
 

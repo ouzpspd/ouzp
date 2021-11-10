@@ -223,7 +223,8 @@ def match_cks(tochka, login, password):
         #for i in itertools.combinations(list_cks,
         #                                2):  # берет по очереди по 2 элемента списка не включая дубли и перевертыши
         #    list_strok.append(i[0] + ' - ' + i[1])
-
+        print('!!!!!!list_cks')
+        print(list_cks)
         return list_cks
     else:
         list_cks.append('Access denied')
@@ -3721,6 +3722,21 @@ def for_tr_view(login, password, dID, tID, trID): #login, password
 
             elif 'Время на реализацию, дней' in i.find_all('td')[0].text:
                 spp_params['Решение ОТПМ'] = search[index+1].find('td').text.strip()
+
+            elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text:
+                for textarea in search[index + 1].find_all('textarea'):
+                    if textarea:
+                        if textarea['name'] == 'trOTO_Resolution':
+                            spp_params['Решение ОРТР'] = textarea.text
+                            print('!!!!!Решение ОРТР')
+                            print(textarea.text)
+                        elif textarea['name'] == 'trOTS_Resolution':
+                            spp_params['Решение ОТC'] = textarea.text
+                            print('!!!!!Решение ОТС')
+                            print(textarea.text)
+
+
+
                 #spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ'].replace('\r\n', '<br />').replace('\n', '<br />')
                 #spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ']
             '''elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text and i.find_all('td')[1].find('input'):
@@ -5801,7 +5817,9 @@ def head(request):
         stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
     else:
         static_vars['указать название коммутатора'] = uplink[-1].split()[0]
-        static_vars['указать порт'] = uplink[-1].split()[1]
+        static_vars['указать порт'] = ' '.join(uplink[-1].split()[1:]) #uplink[-1].split()[1]
+        print('!!!!!!uplink[-1].split()')
+        print(' '.join(uplink[-1].split()[1:]))
         list_stroka_device = []
         if len(uplink) > 1:
             for i in range(len(uplink)-2, -1, -1):
@@ -6483,7 +6501,7 @@ def _passage_services(result_services, value_vars):
     else:
         static_vars['ОИПМ/ОИПД'] = 'ОИПД'
     if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения':
-        stroka = templates.get("Перенос сервиса в новую точку подключения")
+        stroka = templates.get("Перенос ^сервиса^ %указать название сервиса% в новую точку подключения")
         #if value_vars.get('change_log_shpd') and value_vars.get('change_log_shpd') != 'существующая адресация':
 
         if value_vars.get('type_passage') == 'Перенос точки подключения':
@@ -6493,7 +6511,7 @@ def _passage_services(result_services, value_vars):
                     '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
 
                 hidden_vars[
-                    'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
+                    'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'] = 'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'
                 hidden_vars[
                     '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
                 hidden_vars[
@@ -6521,7 +6539,10 @@ def _passage_services(result_services, value_vars):
                         services.append(key + ''.join(value))
             static_vars['указать сервис'] = ', '.join(services)
             static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
-            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+            counter_plur = len(services)
+            result_services.append(pluralizer_vars(stroka, counter_plur))
+
 
         elif value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
             services = []
@@ -6548,7 +6569,7 @@ def _passage_services(result_services, value_vars):
                     '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
 
                 hidden_vars[
-                    'В заявке Cordis указать время проведения работ по переносу сервиса.'] = 'В заявке Cordis указать время проведения работ по переносу сервиса.'
+                    'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'] = 'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'
                 hidden_vars[
                     '- После переезда клиента актуализировать информацию в Cordis и системах учета.'] = '- После переезда клиента актуализировать информацию в Cordis и системах учета.'
                 if value_vars.get('head').split('\n')[4].split()[2] == value_vars.get('selected_ono')[0][-2] or other_services == False:
@@ -6576,7 +6597,10 @@ def _passage_services(result_services, value_vars):
             print(readable_services)
             print('!!!!services')
             print(services)
-            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+            counter_plur = len(services)
+            result_services.append(pluralizer_vars(stroka, counter_plur))
+            #result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
     elif value_vars.get('type_passage') == 'Перенос логического подключения':
         stroka = templates.get("Перенос логического подключения клиента на %указать узел связи%")
