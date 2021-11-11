@@ -85,15 +85,21 @@ WSGI_APPLICATION = 'OuzpServer.wsgi.application'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+            'file': {
+                'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+            }
+        },
     'handlers': {
         'file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': '/home/padavan/djangosites/OuzpServerDev/ouzp/log.log',
+            'formatter': 'file',
+            'filename': os.path.join(BASE_DIR, 'log.log'),
         },
     },
     'loggers': {
-        'tickets': {
+        'django.request': {
             'handlers': ['file'],
             'level': 'WARNING',
             'propagate': True,

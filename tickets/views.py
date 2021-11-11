@@ -4560,7 +4560,7 @@ def exist_enviroment_install_csw(value_vars):
         static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
         hidden_vars[
             'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-        static_vars['указать конвертер/передатчик на стороне клиента'] = 'оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентский коммутатор'
+        static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')  #'оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентский коммутатор'
         if logic_csw_1000 == True:
             hidden_vars[
                 '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
@@ -5146,15 +5146,15 @@ def enviroment_csw(value_vars):
 
 
 
-from django.http import JsonResponse
+#from django.http import JsonResponse
 
-def tr_spin(request):
-    text = 'This is my statement one.&#13;&#10;This is my statement2'
-    return render(request, 'tickets/spinner.html', {'text': text})
+# def tr_spin(request):
+#     text = 'This is my statement one.&#13;&#10;This is my statement2'
+#     return render(request, 'tickets/spinner.html', {'text': text})
 
-def spp_json(request):
-    data = list(SPP.objects.values())
-    return JsonResponse(data, safe=False)
+# def spp_json(request):
+#     data = list(SPP.objects.values())
+#     return JsonResponse(data, safe=False)
 
 
 from django.forms import formset_factory
