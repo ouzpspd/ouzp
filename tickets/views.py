@@ -316,7 +316,6 @@ def commercial(request):
     password = credent['password']
 
     search = in_work_ortr(username, password)
-    search[:] = [x for x in search if 'ПТО' not in x[0]]
     if search[0] == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -324,6 +323,7 @@ def commercial(request):
         return response
 
     else:
+        search[:] = [x for x in search if 'ПТО' not in x[0]]
         list_search = []
         for i in search:
             print('!!!')
@@ -361,7 +361,6 @@ def pto(request):
     password = credent['password']
 
     search = in_work_ortr(username, password)
-    search[:] = [x for x in search if 'ПТО' in x[0]]
     if search[0] == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -369,8 +368,8 @@ def pto(request):
         return response
 
     else:
+        search[:] = [x for x in search if 'ПТО' in x[0]]
         list_search = []
-        print(search)
         for i in search:
             if 'ПТО' in i[0]:
                 list_search.append(i[0])
@@ -5943,6 +5942,8 @@ def head(request):
     list_stroka_other_client_service = []
     readable_services = dict()
     counter_exist_line = set()
+    counter_stick = 0
+    port_stick = set()
     for i in selected_ono:
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
@@ -6014,6 +6015,15 @@ def head(request):
                     readable_services = _readable(curr_value, readable_services, 'Порт ВМ', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Etherline':
+                counter_stick += 1
+                port_stick.add(i[-1])
+                print('!!!counter_stick')
+                print(counter_stick)
+                print('!!!!port_stick')
+                print(port_stick)
+                if counter_stick == 5 and len(port_stick) == 1:
+                    stick = True
+                    break
                 extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 #readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
@@ -6054,54 +6064,60 @@ def head(request):
         print('!!!readable_services after readable')
         print(readable_services)
 
-    if vgw_chains:
-        print('!!!vgw_chains')
-        print(vgw_chains)
-        for i in vgw_chains:
-            model = i.get('model')
-            name = i.get('name')
-            vgw_uplink = i.get('uplink').replace('\r\n', '')
-            room = i.get('type')
-            if model == 'ITM SIP':
-                extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
-                counter_exist_line.add(f'{vgw_uplink}')
-            else:
-                extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
-                counter_exist_line.add(f'{vgw_uplink}')
-            list_stroka_main_client_service.append(extra_stroka_main_client_service)
-            readable_services.update({'"Телефония"': None})
-    extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
-    extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
-    index_of_service = stroka.index('В данной точке клиент потребляет:') + len('В данной точке клиент потребляет:')+1
-    stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + '\n' + extra_extra_stroka_other_client_service + stroka[index_of_service:]
-
-    if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
-        if waste_vgw:
-            list_stroka_other_vgw =[]
-            for i in waste_vgw:
+    if not stick:
+        if vgw_chains:
+            print('!!!vgw_chains')
+            print(vgw_chains)
+            for i in vgw_chains:
                 model = i.get('model')
                 name = i.get('name')
                 vgw_uplink = i.get('uplink').replace('\r\n', '')
                 room = i.get('type')
-                contracts = i.get('contracts')
-                if bool(contracts) == False:
-                    contracts = 'Нет контрактов'
                 if model == 'ITM SIP':
-                    extra_stroka_other_vgw = f'Также есть подключение по IP-транк {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                    extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
+                    counter_exist_line.add(f'{vgw_uplink}')
                 else:
-                    extra_stroka_other_vgw = f'Также есть тел. шлюз {model} {name} ({vgw_uplink}). Контракт: {contracts}\n'
-                list_stroka_other_vgw.append(extra_stroka_other_vgw)
-            extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
-            stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
+                    extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
+                    counter_exist_line.add(f'{vgw_uplink}')
+                list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                readable_services.update({'"Телефония"': None})
+        extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
+        extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
+        #index_of_service = stroka.index('В данной точке клиент потребляет:') + len('В данной точке клиент потребляет:')+1
+        index_of_service = stroka.index('В данной точке %клиент потребляет/c клиентом организован L2-стык%') + len('В данной точке %клиент потребляет/c клиентом организован L2-стык%')+1
+        stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + '\n' + extra_extra_stroka_other_client_service + stroka[index_of_service:]
 
-    counter_exist_line = len(counter_exist_line)
-    print('!!!!!counter_exist_line')
-    print(counter_exist_line)
-    if (selected_ono[0][-2].startswith('SW') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('IAS') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('AR') and counter_exist_line > 1):
-        pass
+        if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
+            if waste_vgw:
+                list_stroka_other_vgw =[]
+                for i in waste_vgw:
+                    model = i.get('model')
+                    name = i.get('name')
+                    vgw_uplink = i.get('uplink').replace('\r\n', '')
+                    room = i.get('type')
+                    contracts = i.get('contracts')
+                    if bool(contracts) == False:
+                        contracts = 'Нет контрактов'
+                    if model == 'ITM SIP':
+                        extra_stroka_other_vgw = f'Также есть подключение по IP-транк {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                    else:
+                        extra_stroka_other_vgw = f'Также есть тел. шлюз {model} {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                    list_stroka_other_vgw.append(extra_stroka_other_vgw)
+                extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
+                stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
+
+        counter_exist_line = len(counter_exist_line)
+        print('!!!!!counter_exist_line')
+        print(counter_exist_line)
+        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'клиент потребляет:'
+        if (selected_ono[0][-2].startswith('SW') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('IAS') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('AR') and counter_exist_line > 1):
+            pass
+        else:
+            hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
     else:
+        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'c клиентом организован L2-стык.'
         hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
-
+        counter_exist_line = 0
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
     result_services = ''.join(result_services)
