@@ -60,7 +60,7 @@ class LinkForm(forms.Form):
     spplink =forms.CharField(max_length=150, label='Ссылка на ТР', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 class LocalForm(forms.Form):
-    types = [('СКС', 'СКС'), ('ЛВС', 'ЛВС')]
+    types = [('СКС', 'СКС'), ('ЛВС', 'ЛВС'), ('Под видеонаблюдение', 'Под видеонаблюдение')]
     local_type = forms.CharField(label='Тип ЛВС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     local_ports = forms.IntegerField(max_value=24, label='Количество портов',
                                    widget=forms.NumberInput(attrs={'class': 'form-control'}))
@@ -101,6 +101,7 @@ class ItvForm(forms.Form):
     type_itv = forms.CharField(label='Тип ITV', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     cnt_itv = forms.IntegerField(max_value=20, label='Количество приставок',
                                         widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    router_itv = forms.BooleanField(label='Маршрутизатор для иТВ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 
 class VolsForm(forms.Form):

@@ -1433,7 +1433,7 @@ def data(request):
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
-                 'exist_service_vm']
+                 'exist_service_vm', 'router_itv']
 
 
 
@@ -2094,6 +2094,8 @@ def phone(request):
                 new_with_csw_job_services = None
 
             tag_service = request.session['tag_service']
+            print('!!!!! def phone before new_with_csw_job_services')
+            print(new_with_csw_job_services)
             for index_service in range(len(services_plus_desc)):
                 if 'Телефон' in services_plus_desc[index_service]:
                     if type_phone == 'ak':
@@ -2101,7 +2103,11 @@ def phone(request):
                             for ind in range(len(new_with_csw_job_services)):
                                 if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
                                     new_with_csw_job_services[ind] += '|'
-                                    new_with_csw_job_services = request.session['new_with_csw_job_services']
+                                    print('!!!new_with_csw_job_services[ind]')
+                                    print(new_with_csw_job_services[ind])
+                                    print(new_with_csw_job_services)
+                                    #new_with_csw_job_services = request.session['new_with_csw_job_services']
+                                    print(new_with_csw_job_services)
                         services_plus_desc[index_service] += '|'
                         counter_line_services = request.session['counter_line_services']
                         counter_line_services += 1
@@ -2128,15 +2134,18 @@ def phone(request):
                             for ind in range(len(new_with_csw_job_services)):
                                 if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
                                     new_with_csw_job_services[ind] += '/'
-                                    new_with_csw_job_services = request.session['new_with_csw_job_services']
+                                    #new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '/'
                     elif type_phone == 'ab':
                         if new_with_csw_job_services:
                             for ind in range(len(new_with_csw_job_services)):
                                 if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
                                     new_with_csw_job_services[ind] += '\\'
-                                    new_with_csw_job_services = request.session['new_with_csw_job_services']
+                                    #new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '\\'
+
+            print('!!!!! def phone new_with_csw_job_services')
+            print(new_with_csw_job_services)
             request.session['services_plus_desc'] = services_plus_desc
             request.session['vgw'] = vgw
             request.session['channel_vgw'] = channel_vgw
@@ -2198,8 +2207,19 @@ def local(request):
             request.session['tag_service'] = tag_service
             if local_type == 'СКС':
                 return redirect('sks')
-            else:
+            elif local_type == 'ЛВС':
                 return redirect('lvs')
+            else:
+                new_with_csw_job_services = request.session.get('new_with_csw_job_services')
+                if new_with_csw_job_services:
+                    new_with_csw_job_services[:] = [x for x in new_with_csw_job_services if not x.startswith('ЛВС')]
+                services_plus_desc = request.session['services_plus_desc']
+                services_plus_desc[:] = [x for x in services_plus_desc if not x.startswith('ЛВС')]
+                request.session['services_plus_desc'] = services_plus_desc
+                print('def local')
+                print('!!!!!next(iter(tag_service[0]))')
+                return redirect(next(iter(tag_service[0])))
+
 
     else:
         services_plus_desc = request.session['services_plus_desc']
@@ -2275,27 +2295,70 @@ def itv(request):
         if itvform.is_valid():
             type_itv = itvform.cleaned_data['type_itv']
             cnt_itv = itvform.cleaned_data['cnt_itv']
+            router_itv = itvform.cleaned_data['router_itv']
             services_plus_desc = request.session['services_plus_desc']
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
+
+            # for index_service in range(len(services_plus_desc)):
+            #     if 'iTV' in services_plus_desc[index_service]:
+            #         if type_itv == 'novl':
+            #             services_plus_desc[index_service] = services_plus_desc[index_service][:-1]
+            #             counter_line_services = request.session['counter_line_services']
+            #             counter_line_services -= 1
+            #             request.session['counter_line_services'] = counter_line_services
+            #             if len(services_plus_desc) == 1:
+            #                 tag_service.pop()
+            #                 tag_service.append({'data': None})
+            # request.session['type_itv'] = type_itv
+            # request.session['cnt_itv'] = cnt_itv
+            # request.session['services_plus_desc'] = services_plus_desc
+            #
+            # print('!!!!tagservice')
+            # print(tag_service)
+            # request.session['tag_service'] = tag_service
+
+            try:
+                new_with_csw_job_services = request.session['new_with_csw_job_services']
+            except KeyError:
+                new_with_csw_job_services = None
+
+
             for index_service in range(len(services_plus_desc)):
                 if 'iTV' in services_plus_desc[index_service]:
-                    if type_itv == 'novl':
-                        services_plus_desc[index_service] = services_plus_desc[index_service][:-1]
+                    if type_itv == 'vl':
+                        if new_with_csw_job_services:
+                            for ind in range(len(new_with_csw_job_services)):
+                                if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
+                                    new_with_csw_job_services[ind] += '|'
+                                    #new_with_csw_job_services = request.session['new_with_csw_job_services']
+                        services_plus_desc[index_service] += '|'
                         counter_line_services = request.session['counter_line_services']
-                        counter_line_services -= 1
+                        counter_line_services += 1
                         request.session['counter_line_services'] = counter_line_services
-                        if len(services_plus_desc) == 1:
-                            tag_service.pop()
-                            tag_service.append({'data': None})
+                        sreda = request.session['sreda']
+                        if sreda == '2' or sreda == '4':
+                            if {'vols': None} not in tag_service:
+                                tag_service.insert(1, {'vols': None})
+                        elif sreda == '3':
+                            if 'wireless' not in tag_service:
+                                tag_service.insert(1, {'wireless': None})
+                        elif sreda == '1':
+                            if 'copper' not in tag_service:
+                                tag_service.insert(1, {'copper': None})
+                        if {'data': None} in tag_service:
+                            tag_service.remove({'data': None})
+            print('!!!!! def itv new_with_csw_job_services')
+            print(new_with_csw_job_services)
+            request.session['new_with_csw_job_services'] = new_with_csw_job_services
+            request.session['services_plus_desc'] = services_plus_desc
             request.session['type_itv'] = type_itv
             request.session['cnt_itv'] = cnt_itv
-            request.session['services_plus_desc'] = services_plus_desc
-
-            print('!!!!tagservice')
-            print(tag_service)
+            request.session['router_itv'] = router_itv
+            tag_service.pop(0)
             request.session['tag_service'] = tag_service
             return redirect(next(iter(tag_service[0])))
+
+            #return redirect(next(iter(tag_service[0])))
 
 
     else:
@@ -2857,8 +2920,8 @@ def _counter_line_services(services_plus_desc):
             replace_index = services_plus_desc[index_service]
             services_plus_desc.remove(replace_index)
             services_plus_desc.insert(0, replace_index)
-        elif 'iTV' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
+        #elif 'iTV' in services_plus_desc[index_service]:
+        #    services_plus_desc[index_service] += '|'
         elif 'ЦКС' in services_plus_desc[index_service]:
             services_plus_desc[index_service] += '|'
         elif 'Порт ВЛС' in services_plus_desc[index_service]:
@@ -3868,20 +3931,34 @@ def _new_services(result_services, value_vars):
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
         elif 'iTV' in service:
-            type_itv = value_vars.get('type_itv')
-            cnt_itv = value_vars.get('cnt_itv')
-            print('{}'.format(service.replace('|', ' ')) + '-' * 20)
-            if logic_csw == True and type_itv == 'vl':
-                for i in range(int(cnt_itv)):
-                    result_services.append(enviroment_csw(value_vars))
             static_vars = {}
             hidden_vars = {}
-
+            type_itv = value_vars.get('type_itv')
             if type_itv == 'vl':
-                if cnt_itv == 1:
+                cnt_itv = value_vars.get('cnt_itv')
+                print('{}'.format(service.replace('|', ' ')) + '-' * 20)
+                if logic_csw:
+                    if value_vars.get('router_itv'):
+                        result_services.append(enviroment_csw(value_vars))
+
+                    else:
+                        for i in range(int(cnt_itv)):
+                            result_services.append(enviroment_csw(value_vars))
+
+                if value_vars.get('router_itv'):
+                    sreda = value_vars.get('sreda')
+                    if sreda == '2' or sreda == '4':
+                        static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                    else:
+                        static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+                    stroka = templates.get("Установка маршрутизатора")
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                     static_vars['маска'] = '/30'
-                elif 1 < cnt_itv < 6:
-                    static_vars['маска'] = '/29'
+                else:
+                    if cnt_itv == 1:
+                        static_vars['маска'] = '/30'
+                    elif 1 < cnt_itv < 6:
+                        static_vars['маска'] = '/29'
                 stroka = templates.get("Организация услуги Вебург.ТВ в отдельном vlan'е")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             elif type_itv == 'novl':
@@ -4104,11 +4181,11 @@ def _new_services(result_services, value_vars):
                 static_vars['указать количество линий'] = str(int(camera_number) - 1)
                 static_vars['указать количество камер'] = camera_number
                 if int(camera_number) == 5:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'D-Link DES-1005P'
+                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор D-Link DES-1005P'
                     static_vars['указать номер порта POE-коммутатора'] = '5'
                     static_vars['номер камеры'] = '5'
                 elif int(camera_number) == 9:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'Atis PoE-1010-8P'
+                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор Atis PoE-1010-8P'
                     static_vars['указать номер порта POE-коммутатора'] = '10'
                     static_vars['номер камеры'] = '9'
                 static_vars['номер порта маршрутизатора'] = 'свободный'
@@ -4147,10 +4224,10 @@ def _new_services(result_services, value_vars):
                 static_vars['указать количество линий'] = camera_number
                 static_vars['указать количество камер'] = camera_number
                 if 5 < int(camera_number) < 9:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'Atis PoE-1010-8P'
+                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор Atis PoE-1010-8P'
                     static_vars['указать номер порта POE-коммутатора'] = '10'
                 elif 2 < int(camera_number) < 5:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'D-Link DES-1005P'
+                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор D-Link DES-1005P'
                     static_vars['указать номер порта POE-коммутатора'] = '5'
                 static_vars['номер порта маршрутизатора'] = 'свободный'
                 static_vars['0/3/7/15/30'] = value_vars.get('deep_archive')
@@ -6200,12 +6277,15 @@ def project_tr_exist_cl(request):
                 tag_service.insert(0, tag)
                 tag_service.insert(0, {'change_serv': None})
 
-        if sreda == '1':
-            tag_service.append({'copper': None})
-        elif sreda == '2' or sreda == '4':
-            tag_service.append({'vols': None})
-        elif sreda == '3':
-            tag_service.append({'wireless': None})
+        if counter_line_services == 0:
+            tag_service.append({'data': None})
+        else:
+            if sreda == '1':
+                tag_service.append({'copper': None})
+            elif sreda == '2' or sreda == '4':
+                tag_service.append({'vols': None})
+            elif sreda == '3':
+                tag_service.append({'wireless': None})
 
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
@@ -6419,6 +6499,8 @@ def pass_serv(request):
                     if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                         pass
                     else:
+                        if {'data': None} in tag_service:
+                            tag_service.remove({'data': None})
                         if sreda == '1':
                             tag_service.append({'copper': None})
                         elif sreda == '2' or sreda == '4':
