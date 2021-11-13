@@ -1432,7 +1432,7 @@ def data(request):
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
-                 'exist_service_vm', 'router_itv']
+                 'exist_service_vm', 'router_itv', 'address']
 
 
 
@@ -1531,15 +1531,40 @@ def data(request):
     now = now.strftime("%d.%m.%Y")
     titles = ''.join(titles)
     result_services = '\n\n\n'.join(result_services)
-    if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
-        need = 'Требуется в данной точке организовать доп. услугу.'
+
+    need = ['Требуется:']
+    if value_vars.get('pass_without_csw_job_services'):
+        if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+            need.append(f"- перенести сервис {value_vars.get('name_passage_service')} в новую точку подключения {value_vars.get('address')};")
+        elif value_vars.get('type_passage') == 'Перенос точки подключения':
+            need.append(
+                f"- перенести точку подключения на адрес {value_vars.get('address')};")
+        elif value_vars.get('type_passage') == 'Перенос логического подключения':
+            need.append(
+                f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
+        elif value_vars.get('type_passage') == 'Перевод на гигабит':
+            need.append(
+                f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
+    if value_vars.get('new_with_csw_job_services'):
+
+        if len(value_vars.get('name_new_service')) > 1:
+            need.append(f"- организовать дополнительные услуги {value_vars.get('name_new_service')}.")
+        else:
+            need.append(f"- организовать дополнительную услугу {value_vars.get('name_new_service')}.")
+    if value_vars.get('change_job_services'):
+        for type_change_service in value_vars.get('types_change_service'):
+            pass
+    need = '\n'.join(need)
+
+    if value_vars.get('type_pass'): # and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
+        #need = 'Требуется в данной точке организовать доп. услугу.'
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
-    elif value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
-        need = 'Требуется перенести услугу в новую точку подключения.'
-        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
-    elif value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
-        need = 'Требуется в данной точке изменить услугу.'
-        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
+    # elif value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
+    #     need = 'Требуется перенести услугу в новую точку подключения.'
+    #     result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
+    # elif value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
+    #     need = 'Требуется в данной точке изменить услугу.'
+    #     result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     else:
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
     counter_str_ortr = result_services.count('\n')
@@ -3879,8 +3904,10 @@ def _new_services(result_services, value_vars):
     services_plus_desc = value_vars.get('services_plus_desc')
     templates = value_vars.get('templates')
     sreda = value_vars.get('sreda')
+    name_new_service = set()
     for service in services_plus_desc:
         if 'Интернет, DHCP' in service:
+            name_new_service.add('ШПД в Интернет')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             if logic_csw == True:
                 result_services.append(enviroment_csw(value_vars))
@@ -3901,6 +3928,7 @@ def _new_services(result_services, value_vars):
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
         elif 'Интернет, блок Адресов Сети Интернет' in service:
+            name_new_service.add('ШПД в Интернет')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             if logic_csw == True:
                 result_services.append(enviroment_csw(value_vars))
@@ -3930,6 +3958,7 @@ def _new_services(result_services, value_vars):
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
         elif 'iTV' in service:
+            name_new_service.add('Вебург.ТВ')
             static_vars = {}
             hidden_vars = {}
             type_itv = value_vars.get('type_itv')
@@ -3968,6 +3997,7 @@ def _new_services(result_services, value_vars):
 
 
         elif 'ЦКС' in service:
+            name_new_service.add('ЦКС')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             if logic_csw == True:
                 result_services.append(enviroment_csw(value_vars))
@@ -4005,6 +4035,7 @@ def _new_services(result_services, value_vars):
 
 
         elif 'Порт ВЛС' in service:
+            name_new_service.add('Порт ВЛС')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             if logic_csw == True:
                 result_services.append(enviroment_csw(value_vars))
@@ -4031,6 +4062,7 @@ def _new_services(result_services, value_vars):
 
 
         elif 'Порт ВМ' in service:
+            name_new_service.add('Порт ВМ')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             if logic_csw == True:
                 result_services.append(enviroment_csw(value_vars))
@@ -4072,6 +4104,7 @@ def _new_services(result_services, value_vars):
 
 
         elif 'HotSpot' in service:
+            name_new_service.add('Хот-спот')
             # hotspot_users = None
             static_vars = {}
             hidden_vars = {}
@@ -4119,6 +4152,7 @@ def _new_services(result_services, value_vars):
 
 
         elif 'Видеонаблюдение' in service:
+            name_new_service.add('Видеонаблюдение')
             # cnt_camera = None
             print('-' * 20 + '\n' + '{}'.format(service.replace('|', ' ')))
             cameras = ['TRASSIR TR-D7111IR1W', 'TRASSIR TR-D7121IR1W', 'QTECH QVC-IPC-202VAE', 'QTECH QVC-IPC-202ASD', \
@@ -4260,6 +4294,7 @@ def _new_services(result_services, value_vars):
                 result_services.append(pluralizer_vars(stroka, counter_plur))
 
         elif 'Телефон' in service:
+            name_new_service.add('Телефония')
             result_services_ots = []
             hidden_vars = {}
             static_vars = {}
@@ -4426,6 +4461,7 @@ def _new_services(result_services, value_vars):
                     result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
         elif 'ЛВС' in service:
+            name_new_service.add('ЛВС')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             static_vars = {}
             hidden_vars = {}
@@ -4467,7 +4503,8 @@ def _new_services(result_services, value_vars):
                 print(stroka)
                 counter_plur = int(local_ports)
                 result_services.append(pluralizer_vars(stroka, counter_plur))
-    return result_services, result_services_ots
+    value_vars.update({'name_new_service': name_new_service})
+    return result_services, result_services_ots, value_vars
 
 def _list_kad(value_vars):
     """Данный метод формирует список всех КАД на узле в строку"""
@@ -5009,7 +5046,7 @@ def client_new(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для нового присоединения и новых услуг"""
     result_services, value_vars = _new_enviroment(value_vars)
-    result_services, result_services_ots = _new_services(result_services, value_vars)
+    result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
 
 
     return result_services, result_services_ots, value_vars
@@ -5942,6 +5979,7 @@ def head(request):
     list_stroka_other_client_service = []
     readable_services = dict()
     counter_exist_line = set()
+    stick = False
     counter_stick = 0
     port_stick = set()
     for i in selected_ono:
@@ -6235,12 +6273,12 @@ def project_tr_exist_cl(request):
 
     new_with_csw_job_services = request.session['new_with_csw_job_services']
     pass_without_csw_job_services = request.session['pass_without_csw_job_services']
-
+    change_job_services = request.session['change_job_services']
 
 
     new_no_spd_jobs_services = request.session['new_no_spd_jobs_services']
     #pass_no_spd_job_services = request.session['pass_no_spd_job_services']
-    change_job_services = request.session['change_job_services']
+
 
     #перенос одного сервиса
     #if pass_without_csw_job_services
@@ -6655,11 +6693,13 @@ def _passage_services(result_services, value_vars):
                         static_vars['указать название сервиса'] = key
                     else:
                         other_services.append(key + ' ' + value)
+                        value_vars.update({'name_passage_service': key})
                 elif type(value) == list:
                     for val in value:
                         if value_vars.get('selected_ono')[0][-4] in val:
                             services.append(key + ' ' + val)
                             static_vars['указать название сервиса'] = key
+                            value_vars.update({'name_passage_service': key})
                         else:
                             other_services.append(key + ' ' + val)
             print(('!!!!!services'))
@@ -6785,7 +6825,7 @@ def _passage_services(result_services, value_vars):
             hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'
         static_vars['существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    return result_services
+    return result_services, value_vars
 
 def _passage_enviroment(value_vars):
     if value_vars.get('result_services'):
@@ -7064,7 +7104,7 @@ def extra_services_with_install_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
      ОТС(заполненые шаблоны) для организации новых услуг дополнительно к существующему подключению"""
     result_services, value_vars = exist_enviroment_install_csw(value_vars)
-    result_services, result_services_ots = _new_services(result_services, value_vars)
+    result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
     result_services = _passage_services_on_csw(result_services, value_vars)
     return result_services, result_services_ots, value_vars
 
@@ -7073,7 +7113,7 @@ def extra_services_with_passage_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
          ОТС(заполненые шаблоны) для переноса КК и организации от него новых услуг"""
     result_services, value_vars = exist_enviroment_passage_csw(value_vars)
-    result_services, result_services_ots = _new_services(result_services, value_vars)
+    result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
     result_services_ots = None
     return result_services, result_services_ots, value_vars
 
@@ -7105,7 +7145,7 @@ def passage_services(value_vars):
     #    result_services, value_vars = _passage_enviroment(value_vars)
 
 
-    result_services = _passage_services(result_services, value_vars)
+    result_services, value_vars = _passage_services(result_services, value_vars)
     if value_vars.get('result_services_ots'):
         result_services_ots = value_vars.get('result_services_ots')
     else:
