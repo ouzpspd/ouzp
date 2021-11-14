@@ -1548,9 +1548,9 @@ def data(request):
     if value_vars.get('new_with_csw_job_services'):
 
         if len(value_vars.get('name_new_service')) > 1:
-            need.append(f"- организовать дополнительные услуги {value_vars.get('name_new_service')}.")
+            need.append(f"- организовать дополнительные услуги {', '.join(value_vars.get('name_new_service'))}.")
         else:
-            need.append(f"- организовать дополнительную услугу {value_vars.get('name_new_service')}.")
+            need.append(f"- организовать дополнительную услугу {value_vars.get('name_new_service')[0]}.")
     if value_vars.get('change_job_services'):
         for type_change_service in value_vars.get('types_change_service'):
             pass
@@ -6691,15 +6691,20 @@ def _passage_services(result_services, value_vars):
                     if value_vars.get('selected_ono')[0][-4] in value:
                         services.append(key + ' ' + value)
                         static_vars['указать название сервиса'] = key
+                        value_vars.update({'name_passage_service': key +' '+ value })
+                        print('!!!!name_passage_service')
+                        print(value_vars.get('name_passage_service'))
                     else:
                         other_services.append(key + ' ' + value)
-                        value_vars.update({'name_passage_service': key})
+
                 elif type(value) == list:
                     for val in value:
                         if value_vars.get('selected_ono')[0][-4] in val:
                             services.append(key + ' ' + val)
                             static_vars['указать название сервиса'] = key
-                            value_vars.update({'name_passage_service': key})
+                            value_vars.update({'name_passage_service': key +' '+ val})
+                            print('!!!!name_passage_service_list')
+                            print(value_vars.get('name_passage_service'))
                         else:
                             other_services.append(key + ' ' + val)
             print(('!!!!!services'))
@@ -6794,10 +6799,12 @@ def _passage_services(result_services, value_vars):
             if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
                 services.append(key + ' ' + value)
                 static_vars['указать название сервиса'] = key
+                value_vars.update({'name_passage_service': key +' '+ value})
             elif type(value) == list:
                 for val in value:
                     if value_vars.get('selected_ono')[0][-4] in val:
                         static_vars['указать название сервиса'] = key
+                        value_vars.update({'name_passage_service': key + ' ' + val})
                         services.append(key + ' ' + val)
 
         if services[0].startswith('"ШПД в интернет"'):
