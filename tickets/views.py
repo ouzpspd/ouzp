@@ -4,7 +4,7 @@ from .models import TR, SPP, OrtrTR
 from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
-    PassServForm, AddServInstCswForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
+    PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm
 
 import logging
@@ -742,17 +742,17 @@ def copper(request):
                 print('!!!!tag_service in vols after add change_log_shpd')
                 print(tag_service)
                 if logic_csw == True:
-                    try:
-                        request.session['type_pass']
-                        #request.session['new_with_csw_job_services']
-                    except KeyError:
-                        #return redirect('csw')
-                        tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
-                    else:
-
-                        tag_service.append({'add_serv_with_install_csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                    # try:
+                    #     request.session['type_pass']
+                    #     #request.session['new_with_csw_job_services']
+                    # except KeyError:
+                    #     #return redirect('csw')
+                    tag_service.append({'csw': None})
+                    return redirect(next(iter(tag_service[0])))
+                    # else:
+                    #
+                    #     tag_service.append({'add_serv_with_install_csw': None})
+                    #     return redirect(next(iter(tag_service[0])))
                 elif logic_change_csw == True or logic_change_gi_csw == True:
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
@@ -970,17 +970,17 @@ def vols(request):
                 if logic_csw == True:
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
                     request.session['device_client'] = device_client
-                    try:
-                        request.session['type_pass']
-                        #request.session['new_with_csw_job_services']
-                    except KeyError:
-                        #return redirect('csw')
-                        tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
-                    else:
-
-                        tag_service.append({'add_serv_with_install_csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                    # try:
+                    #     request.session['type_pass']
+                    #     #request.session['new_with_csw_job_services']
+                    # except KeyError:
+                    #     #return redirect('csw')
+                    tag_service.append({'csw': None})
+                    return redirect(next(iter(tag_service[0])))
+                    # else:
+                    #
+                    #     tag_service.append({'add_serv_with_install_csw': None})
+                    #     return redirect(next(iter(tag_service[0])))
                 elif logic_change_csw == True or logic_change_gi_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
@@ -1206,17 +1206,17 @@ def wireless(request):
                 print('!!!!tag_service in vols after add change_log_shpd')
                 print(tag_service)
                 if logic_csw == True:
-                    try:
-                        request.session['type_pass']
-                        #request.session['new_with_csw_job_services']
-                    except KeyError:
-                        #return redirect('csw')
-                        tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
-                    else:
-
-                        tag_service.append({'add_serv_with_install_csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                    # try:
+                    #     request.session['type_pass']
+                    #     #request.session['new_with_csw_job_services']
+                    # except KeyError:
+                    #     #return redirect('csw')
+                    tag_service.append({'csw': None})
+                    return redirect(next(iter(tag_service[0])))
+                    # else:
+                    #
+                    #     tag_service.append({'add_serv_with_install_csw': None})
+                    #     return redirect(next(iter(tag_service[0])))
                 elif logic_change_csw == True or logic_change_gi_csw == True:
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
@@ -1366,15 +1366,19 @@ def csw(request):
             port_csw = cswform.cleaned_data['port_csw']
             logic_csw_1000 = cswform.cleaned_data['logic_csw_1000']
             exist_speed_csw = cswform.cleaned_data['exist_speed_csw']
+            type_install_csw = cswform.cleaned_data['type_install_csw']
             request.session['model_csw'] = model_csw
             request.session['port_csw'] = port_csw
             request.session['logic_csw_1000'] = logic_csw_1000
             request.session['exist_speed_csw'] = exist_speed_csw
-            try:
-                request.session['type_install_csw']
-            except KeyError:
-                pass
-            else:
+            request.session['type_install_csw'] = type_install_csw
+            # try:
+            #     request.session['type_install_csw']
+            # except KeyError:
+            #     pass
+            # else:
+            #     request.session['logic_csw'] = True
+            if not type_install_csw:
                 request.session['logic_csw'] = True
             tag_service = request.session['tag_service']
             tag_service.pop(0)
@@ -1383,13 +1387,21 @@ def csw(request):
             return redirect(next(iter(tag_service[0])))
     else:
         sreda = request.session['sreda']
+        try:
+            request.session['type_pass']
+        except KeyError:
+            add_serv_install = False
+            new_install = True
+        else:
+            add_serv_install = True
+            new_install = False
         if sreda == '2' or sreda == '4':
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '6'})
         else:
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '5'})
 
         context = {
-            'cswform': cswform
+            'cswform': cswform, 'add_serv_install': add_serv_install, 'new_install': new_install,
         }
         return render(request, 'tickets/csw.html', context)
 
@@ -2216,6 +2228,7 @@ def phone(request):
 
     else:
         services_plus_desc = request.session['services_plus_desc']
+        oattr = request.session['oattr']
         for service in services_plus_desc:
             if 'Телефон' in service:
                 regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
@@ -2246,6 +2259,7 @@ def phone(request):
         context = {
             'service_vgw': service_vgw,
             'vats': vats,
+            'oattr': oattr,
             'phoneform': phoneform
         }
 
@@ -7290,24 +7304,24 @@ def passage_services(value_vars):
     return result_services, result_services_ots, value_vars
 
 
-def add_serv_with_install_csw(request):
-    if request.method == 'POST':
-        add_serv_inst_csw_form = AddServInstCswForm(request.POST)
-
-        if add_serv_inst_csw_form.is_valid():
-            type_install_csw = add_serv_inst_csw_form.cleaned_data['type_install_csw']
-            request.session['type_install_csw'] = type_install_csw
-
-            return redirect('csw')
-
-    else:
-
-        add_serv_inst_csw_form = AddServInstCswForm()
-        context = {
-            'add_serv_inst_csw_form': add_serv_inst_csw_form
-        }
-
-        return render(request, 'tickets/add_serv_inst_csw_form.html', context)
+# def add_serv_with_install_csw(request):
+#     if request.method == 'POST':
+#         add_serv_inst_csw_form = AddServInstCswForm(request.POST)
+#
+#         if add_serv_inst_csw_form.is_valid():
+#             type_install_csw = add_serv_inst_csw_form.cleaned_data['type_install_csw']
+#             request.session['type_install_csw'] = type_install_csw
+#
+#             return redirect('csw')
+#
+#     else:
+#
+#         add_serv_inst_csw_form = AddServInstCswForm()
+#         context = {
+#             'add_serv_inst_csw_form': add_serv_inst_csw_form
+#         }
+#
+#         return render(request, 'tickets/add_serv_inst_csw_form.html', context)
 
 
 def change_serv(request):

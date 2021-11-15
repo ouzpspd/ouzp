@@ -187,8 +187,17 @@ class CswForm(forms.Form):
     types_csw = [('D-Link DGS-1100-06/ME', 'D-Link DGS-1100-06/ME'), ('24-портовый коммутатор', '24-портовый коммутатор')]
     types_port = [('5', '5'), ('6', '6'), ('указанный ОНИТС СПД', 'указанный ОНИТС СПД')]
     types_speed_csw = [('Нет', 'Нет'), ('100', '100'), ('1000', '1000')]
+    types_install_csw = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),
+             ('ВОЛС и порт не меняются', 'ВОЛС и порт не меняются'),
+             ('Перевод на гигабит переключение с меди на ВОЛС', 'Перевод на гигабит переключение с меди на ВОЛС'),
+             ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
+             ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
+             ('Перевод на гигабит/перенос на новый узел', 'Перевод на гигабит/перенос на новый узел')]
+
     logic_csw_1000 = forms.BooleanField(label='Запуск КК на магистрали 1 Гбит/с', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    exist_speed_csw = forms.CharField(label='Существующая магистраль', widget=forms.Select(choices=types_speed_csw, attrs={'class': 'form-control'}))
+    exist_speed_csw = forms.CharField(label='Существующая магистраль', required=False, widget=forms.Select(choices=types_speed_csw, attrs={'class': 'form-control'}))
+    type_install_csw = forms.CharField(label='Варианты установки КК', required=False,
+                                       widget=forms.Select(choices=types_install_csw, attrs={'class': 'form-control'}))
     model_csw = forms.CharField(label='Модель', widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
     port_csw = forms.CharField(label='Порт', widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
 
@@ -312,14 +321,14 @@ class ChangeLogShpdForm(forms.Form):
                                       widget=forms.Select(choices=types_change_log_shpd,
                                                           attrs={'class': 'form-control'}))
 
-class AddServInstCswForm(forms.Form):
-    types = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),
-             ('ВОЛС и порт не меняются', 'ВОЛС и порт не меняются'),
-             ('Перевод на гигабит переключение с меди на ВОЛС', 'Перевод на гигабит переключение с меди на ВОЛС'),
-             ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
-             ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
-             ('Перевод на гигабит/перенос на новый узел', 'Перевод на гигабит/перенос на новый узел')]
-    type_install_csw = forms.CharField(label='Варианты установки КК', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+# class AddServInstCswForm(forms.Form):
+#     types = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),
+#              ('ВОЛС и порт не меняются', 'ВОЛС и порт не меняются'),
+#              ('Перевод на гигабит переключение с меди на ВОЛС', 'Перевод на гигабит переключение с меди на ВОЛС'),
+#              ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
+#              ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
+#              ('Перевод на гигабит/перенос на новый узел', 'Перевод на гигабит/перенос на новый узел')]
+#     type_install_csw = forms.CharField(label='Варианты установки КК', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 
 class ChangeServForm(forms.Form):

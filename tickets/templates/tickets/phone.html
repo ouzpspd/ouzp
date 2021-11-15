@@ -11,7 +11,24 @@
   </tbody>
 </table>
 </div>
+<div class="container">
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Решение ОТПМ</a>
+      </h5>
+    </div>
 
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
 {% if vats == True %}
 <div class="container">
 <div class="card mb-2">
