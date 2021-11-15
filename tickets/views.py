@@ -308,7 +308,6 @@ def commercial(request):
     password = credent['password']
 
     search = in_work_ortr(username, password)
-    search[:] = [x for x in search if 'ПТО' not in x[0]]
     if search[0] == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -316,6 +315,7 @@ def commercial(request):
         return response
 
     else:
+        search[:] = [x for x in search if 'ПТО' not in x[0]]
         list_search = []
         for i in search:
             print('!!!')
@@ -353,14 +353,14 @@ def pto(request):
     password = credent['password']
 
     search = in_work_ortr(username, password)
-    search[:] = [x for x in search if 'ПТО' in x[0]]
+
     if search[0] == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
-
     else:
+        search[:] = [x for x in search if 'ПТО' in x[0]]
         list_search = []
         print(search)
         for i in search:
