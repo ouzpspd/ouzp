@@ -95,6 +95,12 @@ class PhoneForm(forms.Form):
     vgw = forms.CharField(label='Шлюз', widget=forms.Select(choices=types_vgw, attrs={'class': 'form-control'}))
     channel_vgw = forms.CharField(max_length=11, label='Количество каналов', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ports_vgw = forms.CharField(max_length=11, required=False, label='Количество портов', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    form_exist_vgw_model = forms.CharField(max_length=100, label='Модель существующего шлюза', required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
+    form_exist_vgw_name = forms.CharField(max_length=100, label='Название существующего шлюза', required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
+    form_exist_vgw_port= forms.CharField(max_length=100, label='Порты существующего шлюза', required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 class ItvForm(forms.Form):
     types = [('vl', 'В отдельном vlan'), ('novl', 'В vlan услуги ШПД'),]

@@ -1357,6 +1357,24 @@ def wireless(request):
 
         return render(request, 'tickets/env.html', context)
 
+@cache_check
+def vgws(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    pps = request.session['pps']
+    vgws = _parsing_vgws_by_node_name(username, password, NodeName=pps)
+
+    # if vgws:
+    #     messages.warning(request, 'Нет доступа в ИС Холдинга')
+    #     response = redirect('login_for_service')
+    #     response['Location'] += '?next={}'.format(request.path)
+    #     return response
+    # else:
+    return render(request, 'tickets/vgws.html', {'vgws': vgws, 'pps': pps})
+
+
 def csw(request):
     if request.method == 'POST':
         cswform = CswForm(request.POST)
@@ -2157,6 +2175,9 @@ def phone(request):
             vgw = phoneform.cleaned_data['vgw']
             channel_vgw = phoneform.cleaned_data['channel_vgw']
             ports_vgw = phoneform.cleaned_data['ports_vgw']
+            form_exist_vgw_model = phoneform.cleaned_data['form_exist_vgw_model']
+            form_exist_vgw_name = phoneform.cleaned_data['form_exist_vgw_name']
+            form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
             services_plus_desc = request.session['services_plus_desc']
             try:
                 new_with_csw_job_services = request.session['new_with_csw_job_services']
@@ -2213,6 +2234,9 @@ def phone(request):
                                     new_with_csw_job_services[ind] += '\\'
                                     #new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '\\'
+                        request.session['form_exist_vgw_model'] = form_exist_vgw_model
+                        request.session['form_exist_vgw_name'] = form_exist_vgw_name
+                        request.session['form_exist_vgw_port'] = form_exist_vgw_port
 
             print('!!!!! def phone new_with_csw_job_services')
             print(new_with_csw_job_services)
@@ -5797,7 +5821,7 @@ def forming_chain_header(request):
             print(nodes_vgw)
             #all_vgws = []
             for i in nodes_vgw:
-                parsing_vgws = _parsing_vgws_by_node_name(i, username, password)
+                parsing_vgws = _parsing_vgws_by_node_name(username, password, Switch=i)
                 print('!!!!parsing_vgws')
                 print(parsing_vgws)
                 for vgw in parsing_vgws:
@@ -5824,12 +5848,14 @@ def no_data(request):
     context = {}
     return render(request, 'tickets/no_data.html', context)
 
-def _parsing_vgws_by_node_name(device, login, password):
-    """Данный метод получает на входе узел связи и по нему парсит страницу с поиском тел. шлюзов, чтобы получить
-    список тел. шлюзов, подключенных от этого узла"""
+def _parsing_vgws_by_node_name(login, password, **kwargs):
+    """Данный метод получает на входе узел связи или название КАД и по нему парсит страницу с поиском тел. шлюзов"""
     url = 'https://cis.corp.itmh.ru/stu/VoipGateway/SearchVoipGatewayProxy'
     data = {'SearchZip': 'false', 'SearchDeleted': 'false', 'ClientListRequired': 'false', 'BuildingId': '0'}
-    data['Switch'] = device
+    if kwargs.get('Switch'):
+        data['Switch'] = kwargs['Switch']
+    elif kwargs.get('NodeName'):
+        data['NodeName'] = kwargs['NodeName']
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     print('!!!!!')
     print('req.status_code')
@@ -6191,8 +6217,10 @@ def head(request):
                         extra_stroka_other_vgw = f'Также есть тел. шлюз {model} {name} ({vgw_uplink}). Контракт: {contracts}\n'
                     list_stroka_other_vgw.append(extra_stroka_other_vgw)
                 extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
-                stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
-
+                print('!!!!stroka')
+                print(stroka)
+                #stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
+                stroka = stroka + '\n' + extra_stroka_other_vgw
         counter_exist_line = len(counter_exist_line)
         print('!!!!!counter_exist_line')
         print(counter_exist_line)

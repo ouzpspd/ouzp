@@ -33,6 +33,7 @@ urlpatterns = [
     path('local', local, name='local'),
     path('lvs', lvs, name='lvs'),
     path('sks', sks, name='sks'),
+    path('vgws', vgws, name='vgws'),
     path('register', register, name='register'),
     path('login/', user_login, name='login'),
     path('logout/', user_logout, name='logout'),
