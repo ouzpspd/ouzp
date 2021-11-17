@@ -999,6 +999,10 @@ def vols(request):
                     tag_service.insert(0, {'copper': None})
                 elif correct_sreda == '3':
                     tag_service.insert(0, {'wireless': None})
+                elif correct_sreda == '2':
+                    tag_service.insert(0, {'vols': None})
+                elif correct_sreda == '4':
+                    tag_service.insert(0, {'vols': None})
                 request.session['sreda'] = correct_sreda
                 return redirect(next(iter(tag_service[0])))
 
@@ -1518,9 +1522,7 @@ def data(request):
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
-                 'exist_service_vm', 'router_itv', 'address']
-
-
+                 'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port']
 
     value_vars = dict()
 
@@ -2227,6 +2229,10 @@ def phone(request):
                                     new_with_csw_job_services[ind] += '/'
                                     #new_with_csw_job_services = request.session['new_with_csw_job_services']
                         services_plus_desc[index_service] += '/'
+                        if 'copper' in tag_service:
+                            pass
+                        else:
+                            tag_service.insert(1, {'copper': None})
                     elif type_phone == 'ab':
                         if new_with_csw_job_services:
                             for ind in range(len(new_with_csw_job_services)):
@@ -4478,6 +4484,9 @@ def _new_services(result_services, value_vars):
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
 
             elif service.endswith('\\'):
+                static_vars['указать порты тел. шлюза'] = value_vars.get('form_exist_vgw_port')
+                static_vars['указать модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
+                static_vars['идентификатор тел. шлюза'] = value_vars.get('form_exist_vgw_name')
                 if 'ватс' in service.lower():
                     stroka = templates.get("ВАТС (Подключение по аналоговой линии)")
                     if 'базов' in service.lower():
@@ -4489,10 +4498,11 @@ def _new_services(result_services, value_vars):
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
                     static_vars['указать количество портов'] = ports_vgw
-                    if ports_vgw == '1':
-                        static_vars['указать порты тел. шлюза'] = '1'
-                    else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                    # if ports_vgw == '1':
+                    #     static_vars['указать порты тел. шлюза'] = '1'
+                    # else:
+                    #     static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+
                     static_vars['указать количество каналов'] = channel_vgw
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                     regex_counter = 'Организовать (\d+)'
@@ -4505,10 +4515,11 @@ def _new_services(result_services, value_vars):
 
                     static_vars['указать количество телефонных линий'] = channel_vgw
                     static_vars['указать количество каналов'] = channel_vgw
-                    if channel_vgw == '1':
-                        static_vars['указать порты тел. шлюза'] = '1'
-                    else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                    # if channel_vgw == '1':
+                    #     static_vars['указать порты тел. шлюза'] = '1'
+                    # else:
+                    #     static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                     regex_counter = 'Организовать (\d+)'
                     match_counter = re.search(regex_counter, stroka)
@@ -5865,7 +5876,7 @@ def _parsing_vgws_by_node_name(login, password, **kwargs):
         table = soup.find('table')
         rows_tr = table.find_all('tr')
         vgws = []
-        types_model_vgw = ['ITM SIP', 'D-Link', 'Eltex']
+        types_model_vgw = ['ITM SIP', 'D-Link', 'Eltex'] # задаются вручную, т.к. поле модели текстовое и проще его определить по совпадению из списка
         types_node_vgw = ['Узел связи', 'Помещение клиента']
         for row_tr in rows_tr:
             vgw_inner = dict()
@@ -5877,6 +5888,8 @@ def _parsing_vgws_by_node_name(login, password, **kwargs):
                         vgw_inner.update({'uplink': row_td.find('a').text})
                     elif 'tab-ports' in row_td.find('a').get('href'):
                         vgw_inner.update({'ports': row_td.find('a').get('href')})
+                    elif row_td.find('a', {'class': "dashed"}):
+                        vgw_inner.update({'ip': row_td.find('a').text})
                 elif any(model in row_td.text for model in types_model_vgw):
                     vgw_inner.update({'model': row_td.text})
                 elif any(room in row_td.text for room in types_node_vgw):
@@ -6308,12 +6321,19 @@ def project_tr_exist_cl(request):
     print('!!!!!!ticket_tr')
     print(ticket_tr.ticket_tr)
     print(type(ticket_tr.ticket_tr))
+    print('!!!!!!des_tr')
+    print(des_tr)
+    address = None
     for i in range(len(des_tr)):
         if ticket_tr.ticket_tr in next(iter(des_tr[i].keys())):
-            address = next(iter(des_tr[i - 1].keys()))
-            address = address.replace(', д.', ' ')
-            print('!!!!!address')
-            print(address)
+            while address == None:
+                if next(iter(des_tr[i].values())):
+                    i -= 1
+                else:
+                    address = next(iter(des_tr[i].keys()))
+                    address = address.replace(', д.', ' ')
+    print('!!!!!address')
+    print(address)
     request.session['address'] = address
     cks_points = []
     for point in des_tr:

@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% block content %}
-{{vgws}}
 
 <div class="container">
     <table class="table table-bordered">
@@ -13,12 +12,13 @@
     </table>
 
 
-    <table class="table table-striped" id="switch">
+    <table class="table table-striped table-bordered">
       <thead>
         <tr>
 
           <th scope="col">Название</th>
-          <th scope="col">Модель</th>
+          <th scope="col">IP-адрес</th>
+            <th scope="col">Модель</th>
             <th scope="col">Uplink</th>
             <th scope="col">Порты</th>
             <th scope="col">Место установки</th>
@@ -32,6 +32,8 @@
             {% for key, value in vgw.items %}
             {% if key == 'ports' %}
             <td><a href="https://cis.corp.itmh.ru/{{value}}" target ="_blank">Порты</a></td>
+            {% elif key == 'ip' %}
+            <td><a href="http://{{value}}" target ="_blank">{{value}}</a></td>
             {% else %}
             <td>{{value}}</td>
             {% endif %}
