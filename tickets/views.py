@@ -4621,7 +4621,7 @@ def _new_enviroment(value_vars):
         result_services = value_vars.get('result_services')
     else:
         result_services = []
-    kad = 'Не требуется'
+
 
     counter_line_services = value_vars.get('counter_line_services')
     if counter_line_services > 0:
@@ -4717,7 +4717,9 @@ def _new_enviroment(value_vars):
                         hidden_vars[
                             'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    value_vars.update({'kad': kad})
+    if not bool(value_vars.get('kad')):
+        kad = 'Не требуется'
+        value_vars.update({'kad': kad})
     return result_services, value_vars
 
 
@@ -5613,6 +5615,26 @@ def static_formset(request):
 
         return render(request, 'tickets/template_static_formset.html', context)
 
+
+def _parsing_model_and_node_client_device_by_device_name(name, login, password):
+    """Данный метод получает на входе название КАД и по нему парсит страницу с поиском коммутаторв, чтобы определить
+    модель и название узла этого коммутатора"""
+    #Получение страницы с данными о коммутаторе
+    url = 'https://cis.corp.itmh.ru/stu/NetSwitch/SearchNetSwitchProxy'
+    data = {'IncludeDeleted': 'false', 'IncludeDisabled': 'true', 'HideFilterPane': 'false'}
+    data['Name'] = name
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    print('!!!!!')
+    print('req.status_code')
+    print(req.status_code)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.json()['data'], "html.parser")
+        table = soup.find('div', {"class": "t-grid-content"})
+        row_tr = table.find('tr')
+        model = row_tr.contents[1].text
+        node = row_tr.find('a', {"class": "netswitch-nodeName"}).text
+        node = ' '.join(node.split())
+        return model, node
 
 
 def _parsing_id_client_device_by_device_name(name, login, password):
@@ -6744,7 +6766,7 @@ def _passage_services(result_services, value_vars):
             services = []
             if value_vars.get('change_log') != 'Порт и КАД не меняется':
                 hidden_vars[
-                    '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
+                    '-- перенести ^сервис^ %указать сервис% для клиента в новую точку подключения.'] = '-- перенести ^сервис^ %указать сервис% для клиента в новую точку подключения.'
 
                 hidden_vars[
                     'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'] = 'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'
@@ -6809,7 +6831,7 @@ def _passage_services(result_services, value_vars):
 
             if value_vars.get('change_log') != 'Порт и КАД не меняется':
                 hidden_vars[
-                    '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'] = '-- перенести сервис %указать сервис% для клиента в новую точку подключения.'
+                    '-- перенести ^сервис^ %указать сервис% для клиента в новую точку подключения.'] = '-- перенести ^сервис^ %указать сервис% для клиента в новую точку подключения.'
 
                 hidden_vars[
                     'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'] = 'В заявке Cordis указать время проведения работ по переносу ^сервиса^.'
@@ -7158,7 +7180,6 @@ def _passage_enviroment(value_vars):
 
 
 def _passage_services_on_csw(result_services, value_vars):
-    print("Перенос сервиса %указать название сервиса%" + '-' * 20)
     templates = value_vars.get('templates')
     readable_services = value_vars.get('readable_services')
 
