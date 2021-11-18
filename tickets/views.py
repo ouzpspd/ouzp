@@ -686,6 +686,10 @@ def add_tag_service_from_enviroment():
 
 @cache_check
 def copper(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
     if request.method == 'POST':
         copperform = CopperForm(request.POST)
 
@@ -711,7 +715,7 @@ def copper(request):
                 request.session['port'] = port
                 request.session['kad'] = kad
                 type_tr = request.session['type_tr']
-
+                selected_ono = request.session['selected_ono']
                 try:
                     type_pass = request.session['type_pass']
                 except KeyError:
@@ -720,7 +724,7 @@ def copper(request):
                     if 'Перенос, СПД' in type_pass:
                         type_passage = request.session['type_passage']
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
-                            selected_ono = request.session['selected_ono']
+
                             selected_service = selected_ono[0][-3]
                             service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
                             if any(serv in selected_service for serv in service_shpd):
@@ -747,6 +751,12 @@ def copper(request):
                     #     #request.session['new_with_csw_job_services']
                     # except KeyError:
                     #     #return redirect('csw')
+                    tag_service.append({'csw': None})
+                    return redirect(next(iter(tag_service[0])))
+                elif logic_replace_csw == True:
+                    old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username, password)
+                    request.session['old_model_csw'] = old_model_csw
+                    request.session['node_csw'] = node_csw
                     tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
                     # else:
@@ -1522,7 +1532,8 @@ def data(request):
                  'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
-                 'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port']
+                 'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port',
+                 'node_csw', 'old_model_csw']
 
     value_vars = dict()
 
@@ -1582,9 +1593,12 @@ def data(request):
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
-        elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
+        elif value_vars.get('logic_change_csw') and value_vars.get('logic_change_gi_csw') or value_vars.get('logic_change_csw'):
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             result_services, result_services_ots, value_vars = extra_services_with_passage_csw(value_vars)
+        elif value_vars.get('logic_replace_csw') and value_vars.get('logic_change_gi_csw') or value_vars.get('logic_replace_csw'):
+            value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
+            result_services, result_services_ots, value_vars = extra_services_with_replace_csw(value_vars)
         else:
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -3978,7 +3992,7 @@ def in_work_ortr(login, password):
 
 def _new_services(result_services, value_vars):
     result_services_ots = None
-    logic_csw = True if value_vars.get('logic_csw') or value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw') else False
+    logic_csw = True if value_vars.get('logic_csw') or value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw') or value_vars.get('logic_replace_csw') else False
     services_plus_desc = value_vars.get('services_plus_desc')
     templates = value_vars.get('templates')
     sreda = value_vars.get('sreda')
@@ -4842,6 +4856,134 @@ def exist_enviroment_install_csw(value_vars):
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     value_vars.update({'kad': kad})
     return result_services, value_vars
+
+def exist_enviroment_replace_csw(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+
+    static_vars = {}
+    hidden_vars = {}
+    kad = value_vars.get('head').split('\n')[4].split()[2]
+    static_vars['указать название коммутатора'] = kad
+    pps = value_vars.get('head').split('\n')[3].split()[1]
+    static_vars['указать узел связи'] = pps
+    #pps = _readable_node(value_vars.get('pps'))
+    #static_vars['указать узел связи'] = pps
+    static_vars['указать модель коммутатора'] = value_vars.get('model_csw')
+    static_vars['указать № порта'] = value_vars.get('port_csw')
+    static_vars['указать узел связи клиентского коммутатора'] = value_vars.get('node_csw')
+    static_vars['указать модель старого коммутатора'] = value_vars.get('old_model_csw')
+    hidden_vars['- Услуги клиента переключить "порт в порт".'] = '- Услуги клиента переключить "порт в порт".'
+    types_old_models = ('D-Link DIR-10', '3COM', 'Cisco')
+    logic_csw_1000 = value_vars.get('logic_csw_1000')
+    if logic_csw_1000 == True:
+        static_vars['100/1000'] = '1000'
+    else:
+        static_vars['100/1000'] = '100'
+
+    templates = value_vars.get('templates')
+
+    stroka = templates.get("Замена клиентского коммутатора")
+
+    if value_vars.get('type_install_csw') == 'Медная линия и порт не меняются':
+        static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+        #kad = value_vars.get('selected_ono')[0][-2]
+        #static_vars['указать название коммутатора'] = kad
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    elif value_vars.get('type_install_csw') == 'ВОЛС и порт не меняются':
+        static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+        if any(type in value_vars.get('old_model_csw') for type in types_old_models):
+            hidden_vars[
+            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')  #'оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентский коммутатор'
+        else:
+            hidden_vars['(передатчик задействовать из демонтированного коммутатора)'] = '(передатчик задействовать из демонтированного коммутатора)'
+        if logic_csw_1000 == True and value_vars.get('model_csw') == 'D-Link DGS-1100-06/ME':
+            hidden_vars[
+                '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+            hidden_vars[
+                '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+        #kad = value_vars.get('selected_ono')[0][-2]
+        #static_vars['указать название коммутатора'] = kad
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    else:
+        kad, value_vars = _list_kad(value_vars)
+        static_vars['указать название коммутатора'] = kad
+        static_vars['указать порт коммутатора'] = value_vars.get('port')
+
+        if value_vars.get('type_install_csw') == 'Перевод на гигабит по меди на текущем узле':
+            static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+            hidden_vars[
+            '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'] = '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'
+            hidden_vars[
+            '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+            hidden_vars[
+            'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
+            hidden_vars[
+            'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+            static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+
+            static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
+            static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif value_vars.get('type_install_csw') == 'Перевод на гигабит по ВОЛС на текущем узле':
+            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+            hidden_vars[
+            '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'] = '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиента.'
+            hidden_vars[
+            '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+            hidden_vars[
+            'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
+            hidden_vars[
+            'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+            hidden_vars[
+            '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            hidden_vars[
+            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+
+            static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
+            static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
+            hidden_vars[
+            '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+            hidden_vars[
+            '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif value_vars.get('type_install_csw') == 'Перевод на гигабит переключение с меди на ВОЛС' or value_vars.get(
+            'type_install_csw') == 'Перевод на гигабит/перенос на новый узел':
+
+            static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
+            static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
+            hidden_vars[
+            'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
+            hidden_vars[
+            'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+            hidden_vars[
+            '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'
+            static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+            hidden_vars[
+            '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
+            hidden_vars[
+            '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            hidden_vars[
+            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            if logic_csw_1000 == True:
+                hidden_vars[
+                    '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                hidden_vars[
+                    '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    value_vars.update({'pps': pps})
+    value_vars.update({'kad': kad})
+    return result_services, value_vars
+
 
 def exist_enviroment_passage_csw(value_vars):
     if value_vars.get('result_services'):
@@ -7337,6 +7479,13 @@ def extra_services_with_passage_csw(value_vars):
     result_services_ots = None
     return result_services, result_services_ots, value_vars
 
+def extra_services_with_replace_csw(value_vars):
+    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+     ОТС(заполненые шаблоны) для организации новых услуг дополнительно к существующему подключению"""
+    result_services, value_vars = exist_enviroment_replace_csw(value_vars)
+    result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
+    #result_services = _passage_services_on_csw(result_services, value_vars)
+    return result_services, result_services_ots, value_vars
 
 
 def passage_services_with_install_csw(value_vars):
