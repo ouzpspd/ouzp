@@ -726,7 +726,7 @@ def copper(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
 
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -958,7 +958,7 @@ def vols(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -1200,7 +1200,7 @@ def wireless(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -1533,7 +1533,7 @@ def data(request):
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
                  'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port',
-                 'node_csw', 'old_model_csw']
+                 'node_csw', 'old_model_csw', 'type_ip_trunk', 'type_phone']
 
     value_vars = dict()
 
@@ -2191,6 +2191,7 @@ def phone(request):
             vgw = phoneform.cleaned_data['vgw']
             channel_vgw = phoneform.cleaned_data['channel_vgw']
             ports_vgw = phoneform.cleaned_data['ports_vgw']
+            type_ip_trunk = phoneform.cleaned_data['type_ip_trunk']
             form_exist_vgw_model = phoneform.cleaned_data['form_exist_vgw_model']
             form_exist_vgw_name = phoneform.cleaned_data['form_exist_vgw_name']
             form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
@@ -2203,9 +2204,10 @@ def phone(request):
             tag_service = request.session['tag_service']
             print('!!!!! def phone before new_with_csw_job_services')
             print(new_with_csw_job_services)
+
             for index_service in range(len(services_plus_desc)):
                 if 'Телефон' in services_plus_desc[index_service]:
-                    if type_phone == 'ak':
+                    if type_phone == 'ak' or type_phone == 'st':
                         if new_with_csw_job_services:
                             for ind in range(len(new_with_csw_job_services)):
                                 if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
@@ -2217,8 +2219,16 @@ def phone(request):
                                     print(new_with_csw_job_services)
                         services_plus_desc[index_service] += '|'
                         counter_line_services = request.session['counter_line_services']
-                        counter_line_services += 1
-                        request.session['counter_line_services'] = counter_line_services
+                        if type_phone == 'st':
+                            request.session['type_ip_trunk'] = type_ip_trunk
+                            if type_ip_trunk == 'trunk':
+                                request.session['counter_line_services'] = 1
+                            else:
+                                counter_line_services += 1
+                                request.session['counter_line_services'] = counter_line_services
+                        if type_phone == 'ak':
+                            counter_line_services += 1
+                            request.session['counter_line_services'] = counter_line_services
                         sreda = request.session['sreda']
                         if sreda == '2' or sreda == '4':
                             if {'vols': None} in tag_service:
@@ -2226,16 +2236,17 @@ def phone(request):
                             else:
                                 tag_service.insert(1, {'vols': None})
                         elif sreda == '3':
-                            if 'wireless' in tag_service:
+                            if {'wireless': None} in tag_service:
                                 pass
                             else:
                                 tag_service.insert(1, {'wireless': None})
                         elif sreda == '1':
-                            if 'copper' in tag_service:
+                            if {'copper': None} in tag_service:
                                 pass
                             else:
                                 tag_service.insert(1, {'copper': None})
-
+                        if {'data': None} in tag_service:
+                            tag_service.remove({'data': None})
                     elif type_phone == 'ap':
                         if new_with_csw_job_services:
                             for ind in range(len(new_with_csw_job_services)):
@@ -2264,6 +2275,7 @@ def phone(request):
             request.session['vgw'] = vgw
             request.session['channel_vgw'] = channel_vgw
             request.session['ports_vgw'] = ports_vgw
+            request.session['type_phone'] = type_phone
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             request.session['tag_service'] = tag_service
@@ -4393,61 +4405,77 @@ def _new_services(result_services, value_vars):
             vgw = value_vars.get('vgw')
             ports_vgw = value_vars.get('ports_vgw')
             channel_vgw = value_vars.get('channel_vgw')
+            print('!!!! def _new_services')
+            print('!!!service')
+            print(service)
             if service.endswith('|'):
-                if logic_csw == True:
-                    result_services.append(enviroment_csw(value_vars))
-                    static_vars[
-                        'клиентского коммутатора / КАД (указать маркировку коммутатора)'] = 'клиентского коммутатора'
-                elif logic_csw == False:
-                    static_vars['клиентского коммутатора / КАД (указать маркировку коммутатора)'] = value_vars.get(
-                        'kad')
-                stroka = templates.get("Установка тел. шлюза у клиента")
-                static_vars['указать модель тел. шлюза'] = vgw
-                if vgw in ['Eltex TAU-2M.IP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
-                    static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
-                else:
-                    static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
-                    static_vars['указать модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
-                result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
-                if 'ватс' in service.lower():
-                    stroka = templates.get("ВАТС (Подключение по аналоговой линии)")
-                    static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
-                    static_vars['указать модель тел. шлюза'] = vgw
-                    static_vars['указать количество портов'] = ports_vgw
-                    if 'базов' in service.lower():
-                        static_vars[
-                            'базовым набором сервисов / расширенным набором сервисов'] = 'базовым набором сервисов'
-                    elif 'расш' in service.lower():
-                        static_vars[
-                            'базовым набором сервисов / расширенным набором сервисов'] = 'расширенным набором сервисов'
-
-                    static_vars['указать количество телефонных линий'] = ports_vgw
-                    if ports_vgw == '1':
-                        static_vars['указать порты тел. шлюза'] = '1'
-                    else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                print("!!!!value_vars.get('type_phone')")
+                print(value_vars.get('type_phone'))
+                if value_vars.get('type_phone') == 'st':
+                    if logic_csw == True:
+                        result_services.append(enviroment_csw(value_vars))
+                    print('result_services')
+                    print(result_services)
+                    stroka = templates.get("Подключения по цифровой линии с использованием протокола SIP, тип линии «IP-транк»")
+                    static_vars['trunk/access'] = 'trunk' if value_vars.get('type_ip_trunk') == 'trunk' else 'access'
                     static_vars['указать количество каналов'] = channel_vgw
-                    stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                    regex_counter = 'Организовать (\d+)'
-                    match_counter = re.search(regex_counter, stroka)
-                    counter_plur = int(match_counter.group(1))
-                    result_services_ots.append(pluralizer_vars(stroka, counter_plur))
-                else:
-                    stroka = templates.get(
-                        "Подключение аналогового телефона с использованием тел.шлюза на стороне клиента")
-                    static_vars['указать модель тел. шлюза'] = vgw
+                    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                elif value_vars.get('type_phone') == 'ak':
+                    if logic_csw == True:
+                        result_services.append(enviroment_csw(value_vars))
 
-                    static_vars['указать количество телефонных линий'] = channel_vgw
-                    static_vars['указать количество каналов'] = channel_vgw
-                    if channel_vgw == '1':
-                        static_vars['указать порты тел. шлюза'] = '1'
+                        static_vars[
+                            'клиентского коммутатора / КАД (указать маркировку коммутатора)'] = 'клиентского коммутатора'
+                    elif logic_csw == False:
+                        static_vars['клиентского коммутатора / КАД (указать маркировку коммутатора)'] = value_vars.get(
+                            'kad')
+                    stroka = templates.get("Установка тел. шлюза у клиента")
+                    static_vars['указать модель тел. шлюза'] = vgw
+                    if vgw in ['Eltex TAU-2M.IP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
+                        static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
                     else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
-                    stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                    regex_counter = 'Организовать (\d+)'
-                    match_counter = re.search(regex_counter, stroka)
-                    counter_plur = int(match_counter.group(1))
-                    result_services_ots.append(pluralizer_vars(stroka, counter_plur))
+                        static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
+                        static_vars['указать модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
+                    result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                    if 'ватс' in service.lower():
+                        stroka = templates.get("ВАТС (Подключение по аналоговой линии)")
+                        static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
+                        static_vars['указать модель тел. шлюза'] = vgw
+                        static_vars['указать количество портов'] = ports_vgw
+                        if 'базов' in service.lower():
+                            static_vars[
+                                'базовым набором сервисов / расширенным набором сервисов'] = 'базовым набором сервисов'
+                        elif 'расш' in service.lower():
+                            static_vars[
+                                'базовым набором сервисов / расширенным набором сервисов'] = 'расширенным набором сервисов'
+
+                        static_vars['указать количество телефонных линий'] = ports_vgw
+                        if ports_vgw == '1':
+                            static_vars['указать порты тел. шлюза'] = '1'
+                        else:
+                            static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                        static_vars['указать количество каналов'] = channel_vgw
+                        stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                        regex_counter = 'Организовать (\d+)'
+                        match_counter = re.search(regex_counter, stroka)
+                        counter_plur = int(match_counter.group(1))
+                        result_services_ots.append(pluralizer_vars(stroka, counter_plur))
+                    else:
+                        stroka = templates.get(
+                            "Подключение аналогового телефона с использованием тел.шлюза на стороне клиента")
+                        static_vars['указать модель тел. шлюза'] = vgw
+
+                        static_vars['указать количество телефонных линий'] = channel_vgw
+                        static_vars['указать количество каналов'] = channel_vgw
+                        if channel_vgw == '1':
+                            static_vars['указать порты тел. шлюза'] = '1'
+                        else:
+                            static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                        stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                        regex_counter = 'Организовать (\d+)'
+                        match_counter = re.search(regex_counter, stroka)
+                        counter_plur = int(match_counter.group(1))
+                        result_services_ots.append(pluralizer_vars(stroka, counter_plur))
             elif service.endswith('/'):
                 stroka = templates.get("Установка тел. шлюза на ППС")
 
@@ -6221,7 +6249,7 @@ def head(request):
     print('!!!!stroka s \n\n')
     print(stroka)
 
-    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
+    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
     service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
@@ -7324,6 +7352,7 @@ def _passage_enviroment(value_vars):
 def _passage_services_on_csw(result_services, value_vars):
     templates = value_vars.get('templates')
     readable_services = value_vars.get('readable_services')
+    counter_exist_line = value_vars.get('counter_exist_line')
 
     sreda = value_vars.get('sreda')
 
@@ -7356,7 +7385,13 @@ def _passage_services_on_csw(result_services, value_vars):
             hidden_vars['- Согласовать время проведение работ[, необходимость смены реквизитов].'] = '- Согласовать время проведение работ[, необходимость смены реквизитов].'
             hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для переноса ^сервиса^ %указать название сервиса%.'] = '- Создать заявку в Cordis на ОНИТС СПД для переноса ^сервиса^ %указать название сервиса%.'
             hidden_vars['в новую точку подключения'] = 'в новую точку подключения'
-        if value_vars.get('type_passage') == 'Перенос точки подключения':
+        if value_vars.get('logic_csw') and 'Перенос, СПД' not in value_vars.get('type_pass') or value_vars.get('type_passage') == 'Перенос точки подключения':
+            print('!!!!counter_exist_line')
+            print(counter_exist_line)
+            for i in range(counter_exist_line):
+                result_services.append(enviroment_csw(value_vars))
+                print('!!!!!result_services')
+                print(result_services)
             hidden_vars[
                     '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
             static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
@@ -7387,7 +7422,8 @@ def _passage_services_on_csw(result_services, value_vars):
             result_services.append(pluralizer_vars(stroka, counter_plur))
 
 
-        if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+        elif value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+            result_services.append(enviroment_csw(value_vars))
             services = []
             other_services = []
             for key, value in readable_services.items():
@@ -7414,10 +7450,11 @@ def _passage_services_on_csw(result_services, value_vars):
                                 other_services.append(key + ' ' + val)
             print(('!!!!!services'))
             print(services)
-            if value_vars.get('head').split('\n')[4].split()[2] == value_vars.get('selected_ono')[0][-2] or other_services == False:
-                hidden_vars[
-                    '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-                static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
+            if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+                if value_vars.get('head').split('\n')[4].split()[2] == value_vars.get('selected_ono')[0][-2] or other_services == False:
+                    hidden_vars[
+                        '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
+                    static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
             if services[0].startswith('"ШПД в интернет"'):
                 if value_vars.get('change_log_shpd') != 'существующая адресация':
@@ -7439,9 +7476,9 @@ def _passage_services_on_csw(result_services, value_vars):
             print(readable_services)
             print('!!!!services')
             print(services)
-        stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-        counter_plur = len(services)
-        result_services.append(pluralizer_vars(stroka, counter_plur))
+            stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+            counter_plur = len(services)
+            result_services.append(pluralizer_vars(stroka, counter_plur))
 
     #    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     return result_services

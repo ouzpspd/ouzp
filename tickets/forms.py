@@ -87,7 +87,7 @@ class HotspotForm(forms.Form):
     hotspot_users = forms.IntegerField(max_value=1000, label='Количество пользователей', widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
 class PhoneForm(forms.Form):
-    types = [('ak', 'Аналог, установка шлюза у клиента'), ('ap', 'Аналог, установка шлюза на ППС'), ('ab', 'Аналог, установка шлюза не требуется'), ('s', 'SIP, по логину/паролю'),]
+    types = [('ak', 'Аналог, установка шлюза у клиента'), ('ap', 'Аналог, установка шлюза на ППС'), ('ab', 'Аналог, установка шлюза не требуется'), ('s', 'SIP, по логину/паролю'), ('st', 'SIP, IP-транк')]
     type_phone = forms.CharField(label='Тип телефонии', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     types_vgw = [('Eltex TAU-2M.IP', 'Eltex TAU-2M.IP'), ('Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-4M.IP'),
                  ('Eltex TAU-8.IP', 'Eltex TAU-8.IP'), ('Eltex TAU-16.IP', 'Eltex TAU-16.IP'), ('Eltex TAU-24.IP', 'Eltex TAU-24.IP'),
@@ -95,6 +95,9 @@ class PhoneForm(forms.Form):
     vgw = forms.CharField(label='Установка шлюза', widget=forms.Select(choices=types_vgw, attrs={'class': 'form-control'}))
     channel_vgw = forms.CharField(max_length=11, label='Количество каналов', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ports_vgw = forms.CharField(max_length=11, required=False, label='Количество портов ВАТС', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    types_ip_trunk = [('access', 'access'), ('trunk', 'trunk')]
+    type_ip_trunk = forms.CharField(label='Режим порта для IP-транк', required=False,
+                                widget=forms.Select(choices=types_ip_trunk, attrs={'class': 'form-control'}))
     form_exist_vgw_model = forms.CharField(max_length=100, label='Модель существующего шлюза', required=False,
                                   widget=forms.TextInput(attrs={'class': 'form-control'}))
     form_exist_vgw_name = forms.CharField(max_length=100, label='Название существующего шлюза', required=False,
