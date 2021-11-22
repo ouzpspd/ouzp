@@ -51,6 +51,23 @@
                 </div>
             </div>
         </div>
+        {% elif logic_change_gi_csw %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.type_install_csw.id_for_label }}">Варианты установки КК</label>
+                    {{cswform.type_install_csw}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.exist_sreda_csw.id_for_label }}">Существующее подключение КК</label>
+                    {{cswform.exist_sreda_csw}}
+                </div>
+            </div>
+        </div>
         {% else %}
         <div class="row">
             <div class="col-4">

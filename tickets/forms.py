@@ -202,9 +202,16 @@ class CswForm(forms.Form):
              ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
              ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
              ('Перевод на гигабит/перенос на новый узел', 'Перевод на гигабит/перенос на новый узел')]
-
+    types_exist_sreda_csw = [
+        ('1', 'UTP'),
+        ('2', 'ВОЛС'),
+        ('4', 'FTTH'),
+        ('3', 'WiFi'),
+    ]
     logic_csw_1000 = forms.BooleanField(label='Запуск КК на магистрали 1 Гбит/с', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     exist_speed_csw = forms.CharField(label='Существующая магистраль', required=False, widget=forms.Select(choices=types_speed_csw, attrs={'class': 'form-control'}))
+    exist_sreda_csw = forms.CharField(label='Существующее подключение КК', required=False,
+                                       widget=forms.Select(choices=types_exist_sreda_csw, attrs={'class': 'form-control'}))
     type_install_csw = forms.CharField(label='Варианты установки КК', required=False,
                                        widget=forms.Select(choices=types_install_csw, attrs={'class': 'form-control'}))
     model_csw = forms.CharField(label='Модель', widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
