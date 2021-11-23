@@ -754,11 +754,12 @@ def copper(request):
                     #     #return redirect('csw')
                     tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
-                elif logic_replace_csw == True:
+                elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
                     old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username, password)
                     request.session['old_model_csw'] = old_model_csw
                     request.session['node_csw'] = node_csw
                     tag_service.append({'csw': None})
+                    print('!!!!!logic_replace_csw in copper')
                     return redirect(next(iter(tag_service[0])))
                     # else:
                     #
@@ -912,6 +913,10 @@ def copper(request):
 
 @cache_check
 def vols(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
     if request.method == 'POST':
         volsform = VolsForm(request.POST)
 
@@ -958,6 +963,7 @@ def vols(request):
                 except KeyError:
                     pass
                 else:
+                    selected_ono = request.session['selected_ono']
                     if 'Перенос, СПД' in type_pass:
                         type_passage = request.session['type_passage']
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
@@ -1002,6 +1008,16 @@ def vols(request):
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
                             tag_service.insert(0, {'pass_serv': None})
+                        tag_service.append({'csw': None})
+                        return redirect(next(iter(tag_service[0])))
+                elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
+                    old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2],
+                                                                                                   username, password)
+                    request.session['old_model_csw'] = old_model_csw
+                    request.session['node_csw'] = node_csw
+                    device_client = device_client.replace(' в клиентское оборудование', '')
+                    request.session['device_client'] = device_client
+                    if type_pass:
                         tag_service.append({'csw': None})
                         return redirect(next(iter(tag_service[0])))
                 elif logic_change_gi_csw == True:
@@ -1417,14 +1433,11 @@ def csw(request):
             request.session['exist_speed_csw'] = exist_speed_csw
             request.session['type_install_csw'] = type_install_csw
             request.session['exist_sreda_csw'] = exist_sreda_csw
-            # try:
-            #     request.session['type_install_csw']
-            # except KeyError:
-            #     pass
-            # else:
-            #     request.session['logic_csw'] = True
+
+
             if not type_install_csw:
                 request.session['logic_csw'] = True
+
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             #return redirect('data')
@@ -1438,13 +1451,21 @@ def csw(request):
             add_serv_install = False
             new_install = True
             logic_change_gi_csw = None
+            logic_replace_csw = None
         else:
             if request.session.get('logic_change_gi_csw'):
                 logic_change_gi_csw = request.session.get('logic_change_gi_csw')
                 add_serv_install = False
                 new_install = False
+                logic_replace_csw = None
             elif request.session.get('logic_csw'):
                 add_serv_install = request.session.get('logic_csw')
+                new_install = False
+                logic_change_gi_csw = False
+                logic_replace_csw = None
+            elif request.session.get('logic_replace_csw'):
+                logic_replace_csw = request.session.get('logic_replace_csw')
+                add_serv_install = False
                 new_install = False
                 logic_change_gi_csw = False
         if sreda == '2' or sreda == '4':
@@ -1456,7 +1477,8 @@ def csw(request):
             'cswform': cswform,
             'add_serv_install': add_serv_install,
             'new_install': new_install,
-            'logic_change_gi_csw': logic_change_gi_csw
+            'logic_change_gi_csw': logic_change_gi_csw,
+            'logic_replace_csw': logic_replace_csw
         }
         return render(request, 'tickets/csw.html', context)
 
@@ -1617,6 +1639,7 @@ def data(request):
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
         elif value_vars.get('logic_replace_csw') and value_vars.get('logic_change_gi_csw') or value_vars.get('logic_replace_csw'):
+            print('!!!!!in logic_replace_csw')
             value_vars.update(({'services_plus_desc': value_vars.get('new_with_csw_job_services')}))
             result_services, result_services_ots, value_vars = extra_services_with_replace_csw(value_vars)
         elif value_vars.get('logic_change_gi_csw') or value_vars.get('logic_change_csw'):
@@ -4927,7 +4950,7 @@ def exist_enviroment_replace_csw(value_vars):
     #static_vars['указать узел связи'] = pps
     static_vars['указать модель коммутатора'] = value_vars.get('model_csw')
     static_vars['указать № порта'] = value_vars.get('port_csw')
-    static_vars['указать узел связи клиентского коммутатора'] = value_vars.get('node_csw')
+    static_vars['указать узел связи клиентского коммутатора'] = _readable_node(value_vars.get('node_csw'))
     static_vars['указать модель старого коммутатора'] = value_vars.get('old_model_csw')
     hidden_vars['- Услуги клиента переключить "порт в порт".'] = '- Услуги клиента переключить "порт в порт".'
     types_old_models = ('D-Link DIR-10', '3COM', 'Cisco')
@@ -6361,13 +6384,18 @@ def head(request):
             elif i[2] == 'Etherline':
                 counter_stick += 1
                 port_stick.add(i[-1])
-                print('!!!counter_stick')
-                print(counter_stick)
-                print('!!!!port_stick')
-                print(port_stick)
-                if counter_stick == 5 and len(port_stick) == 1:
+                # print('!!!counter_stick')
+                # print(counter_stick)
+                # print('!!!!port_stick')
+                # print(port_stick)
+                if 'Физический стык' in i[4]:
                     stick = True
                     break
+                else:
+                    if counter_stick == 5 and len(port_stick) == 1:
+                        stick = True
+                        break
+
                 extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})\n'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 #readable_services.update({'"ЦКС"': f' "{i[-4]}"'})
