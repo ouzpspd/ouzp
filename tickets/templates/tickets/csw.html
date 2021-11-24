@@ -29,12 +29,44 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
+                    <label for="{{ cswform.model_csw.id_for_label }}">Модель</label>
+                    {{cswform.model_csw}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.port_csw.id_for_label }}">Порт</label>
+                    {{cswform.port_csw}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
                     <label for="{{ cswform.logic_csw_1000.id_for_label }}">Запуск КК на магистрали 1 Гбит/с</label>
                     {{cswform.logic_csw_1000}}
                 </div>
             </div>
         </div>
         {% elif add_serv_install %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.model_csw.id_for_label }}">Модель</label>
+                    {{cswform.model_csw}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.port_csw.id_for_label }}">Порт</label>
+                    {{cswform.port_csw}}
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
@@ -47,6 +79,40 @@
             <div class="col-4 mb-1">
                 <div class="form-group">
                     <label for="{{ cswform.type_install_csw.id_for_label }}">Варианты установки КК</label>
+                    {{cswform.type_install_csw}}
+                </div>
+            </div>
+        </div>
+
+        {% elif logic_replace_csw %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.model_csw.id_for_label }}">Модель</label>
+                    {{cswform.model_csw}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.port_csw.id_for_label }}">Порт</label>
+                    {{cswform.port_csw}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.logic_csw_1000.id_for_label }}">Запуск КК на магистрали 1 Гбит/с</label>
+                    {{cswform.logic_csw_1000}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ cswform.type_install_csw.id_for_label }}">Варианты замены КК</label>
                     {{cswform.type_install_csw}}
                 </div>
             </div>
@@ -65,23 +131,6 @@
                 <div class="form-group">
                     <label for="{{ cswform.exist_sreda_csw.id_for_label }}">Существующее подключение КК</label>
                     {{cswform.exist_sreda_csw}}
-                </div>
-            </div>
-        </div>
-        {% elif logic_replace_csw %}
-        <div class="row">
-            <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{ cswform.logic_csw_1000.id_for_label }}">Запуск КК на магистрали 1 Гбит/с</label>
-                    {{cswform.logic_csw_1000}}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{ cswform.type_install_csw.id_for_label }}">Варианты замены КК</label>
-                    {{cswform.type_install_csw}}
                 </div>
             </div>
         </div>
