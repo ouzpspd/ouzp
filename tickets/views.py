@@ -1578,7 +1578,7 @@ def data(request):
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
                  'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port',
-                 'node_csw', 'old_model_csw', 'type_ip_trunk', 'type_phone', 'exist_sreda_csw']
+                 'node_csw', 'old_model_csw', 'type_ip_trunk', 'type_phone', 'exist_sreda_csw', 'exist_service_type_shpd']
 
     value_vars = dict()
 
@@ -2652,10 +2652,12 @@ def shpd(request):
         if shpdform.is_valid():
             router_shpd = shpdform.cleaned_data['router']
             type_shpd = shpdform.cleaned_data['type_shpd']
+            exist_service_type_shpd = shpdform.cleaned_data['exist_service_type_shpd']
             if type_shpd == 'trunk':
                 request.session['counter_line_services'] = 1
             request.session['router_shpd'] = router_shpd
             request.session['type_shpd'] = type_shpd
+            request.session['exist_service_type_shpd'] = exist_service_type_shpd
             tag_service = request.session['tag_service']
             tag_service.pop(0)
             request.session['tag_service'] = tag_service
@@ -2668,8 +2670,12 @@ def shpd(request):
         for service in services_plus_desc:
             if 'Интернет, DHCP' in service or 'Интернет, блок Адресов Сети Интернет' in service:
                 services_shpd.append(service)
+        types_change_service = request.session.get('types_change_service')
+
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(services_shpd[0], types_change_service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
-        return render(request, 'tickets/shpd.html', {'shpdform': shpdform, 'services_shpd': services_shpd})
+        context = {'shpdform': shpdform, 'services_shpd': services_shpd, 'trunk_turnoff_on': trunk_turnoff_on, 'trunk_turnoff_off': trunk_turnoff_off}
+        return render(request, 'tickets/shpd.html', context)
 
 
 def portvk(request):
@@ -6347,7 +6353,7 @@ def head(request):
         if selected_ono[0][0] == i[0]:
             print('!!!before any head')
             if i[2] == 'IP-адрес или подсеть':
-                if any(serv in i[-3] for serv in service_shpd_bgp):
+                if any(serv in i[-3] for serv in service_shpd_bgp) or '212.49.97.' in i[-4]:
                     extra_stroka_main_client_service = f'- услугу "Подключение по BGP" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     print(extra_stroka_main_client_service)
                     if list_stroka_main_client_service:
@@ -7830,8 +7836,13 @@ def _change_services(value_vars):
                 else:
                     static_vars['указать маску'] = '/30'
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-            static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_exist_serv')
-            static_vars["access'ом (native vlan)/trunk'ом"] = value_vars.get('change_type_port_new_serv')
+
+            if value_vars.get('exist_service_type_shpd') == 'trunk':
+                static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "tag'ом"
+            else:
+                static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
+
+            static_vars["access'ом (native vlan)/trunk'ом"] = "tag'ом"
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом с простоем":
             static_vars = {}

@@ -220,8 +220,10 @@ class CswForm(forms.Form):
 class ShpdForm(forms.Form):
     router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
-    type_shpd = forms.CharField(label='Режим порта',
+    type_shpd = forms.CharField(label='Режим порта', required=False,
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    exist_service_type_shpd = forms.CharField(label='Режим порта существующей услуги', required=False,
+                                    widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class CksForm(forms.Form):
     pointA = forms.CharField(label='Точка A', widget=forms.TextInput(attrs={'class': 'form-control'}))
