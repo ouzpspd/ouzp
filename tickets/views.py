@@ -734,8 +734,11 @@ def copper(request):
                         else:
                             readable_services = request.session['readable_services']
                             _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                            tag_service.append({'change_log_shpd': None})
+                            print('!!!!!service_shpd_change')
+                            print(service_shpd_change)
+                            if service_shpd_change:
+                                request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                                tag_service.append({'change_log_shpd': None})
 
                     elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
@@ -976,8 +979,11 @@ def vols(request):
                         else:
                             readable_services = request.session['readable_services']
                             _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                            tag_service.append({'change_log_shpd': None})
+                            print('!!!!!service_shpd_change')
+                            print(service_shpd_change)
+                            if service_shpd_change:
+                                request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                                tag_service.append({'change_log_shpd': None})
 
                     elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
@@ -1234,8 +1240,9 @@ def wireless(request):
                         else:
                             readable_services = request.session['readable_services']
                             _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                            tag_service.append({'change_log_shpd': None})
+                            if service_shpd_change:
+                                request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                                tag_service.append({'change_log_shpd': None})
 
                     elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
@@ -1522,8 +1529,14 @@ def get_need(value_vars):
             print('!!!type_change_service')
             print(type_change_service)
             if next(iter(type_change_service.keys())) in types_trunk:
-                need.append(
-                    f"- организовать дополнительную услугу {next(iter(type_change_service.keys())).split()[1]};")
+                if 'ШПД' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу ШПД в Интернет;")
+                elif 'ЦКС' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу ЦКС;")
+                elif 'ВЛС' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу порт ВЛС;")
+                elif 'ВМ' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу порт ВМ;")
             else:
                 if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
                     need.append("- измененить cхему организации ШПД;")
@@ -4628,11 +4641,14 @@ def _new_services(result_services, value_vars):
                     static_vars['указать количество каналов'] = channel_vgw
                     if 'базов' in service.lower():
                         stroka = templates.get("ВАТС Базовая(SIP регистрация через Интернет)")
+                        result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
                     elif 'расш' in service.lower():
                         stroka = templates.get("ВАТС Расширенная(SIP регистрация через Интернет)")
                         static_vars['указать количество портов'] = ports_vgw
-                    result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                        stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                        result_services_ots.append(pluralizer_vars(stroka, int(ports_vgw)))
+
                 else:
                     stroka = templates.get(
                         "Подключения по цифровой линии с использованием протокола SIP, тип линии «SIP регистрация через Интернет»")
@@ -4974,7 +4990,7 @@ def exist_enviroment_replace_csw(value_vars):
     static_vars['указать узел связи клиентского коммутатора'] = _readable_node(value_vars.get('node_csw'))
     static_vars['указать модель старого коммутатора'] = value_vars.get('old_model_csw')
     hidden_vars['- Услуги клиента переключить "порт в порт".'] = '- Услуги клиента переключить "порт в порт".'
-    types_old_models = ('D-Link DIR-10', '3COM', 'Cisco')
+    types_old_models = ('DIR-100', '3COM', 'Cisco')
     logic_csw_1000 = value_vars.get('logic_csw_1000')
     if logic_csw_1000 or value_vars.get('logic_change_gi_csw'):
         static_vars['100/1000'] = '1000'
@@ -4983,15 +4999,15 @@ def exist_enviroment_replace_csw(value_vars):
 
     templates = value_vars.get('templates')
 
-    stroka = templates.get("Замена клиентского коммутатора")
+    stroka = templates.get("%Замена/Замена и перевод на гигабит% клиентского коммутатора")
 
     if value_vars.get('type_install_csw') == 'Медная линия и порт не меняются':
         static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-        #kad = value_vars.get('selected_ono')[0][-2]
-        #static_vars['указать название коммутатора'] = kad
+        static_vars['Замена/Замена и перевод на гигабит'] = 'Замена'
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif value_vars.get('type_install_csw') == 'ВОЛС и порт не меняются':
         static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+        static_vars['Замена/Замена и перевод на гигабит'] = 'Замена'
         if any(type in value_vars.get('old_model_csw') for type in types_old_models):
             hidden_vars[
             'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
@@ -5007,6 +5023,10 @@ def exist_enviroment_replace_csw(value_vars):
         #static_vars['указать название коммутатора'] = kad
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     else:
+        if value_vars.get('logic_change_gi_csw'):
+            static_vars['Замена/Замена и перевод на гигабит'] = 'Замена и перевод на гигабит'
+        else:
+            static_vars['Замена/Замена и перевод на гигабит'] = 'Замена'
         if value_vars.get('ppr'):
             hidden_vars[
                 '- Требуется отключение согласно ППР %указать № ППР% согласовать проведение работ.'] = '- Требуется отключение согласно ППР %указать № ППР% согласовать проведение работ.'
@@ -5054,10 +5074,11 @@ def exist_enviroment_replace_csw(value_vars):
 
             static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
             static_vars['указать старый порт коммутатора'] = value_vars.get('selected_ono')[0][-1]
-            hidden_vars[
-            '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
-            hidden_vars[
-            '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+            if value_vars.get('model_csw') == 'D-Link DGS-1100-06/ME':
+                hidden_vars[
+                '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                hidden_vars[
+                '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif value_vars.get('type_install_csw') == 'Перевод на гигабит переключение с меди на ВОЛС' or value_vars.get(
             'type_install_csw') == 'Перенос на новый узел':
@@ -5081,7 +5102,7 @@ def exist_enviroment_replace_csw(value_vars):
             hidden_vars[
             'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
             static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
-            if logic_csw_1000 == True:
+            if logic_csw_1000 or value_vars.get('logic_change_gi_csw') and value_vars.get('model_csw') == 'D-Link DGS-1100-06/ME':
                 hidden_vars[
                     '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
                 hidden_vars[
@@ -7037,7 +7058,8 @@ def _passage_services(result_services, value_vars):
                 hidden_vars[
                     '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
                 static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
-
+                if change_log_shpd == None:
+                    change_log_shpd = 'существующая адресация'
                 services, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, change_log_shpd)
                 if service_shpd_change:
 
@@ -7167,7 +7189,7 @@ def _passage_services(result_services, value_vars):
         static_vars['указать сервис'] = ', '.join(services)
         static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
         static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
-        static_vars['указать узел связи'] = value_vars.get('pps')
+        static_vars['указать узел связи'] = _readable_node(value_vars.get('pps'))
         static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif value_vars.get('type_passage') == 'Перевод на гигабит':
@@ -7894,7 +7916,7 @@ def _change_services(value_vars):
                 hidden_vars[
                     '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'] = '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'
 
-            if type_change_service == "Организация порта ВМ trunk'ом":
+            if next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом":
                 stroka = templates.get("Организация услуги порт виртуального маршрутизатора trunk'ом.")
             else:
                 if value_vars.get('exist_service_vm') == 'trunk':
