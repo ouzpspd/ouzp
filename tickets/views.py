@@ -375,7 +375,8 @@ def pto(request):
                 list_search.append(i[0])
         # list_search = [i for i in set_search]
         print(list_search)
-        spp_process = SPP.objects.filter(process=True).filter(type_ticket='ПТО')
+        spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='ПТО')
+        print(spp_process)
         list_spp_process = []
         for i in spp_process:
             list_spp_process.append(i.ticket_k)
@@ -389,6 +390,7 @@ def pto(request):
 
 
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        spp_process = SPP.objects.filter(process=True).filter(type_ticket='ПТО')
         return render(request, 'tickets/ortr.html', {'search': search, 'pto_search': True, 'spp_process': spp_process})
 
 def wait(request):
@@ -1587,7 +1589,7 @@ def data(request):
                  'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
                  'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
                  'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'types_change_service',
-                 'all_cks_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
+                 'all_cks_in_tr', 'all_shpd_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
                  'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
                  'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
                  'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port',
@@ -2508,6 +2510,9 @@ def itv(request):
                 new_with_csw_job_services = request.session['new_with_csw_job_services']
             except KeyError:
                 new_with_csw_job_services = None
+                if type_itv == 'novlexist':
+                    messages.warning(request, 'Нельзя выбрать действующее ШПД, проектирование в нов. точке')
+                    return redirect(next(iter(tag_service[0])))
 
 
             for index_service in range(len(services_plus_desc)):
@@ -2586,11 +2591,7 @@ def cks(request):
                 all_cks_in_tr = request.session['all_cks_in_tr']
             except KeyError:
                 all_cks_in_tr = dict()
-            #all_cks_in_tr.update({})
-            #request.session['pointA'] = pointA
-            #request.session['pointB'] = pointB
-            #request.session['policer_cks'] = policer_cks
-            #request.session['type_cks'] = type_cks
+
             tag_service = request.session['tag_service']
             service = tag_service[0]['cks']
             all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks, 'type_cks': type_cks, 'exist_service': exist_service}})
@@ -2665,29 +2666,41 @@ def shpd(request):
         if shpdform.is_valid():
             router_shpd = shpdform.cleaned_data['router']
             type_shpd = shpdform.cleaned_data['type_shpd']
-            exist_service_type_shpd = shpdform.cleaned_data['exist_service_type_shpd']
+            exist_service = shpdform.cleaned_data['exist_service']
             if type_shpd == 'trunk':
                 request.session['counter_line_services'] = 1
-            request.session['router_shpd'] = router_shpd
-            request.session['type_shpd'] = type_shpd
-            request.session['exist_service_type_shpd'] = exist_service_type_shpd
+            try:
+                all_shpd_in_tr = request.session['all_shpd_in_tr']
+            except KeyError:
+                all_shpd_in_tr = dict()
+
             tag_service = request.session['tag_service']
+            service = tag_service[0]['shpd']
+            all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
+
+            request.session['all_shpd_in_tr'] = all_shpd_in_tr
+            #request.session['router_shpd'] = router_shpd
+            #request.session['type_shpd'] = type_shpd
+            #request.session['exist_service_type_shpd'] = exist_service_type_shpd
+            #tag_service = request.session['tag_service']
             tag_service.pop(0)
             request.session['tag_service'] = tag_service
             return redirect(next(iter(tag_service[0])))
 
 
     else:
-        services_plus_desc = request.session['services_plus_desc']
-        services_shpd = []
-        for service in services_plus_desc:
-            if 'Интернет, DHCP' in service or 'Интернет, блок Адресов Сети Интернет' in service:
-                services_shpd.append(service)
+        # services_plus_desc = request.session['services_plus_desc']
+        # services_shpd = []
+        # for service in services_plus_desc:
+        #     if 'Интернет, DHCP' in service or 'Интернет, блок Адресов Сети Интернет' in service:
+        #         services_shpd.append(service)
         types_change_service = request.session.get('types_change_service')
+        tag_service = request.session['tag_service']
+        service = tag_service[0]['shpd']
 
-        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(services_shpd[0], types_change_service)
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service) #services_shpd[0]
         shpdform = ShpdForm(initial={'shpd': 'access'})
-        context = {'shpdform': shpdform, 'services_shpd': services_shpd, 'trunk_turnoff_on': trunk_turnoff_on, 'trunk_turnoff_off': trunk_turnoff_off}
+        context = {'shpdform': shpdform, 'services_shpd': service, 'trunk_turnoff_on': trunk_turnoff_on, 'trunk_turnoff_off': trunk_turnoff_off} #services_shpd
         return render(request, 'tickets/shpd.html', context)
 
 
@@ -4078,6 +4091,7 @@ def _new_services(result_services, value_vars):
     name_new_service = set()
     for service in services_plus_desc:
         if 'Интернет, DHCP' in service:
+
             name_new_service.add('ШПД в Интернет')
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
             if logic_csw == True:
@@ -4090,7 +4104,9 @@ def _new_services(result_services, value_vars):
             static_vars['указать маску'] = '/32'
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
-            if value_vars.get('router_shpd') == True:
+            all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
+            if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['router_shpd']:
+            #if value_vars.get('router_shpd') == True:
                 stroka = templates.get("Установка маршрутизатора")
                 if sreda == '2' or sreda == '4':
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
@@ -4113,14 +4129,18 @@ def _new_services(result_services, value_vars):
                 static_vars['указать маску'] = '/28'
             else:
                 static_vars['указать маску'] = '/30'
-            if value_vars.get('type_shpd') == 'access':
+            all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
+            if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'access':
+            #if value_vars.get('type_shpd') == 'access':
                 stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-            elif value_vars.get('type_shpd') == 'trunk':
+            elif all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'trunk':
+            #elif value_vars.get('type_shpd') == 'trunk':
                 stroka = templates.get("Организация услуги ШПД в интернет trunk'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
-            if value_vars.get('router_shpd') == True:
+            if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['router_shpd']:
+            #if value_vars.get('router_shpd') == True:
                 stroka = templates.get("Установка маршрутизатора")
                 if sreda == '2' or sreda == '4':
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
@@ -4165,6 +4185,9 @@ def _new_services(result_services, value_vars):
                     if 'Интернет, блок Адресов Сети Интернет' in serv_inet:
                         stroka = templates.get("Организация услуги Вебург.ТВ в vlan'е новой услуги ШПД в интернет")
                         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            elif type_itv == 'novlexist':
+                stroka = templates.get("Организация услуги Вебург.ТВ в vlan'е действующей услуги ШПД в интернет")
+                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
 
         elif 'ЦКС' in service:
@@ -6911,10 +6934,15 @@ def change_log_shpd(request):
         kad = request.session['kad']
         subnet_for_change_log_shpd = request.session['subnet_for_change_log_shpd']
         changelogshpdform = ChangeLogShpdForm()
+        if request.session.get('pass_without_csw_job_services'):
+            pass_without_csw_job_services = request.session.get('pass_without_csw_job_services')
+        else:
+            pass_without_csw_job_services = None
         context = {
             'head': head,
             'kad': kad,
             'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
+            'pass_without_csw_job_services': pass_without_csw_job_services,
             'changelogshpdform': changelogshpdform
         }
 
@@ -7842,8 +7870,6 @@ def _change_services(value_vars):
                     static_vars['указать маску'] = '/28'
                 else:
                     static_vars['указать маску'] = '/30'
-
-
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация ШПД trunk'ом с простоем":
             stroka = templates.get("Организация услуги ШПД в интернет trunk'ом с простоем связи.")
@@ -7858,14 +7884,20 @@ def _change_services(value_vars):
                 else:
                     static_vars['указать маску'] = '/30'
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+            all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
+            if all_shpd_in_tr:
+                service = next(iter(type_change_service.values()))
 
-            if value_vars.get('exist_service_type_shpd') == 'trunk':
-                static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "tag'ом"
-            else:
-                static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
+                if all_shpd_in_tr.get(service)['exist_service'] == 'trunk':
+                    hidden_vars['Cогласовать с клиентом tag vlan для ресурса "%указать ресурс на договоре%".'] = 'Cогласовать с клиентом tag vlan для ресурса "%указать ресурс на договоре%".'
 
-            static_vars["access'ом (native vlan)/trunk'ом"] = "tag'ом"
-            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            #if value_vars.get('exist_service_type_shpd') == 'trunk':
+                    static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "tag'ом"
+                else:
+                    static_vars["в неизменном виде/access'ом (native vlan)/trunk'ом"] = "access'ом (native vlan)"
+
+                static_vars["access'ом (native vlan)/trunk'ом"] = "tag'ом"
+                result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом с простоем":
             static_vars = {}
             hidden_vars = {}

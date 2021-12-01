@@ -106,7 +106,7 @@ class PhoneForm(forms.Form):
                                   widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 class ItvForm(forms.Form):
-    types = [('vl', 'В отдельном vlan'), ('novl', 'В vlan услуги ШПД'),]
+    types = [('vl', 'В отдельном vlan'), ('novl', 'В vlan новой услуги ШПД'), ('novlexist', 'В vlan действующей услуги ШПД')]
     type_itv = forms.CharField(label='Тип ITV', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     cnt_itv = forms.IntegerField(max_value=20, label='Количество приставок',
                                         widget=forms.NumberInput(attrs={'class': 'form-control'}))
@@ -222,7 +222,7 @@ class ShpdForm(forms.Form):
     types = [('access', 'access'), ('trunk', 'trunk')]
     type_shpd = forms.CharField(label='Режим порта', required=False,
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    exist_service_type_shpd = forms.CharField(label='Режим порта существующей услуги', required=False,
+    exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class CksForm(forms.Form):
