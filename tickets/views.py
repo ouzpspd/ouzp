@@ -1461,22 +1461,39 @@ def csw(request):
             new_install = True
             logic_change_gi_csw = None
             logic_replace_csw = None
+            logic_change_csw = False
         else:
             if request.session.get('logic_change_gi_csw'):
                 logic_change_gi_csw = request.session.get('logic_change_gi_csw')
                 add_serv_install = False
                 new_install = False
-                logic_replace_csw = None
+                if request.session.get('logic_replace_csw'):
+                    logic_replace_csw = True
+                else:
+                    logic_replace_csw = None
+                if request.session.get('logic_change_csw'):
+                    logic_change_csw = True
+                else:
+                    logic_change_csw = False
             elif request.session.get('logic_csw'):
                 add_serv_install = request.session.get('logic_csw')
                 new_install = False
                 logic_change_gi_csw = False
                 logic_replace_csw = None
+                logic_change_csw = False
             elif request.session.get('logic_replace_csw'):
                 logic_replace_csw = request.session.get('logic_replace_csw')
                 add_serv_install = False
                 new_install = False
                 logic_change_gi_csw = False
+                logic_change_csw = False
+            elif request.session.get('logic_change_csw'):
+                logic_change_csw = request.session.get('logic_replace_csw')
+                add_serv_install = False
+                new_install = False
+                logic_change_gi_csw = False
+                logic_replace_csw = False
+
         if sreda == '2' or sreda == '4':
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '6'})
         else:
@@ -1487,7 +1504,8 @@ def csw(request):
             'add_serv_install': add_serv_install,
             'new_install': new_install,
             'logic_change_gi_csw': logic_change_gi_csw,
-            'logic_replace_csw': logic_replace_csw
+            'logic_replace_csw': logic_replace_csw,
+            'logic_change_csw': logic_change_csw
         }
         return render(request, 'tickets/csw.html', context)
 
@@ -1581,7 +1599,7 @@ def data(request):
 
 
 
-    variables = ['port', 'logic_csw', 'device_pps', 'access_point', 'speed_port', 'device_client', 'list_switches', 'router_shpd',
+    """variables = ['port', 'logic_csw', 'device_pps', 'access_point', 'speed_port', 'device_client', 'list_switches', 'router_shpd',
                  'type_shpd', 'type_cks', 'type_portvk', 'type_portvm', 'policer_vk', 'new_vk', 'exist_vk', 'model_csw', 'port_csw',
                  'logic_csw_1000', 'pointA', 'pointB', 'policer_cks', 'policer_vm', 'new_vm', 'exist_vm', 'vm_inet', 'hotspot_points',
                  'hotspot_users', 'exist_hotspot_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
@@ -1605,7 +1623,11 @@ def data(request):
         else:
             value_vars.update({i: request.session[i]})
 
-    request.session['templates'] = templates
+    request.session['templates'] = templates"""
+    value_vars = {}
+    for key, value in request.session.items():
+        value_vars.update({key: value})
+
 
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
@@ -2332,6 +2354,8 @@ def phone(request):
 
             print('!!!!! def phone new_with_csw_job_services')
             print(new_with_csw_job_services)
+            print('!!!!!def phone counter_line_services')
+            print(counter_line_services)
             request.session['services_plus_desc'] = services_plus_desc
             request.session['vgw'] = vgw
             request.session['channel_vgw'] = channel_vgw
@@ -6532,7 +6556,7 @@ def head(request):
                     counter_exist_line.add(f'{vgw_uplink}')
                 else:
                     extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
-                    counter_exist_line.add(f'{vgw_uplink}')
+                    #counter_exist_line.add(f'{vgw_uplink}') проверка организация лишней линии
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 readable_services.update({'"Телефония"': None})
         extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
@@ -6562,6 +6586,8 @@ def head(request):
                 print(stroka)
                 #stroka = stroka[:stroka.index('Требуется')] + extra_stroka_other_vgw + '\n' + stroka[stroka.index('Требуется'):]
                 stroka = stroka + '\n' + extra_stroka_other_vgw
+        print('!!!!!counter_exist_line')
+        print(counter_exist_line)
         counter_exist_line = len(counter_exist_line)
         print('!!!!!counter_exist_line')
         print(counter_exist_line)
@@ -6752,9 +6778,11 @@ def project_tr_exist_cl(request):
             print('!!!change_job_services in proj')
             print(change_job_services)
             tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
+
             for tag in tags:
                 tag_service.insert(0, tag)
                 tag_service.insert(0, {'change_serv': None})
+
 
         if counter_line_services == 0:
             tag_service.append({'data': None})
@@ -7274,8 +7302,8 @@ def _passage_enviroment(value_vars):
     templates = value_vars.get('templates')
     pps = _readable_node(value_vars.get('pps'))
     port = value_vars.get('port')
-    device_pps = value_vars['device_pps']
-    device_client = value_vars['device_client']
+    device_pps = value_vars.get('device_pps')
+    device_client = value_vars.get('device_client')
     selected_ono = value_vars.get('selected_ono')
     if 'Порт и КАД не меняется' == value_vars.get('change_log'):
         kad = value_vars.get('selected_ono')[0][-2]

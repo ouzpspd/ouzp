@@ -95,7 +95,7 @@ class PhoneForm(forms.Form):
     vgw = forms.CharField(label='Установка шлюза', widget=forms.Select(choices=types_vgw, attrs={'class': 'form-control'}))
     channel_vgw = forms.CharField(max_length=11, label='Количество каналов', widget=forms.TextInput(attrs={'class': 'form-control'}))
     ports_vgw = forms.CharField(max_length=11, required=False, label='Количество портов ВАТС', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    types_ip_trunk = [('access', 'access'), ('trunk', 'trunk')]
+    types_ip_trunk = [('Не требуется', 'Не требуется'), ('access', 'access'), ('trunk', 'trunk')]
     type_ip_trunk = forms.CharField(label='Режим порта для IP-транк', required=False,
                                 widget=forms.Select(choices=types_ip_trunk, attrs={'class': 'form-control'}))
     form_exist_vgw_model = forms.CharField(max_length=100, label='Модель существующего шлюза', required=False,
