@@ -2279,10 +2279,13 @@ def phone(request):
             form_exist_vgw_name = phoneform.cleaned_data['form_exist_vgw_name']
             form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
             services_plus_desc = request.session['services_plus_desc']
-            try:
-                new_with_csw_job_services = request.session['new_with_csw_job_services']
-            except KeyError:
-                new_with_csw_job_services = None
+            new_with_csw_job_services = request.session.get('new_with_csw_job_services')
+            if new_with_csw_job_services and request.session.get('phone_in_pass'):
+                new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
+            elif request.session.get('phone_in_pass'):
+                new_with_csw_job_services = []
+                new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
+
 
             tag_service = request.session['tag_service']
             print('!!!!! def phone before new_with_csw_job_services')
@@ -2354,8 +2357,6 @@ def phone(request):
 
             print('!!!!! def phone new_with_csw_job_services')
             print(new_with_csw_job_services)
-            print('!!!!!def phone counter_line_services')
-            print(counter_line_services)
             request.session['services_plus_desc'] = services_plus_desc
             request.session['vgw'] = vgw
             request.session['channel_vgw'] = channel_vgw
@@ -2369,6 +2370,11 @@ def phone(request):
 
     else:
         services_plus_desc = request.session['services_plus_desc']
+        if request.session.get('phone_in_pass'):
+            services_plus_desc.append(''.join(request.session.get('phone_in_pass')))
+            request.session['services_plus_desc'] = services_plus_desc
+        print('!!!!def phone services_plus_desc')
+        print(services_plus_desc)
         oattr = request.session['oattr']
         for service in services_plus_desc:
             if 'Телефон' in service:
@@ -2376,6 +2382,8 @@ def phone(request):
                 for regex in regex_ports_vgw:
                     match_ports_vgw = re.search(regex, service)
                     if match_ports_vgw:
+                        print('!!!match_ports_vgw')
+                        print(match_ports_vgw)
                         reg_ports_vgw = match_ports_vgw.group(1)
                     else:
                         reg_ports_vgw = 'Нет данных'
@@ -7003,11 +7011,15 @@ def pass_serv(request):
                     pass
 
                 else:
+                    pass_without_csw_job_services = request.session.get('pass_without_csw_job_services')
                     print('!!!!!!readable_tag_service')
                     print(tag_service)
                     #if '"ШПД в интернет"' in readable_services.keys():
                     #    tag_service.insert(0, {'change_log_shpd': None})
-
+                    phone_in_pass = [x for x in pass_without_csw_job_services if x.startswith('Телефон')]
+                    if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
+                        tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
+                        request.session['phone_in_pass'] = phone_in_pass
                     if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                         pass
                     else:
