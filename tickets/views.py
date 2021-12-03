@@ -2280,11 +2280,11 @@ def phone(request):
             form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
             services_plus_desc = request.session['services_plus_desc']
             new_with_csw_job_services = request.session.get('new_with_csw_job_services')
-            if new_with_csw_job_services and request.session.get('phone_in_pass'):
-                new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
-            elif request.session.get('phone_in_pass'):
-                new_with_csw_job_services = []
-                new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
+            # if new_with_csw_job_services and request.session.get('phone_in_pass'):
+            #     new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
+            # elif request.session.get('phone_in_pass'):
+            #     new_with_csw_job_services = []
+            #     new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
 
 
             tag_service = request.session['tag_service']
@@ -2304,17 +2304,36 @@ def phone(request):
                                     #new_with_csw_job_services = request.session['new_with_csw_job_services']
                                     print(new_with_csw_job_services)
                         services_plus_desc[index_service] += '|'
-                        counter_line_services = request.session['counter_line_services']
-                        if type_phone == 'st':
-                            request.session['type_ip_trunk'] = type_ip_trunk
-                            if type_ip_trunk == 'trunk':
-                                request.session['counter_line_services'] = 1
-                            else:
+                        if request.session.get('phone_in_pass'):
+                            counter_exist_line = request.session['counter_exist_line']
+                            print('!!!!counter_exist_line')
+                            print(counter_exist_line)
+                            if type_phone == 'st':
+                                request.session['type_ip_trunk'] = type_ip_trunk
+                                if type_ip_trunk == 'trunk':
+                                    request.session['counter_exist_line'] = 1
+                                elif type_ip_trunk == 'access':
+                                    counter_exist_line += 1
+                                    request.session['counter_exist_line'] = counter_exist_line
+                            if type_phone == 'ak':
+                                counter_exist_line += 1
+                                request.session['counter_exist_line'] = counter_exist_line
+                        else:
+                            try:
+                                counter_line_services = request.session['counter_line_services']
+                            except KeyError:
+                                counter_line_services = 0
+
+                            if type_phone == 'st':
+                                request.session['type_ip_trunk'] = type_ip_trunk
+                                if type_ip_trunk == 'trunk':
+                                    request.session['counter_line_services'] = 1
+                                elif type_ip_trunk == 'access':
+                                    counter_line_services += 1
+                                    request.session['counter_line_services'] = counter_line_services
+                            if type_phone == 'ak':
                                 counter_line_services += 1
                                 request.session['counter_line_services'] = counter_line_services
-                        if type_phone == 'ak':
-                            counter_line_services += 1
-                            request.session['counter_line_services'] = counter_line_services
                         sreda = request.session['sreda']
                         if sreda == '2' or sreda == '4':
                             if {'vols': None} in tag_service:
@@ -2370,9 +2389,9 @@ def phone(request):
 
     else:
         services_plus_desc = request.session['services_plus_desc']
-        if request.session.get('phone_in_pass'):
-            services_plus_desc.append(''.join(request.session.get('phone_in_pass')))
-            request.session['services_plus_desc'] = services_plus_desc
+        # if request.session.get('phone_in_pass'):
+        #     services_plus_desc.append(''.join(request.session.get('phone_in_pass')))
+        #     request.session['services_plus_desc'] = services_plus_desc
         print('!!!!def phone services_plus_desc')
         print(services_plus_desc)
         oattr = request.session['oattr']
@@ -4951,7 +4970,8 @@ def exist_enviroment_install_csw(value_vars):
         static_vars['указать название коммутатора'] = kad
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     else:
-        kad, value_vars = _list_kad(value_vars)
+        kad = value_vars.get('kad')
+        #kad, value_vars = _list_kad(value_vars)
         static_vars['указать название коммутатора'] = kad
         static_vars['указать порт коммутатора'] = value_vars.get('port')
 
@@ -5004,24 +5024,30 @@ def exist_enviroment_install_csw(value_vars):
             # 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
             # hidden_vars[
             # 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
+
             hidden_vars[
             '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до клиентcкого коммутатора по решению ОАТТР.'
 
-            static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-            static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
             hidden_vars[
-            '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
-            hidden_vars[
-            '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
-            hidden_vars[
-            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
-            if logic_csw_1000 == True:
+                '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
+            if value_vars.get('sreda') == '2' or value_vars.get('sreda') == '4':
+                static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+                static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+
                 hidden_vars[
-                    '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
                 hidden_vars[
-                    '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+                'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
+                static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                if logic_csw_1000 == True:
+                    hidden_vars[
+                        '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
+                    hidden_vars[
+                        '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'] = '- Совместно с %ОИПМ/ОИПД% удаленно настроить клиентский коммутатор.'
+            else:
+                static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+                static_vars['ОИПМ/ОИПД'] = 'ОИПД'
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     value_vars.update({'kad': kad})
     return result_services, value_vars
@@ -5090,7 +5116,8 @@ def exist_enviroment_replace_csw(value_vars):
             hidden_vars[
                 '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %указать № ППР%.'] = '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %указать № ППР%.'
             static_vars['указать № ППР'] = value_vars.get('ppr')
-        kad, value_vars = _list_kad(value_vars)
+        kad = value_vars.get('kad')
+        #kad, value_vars = _list_kad(value_vars)
         static_vars['указать название коммутатора'] = kad
         static_vars['указать порт коммутатора'] = value_vars.get('port')
 
@@ -7143,12 +7170,13 @@ def _passage_services(result_services, value_vars):
             else:
                 services = []
                 for key, value in readable_services.items():
-                    if type(value) == str:
-                        services.append(key + ' ' + value)
-                    elif type(value) == list:
-                        services.append(key + ''.join(value))
+                    if key != '"Телефония"':
+                        if type(value) == str:
+                            services.append(key + ' ' + value)
+                        elif type(value) == list:
+                            services.append(key + ''.join(value))
             static_vars['указать сервис'] = ', '.join(services)
-            static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
+            static_vars['указать название сервиса'] = ', '.join([x for x in readable_services.keys() if x != '"Телефония"'])
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
             counter_plur = len(services)
             result_services.append(pluralizer_vars(stroka, counter_plur))
@@ -7225,6 +7253,7 @@ def _passage_services(result_services, value_vars):
             pass
         else:
             hidden_vars['МКО:'] = 'МКО:'
+            hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
             hidden_vars['- Согласовать время проведение работ.'] = '- Согласовать время проведение работ.'
             hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для изменения логического подключения сервиса %указать сервис% клиента.'] = '- Создать заявку в Cordis на ОНИТС СПД для изменения логического подключения сервиса %указать сервис% клиента.'
         services = []
@@ -7598,7 +7627,7 @@ def _passage_services_on_csw(result_services, value_vars):
                         elif type(value) == list:
                             services.append(key + ''.join(value))
             static_vars['указать сервис'] = ', '.join(services)
-            static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
+            static_vars['указать название сервиса'] = ', '.join([x for x in readable_services.keys() if x != '"Телефония"'])
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
             counter_plur = len(services)
             result_services.append(pluralizer_vars(stroka, counter_plur))
