@@ -2280,6 +2280,7 @@ def phone(request):
             form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
             services_plus_desc = request.session['services_plus_desc']
             new_with_csw_job_services = request.session.get('new_with_csw_job_services')
+            phone_in_pass = request.session.get('phone_in_pass')
             # if new_with_csw_job_services and request.session.get('phone_in_pass'):
             #     new_with_csw_job_services.append(''.join(request.session.get('phone_in_pass')))
             # elif request.session.get('phone_in_pass'):
@@ -2304,7 +2305,9 @@ def phone(request):
                                     #new_with_csw_job_services = request.session['new_with_csw_job_services']
                                     print(new_with_csw_job_services)
                         services_plus_desc[index_service] += '|'
-                        if request.session.get('phone_in_pass'):
+                        if phone_in_pass:
+                            phone_in_pass += '|'
+                            request.session['phone_in_pass'] = phone_in_pass
                             counter_exist_line = request.session['counter_exist_line']
                             print('!!!!counter_exist_line')
                             print(counter_exist_line)
@@ -2358,6 +2361,9 @@ def phone(request):
                                 if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
                                     new_with_csw_job_services[ind] += '/'
                                     #new_with_csw_job_services = request.session['new_with_csw_job_services']
+                        if phone_in_pass:
+                            phone_in_pass += '/'
+                            request.session['phone_in_pass'] = phone_in_pass
                         services_plus_desc[index_service] += '/'
                         if 'copper' in tag_service:
                             pass
@@ -2369,6 +2375,9 @@ def phone(request):
                                 if new_with_csw_job_services[ind] == services_plus_desc[index_service]:
                                     new_with_csw_job_services[ind] += '\\'
                                     #new_with_csw_job_services = request.session['new_with_csw_job_services']
+                        if phone_in_pass:
+                            phone_in_pass += '\\'
+                            request.session['phone_in_pass'] = phone_in_pass
                         services_plus_desc[index_service] += '\\'
                         request.session['form_exist_vgw_model'] = form_exist_vgw_model
                         request.session['form_exist_vgw_name'] = form_exist_vgw_name
@@ -7046,7 +7055,7 @@ def pass_serv(request):
                     phone_in_pass = [x for x in pass_without_csw_job_services if x.startswith('Телефон')]
                     if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
                         tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
-                        request.session['phone_in_pass'] = phone_in_pass
+                        request.session['phone_in_pass'] = ' '.join(phone_in_pass)
                     if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                         pass
                     else:
@@ -7332,6 +7341,104 @@ def _passage_services(result_services, value_vars):
             hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'
         static_vars['существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+    ####################
+    #if 'Телефон' in service:
+    if value_vars.get('phone_in_pass'):
+        service = value_vars.get('phone_in_pass')
+        result_services_ots = []
+        hidden_vars = {}
+        static_vars = {}
+        vgw = value_vars.get('vgw')
+        ports_vgw = value_vars.get('ports_vgw')
+        channel_vgw = value_vars.get('channel_vgw')
+        if service.endswith('|'):
+            # if value_vars.get('type_phone') == 'st':
+            #     if value_vars.get('logic_csw') == True:
+            #         result_services.append(enviroment_csw(value_vars))
+            #     stroka = templates.get(
+            #         "Подключения по цифровой линии с использованием протокола SIP, тип линии «IP-транк»")
+            #     static_vars['trunk/access'] = 'trunk' if value_vars.get('type_ip_trunk') == 'trunk' else 'access'
+            #     static_vars['указать количество каналов'] = channel_vgw
+            #     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            if value_vars.get('type_phone') == 'ak':
+                if value_vars.get('logic_csw'):
+                    result_services.append(enviroment_csw(value_vars))
+                    static_vars[
+                        'клиентского коммутатора / КАД (указать маркировку коммутатора)'] = 'клиентского коммутатора'
+                else:
+                    static_vars['клиентского коммутатора / КАД (указать маркировку коммутатора)'] = value_vars.get(
+                        'kad')
+                stroka = templates.get("Установка тел. шлюза у клиента")
+                static_vars['указать модель тел. шлюза'] = vgw
+                if vgw in ['Eltex TAU-2M.IP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
+                    static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
+                else:
+                    static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
+                    static_vars['указать модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
+                result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
+                stroka = templates.get(
+                    "Перенос сервиса Телефония с использованием тел.шлюза на стороне клиента")
+                static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
+                static_vars['указать модель тел. шлюза'] = vgw
+                if 'ватс' in service.lower():
+                    static_vars['указать количество телефонных линий'] = ports_vgw
+                    if ports_vgw == '1':
+                        static_vars['указать порты тел. шлюза'] = '1'
+                    else:
+                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                else:
+                    static_vars['указать количество телефонных линий'] = channel_vgw
+                    if channel_vgw == '1':
+                        static_vars['указать порты тел. шлюза'] = '1'
+                    else:
+                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                regex_counter = 'Организовать (\d+)'
+                match_counter = re.search(regex_counter, stroka)
+                counter_plur = int(match_counter.group(1))
+                result_services_ots.append(pluralizer_vars(stroka, counter_plur))
+        elif service.endswith('/'):
+            stroka = templates.get("Установка тел. шлюза на ППС")
+            static_vars['указать модель тел. шлюза'] = vgw
+            static_vars['указать узел связи'] = value_vars.get('pps')
+            result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
+            stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
+            static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
+            if 'ватс' in service.lower():
+                static_vars['указать количество телефонных линий'] = ports_vgw
+                if ports_vgw == '1':
+                    static_vars['указать порты тел. шлюза'] = '1'
+                else:
+                    static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+            else:
+                static_vars['указать количество телефонных линий'] = channel_vgw
+                if channel_vgw == '1':
+                    static_vars['указать порты тел. шлюза'] = '1'
+                else:
+                    static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+            stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+            regex_counter = 'Организовать (\d+)'
+            match_counter = re.search(regex_counter, stroka)
+            counter_plur = int(match_counter.group(1))
+            result_services_ots.append(pluralizer_vars(stroka, counter_plur))
+
+        elif service.endswith('\\'):
+            stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
+            static_vars['указать порты тел. шлюза'] = value_vars.get('form_exist_vgw_port')
+            static_vars['указать модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
+            static_vars['идентификатор тел. шлюза'] = value_vars.get('form_exist_vgw_name')
+            if 'ватс' in service.lower():
+                static_vars['указать количество телефонных линий'] = ports_vgw
+            else:
+                static_vars['указать количество телефонных линий'] = channel_vgw
+            stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+            regex_counter = 'Организовать (\d+)'
+            match_counter = re.search(regex_counter, stroka)
+            counter_plur = int(match_counter.group(1))
+            result_services_ots.append(pluralizer_vars(stroka, counter_plur))
+        value_vars.update({'result_services_ots': result_services_ots})
     return result_services, value_vars
 
 def _passage_enviroment(value_vars):
