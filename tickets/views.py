@@ -541,7 +541,8 @@ def project_tr(request, dID, tID, trID):
             elif 'Видеонаблюдение' in services_plus_desc[index_service]:
                 tag_service.append('video')
             elif 'HotSpot' in services_plus_desc[index_service]:
-                if 'премиум +' in services_plus_desc[index_service].lower() or 'премиум+' in services_plus_desc[index_service].lower():
+                types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +']
+                if any(type in services_plus_desc[index_service].lower() for type in types_premium_plus):
                     premium_plus = True
                 else:
                     premium_plus = False
@@ -2605,26 +2606,41 @@ def ortr(request):
         response['Location'] += '?next={}'.format(request.path)
         return response
 
+
     else:
         list_search = []
         for i in search:
             list_search.append(i[0])
-        print(list_search)
-        spp_proc_wait = SPP.objects.filter(Q(process=True) | Q(wait=True))
-        list_spp_proc_wait = []
-        for i in spp_proc_wait:
-            list_spp_proc_wait.append(i.ticket_k)
-        print(list_spp_proc_wait)
+        spp_proc = SPP.objects.filter(process=True)
+        list_spp_proc = []
+        for i in spp_proc:
+            list_spp_proc.append(i.ticket_k)
+        spp_wait = SPP.objects.filter(wait=True)
+        list_spp_wait = []
+        return_from_wait = []
+        for i in spp_wait:
+            if i.ticket_k in list_search:
+                list_spp_wait.append(i.ticket_k)
+            else:
+                i.wait = False
+                i.save()
+                return_from_wait.append(i.ticket_k)
         list_search_rem = []
-        for i in list_spp_proc_wait:
+        for i in list_spp_proc:
             for index_j in range(len(list_search)):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
+        for i in list_spp_wait:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+
         print(list_search_rem)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-        spp_process = SPP.objects.filter(process=True)
+        if return_from_wait:
+            messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
 
-        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process':spp_process})
+        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
 
 
 def primer_get_tr(request, ticket_tr, ticket_id):
@@ -3386,7 +3402,8 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
             hidden_vars = {}
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
 
-            if 'премиум +' in service.lower() or 'премиум+' in service.lower():
+            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +']
+            if any(type in service.lower() for type in types_premium_plus):
                 if logic_csw == True:
                     result_services.append(enviroment_csw(sreda, templates))
                 static_vars['указать количество клиентов'] = hotspot_users
@@ -3407,7 +3424,8 @@ def client_new(list_switches, ppr, templates, counter_line_services, services_pl
                     stroka = templates.get("Организация услуги Хот-спот %Стандарт/Премиум% для существующего клиента.")
                 else:
                     stroka = templates.get("Организация услуги Хот-спот %Стандарт/Премиум% для нового клиента.")
-                if 'премиум' in service.lower():
+                types_premium = ['премиум', 'прем']
+                if any(type in service.lower() for type in types_premium):
                     static_vars['Стандарт/Премиум'] = 'Премиум'
                     static_vars['указать модель станций'] = 'Ubiquiti UniFi'
                 else:
