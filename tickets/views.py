@@ -2308,19 +2308,19 @@ def phone(request):
                         if phone_in_pass:
                             phone_in_pass += '|'
                             request.session['phone_in_pass'] = phone_in_pass
-                            counter_exist_line = request.session['counter_exist_line']
-                            print('!!!!counter_exist_line')
-                            print(counter_exist_line)
-                            if type_phone == 'st':
-                                request.session['type_ip_trunk'] = type_ip_trunk
-                                if type_ip_trunk == 'trunk':
-                                    request.session['counter_exist_line'] = 1
-                                elif type_ip_trunk == 'access':
-                                    counter_exist_line += 1
-                                    request.session['counter_exist_line'] = counter_exist_line
-                            if type_phone == 'ak':
-                                counter_exist_line += 1
-                                request.session['counter_exist_line'] = counter_exist_line
+                            # counter_exist_line = request.session['counter_exist_line']
+                            # print('!!!!counter_exist_line')
+                            # print(counter_exist_line)
+                            # if type_phone == 'st':
+                            #     request.session['type_ip_trunk'] = type_ip_trunk
+                            #     if type_ip_trunk == 'trunk':
+                            #         request.session['counter_exist_line'] = 1
+                            #     elif type_ip_trunk == 'access':
+                            #         counter_exist_line += 1
+                            #         request.session['counter_exist_line'] = counter_exist_line
+                            # if type_phone == 'ak':
+                            #     counter_exist_line += 1
+                            #     request.session['counter_exist_line'] = counter_exist_line
                         else:
                             try:
                                 counter_line_services = request.session['counter_line_services']
@@ -2365,7 +2365,7 @@ def phone(request):
                             phone_in_pass += '/'
                             request.session['phone_in_pass'] = phone_in_pass
                         services_plus_desc[index_service] += '/'
-                        if 'copper' in tag_service:
+                        if {'copper': None} in tag_service:
                             pass
                         else:
                             tag_service.insert(1, {'copper': None})
@@ -3624,22 +3624,37 @@ def ortr(request):
         list_search = []
         for i in search:
             list_search.append(i[0])
-        print(list_search)
-        spp_proc_wait = SPP.objects.filter(Q(process=True) | Q(wait=True))
-        list_spp_proc_wait = []
-        for i in spp_proc_wait:
-            list_spp_proc_wait.append(i.ticket_k)
-        print(list_spp_proc_wait)
+        spp_proc = SPP.objects.filter(process=True)
+        list_spp_proc = []
+        for i in spp_proc:
+            list_spp_proc.append(i.ticket_k)
+        spp_wait = SPP.objects.filter(wait=True)
+        list_spp_wait = []
+        return_from_wait = []
+        for i in spp_wait:
+            if i.ticket_k in list_search:
+                list_spp_wait.append(i.ticket_k)
+            else:
+                i.wait = False
+                i.save()
+                return_from_wait.append(i.ticket_k)
+
         list_search_rem = []
-        for i in list_spp_proc_wait:
+        for i in list_spp_proc:
             for index_j in range(len(list_search)):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
+        for i in list_spp_wait:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+
         print(list_search_rem)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-        spp_process = SPP.objects.filter(process=True)
+        if return_from_wait:
+            messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
 
-        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process':spp_process})
+        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
 
 
 def primer_get_tr(request, ticket_tr, ticket_id):
@@ -4363,8 +4378,8 @@ def _new_services(result_services, value_vars):
             static_vars = {}
             hidden_vars = {}
             print('{}'.format(service.replace('|', ' ')) + '-' * 20)
-            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
-            if any(type in service.lower() for type in types_premium):
+            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +']
+            if any(type in service.lower() for type in types_premium_plus):
             #if 'премиум +' in service.lower() or 'премиум+' in service.lower():
                 if logic_csw == True:
                     result_services.append(enviroment_csw(value_vars))
@@ -4386,7 +4401,7 @@ def _new_services(result_services, value_vars):
                     stroka = templates.get("Организация услуги Хот-спот %Стандарт/Премиум% для существующего клиента.")
                 else:
                     stroka = templates.get("Организация услуги Хот-спот %Стандарт/Премиум% для нового клиента.")
-                if 'премиум' in service.lower():
+                if 'прем' in service.lower():
                     static_vars['Стандарт/Премиум'] = 'Премиум'
                     static_vars['указать модель станций'] = 'Ubiquiti UniFi'
                 else:
@@ -6590,7 +6605,7 @@ def head(request):
         if vgw_chains:
             print('!!!vgw_chains')
             print(vgw_chains)
-            old_name_model_vgsw = []
+            old_name_model_vgws = []
             for i in vgw_chains:
                 model = i.get('model')
                 name = i.get('name')
@@ -6599,14 +6614,16 @@ def head(request):
                 if model == 'ITM SIP':
                     extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
                     counter_exist_line.add(f'{vgw_uplink}')
+                    readable_services.update({'"Телефония"': 'через IP-транк'})
                 else:
                     extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
-                    old_name_model_vgsw.append(f'{model} {name}')
+                    old_name_model_vgws.append(f'{model} {name}')
+                    readable_services.update({'"Телефония"': None})
                     #counter_exist_line.add(f'{vgw_uplink}') проверка организация лишней линии
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 readable_services.update({'"Телефония"': None})
-            if old_name_model_vgsw:
-                request.session['old_name_model_vgsw'] = ', '.join(old_name_model_vgsw)
+            if old_name_model_vgws:
+                request.session['old_name_model_vgws'] = ', '.join(old_name_model_vgws)
 
         extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
         extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
@@ -7366,6 +7383,8 @@ def _passage_phone_service(result_services, value_vars):
                 static_vars[
                         'клиентского коммутатора / КАД (указать маркировку коммутатора)'] = 'клиентского коммутатора'
             else:
+                result_services = enviroment(result_services, value_vars)
+                value_vars.update({'result_services': result_services})
                 static_vars['клиентского коммутатора / КАД (указать маркировку коммутатора)'] = value_vars.get(
                         'kad')
             stroka = templates.get("Установка тел. шлюза у клиента")
@@ -7380,6 +7399,7 @@ def _passage_phone_service(result_services, value_vars):
                     "Перенос сервиса Телефония с использованием тел.шлюза на стороне клиента")
             static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
             static_vars['указать модель тел. шлюза'] = vgw
+            static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
             if 'ватс' in service.lower():
                 static_vars['указать количество телефонных линий'] = ports_vgw
                 if ports_vgw == '1':
@@ -7405,6 +7425,7 @@ def _passage_phone_service(result_services, value_vars):
 
         stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
         static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
+        static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
         if 'ватс' in service.lower():
             static_vars['указать количество телефонных линий'] = ports_vgw
             if ports_vgw == '1':
@@ -7425,6 +7446,7 @@ def _passage_phone_service(result_services, value_vars):
 
     elif service.endswith('\\'):
         stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
+        static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
         static_vars['указать порты тел. шлюза'] = value_vars.get('form_exist_vgw_port')
         static_vars['указать модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
         static_vars['идентификатор тел. шлюза'] = value_vars.get('form_exist_vgw_name')
