@@ -280,6 +280,9 @@ class ChainForm(forms.Form):
 class ListResourcesForm(forms.Form):
     resource = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
+class ListContractIdForm(forms.Form):
+    resource = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
 class ListJobsForm(forms.Form):
     types = [
         ('Организация/Изменение, СПД', 'Организация/Изменение, СПД'),

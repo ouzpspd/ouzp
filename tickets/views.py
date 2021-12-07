@@ -5,7 +5,7 @@ from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm
 
 import logging
 from django.contrib import messages
@@ -2905,9 +2905,12 @@ def get_contract_id(login, password, contract):
     contract_list = req.json()
     print(contract_list)
     if len(contract_list) > 1:
-        pass
+        contract_id = contract_list
+        # contract_id = []
+        # for i in range(len(contract_list)):
+        #     contract_id.append(contract_list[i].get('id'))
     elif len(contract_list) == 0:
-        pass
+        contract_id = 'Такого договора не найдено'
     else:
         contract_id = contract_list[0].get('id')
         print(contract_id)
@@ -2946,19 +2949,27 @@ def get_resources(request):
             print(contractform.cleaned_data)
             contract = contractform.cleaned_data['contract']
             contract_id = get_contract_id(username, password, contract)
-            ono = get_contract_resources(username, password, contract_id)
-            phone_address = check_contract_phone_exist(username, password, contract_id)
-            if phone_address:
-                request.session['phone_address'] = phone_address
-            request.session['ono'] = ono
-            request.session['contract'] = contract
-            if ono:
-                #return redirect('show_resources')
-                return redirect('test_formset')
+            if isinstance(contract_id, list):
+                request.session['contract_id'] = contract_id
+                request.session['contract'] = contract
+                return redirect('contract_id_formset')
             else:
-                messages.warning(request, 'Договора не найдено')
-                return redirect('get_resources')
+                if contract_id == 'Такого договора не найдено':
+                    messages.warning(request, 'Договора не найдено')
+                    return redirect('get_resources')
+
+                ono = get_contract_resources(username, password, contract_id)
+                phone_address = check_contract_phone_exist(username, password, contract_id)
+                if phone_address:
+                    request.session['phone_address'] = phone_address
+                request.session['ono'] = ono
+                request.session['contract'] = contract
+                return redirect('test_formset')
+            # else:
+            #     messages.warning(request, 'Договора не найдено')
+            #     return redirect('get_resources')
     else:
+
         contractform = ContractForm()
 
     return render(request, 'tickets/contract.html', {'contractform': contractform})
@@ -5743,6 +5754,70 @@ def enviroment_csw(value_vars):
 from django.forms import formset_factory
 #ArticleFormSet = formset_factory(ListResourcesForm, extra=2)
 #formset = ArticleFormSet()
+
+@cache_check
+def contract_id_formset(request):
+    """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
+     только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
+      коммутатором в итоговый список. Если выбрано более одного или ни одного ресурса возвращает эту же форму повторно.
+      По точке подключения(город, улица) проверяет наличие телефонии на договоре. Отправляет пользователя на страницу
+      формирования заголовка."""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    contract_id = request.session['contract_id']
+    # contract_id_values = []
+    # for i in contract_id:
+    #     contract_id_values.append(i.get('value'))
+
+
+    ListContractIdFormSet = formset_factory(ListContractIdForm, extra=len(contract_id))
+    if request.method == 'POST':
+        formset = ListContractIdFormSet(request.POST)
+        if formset.is_valid():
+
+            data = formset.cleaned_data
+            print('!!!!!!!!datatest_formset')
+            print(data)
+            selected_contract_id = []
+            unselected_contract_id = []
+            selected = zip(contract_id, data)
+            for contract_id, data in selected:
+                if bool(data):
+                    selected_contract_id.append(contract_id.get('id'))
+                # else:
+                #     unselected_contract_id.append(contract_id)
+
+            if selected_contract_id:
+                if len(selected_contract_id) > 1:
+                    messages.warning(request, 'Было выбрано более 1 ресурса')
+                    return redirect('contract_id_formset')
+                else:
+                    #request.session['selected_contract_id'] = selected_contract_id
+                    ono = get_contract_resources(username, password, selected_contract_id[0])
+                    if ono:
+                        phone_address = check_contract_phone_exist(username, password, selected_contract_id[0])
+                        if phone_address:
+                            request.session['phone_address'] = phone_address
+                        request.session['ono'] = ono
+                        return redirect('test_formset')
+                    else:
+                        messages.warning(request, 'На контракте нет ресурсов')
+                        return redirect('contract_id_formset')
+            else:
+                messages.warning(request, 'Контракты не выбраны')
+                return redirect('contract_id_formset')
+
+    else:
+        formset = ListContractIdFormSet()
+        context = {
+            'contract_id': contract_id,
+            'formset': formset,
+        }
+
+        return render(request, 'tickets/contract_id_formset.html', context)
+
 
 
 def test_formset(request):
