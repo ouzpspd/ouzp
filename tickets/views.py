@@ -729,7 +729,7 @@ def copper(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
 
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -974,7 +974,9 @@ def vols(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -',
+                                            '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                                            '125 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -1235,7 +1237,9 @@ def wireless(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
+                            service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -',
+                                            '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                                            '125 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -1578,52 +1582,13 @@ def data(request):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    #pps = request.session['pps']
-    #services_plus_desc = request.session['services_plus_desc']
-    #turnoff = request.session['turnoff']
-    #sreda = request.session['sreda']
-    #tochka = request.session['tochka']
-    #address = request.session['address']
-    #oattr = request.session['oattr']
 
-
-    #counter_line_services = request.session['counter_line_services']
-    #print('!!!!!counter_line_services')
-    #print(counter_line_services)
     spp_link = request.session['spplink']
 
 
     templates = ckb_parse(username, password)
     request.session['templates'] = templates
-    #request.session['list_switches'] = list_switches
 
-
-
-    """variables = ['port', 'logic_csw', 'device_pps', 'access_point', 'speed_port', 'device_client', 'list_switches', 'router_shpd',
-                 'type_shpd', 'type_cks', 'type_portvk', 'type_portvm', 'policer_vk', 'new_vk', 'exist_vk', 'model_csw', 'port_csw',
-                 'logic_csw_1000', 'pointA', 'pointB', 'policer_cks', 'policer_vm', 'new_vm', 'exist_vm', 'vm_inet', 'hotspot_points',
-                 'hotspot_users', 'exist_hotspot_client', 'camera_number', 'camera_model', 'voice', 'deep_archive', 'camera_place_one', 'camera_place_two',
-                 'vgw', 'channel_vgw', 'ports_vgw', 'local_type', 'local_ports', 'sks_poe', 'sks_router', 'lvs_busy', 'lvs_switch',
-                 'ppr', 'type_itv', 'cnt_itv', 'pps', 'services_plus_desc', 'sreda', 'address', 'counter_line_services', 'templates',
-                 'readable_services', 'type_pass', 'head', 'type_install_csw', 'selected_ono', 'counter_exist_line', 'from_node', 'log_change',
-                 'new_mask', 'change_type_port_exist_serv', 'change_type_port_new_serv', 'routed_ip', 'routed_vrf', 'types_change_service',
-                 'all_cks_in_tr', 'all_shpd_in_tr', 'kad', 'all_portvk_in_tr', 'new_without_csw_job_services', 'new_with_csw_job_services',
-                 'pass_without_csw_job_services', 'new_no_spd_jobs_services', 'change_job_services', 'type_passage', 'change_log',
-                 'exist_sreda', 'change_log_shpd', 'logic_replace_csw', 'logic_change_csw', 'logic_change_gi_csw', 'vgw_chains', 'waste_vgw',
-                 'exist_service_vm', 'router_itv', 'address', 'form_exist_vgw_model', 'form_exist_vgw_name', 'form_exist_vgw_port',
-                 'node_csw', 'old_model_csw', 'type_ip_trunk', 'type_phone', 'exist_sreda_csw', 'exist_service_type_shpd']
-
-    value_vars = dict()
-
-    for i in variables:
-        try:
-            request.session[i]
-        except KeyError:
-            value_vars.update({i: None})
-        else:
-            value_vars.update({i: request.session[i]})
-
-    request.session['templates'] = templates"""
     value_vars = {}
     for key, value in request.session.items():
         value_vars.update({key: value})
@@ -1663,6 +1628,7 @@ def data(request):
                 value_vars.update({'counter_line_services': 1})
             else:
                 value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
+            print('!!!!def data in else')
             result_services, result_services_ots, value_vars = passage_services(value_vars)
             value_vars.update({'counter_line_services': counter_line_services})
             value_vars.update({'result_services': result_services})
@@ -1700,11 +1666,7 @@ def data(request):
     if value_vars.get('type_pass') and 'Изменение/организация сервисов без монтаж. работ' in value_vars.get('type_pass'):
         pass
 
-    if value_vars.get('type_pass') and 'Организация сервиса(не СПД)' in value_vars.get('type_pass'):
-        print('!!!!!!!!!no spddddd')
-        value_vars.update({'counter_line_services': 0})
-        value_vars.update({'services_plus_desc': value_vars.get('new_no_spd_jobs_services')})
-        result_services, result_services_ots, value_vars = client_new(value_vars)
+
     if not value_vars.get('type_pass'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
 
@@ -5969,7 +5931,6 @@ def job_formset(request):
             change_job_services = []
             new_with_csw_job_services = []
             new_without_csw_job_services = []
-            new_no_spd_jobs_services = []
             data = formset.cleaned_data
             print('!!!!!services')
             print(services)
@@ -5981,8 +5942,6 @@ def job_formset(request):
                 #    new_without_csw_job_services.append(services)
                 if data == {'jobs': 'Организация/Изменение, СПД'}:
                     new_with_csw_job_services.append(services)
-                elif data == {'jobs': 'Организация, не СПД'}:
-                    new_no_spd_jobs_services.append(services)
                 elif data == {'jobs': 'Перенос, СПД'}:
                     pass_without_csw_job_services.append(services)
                 #elif data == {'jobs': 'Перенос сервиса(СПД) с КК'}:
@@ -5995,7 +5954,6 @@ def job_formset(request):
                     pass
             #request.session['new_without_csw_job_services'] = new_without_csw_job_services
             request.session['new_with_csw_job_services'] = new_with_csw_job_services
-            request.session['new_no_spd_jobs_services'] = new_no_spd_jobs_services
             request.session['pass_without_csw_job_services'] = pass_without_csw_job_services
             #request.session['pass_with_csw_job_services'] = pass_with_csw_job_services
             #request.session['pass_no_spd_job_services'] = pass_no_spd_job_services
@@ -6538,7 +6496,8 @@ def head(request):
     print('!!!!stroka s \n\n')
     print(stroka)
 
-    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '92 -', '107 -', '109 -']
+    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -',
+                    '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
     service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
@@ -6867,8 +6826,6 @@ def project_tr_exist_cl(request):
     pass_without_csw_job_services = request.session['pass_without_csw_job_services']
     change_job_services = request.session['change_job_services']
 
-
-    new_no_spd_jobs_services = request.session['new_no_spd_jobs_services']
     #pass_no_spd_job_services = request.session['pass_no_spd_job_services']
 
 
@@ -6908,12 +6865,6 @@ def project_tr_exist_cl(request):
             tag_service.append(tag)
         request.session['new_with_csw_job_services'] = new_with_csw_job_services
 
-        if new_no_spd_jobs_services:
-            type_pass.append('Организация, не СПД')
-            tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_no_spd_jobs_services)
-            for tag in tags:
-                tag_service.append(tag)
-
         if change_job_services:
             type_pass.append('Изменение, не СПД')
             print('!!!change_job_services in proj')
@@ -6943,12 +6894,6 @@ def project_tr_exist_cl(request):
 
 
         request.session['counter_line_services'] = counter_line_services
-
-    if new_no_spd_jobs_services and not new_with_csw_job_services:
-        type_pass.append('Организация, не СПД')
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_no_spd_jobs_services)
-        for tag in tags:
-            tag_service.append(tag)
 
     if change_job_services and not new_with_csw_job_services and not pass_without_csw_job_services:
         type_pass.append('Изменение, не СПД')
@@ -7232,6 +7177,7 @@ def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
 
 
 def _passage_services(result_services, value_vars):
+    print('!!!! in _passage_services')
     templates = value_vars.get('templates')
     sreda = value_vars.get('sreda')
     readable_services = value_vars.get('readable_services')
@@ -7396,7 +7342,6 @@ def _passage_services(result_services, value_vars):
         static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     elif value_vars.get('type_passage') == 'Перевод на гигабит':
-        stroka = templates.get("Расширение полосы сервиса %указать название сервиса%")
         services = []
         print('!!!!readable_services')
         print(readable_services)
@@ -7405,7 +7350,7 @@ def _passage_services(result_services, value_vars):
             if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
                 services.append(key + ' ' + value)
                 static_vars['указать название сервиса'] = key
-                value_vars.update({'name_passage_service': key +' '+ value})
+                value_vars.update({'name_passage_service': key + ' ' + value})
             elif type(value) == list:
                 for val in value:
                     if value_vars.get('selected_ono')[0][-4] in val:
@@ -7413,31 +7358,39 @@ def _passage_services(result_services, value_vars):
                         value_vars.update({'name_passage_service': key + ' ' + val})
                         services.append(key + ' ' + val)
 
-        if services[0].startswith('"ШПД в интернет"'):
-            hidden_vars['- Расширить полосу ШПД в Cordis.'] = '- Расширить полосу ШПД в Cordis.'
-            if value_vars.get('change_log_shpd') != 'существующая адресация':
-                hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
-                hidden_vars[
-                    '- Выделить подсеть с маской %указать новую маску%.'] = '- Выделить подсеть с маской %указать новую маску%.'
-                static_vars['указать новую маску'] = '/30' if value_vars.get(
-                    'change_log_shpd') == 'Новая подсеть /30' else '/32'
-                static_vars['указать сервис'] = static_vars['указать название сервиса']
-                hidden_vars[
-                    '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
-                hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
-                hidden_vars[
-                    '- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
-                static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
-            else:
-                static_vars['указать сервис'] = ', '.join(services)
-        static_vars['указать сервис'] = ', '.join(services)
-        static_vars['указать название коммутатора'] = value_vars.get('kad')
-        if value_vars.get('selected_ono')[0][-2].startswith('CSW') or value_vars.get('selected_ono')[0][-2].startswith('WDA'):
-            pass
+        if value_vars.get('change_log') == 'Порт и КАД не меняется':
+            stroka = templates.get('Изменение полосы сервиса "%указать название сервиса%"')
+            static_vars['указать сервис'] = ', '.join(services)
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         else:
-            hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'
-        static_vars['существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+            stroka = templates.get("Расширение полосы сервиса %указать название сервиса%")
+
+
+            if services[0].startswith('"ШПД в интернет"'):
+                hidden_vars['- Расширить полосу ШПД в Cordis.'] = '- Расширить полосу ШПД в Cordis.'
+                if value_vars.get('change_log_shpd') != 'существующая адресация':
+                    hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
+                    hidden_vars[
+                        '- Выделить подсеть с маской %указать новую маску%.'] = '- Выделить подсеть с маской %указать новую маску%.'
+                    static_vars['указать новую маску'] = '/30' if value_vars.get(
+                        'change_log_shpd') == 'Новая подсеть /30' else '/32'
+                    static_vars['указать сервис'] = static_vars['указать название сервиса']
+                    hidden_vars[
+                        '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
+                    hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
+                    hidden_vars[
+                        '- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
+                    static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
+                else:
+                    static_vars['указать сервис'] = ', '.join(services)
+            static_vars['указать сервис'] = ', '.join(services)
+            static_vars['указать название коммутатора'] = value_vars.get('kad')
+            if value_vars.get('selected_ono')[0][-2].startswith('CSW') or value_vars.get('selected_ono')[0][-2].startswith('WDA'):
+                pass
+            else:
+                hidden_vars['- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на %существующий КАД%.'
+            static_vars['существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     return result_services, value_vars
 
 def _passage_phone_service(result_services, value_vars):
@@ -7961,8 +7914,11 @@ def passage_services(value_vars):
      ОТС(заполненые шаблоны) для переноса услуг"""
     if (value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения') and value_vars.get('change_log') != 'Порт и КАД не меняется':
         result_services, value_vars = _new_enviroment(value_vars)
+    elif value_vars.get('type_passage') == 'Перевод на гигабит' or value_vars.get('Перенос логического подключения') and value_vars.get('change_log') == 'Порт и КАД не меняется':
+        pass
     else:
         result_services, value_vars = _passage_enviroment(value_vars)
+    print('!!!! in passage_services')
     result_services, value_vars = _passage_services(result_services, value_vars)
     if value_vars.get('phone_in_pass'):
         result_services, result_services_ots, value_vars = _passage_phone_service(result_services, value_vars)

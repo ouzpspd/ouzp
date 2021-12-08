@@ -214,8 +214,8 @@ class CswForm(forms.Form):
                                        widget=forms.Select(choices=types_exist_sreda_csw, attrs={'class': 'form-control'}))
     type_install_csw = forms.CharField(label='Варианты установки КК', required=False,
                                        widget=forms.Select(choices=types_install_csw, attrs={'class': 'form-control'}))
-    model_csw = forms.CharField(label='Модель', widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
-    port_csw = forms.CharField(label='Порт', widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
+    model_csw = forms.CharField(label='Модель', required=False, widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
+    port_csw = forms.CharField(label='Порт', required=False, widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
 
 class ShpdForm(forms.Form):
     router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -285,10 +285,9 @@ class ListContractIdForm(forms.Form):
 
 class ListJobsForm(forms.Form):
     types = [
-        ('Организация/Изменение, СПД', 'Организация/Изменение, СПД'),
-        ('Организация, не СПД', 'Организация, не СПД'),
-        ('Изменение, не СПД', 'Изменение, не СПД'),
-        ('Перенос, СПД', 'Перенос, СПД'),
+        ('Перенос, СПД', 'Перенос'),
+        ('Организация/Изменение, СПД', 'Организация'),
+        ('Изменение, не СПД', 'Сущ. порт'),
         ('Не требуется', 'Не требуется'),
     ]
     jobs = forms.CharField(label='',
