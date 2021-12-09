@@ -5,7 +5,7 @@ from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm
 
 import logging
 from django.contrib import messages
@@ -760,9 +760,9 @@ def copper(request):
                     tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
-                    old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username, password)
-                    request.session['old_model_csw'] = old_model_csw
-                    request.session['node_csw'] = node_csw
+                    # old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username, password)
+                    # request.session['old_model_csw'] = old_model_csw
+                    # request.session['node_csw'] = node_csw
                     tag_service.append({'csw': None})
                     print('!!!!!logic_replace_csw in copper')
                     return redirect(next(iter(tag_service[0])))
@@ -1021,10 +1021,10 @@ def vols(request):
                         tag_service.append({'csw': None})
                         return redirect(next(iter(tag_service[0])))
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
-                    old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2],
-                                                                                                   username, password)
-                    request.session['old_model_csw'] = old_model_csw
-                    request.session['node_csw'] = node_csw
+                    # old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2],
+                    #                                                                                username, password)
+                    # request.session['old_model_csw'] = old_model_csw
+                    # request.session['node_csw'] = node_csw
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
                     if type_pass:
@@ -1708,6 +1708,7 @@ def data(request):
         counter_str_ots = result_services_ots.count('\n')
 
     request.session['kad'] = value_vars.get('kad')
+    request.session['pps'] = value_vars.get('pps')
     request.session['titles'] = titles
     request.session['result_services'] = result_services
     request.session['counter_str_ortr'] = counter_str_ortr
@@ -6498,6 +6499,13 @@ def head(request):
     print('!!!!stroka s \n\n')
     print(stroka)
 
+    if selected_ono[0][-2].startswith('CSW'):
+        old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
+                                                                                       password)
+        request.session['old_model_csw'] = old_model_csw
+        request.session['node_csw'] = node_csw
+
+
     service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -',
                     '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
     service_shpd_bgp = ['BGP', 'bgp']
@@ -7064,6 +7072,37 @@ def change_log_shpd(request):
 
         return render(request, 'tickets/change_log_shpd.html', context)
 
+def params_extend_service(request):
+    if request.method == 'POST':
+        extendserviceform = ExtendServiceForm(request.POST)
+
+        if extendserviceform.is_valid():
+            extend_speed = extendserviceform.cleaned_data['extend_speed']
+            extend_policer_cks_vk = extendserviceform.cleaned_data['extend_policer_cks_vk']
+            extend_policer_vm = extendserviceform.cleaned_data['extend_policer_vm']
+            request.session['extend_speed'] = extend_speed
+            request.session['extend_policer_cks_vk'] = extend_policer_cks_vk
+            request.session['extend_policer_vm'] = extend_policer_vm
+            tag_service = request.session['tag_service']
+            print('!!!!tag_service')
+            print(tag_service)
+            tag_service.pop(0)
+            if len(tag_service) == 0:
+                tag_service.append({'data': None})
+            return redirect(next(iter(tag_service[0])))
+
+    else:
+        desc_service = request.session.get('desc_service')
+        extendserviceform = ExtendServiceForm()
+        pass_without_csw_job_services = request.session.get('pass_without_csw_job_services')
+        context = {
+            'desc_service': desc_service,
+            'pass_without_csw_job_services': pass_without_csw_job_services,
+            'extendserviceform': extendserviceform
+        }
+
+        return render(request, 'tickets/params_extend_service.html', context)
+
 def pass_serv(request):
     if request.method == 'POST':
         passservform = PassServForm(request.POST)
@@ -7079,6 +7118,7 @@ def pass_serv(request):
 
             tag_service = request.session['tag_service']
             readable_services = request.session['readable_services']
+            selected_ono = request.session['selected_ono']
             type_pass = request.session['type_pass']
             print('!!!!tag_service')
             print(tag_service)
@@ -7087,11 +7127,24 @@ def pass_serv(request):
             if 'Перенос, СПД' not in type_pass:
                 return redirect(next(iter(tag_service[0])))
             else:
+                pass_without_csw_job_services = request.session.get('pass_without_csw_job_services')
                 if change_log == 'Порт и КАД не меняется':
-                    pass
+                    if type_passage == 'Перевод на гигабит':
+                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
+                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+                            request.session['desc_service'] = desc_service
+                            print('!!!!! desc_service')
+                            print(desc_service)
+                            #extend_in_pass = [x for x in pass_without_csw_job_services if x.startswith(desc_service)]
+                            tag_service.insert(0, {'params_extend_service': None})
+                            return redirect(next(iter(tag_service[0])))
 
                 else:
-                    pass_without_csw_job_services = request.session.get('pass_without_csw_job_services')
+                    if type_passage == 'Перевод на гигабит':
+                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
+                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+                            request.session['desc_service'] = desc_service
+                            tag_service.insert(0, {'params_extend_service': None})
                     print('!!!!!!readable_tag_service')
                     print(tag_service)
                     #if '"ШПД в интернет"' in readable_services.keys():
@@ -7346,28 +7399,26 @@ def _passage_services(result_services, value_vars):
     elif value_vars.get('type_passage') == 'Перевод на гигабит':
 
 
-        # if value_vars.get('change_log') == 'Порт и КАД не меняется':
-        #     stroka = templates.get('Изменение полосы сервиса "%указать название сервиса%"')
-        #     static_vars['указать сервис'] = ', '.join(services)
-        #     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         stroka = templates.get("Расширение полосы сервиса %указать название сервиса%")
 
         services = []
         print('!!!!readable_services')
         print(readable_services)
-
-        for key, value in readable_services.items():
-            if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
-                services.append(key + ' ' + value)
-                static_vars['указать название сервиса'] = key
-                value_vars.update({'name_passage_service': key + ' ' + value})
-            elif type(value) == list:
-                for val in value:
-                    if value_vars.get('selected_ono')[0][-4] in val:
-                        static_vars['указать название сервиса'] = key
-                        value_vars.update({'name_passage_service': key + ' ' + val})
-                        services.append(key + ' ' + val)
-        if services[0].startswith('"ШПД в интернет"'):
+        desc_service, name_passage_service = get_selected_readable_service(readable_services, value_vars.get('selected_ono'))
+        # for key, value in readable_services.items():
+        #     if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
+        #         services.append(key + ' ' + value)
+        #         static_vars['указать название сервиса'] = key
+        #         value_vars.update({'name_passage_service': key + ' ' + value})
+        #     elif type(value) == list:
+        #         for val in value:
+        #             if value_vars.get('selected_ono')[0][-4] in val:
+        #                 static_vars['указать название сервиса'] = key
+        #                 value_vars.update({'name_passage_service': key + ' ' + val})
+        #                 services.append(key + ' ' + val)
+        # if services[0].startswith('"ШПД в интернет"'):
+        static_vars['указать название сервиса'] = desc_service
+        if desc_service == '"ШПД в интернет"':
             hidden_vars['- Расширить полосу ШПД в Cordis.'] = '- Расширить полосу ШПД в Cordis.'
             if value_vars.get('change_log_shpd') != 'существующая адресация':
                 hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
@@ -7383,8 +7434,27 @@ def _passage_services(result_services, value_vars):
                     '- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
                 static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
             else:
-                static_vars['указать сервис'] = ', '.join(services)
-        static_vars['указать сервис'] = ', '.join(services)
+                static_vars['указать сервис'] = name_passage_service
+        # static_vars['указать сервис'] = ', '.join(services)
+        else:
+            hidden_vars['на %указать новую полосу сервиса%'] = 'на %указать новую полосу сервиса%'
+            static_vars['указать новую полосу сервиса'] = value_vars.get('extend_speed')
+            hidden_vars[
+                '- Ограничить скорость и настроить маркировку трафика для %указать сервис% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для %указать сервис% %полисером Subinterface/портом подключения%.'
+            if value_vars.get('extend_policer_cks_vk'):
+                static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+            if value_vars.get('extend_policer_vm'):
+                static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_vm')
+            value_vars.update({'name_passage_service': name_passage_service})
+            static_vars['указать сервис'] = name_passage_service
+        hidden_vars['ОНИТС СПД подготовка к работам:'] = 'ОНИТС СПД подготовка к работам:'
+        hidden_vars['- По заявке в Cordis подготовить настройки на оборудовании для расширения сервиса %указать сервис% [на %указать новую полосу сервиса%].'] = '- По заявке в Cordis подготовить настройки на оборудовании для расширения сервиса %указать сервис% [на %указать новую полосу сервиса%].'
+
+        hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
+        hidden_vars['-- сопроводить работы %ОИПМ/ОИПД% по перенесу сервиса %указать сервис% в гигабитный порт %указать название коммутатора%.'] = '-- сопроводить работы %ОИПМ/ОИПД% по перенесу сервиса %указать сервис% в гигабитный порт %указать название коммутатора%.'
+
+
+
         static_vars['указать название коммутатора'] = value_vars.get('kad')
         if value_vars.get('selected_ono')[0][-2].startswith('CSW') or value_vars.get('selected_ono')[0][-2].startswith('WDA'):
             pass
@@ -7930,6 +8000,19 @@ def passage_services(value_vars):
         result_services_ots = None
     return result_services, result_services_ots, value_vars
 
+def get_selected_readable_service(readable_services, selected_ono):
+    for key, value in readable_services.items():
+        if type(value) == str and selected_ono[0][-4] in value:
+            desc_service = key
+            name_passage_service = key + ' ' + value
+        elif type(value) == list:
+            for val in value:
+                if selected_ono[0][-4] in val:
+                    desc_service = key
+                    name_passage_service = key + ' ' + val
+    return desc_service, name_passage_service
+
+
 def extend_service(value_vars):
     if value_vars.get('result_services'):
         result_services = value_vars.get('result_services')
@@ -7940,31 +8023,23 @@ def extend_service(value_vars):
     else:
         result_services_ots = None
     templates = value_vars.get('templates')
+    selected_ono = value_vars.get('selected_ono')
+    readable_services = value_vars.get('readable_services')
     static_vars = {}
     hidden_vars = {}
-    if any([value_vars.get('selected_ono')[0][2] in ['Etherline', 'Порт виртуального коммутатора']]):
-        if value_vars.get('selected_ono')[0][2] == 'Etherline':
-            static_vars['указать сервис'] = 'ЦКС' + value_vars.get('selected_ono')[0][-3]
-        else:
-            service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
-            service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
-            if any(serv in value_vars.get('selected_ono')[0][-3] for serv in service_portvk):
-                static_vars['указать сервис'] = 'Порт ВЛС' + value_vars.get('selected_ono')[0][-3]
-            elif any(serv in value_vars.get('selected_ono')[0][-3] for serv in service_portvk):
-                static_vars['указать сервис'] = 'Порт ВМ' + value_vars.get('selected_ono')[0][-3]
-        # for key, value in readable_services.items():
-        #     if type(value) == str and value_vars.get('selected_ono')[0][-4] in value:
-        #         services.append(key + ' ' + value)
-        #         static_vars['указать название сервиса'] = key
-        #         value_vars.update({'name_passage_service': key + ' ' + value})
-        #     elif type(value) == list:
-        #         for val in value:
-        #             if value_vars.get('selected_ono')[0][-4] in val:
-        #                 static_vars['указать название сервиса'] = key
-        #                 value_vars.update({'name_passage_service': key + ' ' + val})
-        #                 services.append(key + ' ' + val)
-
-        stroka = templates.get('Изменение полосы сервиса "%указать название сервиса%"')
+    desc_service, name_passage_service = get_selected_readable_service(readable_services, selected_ono)
+    hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
+    if any([desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']]):
+        hidden_vars['на %указать новую полосу сервиса%'] = 'на %указать новую полосу сервиса%'
+        static_vars['указать сервис'] = name_passage_service
+        static_vars['указать название сервиса'] = desc_service
+        static_vars['указать новую полосу сервиса'] = value_vars.get('extend_speed')
+        if value_vars.get('extend_policer_cks_vk'):
+            static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+        if value_vars.get('extend_policer_vm'):
+            static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_vm')
+        value_vars.update({'name_passage_service': name_passage_service})
+        stroka = templates.get('Расширение полосы сервиса %указать название сервиса%')
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     else:
         stroka = templates.get('Изменение полосы сервиса "ШПД в Интернет"')
@@ -7972,6 +8047,9 @@ def extend_service(value_vars):
     if value_vars.get('kad') == None:
         kad = value_vars.get('selected_ono')[0][-2]
         value_vars.update({'kad': kad})
+        if value_vars.get('selected_ono')[0][-2].startswith('CSW'):
+            node_csw = value_vars.get('node_csw')
+            value_vars.update({'pps': node_csw})
     return result_services, result_services_ots, value_vars
 
 # def add_serv_with_install_csw(request):

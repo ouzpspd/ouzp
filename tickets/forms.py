@@ -225,6 +225,27 @@ class ShpdForm(forms.Form):
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
+class ExtendServiceForm(forms.Form):
+    type_police_cks_vk = [
+        ('полисером Subinterface', 'полисером Subinterface'),
+        ('портом подключения', 'портом подключения'),
+        ('не требуется', 'не требуется')]
+    type_police_vm = [
+        ('полисером на SVI', 'полисером на SVI'),
+        ('портом подключения', 'портом подключения'),
+        ('не требуется', 'не требуется')]
+    types = [
+        ('10 Мбит/с', '10 Мбит/с'),
+        ('100 Мбит/с', '100 Мбит/с'),
+        ('1 Гбит/с', '1 Гбит/с'),
+    ]
+    extend_speed = forms.CharField(label='Новая полоса',
+                               widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    extend_policer_cks_vk = forms.CharField(label='Ограничение', required=False, widget=forms.Select(choices=type_police_cks_vk, attrs={'class': 'form-control'}))
+    extend_policer_vm = forms.CharField(label='Ограничение', required=False,
+                                  widget=forms.Select(choices=type_police_vm, attrs={'class': 'form-control'}))
+
+
 class CksForm(forms.Form):
     pointA = forms.CharField(label='Точка A', widget=forms.TextInput(attrs={'class': 'form-control'}))
     pointB = forms.CharField(label='Точка B', widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -285,7 +306,7 @@ class ListContractIdForm(forms.Form):
 
 class ListJobsForm(forms.Form):
     types = [
-        ('Перенос, СПД', 'Перенос'),
+        ('Перенос, СПД', 'Перенос/расширение'),
         ('Организация/Изменение, СПД', 'Организация'),
         ('Изменение, не СПД', 'Сущ. порт'),
         ('Не требуется', 'Не требуется'),
@@ -315,7 +336,7 @@ class PassServForm(forms.Form):
         ('Перенос сервиса в новую точку', 'Перенос сервиса в новую точку'),
         ('Перенос точки подключения', 'Перенос точки подключения'),
         ('Перенос логического подключения', 'Перенос логического подключения'),
-        ('Перевод на гигабит', 'Перевод на гигабит'),
+        ('Перевод на гигабит', 'Расширение сервиса'),
     ]
     type_passage = forms.CharField(label='Варианты переноса',
                                 widget=forms.Select(choices=types_passage, attrs={'class': 'form-control'}))
