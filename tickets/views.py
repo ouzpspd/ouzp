@@ -7445,16 +7445,14 @@ def _passage_services(result_services, value_vars):
                 static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
             if value_vars.get('extend_policer_vm'):
                 static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_vm')
-            value_vars.update({'name_passage_service': name_passage_service})
             static_vars['указать сервис'] = name_passage_service
         hidden_vars['ОНИТС СПД подготовка к работам:'] = 'ОНИТС СПД подготовка к работам:'
         hidden_vars['- По заявке в Cordis подготовить настройки на оборудовании для расширения сервиса %указать сервис% [на %указать новую полосу сервиса%].'] = '- По заявке в Cordis подготовить настройки на оборудовании для расширения сервиса %указать сервис% [на %указать новую полосу сервиса%].'
 
         hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
+        hidden_vars['- Согласовать время проведение работ[, необходимость смены реквизитов].'] = '- Согласовать время проведение работ[, необходимость смены реквизитов].'
         hidden_vars['-- сопроводить работы %ОИПМ/ОИПД% по перенесу сервиса %указать сервис% в гигабитный порт %указать название коммутатора%.'] = '-- сопроводить работы %ОИПМ/ОИПД% по перенесу сервиса %указать сервис% в гигабитный порт %указать название коммутатора%.'
-
-
-
+        value_vars.update({'name_passage_service': name_passage_service})
         static_vars['указать название коммутатора'] = value_vars.get('kad')
         if value_vars.get('selected_ono')[0][-2].startswith('CSW') or value_vars.get('selected_ono')[0][-2].startswith('WDA'):
             pass
@@ -7977,7 +7975,13 @@ def passage_services_with_passage_csw(value_vars):
     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
              ОТС(заполненые шаблоны) для переноса КК"""
     result_services, value_vars = exist_enviroment_passage_csw(value_vars)
-    result_services_ots = None
+    value_vars.update({'result_services': result_services})
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
+    if value_vars.get('type_passage') == 'Перевод на гигабит' and value_vars.get('change_log') == 'Порт/КАД меняются':
+        result_services, result_services_ots, value_vars  = extend_service(value_vars)
     return result_services, result_services_ots, value_vars
 
 def passage_services(value_vars):
@@ -8028,9 +8032,12 @@ def extend_service(value_vars):
     static_vars = {}
     hidden_vars = {}
     desc_service, name_passage_service = get_selected_readable_service(readable_services, selected_ono)
-    hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
+    if value_vars.get('logic_change_gi_csw') == None:
+        hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
+        hidden_vars['- Согласовать время проведение работ[, необходимость смены реквизитов].'] = '- Согласовать время проведение работ[, необходимость смены реквизитов].'
     if any([desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']]):
         hidden_vars['на %указать новую полосу сервиса%'] = 'на %указать новую полосу сервиса%'
+        hidden_vars['- Ограничить скорость и настроить маркировку трафика для %указать сервис% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для %указать сервис% %полисером Subinterface/портом подключения%.'
         static_vars['указать сервис'] = name_passage_service
         static_vars['указать название сервиса'] = desc_service
         static_vars['указать новую полосу сервиса'] = value_vars.get('extend_speed')
@@ -8043,6 +8050,7 @@ def extend_service(value_vars):
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     else:
         stroka = templates.get('Изменение полосы сервиса "ШПД в Интернет"')
+        value_vars.update({'name_passage_service': name_passage_service})
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     if value_vars.get('kad') == None:
         kad = value_vars.get('selected_ono')[0][-2]
