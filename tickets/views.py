@@ -1523,7 +1523,12 @@ def get_need(value_vars):
         elif value_vars.get('type_passage') == 'Перенос точки подключения':
             need.append(
                 f"- перенести точку подключения на адрес {value_vars.get('address')};")
-        elif value_vars.get('type_passage') == 'Перенос логического подключения':
+        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
+                'change_log') == 'Порт и КАД не меняется':
+            need.append(
+                "- перенести трассу присоединения клиента;")
+        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
+                'change_log') == 'Порт/КАД меняются':
             need.append(
                 f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
         elif value_vars.get('type_passage') == 'Перевод на гигабит':
@@ -1585,7 +1590,6 @@ def data(request):
 
     spp_link = request.session['spplink']
 
-
     templates = ckb_parse(username, password)
     request.session['templates'] = templates
 
@@ -1624,6 +1628,8 @@ def data(request):
             result_services, result_services_ots, value_vars = passage_services_with_passage_csw(value_vars)
         elif value_vars.get('type_passage') == 'Перевод на гигабит' and value_vars.get('change_log') == 'Порт и КАД не меняется':
             result_services, result_services_ots, value_vars = extend_service(value_vars)
+        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется':
+            result_services, result_services_ots, value_vars = passage_track(value_vars)
         else:
             counter_line_services = value_vars.get('counter_line_services')
             if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перевод на гигабит':
@@ -6455,14 +6461,18 @@ def head(request):
     for key, item in node_templates.items():
         if node_mon.endswith(key):
             finish_node = item + node_mon[:node_mon.index(key)]
+            request.session['independent_pps'] = node_mon
     static_vars['указать узел связи'] = finish_node
+
     if uplink == [None]:
         static_vars['указать название коммутатора'] = selected_ono[0][-2]
+        request.session['independent_kad'] = selected_ono[0][-2]
         static_vars['указать порт'] = selected_ono[0][-1]
         index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
         stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
     else:
         static_vars['указать название коммутатора'] = uplink[-1].split()[0]
+        request.session['independent_kad'] = uplink[-1].split()[0]
         static_vars['указать порт'] = ' '.join(uplink[-1].split()[1:]) #uplink[-1].split()[1]
         print('!!!!!!uplink[-1].split()')
         print(' '.join(uplink[-1].split()[1:]))
@@ -6710,6 +6720,7 @@ def head(request):
         static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'c клиентом организован L2-стык.'
         hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
         counter_exist_line = 0
+        request.session['stick'] = True
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
 
     result_services = ''.join(result_services)
@@ -8004,6 +8015,9 @@ def passage_services(value_vars):
         result_services_ots = None
     return result_services, result_services_ots, value_vars
 
+
+
+
 def get_selected_readable_service(readable_services, selected_ono):
     for key, value in readable_services.items():
         if type(value) == str and selected_ono[0][-4] in value:
@@ -8059,6 +8073,29 @@ def extend_service(value_vars):
             node_csw = value_vars.get('node_csw')
             value_vars.update({'pps': node_csw})
     return result_services, result_services_ots, value_vars
+
+def passage_track(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
+    templates = value_vars.get('templates')
+    stroka = templates.get('Изменение трассы присоединения к СПД')
+    result_services.append(stroka)
+    if value_vars.get('kad') == None:
+        kad = value_vars.get('independent_kad')
+        value_vars.update({'kad': kad})
+        pps = value_vars.get('independent_pps')
+        value_vars.update({'pps': pps})
+        # if value_vars.get('selected_ono')[0][-2].startswith('CSW'):
+        #     node_csw = value_vars.get('independent_pps')
+        #     value_vars.update({'pps': node_csw})
+    return result_services, result_services_ots, value_vars
+
 
 # def add_serv_with_install_csw(request):
 #     if request.method == 'POST':
@@ -8405,6 +8442,9 @@ def _change_services(value_vars):
 
     print('!!!value_vars.get(kad) ')
     print(value_vars.get('kad'))
+    if value_vars.get('stick'):
+        pps = value_vars.get('independent_pps')
+        value_vars.update({'pps': pps})
     if value_vars.get('kad') == None:
         kad = value_vars.get('selected_ono')[0][-2]
         value_vars.update({'kad': kad})
