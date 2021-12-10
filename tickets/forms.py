@@ -322,6 +322,9 @@ class TemplatesStaticForm(forms.Form):
     static = forms.CharField(label='', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 
+class PassTurnoffForm(forms.Form):
+    ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
 class PassServForm(forms.Form):
 
     types_exist_sreda = [

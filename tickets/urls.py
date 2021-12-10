@@ -71,6 +71,7 @@ urlpatterns = [
     path('add_tr_exist_cl/<int:dID>/<int:tID>/<int:trID>/', add_tr_exist_cl, name='add_tr_exist_cl'),
     path('project_tr_exist_cl/', project_tr_exist_cl, name='project_tr_exist_cl'),
     path('pass_serv/', pass_serv, name='pass_serv'),
+    path('pass_turnoff/', pass_turnoff, name='pass_turnoff'),
     #path('exist_cl_data/', exist_cl_data, name='exist_cl_data'),
     #path('add_serv_with_install_csw/', add_serv_with_install_csw, name='add_serv_with_install_csw'),
     path('change_log_shpd/', change_log_shpd, name='change_log_shpd'),

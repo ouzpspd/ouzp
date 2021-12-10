@@ -5,7 +5,7 @@ from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm
 
 import logging
 from django.contrib import messages
@@ -1630,6 +1630,8 @@ def data(request):
             result_services, result_services_ots, value_vars = extend_service(value_vars)
         elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется':
             result_services, result_services_ots, value_vars = passage_track(value_vars)
+        elif value_vars.get('type_passage') == 'Перенос точки подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется' and value_vars.get('selected_ono')[0][-2].startswith('CSW'):
+            result_services, result_services_ots, value_vars = passage_csw_no_install(value_vars)
         else:
             counter_line_services = value_vars.get('counter_line_services')
             if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перевод на гигабит':
@@ -7100,6 +7102,7 @@ def params_extend_service(request):
             tag_service.pop(0)
             if len(tag_service) == 0:
                 tag_service.append({'data': None})
+            request.session['tag_service'] = tag_service
             return redirect(next(iter(tag_service[0])))
 
     else:
@@ -7149,6 +7152,9 @@ def pass_serv(request):
                             #extend_in_pass = [x for x in pass_without_csw_job_services if x.startswith(desc_service)]
                             tag_service.insert(0, {'params_extend_service': None})
                             return redirect(next(iter(tag_service[0])))
+                    elif type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения' and request.session.get('turnoff'):
+                        tag_service.insert(0, {'pass_turnoff': None})
+                        return redirect(next(iter(tag_service[0])))
 
                 else:
                     if type_passage == 'Перевод на гигабит':
@@ -7199,6 +7205,42 @@ def pass_serv(request):
 
         return render(request, 'tickets/pass_serv.html', context)
 
+def pass_turnoff(request):
+    if request.method == 'POST':
+        passturnoffform = PassTurnoffForm(request.POST)
+        if passturnoffform.is_valid():
+            ppr = passturnoffform.cleaned_data['ppr']
+            request.session['ppr'] = ppr
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            if len(tag_service) == 0:
+                tag_service.append({'data': None})
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+
+    else:
+        oattr = request.session['oattr']
+        pps = request.session['pps']
+        head = request.session['head']
+        spplink = request.session['spplink']
+        regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
+        match_link = re.search(regex_link, spplink)
+        dID = match_link.group(1)
+        tID = match_link.group(2)
+        trID = match_link.group(3)
+        passturnoffform = PassTurnoffForm()
+        context = {
+            'passturnoffform': passturnoffform,
+            'oattr': oattr,
+            'pps': pps,
+            'head': head,
+            'dID': dID,
+            'tID': tID,
+            'trID': trID
+
+        }
+
+        return render(request, 'tickets/pass_turnoff.html', context)
 
 def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
     """Данный метод принимает услуги(название + значение) и значение изменения адресации. Определяет услуги с DHCP.
@@ -8000,8 +8042,8 @@ def passage_services(value_vars):
      ОТС(заполненые шаблоны) для переноса услуг"""
     if (value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения') and value_vars.get('change_log') != 'Порт и КАД не меняется':
         result_services, value_vars = _new_enviroment(value_vars)
-    elif value_vars.get('Перенос логического подключения') and value_vars.get('change_log') == 'Порт и КАД не меняется':
-        pass
+    # elif value_vars.get('Перенос логического подключения') and value_vars.get('change_log') == 'Порт и КАД не меняется':
+    #     pass
     else:
         result_services, value_vars = _passage_enviroment(value_vars)
     print('!!!! in passage_services')
@@ -8096,6 +8138,44 @@ def passage_track(value_vars):
         #     value_vars.update({'pps': node_csw})
     return result_services, result_services_ots, value_vars
 
+def passage_csw_no_install(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
+    static_vars = {}
+    hidden_vars = {}
+    templates = value_vars.get('templates')
+    if value_vars.get('ppr'):
+        hidden_vars[
+            '- Требуется отключение согласно ППР %указать № ППР% согласовать проведение работ.'] = '- Требуется отключение согласно ППР %указать № ППР% согласовать проведение работ.'
+        hidden_vars[
+            '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %указать № ППР%.'] = '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %указать № ППР%.'
+        hidden_vars[
+            '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %указать № ППР%.'] = '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %указать № ППР%.'
+        static_vars['указать № ППР'] = value_vars.get('ppr')
+    static_vars['указать название клиентского коммутатора'] = value_vars.get('selected_ono')[0][-2]
+    if value_vars.get('exist_sreda') == '2' or value_vars.get('exist_sreda') == '4':
+        static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+        static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+    else:
+        static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+        static_vars['ОИПМ/ОИПД'] = 'ОИПД'
+    stroka = templates.get('Перенос клиентского коммутатора')
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    if value_vars.get('kad') == None:
+        kad = value_vars.get('independent_kad')
+        value_vars.update({'kad': kad})
+        pps = value_vars.get('independent_pps')
+        value_vars.update({'pps': pps})
+        # if value_vars.get('selected_ono')[0][-2].startswith('CSW'):
+        #     node_csw = value_vars.get('independent_pps')
+        #     value_vars.update({'pps': node_csw})
+    return result_services, result_services_ots, value_vars
 
 # def add_serv_with_install_csw(request):
 #     if request.method == 'POST':
