@@ -24,7 +24,7 @@
       <tr>
           <th class="table-secondary text-right" style="width: 25%">Отключение</th>
           {% if ticket_tr.turnoff %}
-          <td class="table-light" style="width: 75%; color: red">Требуется отключение</td>
+          <td class="table-light" style="width: 75%; color: red">{{ticket_tr.turnoff}}</td>
           {% else %}
             <td class="table-light" style="width: 75%">Нет</td>
           {% endif %}

@@ -62,15 +62,20 @@
         <tr>
             <th class="table-secondary text-right" style="width: 25%; color: red">{{key}}</th>
             <td class="table-light" style="width: 75%">
-                <ul>Требуется отключение</ul>
-                Файлы:<br />
+                {{value}}
+            </td>
+        </tr>
+        {% endif %}
+    {% elif 'Файлы' in key %}
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+            <td class="table-light" style="width: 75%">
                 {% for k, v in value.items %}
-                    <ul><a href="https://sss.corp.itmh.ru/dem_tr/{{v}}">{{k}}</a></ul>
+                <ul><a href="https://sss.corp.itmh.ru/dem_tr/{{v}}">{{k}}</a></ul>
                 {% endfor %}
 
             </td>
         </tr>
-        {% endif %}
     {% elif 'vID' in key %}
     {% elif 'ОТПМ' in key %}
     {% elif 'ОРТР' in key %}

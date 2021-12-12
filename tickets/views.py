@@ -4027,7 +4027,7 @@ def for_tr_view(login, password, dID, tID, trID): #login, password
                 except KeyError:
                     spp_params[i.find_all('td')[0].text] = 'Нет'
                 else:
-                    spp_params[i.find_all('td')[0].text] = 'Требуется отключение'
+                    spp_params[i.find_all('td')[0].text] = search[index+1].find('td').text.strip()
 
             elif 'Тип / кат' in i.find_all('td')[0].text:
                 file = {}
@@ -4095,8 +4095,8 @@ def for_tr_view(login, password, dID, tID, trID): #login, password
                     else:
                         spp_params['trArticle'] = option['value']
                 spp_params.setdefault('trArticle', 0)'''
-        if spp_params['Отключение'] == 'Требуется отключение':
-            spp_params['Отключение'] = file
+        if spp_params['Отключение']:
+            spp_params['Файлы'] = file
         search2 = soup.find_all('form')
         form_data = search2[1].find_all('input')
         for i in form_data:
@@ -7152,7 +7152,7 @@ def pass_serv(request):
                             #extend_in_pass = [x for x in pass_without_csw_job_services if x.startswith(desc_service)]
                             tag_service.insert(0, {'params_extend_service': None})
                             return redirect(next(iter(tag_service[0])))
-                    elif type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения' and request.session.get('turnoff'):
+                    elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and request.session.get('turnoff'):
                         tag_service.insert(0, {'pass_turnoff': None})
                         return redirect(next(iter(tag_service[0])))
 
