@@ -5556,7 +5556,7 @@ def analyzer_vars(stroka, static_vars, hidden_vars):
         if '\n\n\n' in stroka:
             stroka = stroka.replace('\n\n\n', '\n')
         elif '\n \n \n \n' in stroka:
-            stroka = stroka.replace('\n \n \n \n', '\n')
+            stroka = stroka.replace('\n \n \n \n', '\n\n')
 
     # блок для заполнения %%
     ckb_vars = {}
@@ -5578,15 +5578,11 @@ def analyzer_vars(stroka, static_vars, hidden_vars):
         print(key)
         stroka = stroka.replace('%{}%'.format(key), dynamic_vars[key])
         stroka = stroka.replace(' .', '.')
-    #for key in dynamic_vars.keys():
-    #    if dynamic_vars[key] == None:
-    #        stroka = stroka.replace('%{}%'.format(key), input('Указать свое значение "{}": '.format(key)))
-    #    else:
-    #        logic = sss.state('"{}": {}'.format(key, dynamic_vars[key]))
-    #        if logic == 'y':
-    #            stroka = stroka.replace('%{}%'.format(key), dynamic_vars[key])
-            #elif logic == 'n':
-            #    stroka = stroka.replace('%{}%'.format(key), input('Указать свое значение: '))
+
+    stroka = ''.join([stroka[i] for i in range(len(stroka)) if not (stroka[i] == ' ' and stroka[i + 1] == ' ')])
+    for i in [';', ',', ':', '.']:
+        stroka = stroka.replace(' ' + i, i)
+
     return stroka
 
 def pluralizer_vars(stroka, counter_plur):
@@ -6521,7 +6517,7 @@ def head(request):
     service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -',
                     '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
     service_shpd_bgp = ['BGP', 'bgp']
-    service_portvk = ['-vk', 'vk-', '- vk', 'vk -']
+    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
     service_hotspot = ['hotspot']
     service_itv = ['itv']
@@ -8126,8 +8122,25 @@ def passage_track(value_vars):
     else:
         result_services_ots = None
     templates = value_vars.get('templates')
+    static_vars = {}
+    hidden_vars = {}
+    if value_vars.get('ppr'):
+        hidden_vars['%ОИПМ/ОИПД% подготовка к работам.'] = '%ОИПМ/ОИПД% подготовка к работам.'
+        hidden_vars[
+            '- Требуется отключение согласно ППР %указать № ППР% согласовать проведение работ.'] = '- Требуется отключение согласно ППР %указать № ППР% согласовать проведение работ.'
+        hidden_vars[
+            '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %указать № ППР%.'] = '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %указать № ППР%.'
+        hidden_vars[
+            '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %указать № ППР%.'] = '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %указать № ППР%.'
+        static_vars['указать № ППР'] = value_vars.get('ppr')
+    if value_vars.get('exist_sreda') == '2' or value_vars.get('exist_sreda') == '4':
+        static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
+        static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+    else:
+        static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
+        static_vars['ОИПМ/ОИПД'] = 'ОИПД'
     stroka = templates.get('Изменение трассы присоединения к СПД')
-    result_services.append(stroka)
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     if value_vars.get('kad') == None:
         kad = value_vars.get('independent_kad')
         value_vars.update({'kad': kad})
