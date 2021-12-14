@@ -1568,7 +1568,7 @@ def get_need(value_vars):
                     need.append("- организовать дополнительную услугу порт ВМ;")
             else:
                 if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
-                    need.append("- измененить cхему организации ШПД;")
+                    need.append("- изменить cхему организации ШПД;")
                 elif next(iter(type_change_service.keys())) == "Замена connected на connected":
                     need.append("- заменить существующую connected подсеть на новую;")
                 elif next(iter(type_change_service.keys())) == "Замена connected на connected":
@@ -8465,7 +8465,7 @@ def _change_services(value_vars):
             static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
             static_vars['изменится/не изменится'] = 'не изменится'
-            if int(static_vars['указать нов. маску'][1:]) > int(static_vars['указать нов. маску'][1:]):
+            if int(static_vars['указать нов. маску'][1:]) > int(value_vars.get('selected_ono')[0][4][-2:]):
                 static_vars['большей/меньшей'] = 'меньшей'
             else:
                 static_vars['большей/меньшей'] = 'большей'
