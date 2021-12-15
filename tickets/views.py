@@ -4115,11 +4115,29 @@ def in_work_ortr(login, password):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        search_demand_num2 = soup.find_all('td', class_='demand_num2')
-        search_demand_cust = soup.find_all('td', class_='demand_cust')
-        search_demand_point = soup.find_all('td', class_='demand_point')
-        search_demand_tech = soup.find_all('td', class_='demand_tech')
+        num = 0
+        search = soup.find_all('tr')
+        for tr in search:
+            if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
+                continue
+            elif tr.find('td', id="cur_stat"):
+                num = int(tr.find('td', class_='demand_num').text)
+            elif not tr.find('td', id="cur_stat"):
+                break
+
+        search_demand_num2 = soup.find_all('td', class_='demand_num2')[num:]
+        search_demand_cust = soup.find_all('td', class_='demand_cust')[num:]
+        search_demand_point = soup.find_all('td', class_='demand_point')[num:]
+        search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
         search_demand_cur = soup.find_all('td', class_='demand_cur')
+
+
+        # soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        # search_demand_num2 = soup.find_all('td', class_='demand_num2')
+        # search_demand_cust = soup.find_all('td', class_='demand_cust')
+        # search_demand_point = soup.find_all('td', class_='demand_point')
+        # search_demand_tech = soup.find_all('td', class_='demand_tech')
+        # search_demand_cur = soup.find_all('td', class_='demand_cur')
         #search_demand_stat = soup.find_all('td', class_='demand_stat')
 
         for index in range(len(search_demand_num2)-1):
@@ -4129,6 +4147,7 @@ def in_work_ortr(login, password):
 
                 lines.append([search_demand_num2[index].text, search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):], search_demand_cust[index].text, search_demand_point[index].text,
                           search_demand_tech[index].text, search_demand_cur[index].text]) #search_demand_stat[index].text
+
         for index in range(len(lines)):
             if 'ПТО' in lines[index][0]:
                 lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]+' '+lines[index][0][lines[index][0].index('ПТО'):]
