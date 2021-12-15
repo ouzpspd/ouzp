@@ -3073,6 +3073,7 @@ def in_work_ortr(login, password):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        num = 0
         search = soup.find_all('tr')
         for tr in search:
             if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
