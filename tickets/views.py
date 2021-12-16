@@ -5598,7 +5598,9 @@ def analyzer_vars(stroka, static_vars, hidden_vars):
         stroka = stroka.replace('%{}%'.format(key), dynamic_vars[key])
         stroka = stroka.replace(' .', '.')
 
-    stroka = ''.join([stroka[i] for i in range(len(stroka)) if not (stroka[i] == ' ' and stroka[i + 1] == ' ')])
+    print("stroka")
+    print(stroka)
+    stroka = ''.join([stroka[i] for i in range(len(stroka)) if i != len(stroka)-1 and not (stroka[i] == ' ' and stroka[i + 1] == ' ')])
     for i in [';', ',', ':', '.']:
         stroka = stroka.replace(' ' + i, i)
 
