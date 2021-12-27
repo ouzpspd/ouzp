@@ -6114,7 +6114,7 @@ def _parsing_config_ports_client_device(id_client_device, login, password):
         inner_list = []
         for element_rows_td in element_rows_tr.find_all('td'):
             inner_list.append(element_rows_td.text)
-        if inner_list:
+        if inner_list and inner_list[0] != 'No records to display.':
             inner_list.pop(4)
             inner_list.pop(3)
             config_ports_client_device.append(inner_list)
