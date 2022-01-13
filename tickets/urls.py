@@ -43,7 +43,6 @@ urlpatterns = [
     path('<int:dID>/', spp_view, name='spp_view'),
     path('<int:dID>/<int:tID>/<int:trID>/', tr_view, name='tr_view'),
     path('itv', itv, name='itv'),
-    path('trtr', trtr, name='trtr'),
     #path('sppjson/', spp_json, name='spp-json-view'),
     #path('spinner/', tr_spin, name='tr_spin'),
     path('get_link_tr', get_link_tr, name='get_link_tr'),
