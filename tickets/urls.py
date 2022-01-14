@@ -4,12 +4,12 @@ from django.urls import path
 
 urlpatterns = [
     path('', private_page, name='private_page'),
-    path('index', index, name='index'),
+    #path('index', index, name='index'),
     path('commercial', commercial, name='commercial'),
     path('pto', pto, name='pto'),
     path('wait', wait, name='wait'),
     path('all_com_pto_wait', all_com_pto_wait, name='all_com_pto_wait'),
-    path('tr/<int:ticket_tr>-<int:ticket_id>/', get_tr, name='get_tr'),
+    #path('tr/<int:ticket_tr>-<int:ticket_id>/', get_tr, name='get_tr'),
     #path('cfg_ports', cfg_ports, name='cfg_ports'),
     #path('ports', ports, name='ports'),
     #path('datatr', datatr, name='datatr'),

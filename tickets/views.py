@@ -18,6 +18,14 @@ from django.http import Http404
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 
+import re
+from requests.auth import HTTPBasicAuth
+import requests
+from bs4 import BeautifulSoup
+from collections import OrderedDict
+import pymorphy2
+import datetime
+
 from .parsing import *
 from .parsing import _counter_line_services
 from .parsing import _parsing_vgws_by_node_name
@@ -86,21 +94,6 @@ def change_password(request):
     })
 
 
-def index(request):
-    """Данный метод нужно будет удалить"""
-    list_session_keys = []
-    for key in request.session.keys():
-        if key.startswith('_'):
-            pass
-        else:
-            list_session_keys.append(key)
-    for key in list_session_keys:
-        del request.session[key]
-    print(request.session.keys())
-
-    tr = SPP.objects.order_by('-created')
-    return render(request, 'tickets/index.html', {'tr': tr})
-
 @login_required(login_url='login/')
 def private_page(request):
     """Данный метод в Личном пространстве пользователя отображает все задачи этого пользователя"""
@@ -110,111 +103,104 @@ def private_page(request):
 
 
 
-def get_tr(request, ticket_tr, ticket_id):
-    """Данный метод можно будет удалить"""
-    services_one_tr = []
-    one_tr = TR.objects.get(ticket_tr=ticket_tr, id=ticket_id)
-    for item in one_tr.servicestr_set.all():
-        services_one_tr.append(item.service)
-    data_one_tr = one_tr.datatr_set.get()
-    ortr_one_tr = one_tr.ortrtr_set.first() #first вместо get, т.к. если записи нет, то будет исключение DoesNotExist
-    context = {
-        'one_tr': one_tr,
-        'services_one_tr': services_one_tr,
-        'data_one_tr': data_one_tr,
-        'ortr_one_tr': ortr_one_tr
-    }
-
-    return render(request, 'tickets/tr.html', context=context)
-
-
-import re
-from requests.auth import HTTPBasicAuth
-import requests
-from bs4 import BeautifulSoup
-from collections import OrderedDict
-import itertools
-import pymorphy2
-import datetime
+# def get_tr(request, ticket_tr, ticket_id):
+#     """Данный метод можно будет удалить"""
+#     services_one_tr = []
+#     one_tr = TR.objects.get(ticket_tr=ticket_tr, id=ticket_id)
+#     for item in one_tr.servicestr_set.all():
+#         services_one_tr.append(item.service)
+#     data_one_tr = one_tr.datatr_set.get()
+#     ortr_one_tr = one_tr.ortrtr_set.first() #first вместо get, т.к. если записи нет, то будет исключение DoesNotExist
+#     context = {
+#         'one_tr': one_tr,
+#         'services_one_tr': services_one_tr,
+#         'data_one_tr': data_one_tr,
+#         'ortr_one_tr': ortr_one_tr
+#     }
+#
+#     return render(request, 'tickets/tr.html', context=context)
 
 
-def stash(sw, model, login, password):
-    """Данный метод принимает в качестве параметров Название КАД и модель КАД. Обращается к stash.itmh.ru и парсит
-    конфиг коммутатора по названию. На основе модели КАД подставляет соответствующие regex для формирования данных по портам КАД"""
-    url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    if req.status_code == 404:
-        config_ports_device = {}
-    else:
-        switch = req.content.decode('utf-8')
-
-        if 'SNR' in model or 'Cisco' in model or 'Orion' in model:
-            port_list = []
-            regex_description = '\wnterface (\S+\/\S+)(.+?)!'
-            match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
-            # чтобы найти description блок интерфейса разделяется по \r\n, если не получается разделить, разделяется по \n
-            config_ports_device = {}
-            for i in match_description:
-                if 'description' in i.group(2):
-                    desc = i.group(2).split('\r\n')
-                    if len(desc) == 1:
-                        desc = i.group(2).split('\n')
-                        if 'description' in desc[1]:
-                            desc = i.group(2).split('\n')[1].split()[1]
-                        else:
-                            desc = i.group(2).split('\n')[2].split()[1]
-                    else:
-                        if 'description' in desc[1]:
-                            desc = i.group(2).split('\r\n')[1].split()[1]
-                        else:
-                            desc = i.group(2).split('\r\n')[2].split()[1]
-                else:
-                    desc = '-'
-
-                if 'switchport access vlan 4094' in i.group(2):
-                    vlan = 'Заглушка 4094'
-                else:
-                    vlan = '-'
-
-                config_ports_device[i.group(1)] = [desc, vlan]
 
 
-        elif 'D-Link' in model and model != 'D-Link DIR-100':
-            port_list = None
-            config_ports_device = {}
-            regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
-            match_description = re.finditer(regex_description, switch)
-            for i in match_description:
-                print('!!!!!i.group')
-                print(i.group(1))
-                print(i.group(2))
-                if '-' in i.group(1):
-                    start, stop = [int(j) for j in i.group(1).split('-')]
-                    for one_desc in list(range(start, stop + 1)):
-                        config_ports_device['Port {}'.format(one_desc)] = [i.group(2), '-']
-                else:
-                    config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
-            if '1100' in model:
-                regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
-            else:
-                regex_free = 'config vlan stub add untagged (\S+)'
-            match_free = re.search(regex_free, switch)
-            port_free = []
-            if match_free:
-                for i in match_free.group(1).split(','):
-                    if '-' in i:
-                        start, stop = [int(j) for j in i.split('-')]
-                        port_free += list(range(start, stop+1))
-                    else:
-                        port_free.append(int(i))
 
-                for i in port_free:
-                    if config_ports_device.get('Port {}'.format(i)):
-                        config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
-                    else:
-                        config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
-
-    return config_ports_device
+# def stash(sw, model, login, password):
+#     """Данный метод принимает в качестве параметров Название КАД и модель КАД. Обращается к stash.itmh.ru и парсит
+#     конфиг коммутатора по названию. На основе модели КАД подставляет соответствующие regex для формирования данных по портам КАД"""
+#     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
+#     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+#     if req.status_code == 404:
+#         config_ports_device = {}
+#     else:
+#         switch = req.content.decode('utf-8')
+#
+#         if 'SNR' in model or 'Cisco' in model or 'Orion' in model:
+#             port_list = []
+#             regex_description = '\wnterface (\S+\/\S+)(.+?)!'
+#             match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
+#             # чтобы найти description блок интерфейса разделяется по \r\n, если не получается разделить, разделяется по \n
+#             config_ports_device = {}
+#             for i in match_description:
+#                 if 'description' in i.group(2):
+#                     desc = i.group(2).split('\r\n')
+#                     if len(desc) == 1:
+#                         desc = i.group(2).split('\n')
+#                         if 'description' in desc[1]:
+#                             desc = i.group(2).split('\n')[1].split()[1]
+#                         else:
+#                             desc = i.group(2).split('\n')[2].split()[1]
+#                     else:
+#                         if 'description' in desc[1]:
+#                             desc = i.group(2).split('\r\n')[1].split()[1]
+#                         else:
+#                             desc = i.group(2).split('\r\n')[2].split()[1]
+#                 else:
+#                     desc = '-'
+#
+#                 if 'switchport access vlan 4094' in i.group(2):
+#                     vlan = 'Заглушка 4094'
+#                 else:
+#                     vlan = '-'
+#
+#                 config_ports_device[i.group(1)] = [desc, vlan]
+#
+#
+#         elif 'D-Link' in model and model != 'D-Link DIR-100':
+#             port_list = None
+#             config_ports_device = {}
+#             regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
+#             match_description = re.finditer(regex_description, switch)
+#             for i in match_description:
+#                 print('!!!!!i.group')
+#                 print(i.group(1))
+#                 print(i.group(2))
+#                 if '-' in i.group(1):
+#                     start, stop = [int(j) for j in i.group(1).split('-')]
+#                     for one_desc in list(range(start, stop + 1)):
+#                         config_ports_device['Port {}'.format(one_desc)] = [i.group(2), '-']
+#                 else:
+#                     config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
+#             if '1100' in model:
+#                 regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
+#             else:
+#                 regex_free = 'config vlan stub add untagged (\S+)'
+#             match_free = re.search(regex_free, switch)
+#             port_free = []
+#             if match_free:
+#                 for i in match_free.group(1).split(','):
+#                     if '-' in i:
+#                         start, stop = [int(j) for j in i.split('-')]
+#                         port_free += list(range(start, stop+1))
+#                     else:
+#                         port_free.append(int(i))
+#
+#                 for i in port_free:
+#                     if config_ports_device.get('Port {}'.format(i)):
+#                         config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
+#                     else:
+#                         config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
+#
+#     return config_ports_device
 
 
 
@@ -1485,9 +1471,10 @@ def data(request):
         print(value_vars.get('logic_change_csw'))
 
         if (value_vars.get('logic_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')) or (value_vars.get('logic_change_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')):
-            pass
+            print('popal v pass and org and logic csw')#pass
         elif value_vars.get('logic_csw'):
             counter_line_services = value_vars.get('counter_exist_line')
+            print('popal v logic csw')
             print(counter_line_services)
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
@@ -1535,6 +1522,10 @@ def data(request):
             result_services, result_services_ots, value_vars = client_new(value_vars)
         value_vars.update({'result_services': result_services})
         value_vars.update({'result_services_ots': result_services_ots})
+        if value_vars.get('type_passage') and value_vars.get('type_passage') == 'Перевод на гигабит':
+            result_services, result_services_ots, value_vars = extend_service(value_vars)
+            value_vars.update({'result_services': result_services})
+            value_vars.update({'result_services_ots': result_services_ots})
 
     if value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
         print('!!!!!!change')
@@ -3184,21 +3175,21 @@ def ortr(request):
         return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
 
 
-def primer_get_tr(request, ticket_tr, ticket_id):
-    services_one_tr = []
-    one_tr = TR.objects.get(ticket_tr=ticket_tr, id=ticket_id)
-    for item in one_tr.servicestr_set.all():
-        services_one_tr.append(item.service)
-    data_one_tr = one_tr.datatr_set.get()
-    ortr_one_tr = one_tr.ortrtr_set.first() #first вместо get, т.к. если записи нет, то будет исключение DoesNotExist
-    context = {
-        'one_tr': one_tr,
-        'services_one_tr': services_one_tr,
-        'data_one_tr': data_one_tr,
-        'ortr_one_tr': ortr_one_tr
-    }
-
-    return render(request, 'tickets/tr.html', context=context)
+# def primer_get_tr(request, ticket_tr, ticket_id):
+#     services_one_tr = []
+#     one_tr = TR.objects.get(ticket_tr=ticket_tr, id=ticket_id)
+#     for item in one_tr.servicestr_set.all():
+#         services_one_tr.append(item.service)
+#     data_one_tr = one_tr.datatr_set.get()
+#     ortr_one_tr = one_tr.ortrtr_set.first() #first вместо get, т.к. если записи нет, то будет исключение DoesNotExist
+#     context = {
+#         'one_tr': one_tr,
+#         'services_one_tr': services_one_tr,
+#         'data_one_tr': data_one_tr,
+#         'ortr_one_tr': ortr_one_tr
+#     }
+#
+#     return render(request, 'tickets/tr.html', context=context)
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -6632,14 +6623,16 @@ def change_log_shpd(request):
         subnet_for_change_log_shpd = request.session['subnet_for_change_log_shpd']
         changelogshpdform = ChangeLogShpdForm()
         if request.session.get('pass_without_csw_job_services'):
-            pass_without_csw_job_services = request.session.get('pass_without_csw_job_services')
+            services = request.session.get('pass_without_csw_job_services')
+        elif request.session.get('new_with_csw_job_services'):
+            services = request.session.get('new_with_csw_job_services')
         else:
-            pass_without_csw_job_services = None
+            services = None
         context = {
             'head': head,
             'kad': kad,
             'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
-            'pass_without_csw_job_services': pass_without_csw_job_services,
+            'pass_without_csw_job_services': services,
             'changelogshpdform': changelogshpdform
         }
 
@@ -7433,16 +7426,19 @@ def _passage_services_on_csw(result_services, value_vars):
             hidden_vars['- Согласовать время проведение работ[, необходимость смены реквизитов].'] = '- Согласовать время проведение работ[, необходимость смены реквизитов].'
             hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для переноса ^сервиса^ %указать название сервиса%.'] = '- Создать заявку в Cordis на ОНИТС СПД для переноса ^сервиса^ %указать название сервиса%.'
             hidden_vars['в новую точку подключения'] = 'в новую точку подключения'
-        if value_vars.get('logic_csw') and 'Перенос, СПД' not in value_vars.get('type_pass') or value_vars.get('type_passage') == 'Перенос точки подключения':
+        if value_vars.get('logic_csw') and 'Перенос, СПД' not in value_vars.get('type_pass') or value_vars.get('logic_csw') and value_vars.get('type_passage') == 'Перевод на гигабит' or value_vars.get('type_passage') == 'Перенос точки подключения':
             print('!!!!counter_exist_line')
             print(counter_exist_line)
             for i in range(counter_exist_line):
                 result_services.append(enviroment_csw(value_vars))
                 print('!!!!!result_services')
                 print(result_services)
-            hidden_vars[
-                    '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
-            static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
+                print('!!!value_vars.get(type_install_csw)')
+                print(value_vars.get('type_install_csw'))
+            if value_vars.get('type_install_csw') not in ['Медная линия и порт не меняются', 'ВОЛС и порт не меняются']:
+                hidden_vars[
+                        '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
+                static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
             services, service_shpd_change = _separate_services_and_subnet_dhcp(value_vars.get('readable_services'), value_vars.get('change_log_shpd'))
             if service_shpd_change:
@@ -7552,7 +7548,9 @@ def extra_services_with_install_csw(value_vars):
      ОТС(заполненые шаблоны) для организации новых услуг дополнительно к существующему подключению"""
     result_services, value_vars = exist_enviroment_install_csw(value_vars)
     result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
+    print('popal v extra_services_with_install_csw')
     result_services = _passage_services_on_csw(result_services, value_vars)
+    print(result_services)
     return result_services, result_services_ots, value_vars
 
 
