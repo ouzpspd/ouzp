@@ -66,7 +66,6 @@ urlpatterns = [
     path('forming_head/', forming_header, name='forming_header'),
     path('chain_head/', forming_chain_header, name='forming_chain_header'),
     path('head/', head, name='head'),
-    path('no_data/', no_data, name='no_data'),
     path('add_tr_exist_cl/<int:dID>/<int:tID>/<int:trID>/', add_tr_exist_cl, name='add_tr_exist_cl'),
     path('project_tr_exist_cl/', project_tr_exist_cl, name='project_tr_exist_cl'),
     path('pass_serv/', pass_serv, name='pass_serv'),

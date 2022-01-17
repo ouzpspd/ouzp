@@ -1480,3 +1480,8 @@ def enviroment(result_services, value_vars):
         return result_services
 
 
+def client_new(value_vars):
+    """Данный метод формирует готовое ТР для нового присоединения и новых услуг"""
+    result_services, value_vars = _new_enviroment(value_vars)
+    result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
+    return result_services, result_services_ots, value_vars

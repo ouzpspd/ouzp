@@ -5054,14 +5054,14 @@ def _titles(result_services, result_services_ots):
 
     return titles
 
-def client_new(value_vars):
-    """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
-     ОТС(заполненые шаблоны) для нового присоединения и новых услуг"""
-    result_services, value_vars = _new_enviroment(value_vars)
-    result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
-
-
-    return result_services, result_services_ots, value_vars
+# def client_new(value_vars):
+#     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
+#      ОТС(заполненые шаблоны) для нового присоединения и новых услуг"""
+#     result_services, value_vars = _new_enviroment(value_vars)
+#     result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
+#
+#
+#     return result_services, result_services_ots, value_vars
 
 
 # def analyzer_vars(stroka, static_vars, hidden_vars):
@@ -5861,9 +5861,7 @@ def forming_chain_header(request):
     else:
         return redirect('no_data')
 
-def no_data(request):
-    context = {}
-    return render(request, 'tickets/no_data.html', context)
+
 
 # def _parsing_vgws_by_node_name(login, password, **kwargs):
 #     """Данный метод получает на входе узел связи или название КАД и по нему парсит страницу с поиском тел. шлюзов"""
