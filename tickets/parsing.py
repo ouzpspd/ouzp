@@ -610,3 +610,171 @@ def _get_chain_data(login, password, device):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     chains = req.json()
     return chains
+
+
+def for_spp_view(login, password, dID):
+    """Данный метод принимает в качестве параметра ID заявки в СПП, парсит страницу с данной заявкой и возвращает
+    данные о заявке в СПП."""
+    spp_params = {}
+    sostav = []
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php?dID={}'.format(dID)
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('tr')
+        for i in search:
+            if 'Заказчик' in i.find_all('td')[0].text:
+                customer = ''.join(i.find_all('td')[1].text.split())
+                if 'Проектно-технологическийотдел' in customer or 'ОТПМ' in customer:
+                    spp_params['Тип заявки'] = 'ПТО'
+                else:
+                    spp_params['Тип заявки'] = 'Коммерческая'
+            elif 'Заявка К' in i.find_all('td')[0].text:
+                spp_params['Заявка К'] = ''.join(i.find_all('td')[1].text.split())
+            elif 'Менеджер клиента' in i.find_all('td')[0].text:
+                spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
+            elif 'Клиент' in i.find_all('td')[0].text:
+                spp_params['Клиент'] = i.find_all('td')[1].text.strip()
+            elif 'Разработка схем/карт' in i.find_all('td')[0].text:
+                spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
+            elif 'Технологи' in i.find_all('td')[0].text:
+                spp_params['Технолог'] = i.find_all('td')[1].text.strip()
+            elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
+                spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
+            elif 'ТР по упрощенной схеме' in i.find_all('td')[0].text:
+                spp_params['ТР по упрощенной схеме'] = i.find_all('td')[1].text
+            elif 'Перечень' in i.find_all('td')[0].text:
+                services = i.find_all('td')[1].text
+                services = services[::-1]
+                services = services[:services.index('еинасипО')]
+                services = services[::-1]
+                services = services.split('\n\n')
+                services.pop(0)
+                spp_params['Перечень требуемых услуг'] = services
+            elif 'Состав Заявки ТР' in i.find_all('td')[0].text:
+                for links in i.find_all('td')[1].find_all('a'):
+                    all_link = {}
+                    if 'trID' in links.get('href'):
+                        regex = 'tID=(\d+)&trID=(\d+)'
+                        match_href = re.search(regex, links.get('href'))
+                        total_link = [match_href.group(1), match_href.group(2)]
+                    else:
+                        total_link = None
+                    all_link[links.text] = total_link
+                    sostav.append(all_link)
+                spp_params['Состав Заявки ТР'] = sostav
+            elif 'Примечание' in i.find_all('td')[0].text:
+                spp_params['Примечание'] = i.find_all('td')[1].text.strip()
+        return spp_params
+    else:
+        spp_params['Access denied'] = 'Access denied'
+        return spp_params
+
+
+def for_tr_view(login, password, dID, tID, trID):
+    """Данный метод принимает в качестве параметров параметры ТР в СПП, парсит страницу с данным ТР в СПП и возвращает
+        данные о ТР."""
+    spp_params = {}
+    all_link = {}
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('tr')
+        for index, i in enumerate(search):
+            if 'Перечень' in i.find_all('td')[0].text:
+                total_services = []
+                leng_services = i.find_all('td')[1].find_all('tr')
+                for service_index in range(1, len(i.find_all('td')[1].find_all('tr'))-1):
+                    services = i.find_all('td')[1].find_all('tr')[service_index].find_all('td')
+                    var_list = []
+                    for k in services:
+                        var_list.append(k.text)
+                    service = ' '.join(var_list)
+                    service = service[:-1]
+                    total_services.append(service)
+                spp_params['Перечень требуемых услуг'] = total_services
+            elif 'Информация для' in i.find_all('td')[0].text:
+                spp_params['Информация для разработки ТР'] = i.find_all('td')[1].text
+            elif 'Узел подключения клиента' in i.find_all('td')[0].text:
+                node = re.search(r'\t(.+)\s+Статус', i.find_all('td')[1].text)
+                if 'Изменить' in i.find_all('td')[0].text:
+                    spp_params['Узел подключения клиента'] = node.group(1)
+                else:
+                    spp_params['Узел подключения клиента'] = url
+            elif 'Отключение' in i.find_all('td')[0].text and len(i.find_all('td')) > 1:
+                try:
+                    checked = i.find_all('td')[1].find('input')['checked']
+                except KeyError:
+                    spp_params[i.find_all('td')[0].text] = 'Нет'
+                else:
+                    spp_params[i.find_all('td')[0].text] = search[index+1].find('td').text.strip()
+            elif 'Тип / кат' in i.find_all('td')[0].text:
+                file = {}
+                files = i.find_all('td')[0].find_all('a')
+                for item in range(len(files)):
+                    if 'javascript' not in files[item].get('href'):
+                        file[files[item].text] = files[item].get('href')
+            elif 'Время на реализацию, дней' in i.find_all('td')[0].text:
+                spp_params['Решение ОТПМ'] = search[index+1].find('td').text.strip()
+            elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text:
+                for textarea in search[index + 1].find_all('textarea'):
+                    if textarea:
+                        if textarea['name'] == 'trOTO_Resolution':
+                            spp_params['Решение ОРТР'] = textarea.text
+                        elif textarea['name'] == 'trOTS_Resolution':
+                            spp_params['Решение ОТC'] = textarea.text
+        if spp_params['Отключение']:
+            spp_params['Файлы'] = file
+        search2 = soup.find_all('form')
+        form_data = search2[1].find_all('input')
+        for i in form_data:
+            if i.attrs['type'] == 'hidden':
+                if i['name'] == 'vID':
+                    spp_params[i['name']] = i['value']
+        return spp_params
+    else:
+        spp_params['Access denied'] = 'Access denied'
+        return spp_params
+
+
+def in_work_ortr(login, password):
+    """Данный метод парсит страницу с пулом ОРТР в СПП и отфильтровывает заявки с кураторами DIR 2.4.1"""
+    lines = []
+    url = 'https://sss.corp.itmh.ru/dem_tr/demands.php?tech_uID=0&trStatus=inWorkORTR&curator=any&vName=&dSearch=&bID=1&searchType=param'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        num = 0
+        search = soup.find_all('tr')
+        for tr in search:
+            if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
+                continue
+            elif tr.find('td', id="cur_stat"):
+                num = int(tr.find('td', class_='demand_num').text)
+            elif not tr.find('td', id="cur_stat"):
+                break
+
+        search_demand_num2 = soup.find_all('td', class_='demand_num2')[num:]
+        search_demand_cust = soup.find_all('td', class_='demand_cust')[num:]
+        search_demand_point = soup.find_all('td', class_='demand_point')[num:]
+        search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
+        search_demand_cur = soup.find_all('td', class_='demand_cur')
+        for index in range(len(search_demand_num2)-1):
+            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Гумеров Р.Т.']:
+                pass
+            else:
+
+                lines.append([search_demand_num2[index].text, search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):], search_demand_cust[index].text, search_demand_point[index].text,
+                          search_demand_tech[index].text, search_demand_cur[index].text])
+
+        for index in range(len(lines)):
+            if 'ПТО' in lines[index][0]:
+                lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]+' '+lines[index][0][lines[index][0].index('ПТО'):]
+            for symbol_index in range(1, len(lines[index][3])):
+                if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
+                    lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
+                    break
+    else:
+        lines.append('Access denied')
+    return lines

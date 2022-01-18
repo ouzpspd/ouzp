@@ -1480,6 +1480,24 @@ def enviroment(result_services, value_vars):
         return result_services
 
 
+def _titles(result_services, result_services_ots):
+    """Данный метод формирует список заголовков из шаблонов в блоках ОРТР и ОТС"""
+    index_template = 1
+    titles = []
+    for i in range(len(result_services)):
+        result_services[i] = '{}. '.format(index_template) + result_services[i]
+        titles.append(result_services[i][:result_services[i].index('---')])
+        index_template += 1
+    if result_services_ots == None:
+        pass
+    else:
+        for i in range(len(result_services_ots)):
+            result_services_ots[i] = '{}. '.format(index_template) + result_services_ots[i]
+            titles.append(result_services_ots[i][:result_services_ots[i].index('---')])
+            index_template += 1
+    return titles
+
+
 def get_need(value_vars):
     """Данный метод формирует текст для поля Требуется в готовом ТР"""
     need = ['Требуется:']

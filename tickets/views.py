@@ -26,6 +26,7 @@ from collections import OrderedDict
 import pymorphy2
 import datetime
 from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 
 from .parsing import *
 from .parsing import _counter_line_services
@@ -42,6 +43,7 @@ from .constructing_tr import _get_policer
 from .constructing_tr import _readable_node
 from .constructing_tr import _new_enviroment
 from .constructing_tr import _separate_services_and_subnet_dhcp
+from .constructing_tr import _titles
 
 logger = logging.getLogger(__name__)
 
@@ -2749,27 +2751,16 @@ def _get_uplink(chains, device, max_level):
         выше возможно максимального и впоследствии используется, чтобы однозначно определить вышестоящий узел"""
     if device.startswith('WDA'):
         device = _replace_wda_wds(device)
-        print('!!!dev')
-        print(device)
     elif device.startswith('WFA'):
         replace_wfa_wfs = device.split('-')
         replace_wfa_wfs[0] = replace_wfa_wfs[0].replace('WFA', 'WFS')
         replace_wfa_wfs.pop(1)
         device = '-'.join(replace_wfa_wfs)
-
     uplink = None
     for chain in chains:
-
-        #if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDS'):
-        #    if 'VGW' in chain.get('host_name'):
-        #        vgw_on_node.append(chain.get('host_name'))
-
         if device in chain.get('title'):
             temp_chains2 = chain.get('title').split('\nLink')
-
-            # print(temp_chains2)
             for i in temp_chains2:
-                # print(i)
                 if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
                     if f'-{device}' in i:  # для всех случаев подключения CSW, WDS, WFS
                         preuplink = i.split(f'-{device}')
@@ -2778,26 +2769,17 @@ def _get_uplink(chains, device, max_level):
                         uplink_host = match_uplink.group(1)
                         uplink_port = match_uplink.group(2)
                         if uplink_host == chain.get('host_name') and chain.get('level') < max_level:
-                            print('!!up')
-                            print(uplink_host)
-                            print(uplink_port)
                             max_level = chain.get('level')
-
                             if 'thernet' in uplink_port:
                                 uplink_port = uplink_port.replace('_', '/')
                             else:
                                 uplink_port = uplink_port.replace('_', ' ')
                             uplink = uplink_host + ' ' + uplink_port
-
                         else:
                             pass
                     elif device in i and 'WDA' in i:  # исключение только для случая, когда CSW подключен от WDA
                         link = i.split('-WDA')
                         uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
-                        print('!!!wdauplink')
-                        print(uplink)
-
-
     return uplink, max_level
 
 # @cache_check
@@ -2910,6 +2892,9 @@ def _get_uplink(chains, device, max_level):
 #     return counter_line_services, hotspot_points, services_plus_desc
 
 def _tag_service_for_new_serv(services_plus_desc):
+    """Данный метод принимает на входе список новых услуг и формирует последовательность url'ов услуг, по которым
+    необходимо пройти пользователю. Также определяет для услиги Хот-спот количество пользователей и принадлежность
+    к услуге премиум+"""
     tag_service = []
     hotspot_users = None
     premium_plus = None
@@ -2932,7 +2917,6 @@ def _tag_service_for_new_serv(services_plus_desc):
         elif 'HotSpot' in services_plus_desc[index_service]:
             types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
             if any(type in services_plus_desc[index_service].lower() for type in types_premium):
-            #if 'премиум +' in services_plus_desc[index_service].lower() or 'премиум+' in services_plus_desc[index_service].lower():
                 premium_plus = True
             else:
                 premium_plus = False
@@ -2947,7 +2931,6 @@ def _tag_service_for_new_serv(services_plus_desc):
             tag_service.append({'hotspot': services_plus_desc[index_service]})
         elif 'ЛВС' in services_plus_desc[index_service]:
             tag_service.append({'local': services_plus_desc[index_service]})
-
     return tag_service, hotspot_users, premium_plus
 
 
@@ -2987,7 +2970,6 @@ def ortr(request):
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
-
     else:
         list_search = []
         for i in search:
@@ -3006,7 +2988,6 @@ def ortr(request):
                 i.wait = False
                 i.save()
                 return_from_wait.append(i.ticket_k)
-
         list_search_rem = []
         for i in list_spp_proc:
             for index_j in range(len(list_search)):
@@ -3016,12 +2997,9 @@ def ortr(request):
             for index_j in range(len(list_search)):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
-
-        print(list_search_rem)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
         if return_from_wait:
             messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
-
         return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
 
 
@@ -3041,39 +3019,28 @@ def ortr(request):
 #
 #     return render(request, 'tickets/tr.html', context=context)
 
-from django.core.exceptions import ObjectDoesNotExist
+
 
 @cache_check
 def add_spp(request, dID):
-    '''должна принимать параметром номер заявки, парсить и добавлять в базу заявку. Сможет работать отдельно от заявок
-    в пуле ОРТР, просто вводим урл и номер заявки и она добавляется в бд. А кнопка взять в работу будет ссылкой на этот урл,
-    но тогда не получится добавлять в базу время, когда заявка попала в пул(надо подумать учитывать это или нет)
-    вызывает for_spp_view, for_tr_view'''
+    """Данный метод принимает параметр заявки СПП, проверяет наличие данных в БД с таким параметром. Если в БД есть
+     ТР с таким параметром, то помечает данную заявку как новую версию, если нет, то помечает как версию 1.
+     Получает данные с помощью метода for_spp_view и добавляет в БД. Перенаправляет на метод spp_view_save"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    print('add_spp get username')
-    print(username)
-    print(password)
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
         spp_params = for_spp_view(username, password, dID)
-        print('!!!!spp_params')
-        print(spp_params)
         if spp_params.get('Access denied') == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
             response['Location'] += '?next={}'.format(request.path)
             return response
         else:
-            #exist_dID = len(SPP.objects.filter(dID=dID))
-            #if exist_dID:
-            #    version = exist_dID + 1
-            #else:
             version = 1
-
             ticket_spp = SPP()
             ticket_spp.dID = dID
             ticket_spp.ticket_k = spp_params['Заявка К']
@@ -3087,13 +3054,10 @@ def add_spp(request, dID):
             ticket_spp.comment = spp_params['Примечание']
             ticket_spp.version = version
             ticket_spp.process = True
-
             user = User.objects.get(username=request.user.username)
             ticket_spp.user = user
             ticket_spp.save()
-            # request.session['ticket_spp_id'] = ticket_spp.id
             return redirect('spp_view_save', dID, ticket_spp.id)
-
     else:
         if current_spp.process == True:
             messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
@@ -3108,11 +3072,7 @@ def add_spp(request, dID):
                 return response
             else:
                 exist_dID = len(SPP.objects.filter(dID=dID))
-                #if exist_dID:
                 version = exist_dID + 1
-                #else:
-                #    version = 1
-
                 ticket_spp = SPP()
                 ticket_spp.dID = dID
                 ticket_spp.ticket_k = spp_params['Заявка К']
@@ -3126,7 +3086,6 @@ def add_spp(request, dID):
                 ticket_spp.comment = spp_params['Примечание']
                 ticket_spp.version = version
                 ticket_spp.process = True
-
                 user = User.objects.get(username=request.user.username)
                 ticket_spp.user = user
                 ticket_spp.save()
@@ -3134,6 +3093,7 @@ def add_spp(request, dID):
                 return redirect('spp_view_save', dID, ticket_spp.id)
 
 def remove_spp_process(request, ticket_spp_id):
+    """Данный метод удаляет заявку из обрабатываемых заявок"""
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.process = False
     current_ticket_spp.save()
@@ -3142,14 +3102,15 @@ def remove_spp_process(request, ticket_spp_id):
 
 
 def remove_spp_wait(request, ticket_spp_id):
+    """Данный метод удаляет заявку из заявок в ожидании"""
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.wait = False
-    #current_ticket_spp. = False
     current_ticket_spp.save()
     messages.success(request, 'Заявка {} возвращена из ожидания'.format(current_ticket_spp.ticket_k))
     return redirect('ortr')
 
 def add_spp_wait(request, ticket_spp_id):
+    """Данный метод добавляет заявку в заявки в ожидании"""
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.wait = True
     current_ticket_spp.was_waiting = True
@@ -3160,6 +3121,8 @@ def add_spp_wait(request, ticket_spp_id):
 
 
 def spp_view_save(request, dID, ticket_spp_id):
+    """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
+     получает из БД"""
     request.session['ticket_spp_id'] = ticket_spp_id
     request.session['dID'] = dID
     current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
@@ -3167,6 +3130,8 @@ def spp_view_save(request, dID, ticket_spp_id):
 
 @cache_check
 def spp_view(request, dID):
+    """Данный метод отображает html-страничку с данными заявки находящейся в пуле ОРТР. Данные о заявке получает
+    с помощью метода for_spp_view из СПП."""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -3180,63 +3145,61 @@ def spp_view(request, dID):
     else:
         return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
 
-def for_spp_view(login, password, dID):
-    spp_params = {}
-    sostav = []
-    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php?dID={}'.format(dID)
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    if req.status_code == 200:
-        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        search = soup.find_all('tr')
-        for i in search:
-            if 'Заказчик' in i.find_all('td')[0].text:
-                customer = ''.join(i.find_all('td')[1].text.split())
-                print('!!!!customer')
-                print(customer)
-                if 'Проектно-технологическийотдел' in customer or 'ОТПМ' in customer:
-                    spp_params['Тип заявки'] = 'ПТО'
-                else:
-                    spp_params['Тип заявки'] = 'Коммерческая'
-            elif 'Заявка К' in i.find_all('td')[0].text:
-                spp_params['Заявка К'] = ''.join(i.find_all('td')[1].text.split())
-            elif 'Менеджер клиента' in i.find_all('td')[0].text:
-                spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
-            elif 'Клиент' in i.find_all('td')[0].text:
-                spp_params['Клиент'] = i.find_all('td')[1].text.strip()
-            elif 'Разработка схем/карт' in i.find_all('td')[0].text:
-                spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
-            elif 'Технологи' in i.find_all('td')[0].text:
-                spp_params['Технолог'] = i.find_all('td')[1].text.strip()
-            elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
-                spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
-            elif 'ТР по упрощенной схеме' in i.find_all('td')[0].text:
-                spp_params['ТР по упрощенной схеме'] = i.find_all('td')[1].text
-            elif 'Перечень' in i.find_all('td')[0].text:
-                services = i.find_all('td')[1].text
-                services = services[::-1]
-                services = services[:services.index('еинасипО')]
-                services = services[::-1]
-                services = services.split('\n\n')
-                services.pop(0)
-                spp_params['Перечень требуемых услуг'] = services
-            elif 'Состав Заявки ТР' in i.find_all('td')[0].text:
-                for links in i.find_all('td')[1].find_all('a'):
-                    all_link = {}
-                    if 'trID' in links.get('href'):
-                        regex = 'tID=(\d+)&trID=(\d+)'
-                        match_href = re.search(regex, links.get('href'))
-                        total_link = [match_href.group(1), match_href.group(2)]
-                    else:
-                        total_link = None
-                    all_link[links.text] = total_link
-                    sostav.append(all_link)
-                spp_params['Состав Заявки ТР'] = sostav
-            elif 'Примечание' in i.find_all('td')[0].text:
-                spp_params['Примечание'] = i.find_all('td')[1].text.strip()
-        return spp_params
-    else:
-        spp_params['Access denied'] = 'Access denied'
-        return spp_params
+# def for_spp_view(login, password, dID):
+#     spp_params = {}
+#     sostav = []
+#     url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php?dID={}'.format(dID)
+#     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+#     if req.status_code == 200:
+#         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+#         search = soup.find_all('tr')
+#         for i in search:
+#             if 'Заказчик' in i.find_all('td')[0].text:
+#                 customer = ''.join(i.find_all('td')[1].text.split())
+#                 if 'Проектно-технологическийотдел' in customer or 'ОТПМ' in customer:
+#                     spp_params['Тип заявки'] = 'ПТО'
+#                 else:
+#                     spp_params['Тип заявки'] = 'Коммерческая'
+#             elif 'Заявка К' in i.find_all('td')[0].text:
+#                 spp_params['Заявка К'] = ''.join(i.find_all('td')[1].text.split())
+#             elif 'Менеджер клиента' in i.find_all('td')[0].text:
+#                 spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
+#             elif 'Клиент' in i.find_all('td')[0].text:
+#                 spp_params['Клиент'] = i.find_all('td')[1].text.strip()
+#             elif 'Разработка схем/карт' in i.find_all('td')[0].text:
+#                 spp_params['Менеджер'] = i.find_all('td')[1].text.strip()
+#             elif 'Технологи' in i.find_all('td')[0].text:
+#                 spp_params['Технолог'] = i.find_all('td')[1].text.strip()
+#             elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
+#                 spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
+#             elif 'ТР по упрощенной схеме' in i.find_all('td')[0].text:
+#                 spp_params['ТР по упрощенной схеме'] = i.find_all('td')[1].text
+#             elif 'Перечень' in i.find_all('td')[0].text:
+#                 services = i.find_all('td')[1].text
+#                 services = services[::-1]
+#                 services = services[:services.index('еинасипО')]
+#                 services = services[::-1]
+#                 services = services.split('\n\n')
+#                 services.pop(0)
+#                 spp_params['Перечень требуемых услуг'] = services
+#             elif 'Состав Заявки ТР' in i.find_all('td')[0].text:
+#                 for links in i.find_all('td')[1].find_all('a'):
+#                     all_link = {}
+#                     if 'trID' in links.get('href'):
+#                         regex = 'tID=(\d+)&trID=(\d+)'
+#                         match_href = re.search(regex, links.get('href'))
+#                         total_link = [match_href.group(1), match_href.group(2)]
+#                     else:
+#                         total_link = None
+#                     all_link[links.text] = total_link
+#                     sostav.append(all_link)
+#                 spp_params['Состав Заявки ТР'] = sostav
+#             elif 'Примечание' in i.find_all('td')[0].text:
+#                 spp_params['Примечание'] = i.find_all('td')[1].text.strip()
+#         return spp_params
+#     else:
+#         spp_params['Access denied'] = 'Access denied'
+#         return spp_params
 
 
 
@@ -3244,13 +3207,12 @@ def for_spp_view(login, password, dID):
 #@login_required(login_url='tickets/login/')
 @cache_check
 def add_tr(request, dID, tID, trID):
+    """Попробовать заменить часть кода на add_tr_to_db"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
     tr_params = for_tr_view(username, password, dID, tID, trID)
-    print('!!!!!tr_params')
-    print(tr_params)
     if tr_params.get('Access denied') == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -3265,7 +3227,6 @@ def add_tr(request, dID, tID, trID):
             ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
         else:
             ticket_tr = TR()
-
         ticket_tr.ticket_k = ticket_spp
         ticket_tr.ticket_tr = trID
         ticket_tr.pps = tr_params['Узел подключения клиента']
@@ -3273,15 +3234,9 @@ def add_tr(request, dID, tID, trID):
         ticket_tr.info_tr = tr_params['Информация для разработки ТР']
         ticket_tr.services = tr_params['Перечень требуемых услуг']
         ticket_tr.oattr = tr_params['Решение ОТПМ']
-        #ticket_tr.tr_OTO_Pay = tr_params['tr_OTO_Pay']
-        #ticket_tr.tr_OTS_Pay = tr_params['tr_OTS_Pay']
-        #ticket_tr.trOTMPType = tr_params['trOTMPType']
-        #ticket_tr.trArticle = tr_params['trArticle']
         ticket_tr.vID = tr_params['vID']
         ticket_tr.save()
         request.session['ticket_tr_id'] = ticket_tr.id
-        print(request.GET)
-
         return redirect('project_tr', dID, tID, trID)
 
 def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
@@ -3310,19 +3265,7 @@ def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
 
 
 def tr_view_save(request, dID, ticket_spp_id, trID):
-    #request.session['ticket_spp_id'] = ticket_spp_id
-    #request.session['dID'] = dID
-    #current_ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
-
-    #current_ticket_tr = TR.objects.get(ticket_tr=ticket_tr, ticket_k__id=ticket_spp_id)
-
-    #ticket_spp_id = request.session['ticket_spp_id']
-    #dID = request.session['dID']
     ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
-
-    # if ticket_spp.children.filter(ticket_tr=trID):
-
-
     #get_object_or_404 не используется т.к. 'RelatedManager' object has no attribute 'get_object_or_404'
     try:
         ticket_tr = ticket_spp.children.get(ticket_tr=trID)
@@ -3333,20 +3276,6 @@ def tr_view_save(request, dID, ticket_spp_id, trID):
         ortr = ticket_tr.ortrtr_set.all()[0]
     except IndexError:
         raise Http404("Блока ОРТР нет")
-
-    #request.session['ticket_tr_id'] = ticket_tr.id
-
-    # if ticket_tr.ortrtr_set.all():
-
-    #request.session['ortr_id'] = ortr.id
-
-    #counter_str_ortr = ortr.ortr.count('\n')
-    #if ortr.ots:
-    #    counter_str_ots = ortr.ots.count('\n')
-    #else:
-        #counter_str_ots = 1
-
-
     return render(request, 'tickets/tr_view_save.html', {'ticket_tr': ticket_tr, 'ortr': ortr})
 
 
@@ -3366,182 +3295,125 @@ def tr_view(request, dID, tID, trID):
         return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
 
 
-def for_tr_view(login, password, dID, tID, trID): #login, password
-    spp_params = {}
-    all_link = {}
-    url = 'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    if req.status_code == 200:
-        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        search = soup.find_all('tr')
-
-        for index, i in enumerate(search):
-            if 'Перечень' in i.find_all('td')[0].text:
-                total_services = []
-                leng_services = i.find_all('td')[1].find_all('tr')
-                for service_index in range(1, len(i.find_all('td')[1].find_all('tr'))-1):
-                    services = i.find_all('td')[1].find_all('tr')[service_index].find_all('td')
-                    var_list = []
-                    for k in services:
-                        var_list.append(k.text)
-                    service = ' '.join(var_list)
-                    service = service[:-1]
-                    total_services.append(service)
-
-                spp_params['Перечень требуемых услуг'] = total_services
-            elif 'Информация для' in i.find_all('td')[0].text:
-                spp_params['Информация для разработки ТР'] = i.find_all('td')[1].text
-            elif 'Узел подключения клиента' in i.find_all('td')[0].text:
-                #print('!!!!!УЗел')
-
-                node = re.search(r'\t(.+)\s+Статус', i.find_all('td')[1].text)
-
-                #print(node.group(1))
-                if 'Изменить' in i.find_all('td')[0].text:
-                    spp_params['Узел подключения клиента'] = node.group(1)
-                else:
-                    #node = i.find_all('td')[0].find('a').get('href')
-                    #match_node = re.search(r'(\d+), (\d+)', node)
-                    #node_href = match_node.groups()
-                    #spp_params['Узел подключения клиента'] = 'https://sss.corp.itmh.ru/building/address_begin.php?mode=selectAV&aID={}&parent={}'.format(*node_href)
-                    spp_params['Узел подключения клиента'] = url
-            elif 'Отключение' in i.find_all('td')[0].text and len(i.find_all('td')) > 1:
-                try:
-                    checked = i.find_all('td')[1].find('input')['checked']
-                except KeyError:
-                    spp_params[i.find_all('td')[0].text] = 'Нет'
-                else:
-                    spp_params[i.find_all('td')[0].text] = search[index+1].find('td').text.strip()
-
-            elif 'Тип / кат' in i.find_all('td')[0].text:
-                file = {}
-                files = i.find_all('td')[0].find_all('a')
-                print('!!!Отклю')
-                for item in range(len(files)):
-                    if 'javascript' not in files[item].get('href'):
-                        file[files[item].text] = files[item].get('href')
-                        print(files[item].get('href'))
-                        print(files[item].text)
-
-
-                #elif 'Состав Заявки ТР' in i.find_all('td')[0].text:
-                #for links in i.find_all('td')[1].find_all('a'):
-                #    if 'trID' in links.get('href'):
-                #        regex = 'tID=(\d+)&trID=(\d+)'
-                #        match_href = re.search(regex, links.get('href'))
-                #        total_link = [match_href.group(1), match_href.group(2)]
-                #    else:
-                #        total_link = None
-                #    all_link[links.text] = total_link
-                #spp_params['Состав Заявки ТР'] = all_link
-
-
-
-            elif 'Время на реализацию, дней' in i.find_all('td')[0].text:
-                spp_params['Решение ОТПМ'] = search[index+1].find('td').text.strip()
-
-            elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text:
-                for textarea in search[index + 1].find_all('textarea'):
-                    if textarea:
-                        if textarea['name'] == 'trOTO_Resolution':
-                            spp_params['Решение ОРТР'] = textarea.text
-                            print('!!!!!Решение ОРТР')
-                            print(textarea.text)
-                        elif textarea['name'] == 'trOTS_Resolution':
-                            spp_params['Решение ОТC'] = textarea.text
-                            print('!!!!!Решение ОТС')
-                            print(textarea.text)
+# def for_tr_view(login, password, dID, tID, trID):
+#     spp_params = {}
+#     all_link = {}
+#     url = 'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
+#     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+#     if req.status_code == 200:
+#         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+#         search = soup.find_all('tr')
+#
+#         for index, i in enumerate(search):
+#             if 'Перечень' in i.find_all('td')[0].text:
+#                 total_services = []
+#                 leng_services = i.find_all('td')[1].find_all('tr')
+#                 for service_index in range(1, len(i.find_all('td')[1].find_all('tr'))-1):
+#                     services = i.find_all('td')[1].find_all('tr')[service_index].find_all('td')
+#                     var_list = []
+#                     for k in services:
+#                         var_list.append(k.text)
+#                     service = ' '.join(var_list)
+#                     service = service[:-1]
+#                     total_services.append(service)
+#
+#                 spp_params['Перечень требуемых услуг'] = total_services
+#             elif 'Информация для' in i.find_all('td')[0].text:
+#                 spp_params['Информация для разработки ТР'] = i.find_all('td')[1].text
+#             elif 'Узел подключения клиента' in i.find_all('td')[0].text:
+#                 node = re.search(r'\t(.+)\s+Статус', i.find_all('td')[1].text)
+#                 if 'Изменить' in i.find_all('td')[0].text:
+#                     spp_params['Узел подключения клиента'] = node.group(1)
+#                 else:
+#                     spp_params['Узел подключения клиента'] = url
+#             elif 'Отключение' in i.find_all('td')[0].text and len(i.find_all('td')) > 1:
+#                 try:
+#                     checked = i.find_all('td')[1].find('input')['checked']
+#                 except KeyError:
+#                     spp_params[i.find_all('td')[0].text] = 'Нет'
+#                 else:
+#                     spp_params[i.find_all('td')[0].text] = search[index+1].find('td').text.strip()
+#             elif 'Тип / кат' in i.find_all('td')[0].text:
+#                 file = {}
+#                 files = i.find_all('td')[0].find_all('a')
+#                 print('!!!Отклю')
+#                 for item in range(len(files)):
+#                     if 'javascript' not in files[item].get('href'):
+#                         file[files[item].text] = files[item].get('href')
+#                         print(files[item].get('href'))
+#                         print(files[item].text)
+#             elif 'Время на реализацию, дней' in i.find_all('td')[0].text:
+#                 spp_params['Решение ОТПМ'] = search[index+1].find('td').text.strip()
+#             elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text:
+#                 for textarea in search[index + 1].find_all('textarea'):
+#                     if textarea:
+#                         if textarea['name'] == 'trOTO_Resolution':
+#                             spp_params['Решение ОРТР'] = textarea.text
+#                         elif textarea['name'] == 'trOTS_Resolution':
+#                             spp_params['Решение ОТC'] = textarea.text
+#         if spp_params['Отключение']:
+#             spp_params['Файлы'] = file
+#         search2 = soup.find_all('form')
+#         form_data = search2[1].find_all('input')
+#         for i in form_data:
+#             if i.attrs['type'] == 'hidden':
+#                 if i['name'] == 'vID':
+#                     spp_params[i['name']] = i['value']
+#         return spp_params
+#     else:
+#         spp_params['Access denied'] = 'Access denied'
+#         return spp_params
 
 
-
-                #spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ'].replace('\r\n', '<br />').replace('\n', '<br />')
-                #spp_params['Решение ОТПМ'] = spp_params['Решение ОТПМ']
-            '''elif 'Стоимость доп. Оборудования' in i.find_all('td')[0].text and i.find_all('td')[1].find('input'):
-                if i.find_all('td')[1].find('input')['name'] == 'tr_OTO_Pay':
-                    spp_params[i.find_all('td')[1].find('input')['name']] = i.find_all('td')[1].find('input')['value']
-                if i.find_all('td')[1].find('input')['name'] == 'tr_OTS_Pay':
-                    spp_params[i.find_all('td')[1].find('input')['name']] = i.find_all('td')[1].find('input')['value']
-            elif 'Тип ТР' in i.find_all('td')[0].text:
-                for option in i.find_all('td')[1].find('select').find_all('option'):
-                    try:
-                        selected_option = option['selected']
-                    except KeyError:
-                        selected_option = None
-                    else:
-                        spp_params['trOTMPType'] = option['value']
-                spp_params.setdefault('trOTMPType', 0)
-            elif 'Статья затрат' in i.find_all('td')[0].text:
-                for option in i.find_all('td')[1].find('select').find_all('option'):
-                    try:
-                        selected_option = option['selected']
-                    except KeyError:
-                        selected_option = None
-                    else:
-                        spp_params['trArticle'] = option['value']
-                spp_params.setdefault('trArticle', 0)'''
-        if spp_params['Отключение']:
-            spp_params['Файлы'] = file
-        search2 = soup.find_all('form')
-        form_data = search2[1].find_all('input')
-        for i in form_data:
-            if i.attrs['type'] == 'hidden':
-                if i['name'] == 'vID':
-                    spp_params[i['name']] = i['value']
-        return spp_params
-    else:
-        spp_params['Access denied'] = 'Access denied'
-        return spp_params
-
-
-def in_work_ortr(login, password):
-    lines = []
-    url = 'https://sss.corp.itmh.ru/dem_tr/demands.php?tech_uID=0&trStatus=inWorkORTR&curator=any&vName=&dSearch=&bID=1&searchType=param'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    if req.status_code == 200:
-        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        num = 0
-        search = soup.find_all('tr')
-        for tr in search:
-            if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
-                continue
-            elif tr.find('td', id="cur_stat"):
-                num = int(tr.find('td', class_='demand_num').text)
-            elif not tr.find('td', id="cur_stat"):
-                break
-
-        search_demand_num2 = soup.find_all('td', class_='demand_num2')[num:]
-        search_demand_cust = soup.find_all('td', class_='demand_cust')[num:]
-        search_demand_point = soup.find_all('td', class_='demand_point')[num:]
-        search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
-        search_demand_cur = soup.find_all('td', class_='demand_cur')
-
-
-        # soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        # search_demand_num2 = soup.find_all('td', class_='demand_num2')
-        # search_demand_cust = soup.find_all('td', class_='demand_cust')
-        # search_demand_point = soup.find_all('td', class_='demand_point')
-        # search_demand_tech = soup.find_all('td', class_='demand_tech')
-        # search_demand_cur = soup.find_all('td', class_='demand_cur')
-        #search_demand_stat = soup.find_all('td', class_='demand_stat')
-
-        for index in range(len(search_demand_num2)-1):
-            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Гумеров Р.Т.']:
-                pass
-            else:
-
-                lines.append([search_demand_num2[index].text, search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):], search_demand_cust[index].text, search_demand_point[index].text,
-                          search_demand_tech[index].text, search_demand_cur[index].text]) #search_demand_stat[index].text
-
-        for index in range(len(lines)):
-            if 'ПТО' in lines[index][0]:
-                lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]+' '+lines[index][0][lines[index][0].index('ПТО'):]
-            for symbol_index in range(1, len(lines[index][3])):
-                if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
-                    lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
-                    break
-    else:
-        lines.append('Access denied')
-    return lines
+# def in_work_ortr(login, password):
+#     lines = []
+#     url = 'https://sss.corp.itmh.ru/dem_tr/demands.php?tech_uID=0&trStatus=inWorkORTR&curator=any&vName=&dSearch=&bID=1&searchType=param'
+#     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+#     if req.status_code == 200:
+#         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+#         num = 0
+#         search = soup.find_all('tr')
+#         for tr in search:
+#             if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
+#                 continue
+#             elif tr.find('td', id="cur_stat"):
+#                 num = int(tr.find('td', class_='demand_num').text)
+#             elif not tr.find('td', id="cur_stat"):
+#                 break
+#
+#         search_demand_num2 = soup.find_all('td', class_='demand_num2')[num:]
+#         search_demand_cust = soup.find_all('td', class_='demand_cust')[num:]
+#         search_demand_point = soup.find_all('td', class_='demand_point')[num:]
+#         search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
+#         search_demand_cur = soup.find_all('td', class_='demand_cur')
+#
+#
+#         # soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+#         # search_demand_num2 = soup.find_all('td', class_='demand_num2')
+#         # search_demand_cust = soup.find_all('td', class_='demand_cust')
+#         # search_demand_point = soup.find_all('td', class_='demand_point')
+#         # search_demand_tech = soup.find_all('td', class_='demand_tech')
+#         # search_demand_cur = soup.find_all('td', class_='demand_cur')
+#         #search_demand_stat = soup.find_all('td', class_='demand_stat')
+#
+#         for index in range(len(search_demand_num2)-1):
+#             if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Гумеров Р.Т.']:
+#                 pass
+#             else:
+#
+#                 lines.append([search_demand_num2[index].text, search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):], search_demand_cust[index].text, search_demand_point[index].text,
+#                           search_demand_tech[index].text, search_demand_cur[index].text]) #search_demand_stat[index].text
+#
+#         for index in range(len(lines)):
+#             if 'ПТО' in lines[index][0]:
+#                 lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]+' '+lines[index][0][lines[index][0].index('ПТО'):]
+#             for symbol_index in range(1, len(lines[index][3])):
+#                 if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
+#                     lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
+#                     break
+#     else:
+#         lines.append('Access denied')
+#     return lines
 
 
 # def _new_services(result_services, value_vars):
@@ -4880,24 +4752,24 @@ def _list_kad(value_vars):
 
 
 
-def _titles(result_services, result_services_ots):
-    """Данный метод формирует список заголовков из шаблонов в блоках ОРТР и ОТС"""
-    index_template = 1
-    titles = []
-    for i in range(len(result_services)):
-        result_services[i] = '{}. '.format(index_template) + result_services[i]
-        titles.append(result_services[i][:result_services[i].index('---')])
-        index_template += 1
-
-    if result_services_ots == None:
-        pass
-    else:
-        for i in range(len(result_services_ots)):
-            result_services_ots[i] = '{}. '.format(index_template) + result_services_ots[i]
-            titles.append(result_services_ots[i][:result_services_ots[i].index('---')])
-            index_template += 1
-
-    return titles
+# def _titles(result_services, result_services_ots):
+#     """Данный метод формирует список заголовков из шаблонов в блоках ОРТР и ОТС"""
+#     index_template = 1
+#     titles = []
+#     for i in range(len(result_services)):
+#         result_services[i] = '{}. '.format(index_template) + result_services[i]
+#         titles.append(result_services[i][:result_services[i].index('---')])
+#         index_template += 1
+#
+#     if result_services_ots == None:
+#         pass
+#     else:
+#         for i in range(len(result_services_ots)):
+#             result_services_ots[i] = '{}. '.format(index_template) + result_services_ots[i]
+#             titles.append(result_services_ots[i][:result_services_ots[i].index('---')])
+#             index_template += 1
+#
+#     return titles
 
 # def client_new(value_vars):
 #     """Данный метод с помощью внутрених методов формирует блоки ОРТР(заголовки и заполненные шаблоны),
