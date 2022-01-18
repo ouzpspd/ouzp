@@ -25,6 +25,7 @@ from bs4 import BeautifulSoup
 from collections import OrderedDict
 import pymorphy2
 import datetime
+from django.core.cache import cache
 
 from .parsing import *
 from .parsing import _counter_line_services
@@ -33,6 +34,7 @@ from .parsing import _parsing_model_and_node_client_device_by_device_name
 from .parsing import _parsing_id_client_device_by_device_name
 from .parsing import _parsing_config_ports_client_device
 from .parsing import _parsing_config_ports_vgw
+from .parsing import _get_chain_data
 
 from .constructing_tr import *
 from .constructing_tr import _new_services
@@ -109,6 +111,177 @@ def private_page(request):
     return render(request, 'tickets/private_page.html', {'spp_success': spp_success})
 
 
+def login_for_service(request):
+    """Данный метод перенаправляет на страницу Авторизация в ИС Холдинга. Метод используется для получения данных от пользователя
+     для авторизации в ИС Холдинга. После получения данных, проверяет, что пароль не содержит русских символов и добавляет
+      логин с паролем в redis(задает время хранения в параметре timeout) и перенаправляет на страницу, с которой пришел запрос"""
+    if request.method == 'POST':
+        authform = AuthForServiceForm(request.POST)
+        if authform.is_valid():
+            username = authform.cleaned_data['username']
+            password = authform.cleaned_data['password']
+            if re.search(r'[а-яА-Я]', password):
+                messages.warning(request, 'Русская клавиатура')
+                return redirect('login_for_service')
+            else:
+
+                user = User.objects.get(username=request.user.username)
+                credent = dict()
+                credent.update({'username': username})
+                credent.update({'password': password})
+                cache.set(user, credent, timeout=3600)
+                #prim = request.META.get('HTTP_REFERER')
+                #print(prim)
+                #cache.set_many({'username': username, 'password': password}, timeout=60)
+                print(request.GET)
+                if 'next' in request.GET:
+                    return redirect(request.GET['next'])
+                return redirect('ortr')
+    else:
+        authform = AuthForServiceForm()
+
+    return render(request, 'tickets/login_is.html', {'form': authform})
+
+
+def cache_check(func):
+    """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
+     если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
+    def wrapper(request, *args, **kwargs):
+        print(request.path)
+        if not request.user.is_authenticated:
+            return redirect('login/?next=%s' % (request.path))#(request.GET['next']))
+        user = User.objects.get(username=request.user.username)
+        credent = cache.get(user)
+        print(request.GET)
+        #?next={}'.format(request.GET['next'])
+        if credent == None:
+            response = redirect('login_for_service')#, request.GET['next'])
+            print(response['Location'])
+            #response['Location'] += '?next={}'.format(request.GET['next'])
+            response['Location'] += '?next={}'.format(request.path)
+            return response
+            #return redirect('login_for_service?next={}'.format(request.GET['next']))
+        return func(request, *args, **kwargs)
+    return wrapper
+
+
+@cache_check
+def commercial(request):
+    """Данный метод перенаправляет на страницу Коммерческие заявки, которые находятся в работе ОРТР.
+    1. Получает данные от redis о логин/пароле
+    2. Получает данные о коммерческих заявках в пуле ОРТР с помощью метода in_work_ortr
+    3. Получает данные о коммерческих заявках которые уже находятся в БД(в работе/в ожидании)
+    4. Удаляет из списка в пуле заявки, которые есть в работе/в ожидании
+    5. Формирует итоговый список задач в пуле и в работе"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    search = in_work_ortr(username, password)
+    if search[0] == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        search[:] = [x for x in search if 'ПТО' not in x[0]]
+        list_search = []
+        for i in search:
+            if 'ПТО' not in i[0]:
+                list_search.append(i[0])
+        spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='Коммерческая')
+        list_spp_process = []
+        for i in spp_process:
+            list_spp_process.append(i.ticket_k)
+        list_search_rem = []
+        for i in list_spp_process:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        spp_process = SPP.objects.filter(process=True).filter(type_ticket='Коммерческая')
+        return render(request, 'tickets/ortr.html', {'search': search, 'com_search': True, 'spp_process': spp_process})
+
+@cache_check
+def pto(request):
+    """Данный метод перенаправляет на страницу ПТО заявки, которые находятся в работе ОРТР.
+        1. Получает данные от redis о логин/пароле
+        2. Получает данные о ПТО заявках в пуле ОРТР с помощью метода in_work_ortr
+        3. Получает данные о ПТО заявках которые уже находятся в БД(в работе/в ожидании)
+        4. Удаляет из списка в пуле заявки, которые есть в работе/в ожидании
+        5. Формирует итоговый список задач в пуле и в работе"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    search = in_work_ortr(username, password)
+    if search[0] == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        search[:] = [x for x in search if 'ПТО' in x[0]]
+        list_search = []
+        for i in search:
+            if 'ПТО' in i[0]:
+                list_search.append(i[0])
+        spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='ПТО')
+        list_spp_process = []
+        for i in spp_process:
+            list_spp_process.append(i.ticket_k)
+        list_search_rem = []
+        for i in list_spp_process:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        spp_process = SPP.objects.filter(process=True).filter(type_ticket='ПТО')
+        return render(request, 'tickets/ortr.html', {'search': search, 'pto_search': True, 'spp_process': spp_process})
+
+def wait(request):
+    """Данный метод перенаправляет на страницу заявки в ожидании.
+            1. Получает данные о всех заявках которые уже находятся в БД(в ожидании)
+            2. Формирует итоговый список задач в ожидании"""
+    spp_process = SPP.objects.filter(wait=True)
+    return render(request, 'tickets/ortr.html', {'wait_search': True, 'spp_process': spp_process})
+
+
+@cache_check
+def all_com_pto_wait(request):
+    """Данный метод перенаправляет на страницу Все заявки, которые находятся в пуле ОРТР/в работе/в ожидании.
+        1. Получает данные от redis о логин/пароле
+        2. Получает данные о всех заявках в пуле ОРТР с помощью метода in_work_ortr
+        3. Получает данные о всех заявках которые уже находятся в БД(в работе/в ожидании)
+        4. Удаляет из списка в пуле заявки, которые есть в работе/в ожидании
+        5. Формирует итоговый список всех заявок в пуле/в работе/в ожидании"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    search = in_work_ortr(username, password)
+    if search[0] == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        list_search = []
+        for i in search:
+            list_search.append(i[0])
+        spp_proc_wait_all = SPP.objects.filter(Q(process=True) | Q(wait=True))
+        list_spp_proc_wait_all = []
+        for i in spp_proc_wait_all:
+            list_spp_proc_wait_all.append(i.ticket_k)
+        list_search_rem = []
+        for i in list_spp_proc_wait_all:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        spp_process = SPP.objects.filter(process=True)
+        spp_wait = SPP.objects.filter(wait=True)
+        return render(request, 'tickets/ortr.html', {'all_search': True, 'search': search, 'spp_process': spp_process, 'spp_wait': spp_wait})
 
 # def get_tr(request, ticket_tr, ticket_id):
 #     """Данный метод можно будет удалить"""
@@ -211,38 +384,9 @@ def private_page(request):
 
 
 
-def login_for_service(request):
-    """Данный метод перенаправляет на страницу Авторизация в ИС Холдинга. Метод используется для получения данных от пользователя
-     для авторизации в ИС Холдинга. После получения данных, проверяет, что пароль не содержит русских символов и добавляет
-      логин с паролем в redis(задает время хранения в параметре timeout) и перенаправляет на страницу, с которой пришел запрос"""
-    if request.method == 'POST':
-        authform = AuthForServiceForm(request.POST)
-        if authform.is_valid():
-            username = authform.cleaned_data['username']
-            password = authform.cleaned_data['password']
-            if re.search(r'[а-яА-Я]', password):
-                messages.warning(request, 'Русская клавиатура')
-                return redirect('login_for_service')
-            else:
 
-                user = User.objects.get(username=request.user.username)
-                credent = dict()
-                credent.update({'username': username})
-                credent.update({'password': password})
-                cache.set(user, credent, timeout=3600)
-                #prim = request.META.get('HTTP_REFERER')
-                #print(prim)
-                #cache.set_many({'username': username, 'password': password}, timeout=60)
-                print(request.GET)
-                if 'next' in request.GET:
-                    return redirect(request.GET['next'])
-                return redirect('ortr')
-    else:
-        authform = AuthForServiceForm()
 
-    return render(request, 'tickets/login_is.html', {'form': authform})
 
-from django.core.cache import cache
 
 from django.contrib.auth.decorators import user_passes_test
 
@@ -251,170 +395,7 @@ from django.contrib.auth.decorators import user_passes_test
 
 from django.http import HttpResponseRedirect
 
-def cache_check(func):
-    """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
-     если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
-    def wrapper(request, *args, **kwargs):
-        print(request.path)
-        if not request.user.is_authenticated:
-            return redirect('login/?next=%s' % (request.path))#(request.GET['next']))
-        user = User.objects.get(username=request.user.username)
-        credent = cache.get(user)
-        print(request.GET)
-        #?next={}'.format(request.GET['next'])
-        if credent == None:
-            response = redirect('login_for_service')#, request.GET['next'])
-            print(response['Location'])
-            #response['Location'] += '?next={}'.format(request.GET['next'])
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-            #return redirect('login_for_service?next={}'.format(request.GET['next']))
-        return func(request, *args, **kwargs)
-    return wrapper
 
-
-@cache_check
-def commercial(request):
-    """Данный метод перенаправляет на страницу Коммерческие заявки, которые находятся в работе ОРТР.
-    1. Получает данные от redis о логин/пароле
-    2. Получает данные о коммерческих заявках в пуле ОРТР с помощью метода in_work_ortr
-    3. Получает данные о коммерческих заявках которые уже находятся в БД(в работе/в ожидании)
-    4. Удаляет из списка в пуле заявки, которые есть в работе/в ожидании
-    5. Формирует итоговый список задач в пуле и в работе"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-
-    search = in_work_ortr(username, password)
-    if search[0] == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-
-    else:
-        search[:] = [x for x in search if 'ПТО' not in x[0]]
-        list_search = []
-        for i in search:
-            print('!!!')
-            print(i[0])
-            if 'ПТО' not in i[0]:
-                list_search.append(i[0])
-        print(list_search)
-        spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='Коммерческая')
-        list_spp_process = []
-        for i in spp_process:
-            list_spp_process.append(i.ticket_k)
-        print(list_spp_process)
-        list_search_rem = []
-        for i in list_spp_process:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        print(list_search_rem)
-
-        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-        spp_process = SPP.objects.filter(process=True).filter(type_ticket='Коммерческая')
-        return render(request, 'tickets/ortr.html', {'search': search, 'com_search': True, 'spp_process': spp_process})
-
-@cache_check
-def pto(request):
-    """Данный метод перенаправляет на страницу ПТО заявки, которые находятся в работе ОРТР.
-        1. Получает данные от redis о логин/пароле
-        2. Получает данные о ПТО заявках в пуле ОРТР с помощью метода in_work_ortr
-        3. Получает данные о ПТО заявках которые уже находятся в БД(в работе/в ожидании)
-        4. Удаляет из списка в пуле заявки, которые есть в работе/в ожидании
-        5. Формирует итоговый список задач в пуле и в работе"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-
-    search = in_work_ortr(username, password)
-    if search[0] == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-
-    else:
-        search[:] = [x for x in search if 'ПТО' in x[0]]
-        list_search = []
-        for i in search:
-            if 'ПТО' in i[0]:
-                list_search.append(i[0])
-        # list_search = [i for i in set_search]
-        print(list_search)
-        spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='ПТО')
-        print(spp_process)
-        list_spp_process = []
-        for i in spp_process:
-            list_spp_process.append(i.ticket_k)
-        print(list_spp_process)
-        list_search_rem = []
-        for i in list_spp_process:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        print(list_search_rem)
-
-
-        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-        spp_process = SPP.objects.filter(process=True).filter(type_ticket='ПТО')
-        return render(request, 'tickets/ortr.html', {'search': search, 'pto_search': True, 'spp_process': spp_process})
-
-def wait(request):
-    """Данный метод перенаправляет на страницу заявки в ожидании.
-            1. Получает данные о всех заявках которые уже находятся в БД(в ожидании)
-            2. Формирует итоговый список задач в ожидании"""
-    spp_process = SPP.objects.filter(wait=True)
-    return render(request, 'tickets/ortr.html', {'wait_search': True, 'spp_process': spp_process})
-
-
-@cache_check
-def all_com_pto_wait(request):
-    """Данный метод перенаправляет на страницу Все заявки, которые находятся в пуле ОРТР/в работе/в ожидании.
-        1. Получает данные от redis о логин/пароле
-        2. Получает данные о всех заявках в пуле ОРТР с помощью метода in_work_ortr
-        3. Получает данные о всех заявках которые уже находятся в БД(в работе/в ожидании)
-        4. Удаляет из списка в пуле заявки, которые есть в работе/в ожидании
-        5. Формирует итоговый список всех заявок в пуле/в работе/в ожидании"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-
-    search = in_work_ortr(username, password)
-    if search[0] == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-
-    else:
-        list_search = []
-        for i in search:
-            list_search.append(i[0])
-        print(list_search)
-        spp_proc_wait_all = SPP.objects.filter(Q(process=True) | Q(wait=True))
-        list_spp_proc_wait_all = []
-        for i in spp_proc_wait_all:
-            list_spp_proc_wait_all.append(i.ticket_k)
-        print(list_spp_proc_wait_all)
-        list_search_rem = []
-        for i in list_spp_proc_wait_all:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        print(list_search_rem)
-
-        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-
-        spp_process = SPP.objects.filter(process=True)
-        spp_wait = SPP.objects.filter(wait=True)
-
-        return render(request, 'tickets/ortr.html', {'all_search': True, 'search': search, 'spp_process': spp_process, 'spp_wait': spp_wait})
 
 
 @cache_check
@@ -427,7 +408,6 @@ def get_link_tr(request):
     if request.method == 'POST':
         linkform = LinkForm(request.POST)
         if linkform.is_valid():
-            print(linkform.cleaned_data)
             spplink = linkform.cleaned_data['spplink']
             manlink = spplink
             regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
@@ -436,9 +416,7 @@ def get_link_tr(request):
                 dID = match_link.group(1)
                 tID = match_link.group(2)
                 trID = match_link.group(3)
-
                 request.session['manlink'] = manlink
-                print(request.session.items())
                 return redirect('project_tr', dID, tID, trID)
             else:
                 messages.warning(request, 'Неверная ссылка')
@@ -452,13 +430,14 @@ def get_link_tr(request):
                 list_session_keys.append(key)
         for key in list_session_keys:
             del request.session[key]
-
         linkform = LinkForm()
-
     return render(request, 'tickets/inputtr.html', {'linkform': linkform})
 
 
 def project_tr(request, dID, tID, trID):
+    """Данный метод на входе получает параметры ссылки ТР в СПП, с помощью метода parse_tr получает данные из ТР в СПП,
+    формирует последовательность url'ов по которым необходимо пройти для получения данных от пользователя и
+    перенаправляет на первый из них"""
     spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
@@ -502,15 +481,11 @@ def project_tr(request, dID, tID, trID):
         request.session['tID'] = tID
         request.session['dID'] = dID
         request.session['trID'] = trID
-
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
         tag_service.insert(0, {'sppdata': None})
-
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
         request.session['premium_plus'] = premium_plus
-
-
         if counter_line_services == 0:
             tag_service.append({'data': None})
         else:
@@ -520,17 +495,15 @@ def project_tr(request, dID, tID, trID):
                 tag_service.append({'vols': None})
             elif sreda == '3':
                 tag_service.append({'wireless': None})
-
         type_tr = 'new_cl'
         request.session['type_tr'] = type_tr
         request.session['tag_service'] = tag_service
-        print('!!!!!tagsevice')
-        print(tag_service)
         return redirect(next(iter(tag_service[0])))
 
 
 
 def sppdata(request):
+    """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
     services_plus_desc = request.session['services_plus_desc']
     client = request.session['client']
     manager = request.session['manager']
@@ -558,13 +531,13 @@ def sppdata(request):
 
 @cache_check
 def copper(request):
+    """Данный метод отображает html-страничку с параметрами для медной линии связи"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
     if request.method == 'POST':
         copperform = CopperForm(request.POST)
-
         if copperform.is_valid():
             print(copperform.cleaned_data)
             correct_sreda = copperform.cleaned_data['correct_sreda']
@@ -578,7 +551,6 @@ def copper(request):
                 logic_change_csw = copperform.cleaned_data['logic_change_csw']
                 port = copperform.cleaned_data['port']
                 kad = copperform.cleaned_data['kad']
-
                 tag_service = request.session['tag_service']
                 request.session['logic_csw'] = logic_csw
                 request.session['logic_replace_csw'] = logic_replace_csw
@@ -587,7 +559,6 @@ def copper(request):
                 request.session['port'] = port
                 request.session['kad'] = kad
                 type_tr = request.session['type_tr']
-
                 try:
                     type_pass = request.session['type_pass']
                 except KeyError:
@@ -597,7 +568,6 @@ def copper(request):
                     if 'Перенос, СПД' in type_pass:
                         type_passage = request.session['type_passage']
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
-
                             selected_service = selected_ono[0][-3]
                             service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
@@ -606,12 +576,9 @@ def copper(request):
                         else:
                             readable_services = request.session['readable_services']
                             _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            print('!!!!!service_shpd_change')
-                            print(service_shpd_change)
                             if service_shpd_change:
                                 request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
                                 tag_service.append({'change_log_shpd': None})
-
                     elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
                         readable_services = request.session['readable_services']
                         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
@@ -619,27 +586,12 @@ def copper(request):
                         request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
                         tag_service.append({'change_log_shpd': None})
 
-                print('!!!!tag_service in vols after add change_log_shpd')
-                print(tag_service)
                 if logic_csw == True:
-                    # try:
-                    #     request.session['type_pass']
-                    #     #request.session['new_with_csw_job_services']
-                    # except KeyError:
-                    #     #return redirect('csw')
                     tag_service.append({'csw': None})
                     return redirect(next(iter(tag_service[0])))
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
-                    # old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username, password)
-                    # request.session['old_model_csw'] = old_model_csw
-                    # request.session['node_csw'] = node_csw
                     tag_service.append({'csw': None})
-                    print('!!!!!logic_replace_csw in copper')
                     return redirect(next(iter(tag_service[0])))
-                    # else:
-                    #
-                    #     tag_service.append({'add_serv_with_install_csw': None})
-                    #     return redirect(next(iter(tag_service[0])))
                 elif logic_change_csw == True and logic_change_gi_csw == True or logic_change_csw == True:
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
@@ -651,59 +603,8 @@ def copper(request):
                         tag_service.append({'csw': None})
                         return redirect(next(iter(tag_service[0])))
                 else:
-                    #return redirect('data')
                     tag_service.append({'data': None})
                     return redirect(next(iter(tag_service[0])))
-
-                # try:
-                #     type_pass = request.session['type_pass']
-                # except KeyError:
-                #     pass
-                # else:
-                #     if 'Перенос, СПД' in type_pass:
-                #         type_passage = request.session['type_passage']
-                #         if type_passage == 'Перенос сервиса в новую точку':
-                #             selected_ono = request.session['selected_ono']
-                #             selected_service = selected_ono[0][-3]
-                #             service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '62 -', '92 -', '107 -', '109 -']
-                #             if any(serv in selected_service for serv in service_shpd):
-                #                 tag_service.append({'change_log_shpd': None})
-                #         elif type_passage == 'Перенос логического подключения':
-                #             pass
-                #         else:
-                #             readable_services = request.session['readable_services']
-                #             if '"ШПД в интернет"' in readable_services.keys():
-                #                 tag_service.append({'change_log_shpd': None})
-                #     elif 'Организация/Изменение, СПД' in type_pass and logic_csw == True:
-                #         readable_services = request.session['readable_services']
-                #         if '"ШПД в интернет"' in readable_services.keys():
-                #             tag_service.append({'change_log_shpd': None})
-                #
-                #
-                # if logic_csw == True:
-                #     try:
-                #         request.session['type_pass']
-                #         #request.session['new_with_csw_job_services']
-                #     except KeyError:
-                #         #return redirect('csw')
-                #         tag_service.append({'csw': None})
-                #         return redirect(next(iter(tag_service[0])))
-                #     else:
-                #
-                #         tag_service.append({'add_serv_with_install_csw': None})
-                #         return redirect(next(iter(tag_service[0])))
-                # elif logic_change_csw == True or logic_change_gi_csw == True:
-                #     if type_pass:
-                #         tag_service.append({'csw': None})
-                #         return redirect(next(iter(tag_service[0])))
-                # else:
-                #     #return redirect('data')
-                #     tag_service.append({'data': None})
-                #     return redirect(next(iter(tag_service[0])))
-
-
-
-
             else:
                 if correct_sreda == '3':
                     tag_service.insert(0, {'wireless': None})
@@ -711,30 +612,19 @@ def copper(request):
                     tag_service.insert(0, {'vols': None})
                 request.session['sreda'] = correct_sreda
                 return redirect(next(iter(tag_service[0])))
-
-
-
-
     else:
         user = User.objects.get(username=request.user.username)
         credent = cache.get(user)
         username = credent['username']
         password = credent['password']
         pps = request.session['pps']
-        print('!!!!!pps in copper')
-        print(pps)
         services_plus_desc = request.session['services_plus_desc']
-        #turnoff = request.session['turnoff']
         sreda = request.session['sreda']
-        #tochka = request.session['tochka']
         oattr = request.session['oattr']
-        #counter_line_services = request.session['counter_line_services']
-        #spp_link = request.session['spplink']
         try:
             type_pass = request.session['type_pass']
         except KeyError:
             type_pass = None
-
 
         list_switches = parsingByNodename(pps, username, password)
         if list_switches[0] == 'Access denied':
@@ -765,15 +655,11 @@ def copper(request):
                                 list_switches[i][10][port].append(from_dev)
                     list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
             switch_name.append(list_switches[i][0])
-        print(('!!!!switch_name'))
-        print(switch_name)
         if len(switch_name) == 1:
             switches_name = switch_name[0]
         else:
             switches_name = ' или '.join(switch_name)
-
         request.session['list_switches'] = list_switches
-
         copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
 
         context = {
@@ -782,9 +668,9 @@ def copper(request):
             'list_switches': list_switches,
             'sreda': sreda,
             'copperform': copperform
-
         }
         return render(request, 'tickets/env.html', context)
+
 
 @cache_check
 def vols(request):
@@ -1283,6 +1169,7 @@ def wireless(request):
 
 @cache_check
 def vgws(request):
+    """Данный метод отображает html-страничку со списком тел. шлюзов"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -1377,98 +1264,93 @@ def csw(request):
         return render(request, 'tickets/csw.html', context)
 
 
-def get_need(value_vars):
-    need = ['Требуется:']
-    if value_vars.get('pass_without_csw_job_services'):
-        if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
-            need.append(
-                f"- перенести сервис {value_vars.get('name_passage_service')} в новую точку подключения {value_vars.get('address')};")
-        elif value_vars.get('type_passage') == 'Перенос точки подключения':
-            need.append(
-                f"- перенести точку подключения на адрес {value_vars.get('address')};")
-        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
-                'change_log') == 'Порт и КАД не меняется':
-            need.append(
-                "- перенести трассу присоединения клиента;")
-        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
-                'change_log') == 'Порт/КАД меняются':
-            need.append(
-                f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
-        elif value_vars.get('type_passage') == 'Перевод на гигабит':
-            need.append(
-                f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
-    if value_vars.get('new_with_csw_job_services'):
-
-        if len(value_vars.get('name_new_service')) > 1:
-            need.append(f"- организовать дополнительные услуги {', '.join(value_vars.get('name_new_service'))};")
-        else:
-            print("!!!!!value_vars.get('name_new_service')")
-            print(value_vars.get('name_new_service'))
-            need.append(f"- организовать дополнительную услугу {''.join(value_vars.get('name_new_service'))};")
-    if value_vars.get('change_job_services'):
-        types_trunk = [
-            "Организация ШПД trunk'ом",
-            "Организация ШПД trunk'ом с простоем",
-            "Организация ЦКС trunk'ом",
-            "Организация ЦКС trunk'ом с простоем",
-            "Организация порта ВЛС trunk'ом",
-            "Организация порта ВЛС trunk'ом с простоем",
-            "Организация порта ВМ trunk'ом",
-            "Организация порта ВМ trunk'ом с простоем"
-        ]
-
-        for type_change_service in value_vars.get('types_change_service'):
-            print('!!!type_change_service')
-            print(type_change_service)
-            if next(iter(type_change_service.keys())) in types_trunk:
-                if 'ШПД' in next(iter(type_change_service.keys())):
-                    need.append("- организовать дополнительную услугу ШПД в Интернет;")
-                elif 'ЦКС' in next(iter(type_change_service.keys())):
-                    need.append("- организовать дополнительную услугу ЦКС;")
-                elif 'ВЛС' in next(iter(type_change_service.keys())):
-                    need.append("- организовать дополнительную услугу порт ВЛС;")
-                elif 'ВМ' in next(iter(type_change_service.keys())):
-                    need.append("- организовать дополнительную услугу порт ВМ;")
-            else:
-                if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
-                    need.append("- изменить cхему организации ШПД;")
-                elif next(iter(type_change_service.keys())) == "Замена connected на connected":
-                    need.append("- заменить существующую connected подсеть на новую;")
-                elif next(iter(type_change_service.keys())) == "Замена connected на connected":
-                    need.append("- заменить существующую connected подсеть на новую;")
-                elif next(iter(type_change_service.keys())) == "Организация доп connected":
-                    need.append("- организовать дополнительную connected подсеть;")
-                elif next(iter(type_change_service.keys())) == "Организация доп connected":
-                    need.append("- организовать дополнительную маршрутизируемую подсеть;")
-                elif next(iter(type_change_service.keys())) == "Организация доп IPv6":
-                    need.append("- организовать дополнительную IPv6 подсеть;")
-    return '\n'.join(need)[:-1]+'.'
+# def get_need(value_vars):
+#     need = ['Требуется:']
+#     if value_vars.get('pass_without_csw_job_services'):
+#         if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+#             need.append(
+#                 f"- перенести сервис {value_vars.get('name_passage_service')} в новую точку подключения {value_vars.get('address')};")
+#         elif value_vars.get('type_passage') == 'Перенос точки подключения':
+#             need.append(
+#                 f"- перенести точку подключения на адрес {value_vars.get('address')};")
+#         elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
+#                 'change_log') == 'Порт и КАД не меняется':
+#             need.append(
+#                 "- перенести трассу присоединения клиента;")
+#         elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
+#                 'change_log') == 'Порт/КАД меняются':
+#             need.append(
+#                 f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
+#         elif value_vars.get('type_passage') == 'Перевод на гигабит':
+#             need.append(
+#                 f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
+#     if value_vars.get('new_with_csw_job_services'):
+#
+#         if len(value_vars.get('name_new_service')) > 1:
+#             need.append(f"- организовать дополнительные услуги {', '.join(value_vars.get('name_new_service'))};")
+#         else:
+#             print("!!!!!value_vars.get('name_new_service')")
+#             print(value_vars.get('name_new_service'))
+#             need.append(f"- организовать дополнительную услугу {''.join(value_vars.get('name_new_service'))};")
+#     if value_vars.get('change_job_services'):
+#         types_trunk = [
+#             "Организация ШПД trunk'ом",
+#             "Организация ШПД trunk'ом с простоем",
+#             "Организация ЦКС trunk'ом",
+#             "Организация ЦКС trunk'ом с простоем",
+#             "Организация порта ВЛС trunk'ом",
+#             "Организация порта ВЛС trunk'ом с простоем",
+#             "Организация порта ВМ trunk'ом",
+#             "Организация порта ВМ trunk'ом с простоем"
+#         ]
+#
+#         for type_change_service in value_vars.get('types_change_service'):
+#             print('!!!type_change_service')
+#             print(type_change_service)
+#             if next(iter(type_change_service.keys())) in types_trunk:
+#                 if 'ШПД' in next(iter(type_change_service.keys())):
+#                     need.append("- организовать дополнительную услугу ШПД в Интернет;")
+#                 elif 'ЦКС' in next(iter(type_change_service.keys())):
+#                     need.append("- организовать дополнительную услугу ЦКС;")
+#                 elif 'ВЛС' in next(iter(type_change_service.keys())):
+#                     need.append("- организовать дополнительную услугу порт ВЛС;")
+#                 elif 'ВМ' in next(iter(type_change_service.keys())):
+#                     need.append("- организовать дополнительную услугу порт ВМ;")
+#             else:
+#                 if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
+#                     need.append("- изменить cхему организации ШПД;")
+#                 elif next(iter(type_change_service.keys())) == "Замена connected на connected":
+#                     need.append("- заменить существующую connected подсеть на новую;")
+#                 elif next(iter(type_change_service.keys())) == "Замена connected на connected":
+#                     need.append("- заменить существующую connected подсеть на новую;")
+#                 elif next(iter(type_change_service.keys())) == "Организация доп connected":
+#                     need.append("- организовать дополнительную connected подсеть;")
+#                 elif next(iter(type_change_service.keys())) == "Организация доп connected":
+#                     need.append("- организовать дополнительную маршрутизируемую подсеть;")
+#                 elif next(iter(type_change_service.keys())) == "Организация доп IPv6":
+#                     need.append("- организовать дополнительную IPv6 подсеть;")
+#     return '\n'.join(need)[:-1]+'.'
 
 
 def data(request):
+    """Данный метод определяет какой требуется тип ТР(перенос, организация доп. услуг, организация нов. точки и т.д),
+     вызывает соответствующие методы для формирования готового ТР, добавления даты, описания существующего подключения,
+      поля Требуется и перенаправляет на метод отображающий готовое ТР"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-
     spp_link = request.session['spplink']
-
     templates = ckb_parse(username, password)
     request.session['templates'] = templates
-
     value_vars = {}
     for key, value in request.session.items():
         value_vars.update({key: value})
-
-
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
     type_ticket = ticket_tr.ticket_k.type_ticket
     value_vars.update({'type_ticket': type_ticket})
-
     readable_services = value_vars.get('readable_services')
-    print('!!!!!readable_services in def data')
-    print(readable_services)
 
     if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         print('!!!!!!perenossss')
@@ -1484,8 +1366,7 @@ def data(request):
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
         elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
-            #counter_line_services = value_vars.get('counter_exist_line') может и надо будет что-то добавить
-            counter_line_services = 0 #value_vars.get('counter_exist_line')  суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
+            counter_line_services = 0 # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
             print('counter_line_services')
             print(counter_line_services)
             value_vars.update({'counter_line_services': counter_line_services})
@@ -1536,14 +1417,12 @@ def data(request):
         print('!!!!!!change')
         result_services, result_services_ots, value_vars = change_services(value_vars)
 
-
     if value_vars.get('type_pass') and 'Организация доп.услуги без установки КК' in value_vars.get('type_pass'):
         print('!!!!!!extra bez csw')
         value_vars.update({'services_plus_desc': value_vars.get('new_without_csw_job_services')})
         result_services, result_services_ots, value_vars = client_new(value_vars)
     if value_vars.get('type_pass') and 'Изменение/организация сервисов без монтаж. работ' in value_vars.get('type_pass'):
         pass
-
 
     if not value_vars.get('type_pass'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -1559,28 +1438,17 @@ def data(request):
 
     need = get_need(value_vars)
 
-    if value_vars.get('type_pass'): # and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
-        #need = 'Требуется в данной точке организовать доп. услугу.'
+    if value_vars.get('type_pass'):
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
-    # elif value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
-    #     need = 'Требуется перенести услугу в новую точку подключения.'
-    #     result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
-    # elif value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
-    #     need = 'Требуется в данной точке изменить услугу.'
-    #     result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     else:
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
     counter_str_ortr = result_services.count('\n')
-
-
-
 
     if result_services_ots == None:
         counter_str_ots = 1
     else:
         result_services_ots = '\n\n\n'.join(result_services_ots)
         result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
-        #result_services_ots = result_services_ots.replace('\n', '&#13;&#10;')
         counter_str_ots = result_services_ots.count('\n')
 
     request.session['kad'] = value_vars.get('kad')
@@ -1590,8 +1458,6 @@ def data(request):
     request.session['counter_str_ortr'] = counter_str_ortr
     request.session['result_services_ots'] = result_services_ots
     request.session['counter_str_ots'] = counter_str_ots
-
-
     try:
         manlink = request.session['manlink']
     except KeyError:
@@ -1604,7 +1470,7 @@ def data(request):
 
 
 def unsaved_data(request):
-
+    """Данный метод отображает не редактируемую html-страничку готового ТР"""
     services_plus_desc = request.session['services_plus_desc']
     oattr = request.session['oattr']
     titles = request.session['titles']
@@ -1616,9 +1482,7 @@ def unsaved_data(request):
         list_switches = request.session['list_switches']
     except KeyError:
         list_switches = None
-
     now = datetime.datetime.now()
-
     context = {
         'services_plus_desc': services_plus_desc,
         'oattr': oattr,
@@ -1630,25 +1494,15 @@ def unsaved_data(request):
         'counter_str_ortr': counter_str_ortr,
         'counter_str_ots': counter_str_ots
     }
-    # request.session.flush()
-    #list_session_keys = []
-    #for key in request.session.keys():
-    #    if key.startswith('_'):
-    #        pass
-    #    else:
-    #       list_session_keys.append(key)
-    #or key in list_session_keys:
-    #   del request.session[key]
-
     return render(request, 'tickets/data.html', context)
 
 
 
 
 def saved_data(request):
+
     if request.method == 'POST':
         ortrform = OrtrForm(request.POST)
-
         if ortrform.is_valid():
             services_plus_desc = request.session['services_plus_desc']
             oattr = request.session['oattr']
@@ -1988,43 +1842,28 @@ def manually_tr(request, dID, tID, trID):
 
 @cache_check
 def send_to_spp(request):
+    """Данный метод заполняет поля блока ОРТР в СПП готовым ТР"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    #Получение страницы с данными о коммутаторе
     spplink = request.session['spplink']
     url = spplink.replace('dem_begin', 'dem_point')
-    print(url)
     req_check = requests.get(url, verify=False, auth=HTTPBasicAuth(username, password))
     if req_check.status_code == 200:
-        #url = 'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
-
         ticket_tr_id = request.session['ticket_tr_id']
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         trOTO_AV = ticket_tr.pps
         trOTO_Comm = ticket_tr.kad
         vID = ticket_tr.vID
-        print(trOTO_AV)
-        print(vID)
-
-
         if ticket_tr.ortrtr_set.all():
             ortr = ticket_tr.ortrtr_set.all()[0]
-
             trOTO_Resolution = ortr.ortr
             trOTS_Resolution = ortr.ots
             print(trOTO_Resolution)
-
         data = {'trOTO_Resolution': trOTO_Resolution, 'trOTS_Resolution': trOTS_Resolution, 'action': 'saveVariant',
-                'trOTO_AV': trOTO_AV, 'trOTO_Comm': trOTO_Comm, 'vID': vID} # {'dID': 111428, 'tID': 130916, 'trID': 54886,
-                #'fType': 0, 'vID': 14147, 'noCompress': 1, 'trOTO_Blocked': 1, 'trOTO_AV': 'АВ ЕКБ Учителей 32 П1 Э2',
-                #'trOTO_Comm': 'SW037-AR126-31.ekb', 'tr_OTO_Pay': 0, 'tr_OTS_Pay': 0, 'trOTMPK': 0,
-                #'loadNewTask': 0}
-        #data['NodeName'] = node_name.encode('utf-8')
+                'trOTO_AV': trOTO_AV, 'trOTO_Comm': trOTO_Comm, 'vID': vID}
         req = requests.post(url, verify=False, auth=HTTPBasicAuth(username, password), data=data)
-        print('req.status_code send spp')
-        print(req.status_code)
         return redirect(spplink)
     else:
         messages.warning(request, 'Нет доступа в ИС Холдинга')
@@ -2815,44 +2654,40 @@ def get_resources(request):
 
     return render(request, 'tickets/contract.html', {'contractform': contractform})
 
-def show_resources(request):
-    ono = request.session['selected_ono']
-    contract = request.session['contract']
-    context = {
-        'ono': ono,
-        'contract': contract
-    }
-    return render(request, 'tickets/show_resources.html', context)
+# def show_resources(request):
+#     """Данный метод отображает html-страничку"""
+#     ono = request.session['selected_ono']
+#     contract = request.session['contract']
+#     context = {
+#         'ono': ono,
+#         'contract': contract
+#     }
+#     return render(request, 'tickets/show_resources.html', context)
 
 
 def _replace_wda_wds(device):
+    """Данный метод из названия WDA получает название WDS"""
     replace_wda_wds = device.split('-')
     replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
     replace_wda_wds.pop(1)
     device = '-'.join(replace_wda_wds)
     return device
 
-def _get_chain_data(login, password, device):
-    url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    chains = req.json()
-    return chains
+# def _get_chain_data(login, password, device):
+#     url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
+#     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+#     chains = req.json()
+#     return chains
 
 
 def _get_downlink(chains, device):
+    """Данный метод в качестве параметров получает название оборудования, от которого подключен клиент, цепочку
+     устройств, в которой состоит это оборудование, и определяет нижестоящее оборудование"""
     if device.startswith('WDA'):
         device = _replace_wda_wds(device)
-        print('!!!dev')
-        print(device)
-
-
     downlink = []
     downlevel = 20
-    temp_chains2 = []
     for chain in chains:
-        #print('!!chain')
-        #print(chain)
-
         if device == chain.get('host_name'):
             downlevel = chain.get('level')
         elif downlevel < chain.get('level'):
@@ -2873,6 +2708,8 @@ def _get_downlink(chains, device):
     return downlink
 
 def _get_vgw_on_node(chains, device):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+     это оборудование, и определяет существуют тел. шлюзы, подключенные от этого оборудования или нет"""
     vgw_on_node = None
     level_device = 0
     for chain in chains:
@@ -2886,16 +2723,19 @@ def _get_vgw_on_node(chains, device):
                     #vgw_on_node.append(chain.get('host_name'))
                     vgw_on_node = 'exist'
                     break
-
     return vgw_on_node
 
 def _get_node_device(chains, device):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+    это оборудование, и определяет название узла связи"""
     for chain in chains:
         if device == chain.get('host_name'):
             node_device = chain.get('alias')
     return node_device
 
 def _get_extra_node_device(chains, device, node_device):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+    это оборудование, название узла связи и определяет иные устройства на данном узле связи"""
     extra_node_device = []
     for chain in chains:
         if node_device == chain.get('alias') and device != chain.get('host_name'):
@@ -2904,6 +2744,9 @@ def _get_extra_node_device(chains, device, node_device):
 
 
 def _get_uplink(chains, device, max_level):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+        это оборудование и определяет название и порт вышестоящего узла. Парамерт max_level изначально задается
+        выше возможно максимального и впоследствии используется, чтобы однозначно определить вышестоящий узел"""
     if device.startswith('WDA'):
         device = _replace_wda_wds(device)
         print('!!!dev')
@@ -2957,68 +2800,70 @@ def _get_uplink(chains, device, max_level):
 
     return uplink, max_level
 
-@cache_check
-def get_chain(request):
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    if request.method == 'POST':
-        chainform = ChainForm(request.POST)
-        if chainform.is_valid():
-            print(chainform.cleaned_data)
-            chain_device = chainform.cleaned_data['chain_device']
-            chains = _get_chain_data(username,password, chain_device)
-            downlink = _get_downlink(chains, chain_device)
-            vgw_chains = _get_vgw_on_node(chains, chain_device)
-            node_mon = _get_node_device(chains, chain_device)
-            max_level = 20
-            uplink, max_level = _get_uplink(chains, chain_device, max_level)
-            #total_downlink = downlink   выносится в отдельную переменную, чтобы в дальнейшем цикле while не перезаписывался
-            all_chain = []
-            all_chain.append(uplink)
-            if uplink:
-                while uplink.startswith('CSW') or uplink.startswith('WDA'):
-                    next_chain_device = uplink.split()
-                    all_chain.pop()
-                    if uplink.startswith('CSW') and chain_device.startswith('WDA'):
-                        all_chain.append(_replace_wda_wds(chain_device))
-                    all_chain.append(next_chain_device[0])
-                    if uplink.startswith('WDA'):
-                        all_chain.append(_replace_wda_wds(next_chain_device[0]))
-                    uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
-                    all_chain.append(uplink)
-            request.session['node_mon'] = node_mon
-            request.session['uplink'] = all_chain
-            request.session['downlink'] = downlink
-            request.session['vgw_chains'] = vgw_chains
-            if node_mon:
-                return redirect('show_chains')
-            else:
-                messages.warning(request, 'не найдено')
-                return redirect('get_chain')
-    else:
-        chainform = ChainForm()
-
-    return render(request, 'tickets/get_chain.html', {'chainform': chainform})
-
-
-def show_chains(request):
-    node_mon = request.session['node_mon']
-    uplink = request.session['uplink']
-    downlink = request.session['downlink']
-    vgw_chains = request.session['vgw_chains']
-    selected_ono = request.session['selected_ono']
-    waste_vgw = request.session['waste_vgw']
-    context = {
-        'node_mon': node_mon,
-        'uplink': uplink,
-        'downlink': downlink,
-        'vgw_chains': vgw_chains,
-        'selected_ono': selected_ono,
-        'waste_vgw': waste_vgw
-    }
-    return render(request, 'tickets/chain.html', context)
+# @cache_check
+# def get_chain(request):
+#     """Предположительно подготовительный метод для отображения цепочки. Возможно можно удалить"""
+#     user = User.objects.get(username=request.user.username)
+#     credent = cache.get(user)
+#     username = credent['username']
+#     password = credent['password']
+#     if request.method == 'POST':
+#         chainform = ChainForm(request.POST)
+#         if chainform.is_valid():
+#             print(chainform.cleaned_data)
+#             chain_device = chainform.cleaned_data['chain_device']
+#             chains = _get_chain_data(username,password, chain_device)
+#             downlink = _get_downlink(chains, chain_device)
+#             vgw_chains = _get_vgw_on_node(chains, chain_device)
+#             node_mon = _get_node_device(chains, chain_device)
+#             max_level = 20
+#             uplink, max_level = _get_uplink(chains, chain_device, max_level)
+#             #total_downlink = downlink   выносится в отдельную переменную, чтобы в дальнейшем цикле while не перезаписывался
+#             all_chain = []
+#             all_chain.append(uplink)
+#             if uplink:
+#                 while uplink.startswith('CSW') or uplink.startswith('WDA'):
+#                     next_chain_device = uplink.split()
+#                     all_chain.pop()
+#                     if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+#                         all_chain.append(_replace_wda_wds(chain_device))
+#                     all_chain.append(next_chain_device[0])
+#                     if uplink.startswith('WDA'):
+#                         all_chain.append(_replace_wda_wds(next_chain_device[0]))
+#                     uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
+#                     all_chain.append(uplink)
+#             request.session['node_mon'] = node_mon
+#             request.session['uplink'] = all_chain
+#             request.session['downlink'] = downlink
+#             request.session['vgw_chains'] = vgw_chains
+#             if node_mon:
+#                 return redirect('show_chains')
+#             else:
+#                 messages.warning(request, 'не найдено')
+#                 return redirect('get_chain')
+#     else:
+#         chainform = ChainForm()
+#
+#     return render(request, 'tickets/get_chain.html', {'chainform': chainform})
+#
+#
+# def show_chains(request):
+#     """Предположительно подготовительный метод для отображения цепочки. Возможно можно удалить"""
+#     node_mon = request.session['node_mon']
+#     uplink = request.session['uplink']
+#     downlink = request.session['downlink']
+#     vgw_chains = request.session['vgw_chains']
+#     selected_ono = request.session['selected_ono']
+#     waste_vgw = request.session['waste_vgw']
+#     context = {
+#         'node_mon': node_mon,
+#         'uplink': uplink,
+#         'downlink': downlink,
+#         'vgw_chains': vgw_chains,
+#         'selected_ono': selected_ono,
+#         'waste_vgw': waste_vgw
+#     }
+#     return render(request, 'tickets/chain.html', context)
 
 
 # def _counter_line_services(services_plus_desc):

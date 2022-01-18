@@ -601,3 +601,12 @@ def stash(sw, model, login, password):
                     else:
                         config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
     return config_ports_device
+
+
+def _get_chain_data(login, password, device):
+    """Данный метод принимает в качестве параметра Название оборудования, от которого подключен клиент. Обращается к
+     https://mon.itss.mirasystem.net/mp/ и парсит цепочку устройств в которой состоит это оборудование."""
+    url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    chains = req.json()
+    return chains

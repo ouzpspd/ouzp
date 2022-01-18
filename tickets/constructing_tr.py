@@ -1480,8 +1480,74 @@ def enviroment(result_services, value_vars):
         return result_services
 
 
+def get_need(value_vars):
+    """Данный метод формирует текст для поля Требуется в готовом ТР"""
+    need = ['Требуется:']
+    if value_vars.get('pass_without_csw_job_services'):
+        if value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
+            need.append(
+                f"- перенести сервис {value_vars.get('name_passage_service')} в новую точку подключения {value_vars.get('address')};")
+        elif value_vars.get('type_passage') == 'Перенос точки подключения':
+            need.append(
+                f"- перенести точку подключения на адрес {value_vars.get('address')};")
+        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
+                'change_log') == 'Порт и КАД не меняется':
+            need.append(
+                "- перенести трассу присоединения клиента;")
+        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
+                'change_log') == 'Порт/КАД меняются':
+            need.append(
+                f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
+        elif value_vars.get('type_passage') == 'Перевод на гигабит':
+            need.append(
+                f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
+    if value_vars.get('new_with_csw_job_services'):
+
+        if len(value_vars.get('name_new_service')) > 1:
+            need.append(f"- организовать дополнительные услуги {', '.join(value_vars.get('name_new_service'))};")
+        else:
+            need.append(f"- организовать дополнительную услугу {''.join(value_vars.get('name_new_service'))};")
+    if value_vars.get('change_job_services'):
+        types_trunk = [
+            "Организация ШПД trunk'ом",
+            "Организация ШПД trunk'ом с простоем",
+            "Организация ЦКС trunk'ом",
+            "Организация ЦКС trunk'ом с простоем",
+            "Организация порта ВЛС trunk'ом",
+            "Организация порта ВЛС trunk'ом с простоем",
+            "Организация порта ВМ trunk'ом",
+            "Организация порта ВМ trunk'ом с простоем"
+        ]
+        for type_change_service in value_vars.get('types_change_service'):
+            if next(iter(type_change_service.keys())) in types_trunk:
+                if 'ШПД' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу ШПД в Интернет;")
+                elif 'ЦКС' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу ЦКС;")
+                elif 'ВЛС' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу порт ВЛС;")
+                elif 'ВМ' in next(iter(type_change_service.keys())):
+                    need.append("- организовать дополнительную услугу порт ВМ;")
+            else:
+                if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
+                    need.append("- изменить cхему организации ШПД;")
+                elif next(iter(type_change_service.keys())) == "Замена connected на connected":
+                    need.append("- заменить существующую connected подсеть на новую;")
+                elif next(iter(type_change_service.keys())) == "Замена connected на connected":
+                    need.append("- заменить существующую connected подсеть на новую;")
+                elif next(iter(type_change_service.keys())) == "Организация доп connected":
+                    need.append("- организовать дополнительную connected подсеть;")
+                elif next(iter(type_change_service.keys())) == "Организация доп connected":
+                    need.append("- организовать дополнительную маршрутизируемую подсеть;")
+                elif next(iter(type_change_service.keys())) == "Организация доп IPv6":
+                    need.append("- организовать дополнительную IPv6 подсеть;")
+    return '\n'.join(need)[:-1]+'.'
+
+
 def client_new(value_vars):
     """Данный метод формирует готовое ТР для нового присоединения и новых услуг"""
     result_services, value_vars = _new_enviroment(value_vars)
     result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
     return result_services, result_services_ots, value_vars
+
+
