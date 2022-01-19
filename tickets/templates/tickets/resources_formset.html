@@ -20,7 +20,7 @@
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">
       <p class="card-text">Выбрать 1 ресурс для работ</p>
-<form action="{% url 'test_formset' %}" method="post">
+<form action="{% url 'resources_formset' %}" method="post">
     {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
     {% csrf_token %}
     <div class="container">

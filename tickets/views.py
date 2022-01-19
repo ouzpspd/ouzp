@@ -2306,6 +2306,9 @@ def itv(request):
 
 
 def trunk_turnoff_shpd_cks_vk_vm(service, types_change_service):
+    """Данный метод в качестве параметров получает обрабатываемый сервис и массив всех сервисов со значением
+     выбранных работ(например организовать trunk'ом с простоем/без простоя). По значению выбранных работ определяет для
+     данного сервиса использовать блок ТТР с простоем или без"""
     trunk_turnoff_on = False
     trunk_turnoff_off = False
     if types_change_service:
@@ -2616,19 +2619,17 @@ def video(request):
 
 @cache_check
 def get_resources(request):
-    """Данный метод получает от пользователя номер договора. с помощью метода get_contract_id получает ID договора. С
-    помощью метода get_contract_resources получает ресурсы с контракта. Отправляет пользователя на страницу, где
-    отображаются эти ресурсы"""
+    """Данный метод получает от пользователя номер договора. с помощью метода get_contract_id получает ID договора.
+     С помощью метода get_contract_resources получает ресурсы с контракта. Отправляет пользователя на страницу, где
+    отображаются эти ресурсы. 
+    Если несколько договоров удовлетворяющих поиску - перенаправляет на страницу выбора конкретного договора."""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
     if request.method == 'POST':
-        print('!!!!req_con')
-        print(request.POST)
         contractform = ContractForm(request.POST)
         if contractform.is_valid():
-            print(contractform.cleaned_data)
             contract = contractform.cleaned_data['contract']
             contract_id = get_contract_id(username, password, contract)
             if isinstance(contract_id, list):
@@ -2639,21 +2640,15 @@ def get_resources(request):
                 if contract_id == 'Такого договора не найдено':
                     messages.warning(request, 'Договора не найдено')
                     return redirect('get_resources')
-
                 ono = get_contract_resources(username, password, contract_id)
                 phone_address = check_contract_phone_exist(username, password, contract_id)
                 if phone_address:
                     request.session['phone_address'] = phone_address
                 request.session['ono'] = ono
                 request.session['contract'] = contract
-                return redirect('test_formset')
-            # else:
-            #     messages.warning(request, 'Договора не найдено')
-            #     return redirect('get_resources')
+                return redirect('resources_formset')
     else:
-
         contractform = ContractForm()
-
     return render(request, 'tickets/contract.html', {'contractform': contractform})
 
 # def show_resources(request):
@@ -3204,10 +3199,10 @@ def spp_view(request, dID):
 
 
 
-#@login_required(login_url='tickets/login/')
+
 @cache_check
 def add_tr(request, dID, tID, trID):
-    """Попробовать заменить часть кода на add_tr_to_db"""
+    """Данный метод получает данные о ТР из СПП и добавляет ТР новой точки подключения в АРМ"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -3220,35 +3215,19 @@ def add_tr(request, dID, tID, trID):
         return response
     else:
         ticket_spp_id = request.session['ticket_spp_id']
-
-        ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
-
-        if ticket_spp.children.filter(ticket_tr=trID):
-            ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
-        else:
-            ticket_tr = TR()
-        ticket_tr.ticket_k = ticket_spp
-        ticket_tr.ticket_tr = trID
-        ticket_tr.pps = tr_params['Узел подключения клиента']
-        ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
-        ticket_tr.info_tr = tr_params['Информация для разработки ТР']
-        ticket_tr.services = tr_params['Перечень требуемых услуг']
-        ticket_tr.oattr = tr_params['Решение ОТПМ']
-        ticket_tr.vID = tr_params['vID']
-        ticket_tr.save()
-        request.session['ticket_tr_id'] = ticket_tr.id
+        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        request.session['ticket_tr_id'] = ticket_tr_id
         return redirect('project_tr', dID, tID, trID)
 
-def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
-    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки СПП в АРМ.
-    создает заявку ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
-    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
 
+def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
+    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки в АРМ.
+    создает ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
+    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
     if ticket_spp.children.filter(ticket_tr=trID):
         ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
     else:
         ticket_tr = TR()
-
     ticket_tr.ticket_k = ticket_spp
     ticket_tr.ticket_tr = trID
     ticket_tr.pps = tr_params['Узел подключения клиента']
@@ -5003,70 +4982,55 @@ from django.forms import formset_factory
 
 @cache_check
 def contract_id_formset(request):
-    """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
-     только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
-      коммутатором в итоговый список. Если выбрано более одного или ни одного ресурса возвращает эту же форму повторно.
-      По точке подключения(город, улица) проверяет наличие телефонии на договоре. Отправляет пользователя на страницу
-      формирования заголовка."""
+    """Данный метод отображает форму, в которой пользователь выбирает 1 из договоров наиболее удовлетворяющих
+     поисковому запросу договора, с помощью метода get_contract_resources получает ресурсы с этого договора
+      и перенаправляет на форму для выбора ресурса для работ.
+      Если выбрано более одного или ни одного договора возвращает эту же форму повторно."""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
     contract_id = request.session['contract_id']
-    # contract_id_values = []
-    # for i in contract_id:
-    #     contract_id_values.append(i.get('value'))
-
-
     ListContractIdFormSet = formset_factory(ListContractIdForm, extra=len(contract_id))
     if request.method == 'POST':
         formset = ListContractIdFormSet(request.POST)
         if formset.is_valid():
-
             data = formset.cleaned_data
-            print('!!!!!!!!datatest_formset')
-            print(data)
             selected_contract_id = []
             unselected_contract_id = []
             selected = zip(contract_id, data)
             for contract_id, data in selected:
                 if bool(data):
                     selected_contract_id.append(contract_id.get('id'))
-                # else:
-                #     unselected_contract_id.append(contract_id)
-
             if selected_contract_id:
                 if len(selected_contract_id) > 1:
                     messages.warning(request, 'Было выбрано более 1 ресурса')
                     return redirect('contract_id_formset')
                 else:
-                    #request.session['selected_contract_id'] = selected_contract_id
                     ono = get_contract_resources(username, password, selected_contract_id[0])
                     if ono:
                         phone_address = check_contract_phone_exist(username, password, selected_contract_id[0])
                         if phone_address:
                             request.session['phone_address'] = phone_address
                         request.session['ono'] = ono
-                        return redirect('test_formset')
+                        return redirect('resources_formset')
                     else:
                         messages.warning(request, 'На контракте нет ресурсов')
                         return redirect('contract_id_formset')
             else:
                 messages.warning(request, 'Контракты не выбраны')
                 return redirect('contract_id_formset')
-
     else:
         formset = ListContractIdFormSet()
         context = {
             'contract_id': contract_id,
             'formset': formset,
         }
-
         return render(request, 'tickets/contract_id_formset.html', context)
 
 
 
-def test_formset(request):
+def resources_formset(request):
     """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
      только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
       коммутатором в итоговый список. Если выбрано более одного или ни одного ресурса возвращает эту же форму повторно.
@@ -5077,16 +5041,11 @@ def test_formset(request):
         phone_address = request.session['phone_address']
     except KeyError:
         phone_address = None
-    print('!!!!phone_address')
-    print(phone_address)
     ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
     if request.method == 'POST':
         formset = ListResourcesFormSet(request.POST)
         if formset.is_valid():
-
             data = formset.cleaned_data
-            print('!!!!!!!!datatest_formset')
-            print(data)
             selected_ono = []
             unselected_ono = []
             selected = zip(ono, data)
@@ -5095,35 +5054,27 @@ def test_formset(request):
                     selected_ono.append(ono)
                 else:
                     unselected_ono.append(ono)
-
             if selected_ono:
                 if len(selected_ono) > 1:
                     messages.warning(request, 'Было выбрано более 1 ресурса')
-                    return redirect('test_formset')
+                    return redirect('resources_formset')
                 else:
                     for i in unselected_ono:
-                        if selected_ono[0][-2] == i[-2]: #to do сейчас проверка по КАД. По точке подключения нужна? Хорошо посмотреть 00128733
+                        if selected_ono[0][-2] == i[-2]:
                             selected_ono.append(i)
                     if phone_address:
-
-                        print('!!!! doshli do any')
-                        print(selected_ono[0][3])
-                        print(phone_address)
                         if any(phone_addr in selected_ono[0][3] for phone_addr in phone_address):
                             phone_exist = True
                         else:
                             phone_exist = False
                     else:
                         phone_exist = False
-                    print('!!!phone_exist')
-                    print(phone_exist)
                     request.session['phone_exist'] = phone_exist
                     request.session['selected_ono'] = selected_ono
                     return redirect('forming_header')
             else:
                 messages.warning(request, 'Ресурсы не выбраны')
-                return redirect('test_formset')
-
+                return redirect('resources_formset')
     else:
         ticket_tr_id = request.session['ticket_tr_id']
         ticket_tr = TR.objects.get(id=ticket_tr_id)
@@ -5135,21 +5086,17 @@ def test_formset(request):
             resource_for_formset.pop(1)
             resource_for_formset.pop(0)
             ono_for_formset.append(resource_for_formset)
-        print('!!!!!ono_for_formset')
-        print(ono_for_formset)
         context = {
             'ono_for_formset': ono_for_formset,
-            #'contract': contract,
             'formset': formset,
             'task_otpm': task_otpm
         }
-
-        return render(request, 'tickets/test_formset.html', context)
+        return render(request, 'tickets/resources_formset.html', context)
 
 
 def job_formset(request):
-    """Данный метод получает спискок услуг из ТР. Формирует форму, в которой пользователь выбирает, что необходимо
-     сделать с услугой(перенос, изменение, организация) и формируется соответствующие списки услуг."""
+    """Данный метод получает спискок услуг из ТР. Отображает форму, в которой пользователь для каждой услуги выбирает
+    необходимое действие(перенос, изменение, организация) и формируется соответствующие списки услуг."""
     head = request.session['head']
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
@@ -5209,63 +5156,33 @@ def job_formset(request):
     if request.method == 'POST':
         formset = ListJobsFormSet(request.POST)
         if formset.is_valid():
-            pass_with_csw_job_services = []
             pass_without_csw_job_services = []
-            pass_no_spd_job_services = []
             change_job_services = []
             new_with_csw_job_services = []
-            new_without_csw_job_services = []
             data = formset.cleaned_data
-            print('!!!!!services')
-            print(services)
-            print('!!!!!datajobservices')
-            print(data)
             selected = zip(services, data)
             for services, data in selected:
-                #if data == {'jobs': 'Организация сервиса(СПД) без уст. КК'}:
-                #    new_without_csw_job_services.append(services)
                 if data == {'jobs': 'Организация/Изменение, СПД'}:
                     new_with_csw_job_services.append(services)
                 elif data == {'jobs': 'Перенос, СПД'}:
                     pass_without_csw_job_services.append(services)
-                #elif data == {'jobs': 'Перенос сервиса(СПД) с КК'}:
-                #    pass_with_csw_job_services.append(services)
-                #elif data == {'jobs': 'Перенос сервиса(не СПД)'}:
-                #    pass_no_spd_job_services.append(services)
                 elif data == {'jobs': 'Изменение, не СПД'}:
                     change_job_services.append(services)
                 elif data == {'jobs': 'Не требуется'}:
                     pass
-            #request.session['new_without_csw_job_services'] = new_without_csw_job_services
             request.session['new_with_csw_job_services'] = new_with_csw_job_services
             request.session['pass_without_csw_job_services'] = pass_without_csw_job_services
-            #request.session['pass_with_csw_job_services'] = pass_with_csw_job_services
-            #request.session['pass_no_spd_job_services'] = pass_no_spd_job_services
             request.session['change_job_services'] = change_job_services
-
-            #context = {
-            #    'pass_job_services': pass_job_services,
-            #    'change_job_services': change_job_services,
-            #    'new_job_services': new_job_services,
-            #   'data': data
-            #
-
             return redirect('project_tr_exist_cl')
-            #return redirect('passage')
-            #return render(request, 'tickets/no_data.html', context)
-
     else:
-
         formset = ListJobsFormSet()
         context = {
             'head': head,
             'oattr': oattr,
             'pps': pps,
             'services': services,
-            #'contract': contract,
             'formset': formset
         }
-
         return render(request, 'tickets/job_formset.html', context)
 
 def static_formset(request):
@@ -5282,7 +5199,7 @@ def static_formset(request):
         if formset.is_valid():
 
             data = formset.cleaned_data
-            print('!!!!!!!!datatest_formset')
+            print('!!!!!!!!dataresources_formset')
             print(data)
             static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
             selected_ono = []
@@ -5295,10 +5212,6 @@ def static_formset(request):
             print('!!!!static_vars')
             print(static_vars)
             return redirect('no_data')
-
-
-
-
     else:
         template_static = """Присоединение к СПД по медной линии связи.
         -----------------------------------------------------------------------------------
@@ -5377,13 +5290,11 @@ def static_formset(request):
 #     return config_ports_client_device
 
 def _compare_config_ports_client_device(config_ports_client_device, main_client):
-    """Данный метод на входе получает список портконфигов и номер договора, который участвует в ТР. Данный метод определяет
-    какие портконфиги следует учитывать для формирования заголовка ТР."""
+    """Данный метод на входе получает список портконфигов на клиентском устройстве и номер договора клиента. Проходит
+     по списку портконфигов и составляет список других договоров на данном клиентском устройстве"""
     extra_clients = []
     extra_name_clients = []
     for config_port in config_ports_client_device:
-        print('!!!!extra_name_clients')
-        print(extra_name_clients)
         if extra_name_clients:
             if config_port[2] in extra_name_clients or main_client == config_port[2]:
                 pass
@@ -5396,16 +5307,12 @@ def _compare_config_ports_client_device(config_ports_client_device, main_client)
             else:
                 extra_name_clients.append(config_port[2])
                 extra_clients.append(config_port)
-    print('!!!!extra_clients')
-    print(extra_clients)
     return extra_clients
 
 @cache_check
 def forming_header(request):
     """Данный метод проверяет если клиент подключен через CSW или WDA, то проверяет наличие на этих устройтсвах других
-     договоров с помощью метода _get_extra_selected_ono и если есть такие договоры, то добавляет их ресурсы в список
-      выбранных ресурсов с договора. Отправляет на получение дополнительных данных если клиент подключен через цепочку
-       устройств."""
+     договоров и если есть такие договоры, то добавляет их ресурсы в список выбранных ресурсов с договора клиента."""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
@@ -5427,10 +5334,13 @@ def forming_header(request):
         'ono': selected_ono,
 
     }
-    #return render(request, 'tickets/show_resources.html', context)
     return redirect('forming_chain_header')
 
+
 def _get_extra_selected_ono(username, password, selected_device, selected_client):
+    """Данные метод на входе получает устройство клиента, по нему получает ID клиентского устройства, по ID получает
+    портконфиги устройства, по портконфигам определяет другие договора на клиентском устройстве. По договорам
+    определяет ресурсы и добавляет их в заголовок"""
     extra_selected_ono = []
     id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
     config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
@@ -5446,6 +5356,8 @@ def _get_extra_selected_ono(username, password, selected_device, selected_client
     return extra_selected_ono
 
 def _get_all_chain(chains, chain_device, uplink, max_level):
+    """Данный метод проверяет является ли uplink КАД/УПА/РУА, если нет, то формирует цепочку из промежуточных
+     устройств"""
     all_chain = []
     all_chain.append(uplink)
     if uplink:
@@ -5473,77 +5385,46 @@ def forming_chain_header(request):
     chain_device = request.session['selected_device']
     selected_ono = request.session['selected_ono']
     phone_exist = request.session['phone_exist']
-    print('!!!phone_exist')
-    print(phone_exist)
-    print('!!chain_device')
-    print(chain_device)
-
     chains = _get_chain_data(username, password, chain_device)
-    print('!!!chains')
-    print(chains)
     if chains:
         downlink = _get_downlink(chains, chain_device)
         node_device = _get_node_device(chains, chain_device)
-
         nodes_vgw = []
         if phone_exist or node_device.endswith(', КК') or node_device.endswith(', WiFi'):
             vgw_on_node = _get_vgw_on_node(chains, chain_device)
             if vgw_on_node:
                 nodes_vgw.append(chain_device)
-
         max_level = 20
         uplink, max_level = _get_uplink(chains, chain_device, max_level)
         all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
-        print(all_chain)
-
         selected_client = 'No client'
         if all_chain[0] == None:
             node_uplink = node_device
             if phone_exist:
                 extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
-                print(extra_node_device)
                 if extra_node_device:
                     for extra in extra_node_device:
                         extra_chains = _get_chain_data(username, password, extra)
                         extra_vgw = _get_vgw_on_node(extra_chains, extra)
-                        print(extra_vgw)
                         if extra_vgw:
                             nodes_vgw.append(extra)
-                            print(nodes_vgw)
-
         else:
             node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
             for all_chain_device in all_chain:
-                if all_chain_device.startswith('CSW'): # or all_chain_device.startswith('WDA'):
-                    #extra_vgw = _get_vgw_on_node(chains, all_chain_device)
-                    #node_all_chain_device = _get_node_device(chains, all_chain_device)
-                    #if node_all_chain_device in nodes_vgw:
-                    #    pass
-                    #else:
+                if all_chain_device.startswith('CSW'):
                     extra_chains = _get_chain_data(username, password, all_chain_device)
                     extra_vgw = _get_vgw_on_node(extra_chains, all_chain_device)
                     if extra_vgw:
                         nodes_vgw.append(all_chain_device)
-                    #vgws.update({node_all_chain_device: extra_vgw})
                     extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
                     if extra_selected_ono:
                         for i in extra_selected_ono:
                             selected_ono.append(i)
         if downlink:
-            print('!!!downlink')
-
             for link_device in downlink:
-                #extra_vgw = _get_vgw_on_node(chains, link_device)
-                #node_link_device = _get_node_device(chains, link_device)
-                #if node_link_device in nodes_vgw:
-                #    pass
-                #else:
                 extra_vgw = _get_vgw_on_node(chains, link_device)
-                print('!!!extra_vgw')
-                print(extra_vgw)
                 if extra_vgw:
                     nodes_vgw.append(link_device)
-                #vgws.update({node_link_device: extra_vgw})
                 extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
                 if extra_selected_ono:
                     for i in extra_selected_ono:
@@ -5551,24 +5432,13 @@ def forming_chain_header(request):
 
         all_vgws = []
         if nodes_vgw:
-            print('!!!!!nodes_vgw')
-            print(nodes_vgw)
-            #all_vgws = []
             for i in nodes_vgw:
                 parsing_vgws = _parsing_vgws_by_node_name(username, password, Switch=i)
-                print('!!!!parsing_vgws')
-                print(parsing_vgws)
                 for vgw in parsing_vgws:
                     all_vgws.append(vgw)
         selected_clients_for_vgw = [client[0] for client in selected_ono]
         contracts_for_vgw = list(set(selected_clients_for_vgw))
-        print('!!!contracts_for_vgw')
-        print(contracts_for_vgw)
-        print('!!!!all_vgws')
-        print(all_vgws)
         selected_vgw, waste_vgw = check_client_on_vgw(contracts_for_vgw, all_vgws, username, password)
-
-
         request.session['node_mon'] = node_uplink
         request.session['uplink'] = all_chain
         request.session['downlink'] = downlink
