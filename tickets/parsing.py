@@ -2,59 +2,15 @@ import requests
 from requests.auth import HTTPBasicAuth
 import re
 from bs4 import BeautifulSoup
-
-def _counter_line_services(services_plus_desc):
-    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
-     где требуется линия добавляется спец. символ. Метод возвращает количество требуемых линий"""
-    hotspot_points = None
-    print('!!!!before services_plus_desc')
-    print(services_plus_desc)
-    for index_service in range(len(services_plus_desc)):
-        if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            replace_index = services_plus_desc[index_service]
-            services_plus_desc.remove(replace_index)
-            services_plus_desc.insert(0, replace_index)
-        elif 'Интернет, DHCP' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            replace_index = services_plus_desc[index_service]
-            services_plus_desc.remove(replace_index)
-            services_plus_desc.insert(0, replace_index)
-        #elif 'iTV' in services_plus_desc[index_service]:
-        #    services_plus_desc[index_service] += '|'
-        elif 'ЦКС' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'Порт ВЛС' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'Порт ВМ' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'HotSpot' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
-            for regex in regex_hotspot_point:
-                match_hotspot_point = re.search(regex, services_plus_desc[index_service])
-                if match_hotspot_point:
-                    hotspot_points = match_hotspot_point.group(1)
-                    break
-
-    counter_line_services = 0
-    for i in services_plus_desc:
-        while i.endswith('|'):
-            counter_line_services += 1
-            i = i[:-1]
-    print('!!!!after services_plus_desc')
-    print(services_plus_desc)
-    return counter_line_services, hotspot_points, services_plus_desc
+from .utils import _counter_line_services
 
 
 def parse_tr(login, password, url):
-    # Получение данных со страницы Тех решения
-    #url = input('Ссылка на Тех.решение: ')
+    """Данный метод парсит ТР в СПП и возвращает полученные данные о ТР"""
     url = url.replace('dem_begin', 'dem_point')
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if req.status_code == 200:
         parsed = req.content.decode('utf-8')
-
         # Получение данных среды передачи с блока "ОТПМ"
         sreda = None
         regex_env = 'Время на реализацию, дней</td>\r\n<td colspan="2">\d</td>\r\n</tr>\r\n\r\n\r\n\r\n\r\n\r\n<tr av_req="1">\r\n<td colspan="3" align="left">\r\n(.+)</td>\r\n</tr>\r\n\r\n\r\n\r\n<tr obt_req'
@@ -66,21 +22,16 @@ def parse_tr(login, password, url):
                     (not 'ОК' in oattr) and ('радио' in oattr)) or (
                     (not 'ОК' in oattr) and ('радиоканал' in oattr)) or ((not 'ОК' in oattr) and ('антенну' in oattr)):
                 sreda = '3'
-                print('Среда передачи:  Беспроводная среда')
             elif ('Alpha' in oattr) or (('ОК-1' in oattr) and (not 'ОК-16' in oattr)):
                 sreda = '4'
-                print('Среда передачи: FTTH')
             elif ('ОВ' in oattr) or ('ОК' in oattr) or ('ВОЛС' in oattr) or ('волокно' in oattr) or (
                     'ОР ' in oattr) or ('ОР№' in oattr) or ('сущ.ОМ' in oattr) or ('оптическ' in oattr):
                 sreda = '2'
-                print('Среда передачи: ВОЛС')
             else:
                 sreda = '1'
-                print('Среда передачи: UTP')
         except AttributeError:
             sreda = '1'
             oattr = None
-            print('Среда передачи: UTP')
 
         # Получение данных с блока "Перечень требуемых услуг"
         services_plus_desc = []
@@ -102,20 +53,14 @@ def parse_tr(login, password, url):
 
         for i in range(len(services_plus_desc)):
             services_plus_desc[i] = services_plus_desc[i].replace('&quot;', '"')
-            print('Услуга:  {}'.format(
-                services_plus_desc[i]))
-
-
 
         # проходим по списку услуг чтобы определить количество организуемых линий от СПД и в той услуге, где требуется
         # добавляем спец. символ
         counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(services_plus_desc)
 
-
         pps = None
         turnoff = None
 
-        #if counter_line_services > 0:
         # Получение данных с блока "Узел подключения клиента"
         # Разделение сделано, т.к. для обычного ТР и упрощенки разный regex
         match_AB = None
@@ -133,21 +78,14 @@ def parse_tr(login, password, url):
             pps = match_AB.group(1)
             pps = pps.replace('&quot;', '"')
 
-
-        # print(pps)
-
         # Получение данных с блока "Отключение"
         match_turnoff = None
         regex_turnoff = 'INPUT  disabled=\'disabled\' id=\'trTurnOff'
         match_turnoff = re.search(regex_turnoff, parsed)
         if match_turnoff is None:
             turnoff = True
-            print('Отключение:  Внимание! Требуется отключение')
         else:
             turnoff = False
-            print('Отключение:  Отключение не требуется')
-
-
 
         tochka = []
         regex_tochka = 'dID=(\d+)&tID=(\d+)&trID'
@@ -156,7 +94,6 @@ def parse_tr(login, password, url):
         id2 = match_tochka.group(2)
         tochka.append(id1)
         tochka.append(id2)
-
         url = 'https://sss.corp.itmh.ru/dem_tr/dem_point_panel.php?dID={}&tID={}'.format(id1, id2)
         req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
         parsed = req.content.decode('utf-8')
@@ -164,8 +101,6 @@ def parse_tr(login, password, url):
         match_address = re.search(regex_address, parsed)
         address = match_address.group(1)
         address = address.replace(', д.', ' ')
-
-
         url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php?dID={}'.format(id1)
         req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
         parsed = req.content.decode('utf-8')
@@ -174,7 +109,7 @@ def parse_tr(login, password, url):
         client = match_client.group(1)
         client = ' '.join(client.split())
         client = client.replace('&quot;', '"')
-        print(client)
+
         regex_manager = 'Менеджер клиента            </td>\r\n            <td align="left" colspan="3">\r\n(.+)</td>'
         match_manager = re.search(regex_manager, parsed)
         try:
@@ -187,14 +122,12 @@ def parse_tr(login, password, url):
         match_technolog = re.search(regex_technolog, parsed)
         technolog = match_technolog.group(1)
         technolog = ' '.join(technolog.split())
-        print(technolog)
 
         regex_task_otpm = 'Задача в ОТПМ\r\n(?:\s+)</td>\r\n(?:\s+)<td colspan="3" valign="top">(.+)</td>'
         match_task_otpm = re.search(regex_task_otpm, parsed, flags=re.DOTALL)
         task_otpm = match_task_otpm.group(1)
         task_otpm = task_otpm[:task_otpm.find('</td>')]
         task_otpm = ' '.join(task_otpm.split())
-        print(task_otpm)
 
         data_sss = []
         data_sss.append(services_plus_desc)
@@ -210,7 +143,6 @@ def parse_tr(login, password, url):
         data_sss.append(manager)
         data_sss.append(technolog)
         data_sss.append(task_otpm)
-
         return data_sss
     else:
         data_sss = []
@@ -241,9 +173,6 @@ def parsingByNodename(node_name, login, password):
     data = {'IncludeDeleted': 'false', 'IncludeDisabled': 'true', 'HideFilterPane': 'false'}
     data['NodeName'] = node_name.encode('utf-8')
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
-    print('!!!!!')
-    print('req.status_code')
-    print(req.status_code)
     if req.status_code == 200:
         switch = req.content.decode('utf-8')
         if 'No records to display.' in switch:
@@ -293,8 +222,6 @@ def parsingByNodename(node_name, login, password):
             configport_switches = []
             for i in clear_index:
                 clear_switch_id.append(match_switch_id[i])
-            print('!!!!clear_switch_id')
-            print(clear_switch_id)
             for i in clear_switch_id:
                 ports = {}
                 url_switch_id = 'https://cis.corp.itmh.ru/stu/Switch/Details/' + i
@@ -409,14 +336,12 @@ def get_contract_id(login, password, contract):
     url = f'https://cis.corp.itmh.ru/doc/crm/contract_ajax.ashx?term={contract}'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     contract_list = req.json()
-    print(contract_list)
     if len(contract_list) > 1:
         contract_id = contract_list
     elif len(contract_list) == 0:
         contract_id = 'Такого договора не найдено'
     else:
         contract_id = contract_list[0].get('id')
-        print(contract_id)
     return contract_id
 
 
@@ -468,7 +393,6 @@ def _parsing_id_client_device_by_device_name(name, login, password):
         table = soup.find('div', {"class": "t-grid-content"})
         row_tr = table.find('tr')
         id_client_device = row_tr.get('id')
-        print(table)
         return id_client_device
 
 

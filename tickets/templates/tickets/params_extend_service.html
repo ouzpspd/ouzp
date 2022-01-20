@@ -6,8 +6,8 @@
       <tbody>
         <tr>
 
-        <th class="table-secondary text-right" style="width: 25%" rowspan="{{pass_without_csw_job_services|length}}">Услуг{{ pass_without_csw_job_services|length|pluralize:"а,и" }}</th>
-{% for i in pass_without_csw_job_services%}
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{pass_job_services|length}}">Услуг{{ pass_job_services|length|pluralize:"а,и" }}</th>
+{% for i in pass_job_services%}
         <td class="table-light" style="width: 75%">{{i}}</td>
 
         </tr>
