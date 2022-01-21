@@ -27,26 +27,33 @@ import pymorphy2
 import datetime
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
+from django.forms import formset_factory
 
 from .parsing import *
-from .parsing import _counter_line_services
+
 from .parsing import _parsing_vgws_by_node_name
 from .parsing import _parsing_model_and_node_client_device_by_device_name
 from .parsing import _parsing_id_client_device_by_device_name
 from .parsing import _parsing_config_ports_client_device
-from .parsing import _parsing_config_ports_vgw
 from .parsing import _get_chain_data
+from .parsing import _counter_line_services
 
 from .constructing_tr import *
-from .constructing_tr import _new_services
-from .constructing_tr import _readable_node
-from .constructing_tr import _new_enviroment
 from .constructing_tr import _separate_services_and_subnet_dhcp
 from .constructing_tr import _titles
-from .constructing_tr import _passage_services
-from .constructing_tr import _passage_phone_service
-from .constructing_tr import _passage_enviroment
-from .constructing_tr import _passage_services_on_csw
+
+
+from .utils import *
+from .utils import _replace_wda_wds
+from .utils import _get_downlink
+from .utils import _get_vgw_on_node
+from .utils import _get_node_device
+from .utils import _get_extra_node_device
+from .utils import _get_uplink
+from .utils import _get_extra_selected_ono
+from .utils import _get_all_chain
+from .utils import _tag_service_for_new_serv
+from .utils import _readable
 
 
 
@@ -159,6 +166,58 @@ def cache_check(func):
             return response
         return func(request, *args, **kwargs)
     return wrapper
+
+
+@cache_check
+def ortr(request):
+    """Данный метод перенаправляет на страницу Новые заявки, которые находятся в пуле ОРТР/в работе.
+        1. Получает данные от redis о логин/пароле
+        2. Получает данные о всех заявках в пуле ОРТР с помощью метода in_work_ortr
+        3. Получает данные о всех заявках которые уже находятся в БД(в работе)
+        4. Удаляет из списка в пуле заявки, которые есть в работе
+        5. Формирует итоговый список всех заявок в пуле/в работе"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    request = flush_session_key(request)
+    search = in_work_ortr(username, password)
+    if search[0] == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        list_search = []
+        for i in search:
+            list_search.append(i[0])
+        spp_proc = SPP.objects.filter(process=True)
+        list_spp_proc = []
+        for i in spp_proc:
+            list_spp_proc.append(i.ticket_k)
+        spp_wait = SPP.objects.filter(wait=True)
+        list_spp_wait = []
+        return_from_wait = []
+        for i in spp_wait:
+            if i.ticket_k in list_search:
+                list_spp_wait.append(i.ticket_k)
+            else:
+                i.wait = False
+                i.save()
+                return_from_wait.append(i.ticket_k)
+        list_search_rem = []
+        for i in list_spp_proc:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+        for i in list_spp_wait:
+            for index_j in range(len(list_search)):
+                if i in list_search[index_j]:
+                    list_search_rem.append(index_j)
+        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if return_from_wait:
+            messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
+        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
 
 
 @cache_check
@@ -421,7 +480,6 @@ def copper(request):
     if request.method == 'POST':
         copperform = CopperForm(request.POST)
         if copperform.is_valid():
-            print(copperform.cleaned_data)
             correct_sreda = copperform.cleaned_data['correct_sreda']
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
@@ -516,30 +574,7 @@ def copper(request):
         elif 'No records to display' in list_switches[0]:
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
-
-        switch_name = []
-        for i in range(len(list_switches)):
-            if list_switches[i][-1] == '-':
-                pass
-            else:
-                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-                if switch_ports_var == None:
-                    pass
-                else:
-                    for port in switch_ports_var.keys():
-                        if list_switches[i][10].get(port) == None:
-                            switch_ports_var[port].insert(0, '-')
-                            switch_ports_var[port].insert(0, '-')
-                            list_switches[i][10].update({port: switch_ports_var[port]})
-                        else:
-                            for from_dev in switch_ports_var[port]:
-                                list_switches[i][10][port].append(from_dev)
-                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
-            switch_name.append(list_switches[i][0])
-        if len(switch_name) == 1:
-            switches_name = switch_name[0]
-        else:
-            switches_name = ' или '.join(switch_name)
+        list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         request.session['list_switches'] = list_switches
         copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
 
@@ -692,30 +727,7 @@ def vols(request):
         elif 'No records to display' in list_switches[0]:
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
-
-        switch_name = []
-        for i in range(len(list_switches)):
-            if list_switches[i][-1] == '-':
-                pass
-            else:
-                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-                if switch_ports_var == None:
-                    pass
-                else:
-                    for port in switch_ports_var.keys():
-                        if list_switches[i][10].get(port) == None:
-                            switch_ports_var[port].insert(0, '-')
-                            switch_ports_var[port].insert(0, '-')
-                            list_switches[i][10].update({port: switch_ports_var[port]})
-                        else:
-                            for from_dev in switch_ports_var[port]:
-                                list_switches[i][10][port].append(from_dev)
-                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
-            switch_name.append(list_switches[i][0])
-        if len(switch_name) == 1:
-            switches_name = switch_name[0]
-        else:
-            switches_name = ' или '.join(switch_name)
+        list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         request.session['list_switches'] = list_switches
 
         if sreda == '2':
@@ -848,29 +860,7 @@ def wireless(request):
         elif 'No records to display' in list_switches[0]:
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
             return redirect('ortr')
-        switch_name = []
-        for i in range(len(list_switches)):
-            if list_switches[i][-1] == '-':
-                pass
-            else:
-                switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
-                if switch_ports_var == None:
-                    pass
-                else:
-                    for port in switch_ports_var.keys():
-                        if list_switches[i][10].get(port) == None:
-                            switch_ports_var[port].insert(0, '-')
-                            switch_ports_var[port].insert(0, '-')
-                            list_switches[i][10].update({port: switch_ports_var[port]})
-                        else:
-                            for from_dev in switch_ports_var[port]:
-                                list_switches[i][10][port].append(from_dev)
-                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
-            switch_name.append(list_switches[i][0])
-        if len(switch_name) == 1:
-            switches_name = switch_name[0]
-        else:
-            switches_name = ' или '.join(switch_name)
+        list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         request.session['list_switches'] = list_switches
         wirelessform = WirelessForm(initial={'correct_sreda': '3', 'kad': switches_name, 'port': 'свободный'})
         context = {
@@ -1364,6 +1354,1823 @@ def manually_tr(request, dID, tID, trID):
             return render(request, 'tickets/edit_tr.html', context)
 
 
+@cache_check
+def send_to_spp(request):
+    """Данный метод заполняет поля блока ОРТР в СПП готовым ТР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    spplink = request.session['spplink']
+    url = spplink.replace('dem_begin', 'dem_point')
+    req_check = requests.get(url, verify=False, auth=HTTPBasicAuth(username, password))
+    if req_check.status_code == 200:
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        trOTO_AV = ticket_tr.pps
+        trOTO_Comm = ticket_tr.kad
+        vID = ticket_tr.vID
+        if ticket_tr.ortrtr_set.all():
+            ortr = ticket_tr.ortrtr_set.all()[0]
+            trOTO_Resolution = ortr.ortr
+            trOTS_Resolution = ortr.ots
+        data = {'trOTO_Resolution': trOTO_Resolution, 'trOTS_Resolution': trOTS_Resolution, 'action': 'saveVariant',
+                'trOTO_AV': trOTO_AV, 'trOTO_Comm': trOTO_Comm, 'vID': vID}
+        req = requests.post(url, verify=False, auth=HTTPBasicAuth(username, password), data=data)
+        return redirect(spplink)
+    else:
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+
+
+def hotspot(request):
+    if request.method == 'POST':
+        hotspotform = HotspotForm(request.POST)
+
+        if hotspotform.is_valid():
+            print(hotspotform.cleaned_data)
+            hotspot_points = hotspotform.cleaned_data['hotspot_points']
+            hotspot_users = hotspotform.cleaned_data['hotspot_users']
+            exist_hotspot_client = hotspotform.cleaned_data['exist_hotspot_client']
+            services_plus_desc = request.session['services_plus_desc']
+            counter_line_services = request.session['counter_line_services']
+            if hotspot_points:
+                for index_service in range(len(services_plus_desc)):
+                    if 'HotSpot' in services_plus_desc[index_service]:
+                        for i in range(int(hotspot_points)):
+                            services_plus_desc[index_service] += '|'
+                counter_line_services += hotspot_points-1
+            request.session['counter_line_services'] = counter_line_services
+            request.session['services_plus_desc'] = services_plus_desc
+            request.session['hotspot_points'] = str(hotspot_points)
+            request.session['hotspot_users'] = str(hotspot_users)
+            request.session['exist_hotspot_client'] = exist_hotspot_client
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+
+    else:
+        hotspot_points = request.session['hotspot_points']
+        hotspot_users = request.session['hotspot_users']
+        premium_plus = request.session['premium_plus']
+        services_plus_desc = request.session['services_plus_desc']
+        for service in services_plus_desc:
+            if 'HotSpot' in service:
+                service_hotspot = service
+                break
+        hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
+        context = {
+            'premium_plus': premium_plus,
+            'hotspotform': hotspotform,
+            'service_hotspot': service_hotspot
+        }
+        return render(request, 'tickets/hotspot.html', context)
+
+def phone(request):
+    if request.method == 'POST':
+        phoneform = PhoneForm(request.POST)
+        if phoneform.is_valid():
+            type_phone = phoneform.cleaned_data['type_phone']
+            vgw = phoneform.cleaned_data['vgw']
+            channel_vgw = phoneform.cleaned_data['channel_vgw']
+            ports_vgw = phoneform.cleaned_data['ports_vgw']
+            type_ip_trunk = phoneform.cleaned_data['type_ip_trunk']
+            form_exist_vgw_model = phoneform.cleaned_data['form_exist_vgw_model']
+            form_exist_vgw_name = phoneform.cleaned_data['form_exist_vgw_name']
+            form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
+            services_plus_desc = request.session['services_plus_desc']
+            new_job_services = request.session.get('new_job_services')
+            phone_in_pass = request.session.get('phone_in_pass')
+            tag_service = request.session['tag_service']
+            for index_service in range(len(services_plus_desc)):
+                if 'Телефон' in services_plus_desc[index_service]:
+                    if type_phone == 'ak' or type_phone == 'st':
+                        if new_job_services:
+                            for ind in range(len(new_job_services)):
+                                if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] += '|'
+                        services_plus_desc[index_service] += '|'
+                        if phone_in_pass:
+                            phone_in_pass += '|'
+                            request.session['phone_in_pass'] = phone_in_pass
+                        else:
+                            try:
+                                counter_line_services = request.session['counter_line_services']
+                            except KeyError:
+                                counter_line_services = 0
+                            if type_phone == 'st':
+                                request.session['type_ip_trunk'] = type_ip_trunk
+                                if type_ip_trunk == 'trunk':
+                                    request.session['counter_line_services'] = 1
+                                elif type_ip_trunk == 'access':
+                                    counter_line_services += 1
+                                    request.session['counter_line_services'] = counter_line_services
+                            if type_phone == 'ak':
+                                counter_line_services += 1
+                                request.session['counter_line_services'] = counter_line_services
+                        sreda = request.session['sreda']
+                        if sreda == '2' or sreda == '4':
+                            if {'vols': None} in tag_service:
+                                pass
+                            else:
+                                tag_service.insert(1, {'vols': None})
+                        elif sreda == '3':
+                            if {'wireless': None} in tag_service:
+                                pass
+                            else:
+                                tag_service.insert(1, {'wireless': None})
+                        elif sreda == '1':
+                            if {'copper': None} in tag_service:
+                                pass
+                            else:
+                                tag_service.insert(1, {'copper': None})
+                        if {'data': None} in tag_service:
+                            tag_service.remove({'data': None})
+                    elif type_phone == 'ap':
+                        if new_job_services:
+                            for ind in range(len(new_job_services)):
+                                if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] += '/'
+                        if phone_in_pass:
+                            phone_in_pass += '/'
+                            request.session['phone_in_pass'] = phone_in_pass
+                        services_plus_desc[index_service] += '/'
+                        if {'copper': None} in tag_service:
+                            pass
+                        else:
+                            tag_service.insert(1, {'copper': None})
+                    elif type_phone == 'ab':
+                        if new_job_services:
+                            for ind in range(len(new_job_services)):
+                                if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] += '\\'
+                        if phone_in_pass:
+                            phone_in_pass += '\\'
+                            request.session['phone_in_pass'] = phone_in_pass
+                        services_plus_desc[index_service] += '\\'
+                        request.session['form_exist_vgw_model'] = form_exist_vgw_model
+                        request.session['form_exist_vgw_name'] = form_exist_vgw_name
+                        request.session['form_exist_vgw_port'] = form_exist_vgw_port
+            request.session['services_plus_desc'] = services_plus_desc
+            request.session['vgw'] = vgw
+            request.session['channel_vgw'] = channel_vgw
+            request.session['ports_vgw'] = ports_vgw
+            request.session['type_phone'] = type_phone
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        oattr = request.session['oattr']
+        for service in services_plus_desc:
+            if 'Телефон' in service:
+                regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
+                for regex in regex_ports_vgw:
+                    match_ports_vgw = re.search(regex, service)
+                    if match_ports_vgw:
+                        reg_ports_vgw = match_ports_vgw.group(1)
+                    else:
+                        reg_ports_vgw = 'Нет данных'
+                    break
+                regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
+                for regex in regex_channel_vgw:
+                    match_channel_vgw = re.search(regex, service)
+                    if match_channel_vgw:
+                        reg_channel_vgw = match_channel_vgw.group(1)
+                    else:
+                        reg_channel_vgw = 'Нет данных'
+                    break
+                service_vgw = service
+                if 'ватс' in service.lower():
+                    vats = True
+                else:
+                    vats = False
+                break
+        phoneform = PhoneForm(initial={
+                                'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw
+                            })
+        context = {
+            'service_vgw': service_vgw,
+            'vats': vats,
+            'oattr': oattr,
+            'phoneform': phoneform
+        }
+        return render(request, 'tickets/phone.html', context)
+
+def local(request):
+    if request.method == 'POST':
+        localform = LocalForm(request.POST)
+        if localform.is_valid():
+            local_type = localform.cleaned_data['local_type']
+            local_ports = localform.cleaned_data['local_ports']
+            request.session['local_type'] = local_type
+            request.session['local_ports'] = str(local_ports)
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            if local_type == 'СКС':
+                return redirect('sks')
+            elif local_type == 'ЛВС':
+                return redirect('lvs')
+            else:
+                new_job_services = request.session.get('new_job_services')
+                if new_job_services:
+                    new_job_services[:] = [x for x in new_job_services if not x.startswith('ЛВС')]
+                services_plus_desc = request.session['services_plus_desc']
+                services_plus_desc[:] = [x for x in services_plus_desc if not x.startswith('ЛВС')]
+                request.session['services_plus_desc'] = services_plus_desc
+                return redirect(next(iter(tag_service[0])))
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        for service in services_plus_desc:
+            if 'ЛВС' in service:
+                service_lvs = service
+                request.session['service_lvs'] = service_lvs
+                break
+        localform = LocalForm()
+        context = {
+            'service_lvs': service_lvs,
+            'localform': localform
+        }
+        return render(request, 'tickets/local.html', context)
+
+
+def sks(request):
+    if request.method == 'POST':
+        sksform = SksForm(request.POST)
+        if sksform.is_valid():
+            sks_poe = sksform.cleaned_data['sks_poe']
+            sks_router = sksform.cleaned_data['sks_router']
+            request.session['sks_poe'] = sks_poe
+            request.session['sks_router'] = sks_router
+            tag_service = request.session['tag_service']
+            return redirect(next(iter(tag_service[0])))
+    else:
+        service_lvs = request.session['service_lvs']
+        sksform = SksForm()
+        context = {
+            'service_lvs': service_lvs,
+            'sksform': sksform
+        }
+        return render(request, 'tickets/sks.html', context)
+
+
+def lvs(request):
+    if request.method == 'POST':
+        lvsform = LvsForm(request.POST)
+        if lvsform.is_valid():
+            lvs_busy = lvsform.cleaned_data['lvs_busy']
+            lvs_switch = lvsform.cleaned_data['lvs_switch']
+            request.session['lvs_busy'] = lvs_busy
+            request.session['lvs_switch'] = lvs_switch
+            tag_service = request.session['tag_service']
+            return redirect(next(iter(tag_service[0])))
+    else:
+        service_lvs = request.session['service_lvs']
+        lvsform = LvsForm()
+        context = {
+            'service_lvs': service_lvs,
+            'lvsform': lvsform
+        }
+        return render(request, 'tickets/lvs.html', context)
+
+
+def itv(request):
+    if request.method == 'POST':
+        itvform = ItvForm(request.POST)
+        if itvform.is_valid():
+            type_itv = itvform.cleaned_data['type_itv']
+            cnt_itv = itvform.cleaned_data['cnt_itv']
+            router_itv = itvform.cleaned_data['router_itv']
+            services_plus_desc = request.session['services_plus_desc']
+            tag_service = request.session['tag_service']
+            try:
+                new_job_services = request.session['new_job_services']
+            except KeyError:
+                new_job_services = None
+                if type_itv == 'novlexist':
+                    messages.warning(request, 'Нельзя выбрать действующее ШПД, проектирование в нов. точке')
+                    return redirect(next(iter(tag_service[0])))
+            for index_service in range(len(services_plus_desc)):
+                if 'iTV' in services_plus_desc[index_service]:
+                    if type_itv == 'vl':
+                        if new_job_services:
+                            for ind in range(len(new_job_services)):
+                                if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] += '|'
+                        services_plus_desc[index_service] += '|'
+                        counter_line_services = request.session['counter_line_services']
+                        counter_line_services += 1
+                        request.session['counter_line_services'] = counter_line_services
+                        sreda = request.session['sreda']
+                        if sreda == '2' or sreda == '4':
+                            if {'vols': None} not in tag_service:
+                                tag_service.insert(1, {'vols': None})
+                        elif sreda == '3':
+                            if 'wireless' not in tag_service:
+                                tag_service.insert(1, {'wireless': None})
+                        elif sreda == '1':
+                            if 'copper' not in tag_service:
+                                tag_service.insert(1, {'copper': None})
+                        if {'data': None} in tag_service:
+                            tag_service.remove({'data': None})
+            request.session['new_job_services'] = new_job_services
+            request.session['services_plus_desc'] = services_plus_desc
+            request.session['type_itv'] = type_itv
+            request.session['cnt_itv'] = cnt_itv
+            request.session['router_itv'] = router_itv
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        for service in services_plus_desc:
+            if 'iTV' in service:
+                service_itv = service
+                break
+        itvform = ItvForm(initial={'type_itv': 'novl'})
+        return render(request, 'tickets/itv.html', {'itvform': itvform, 'service_itv': service_itv})
+
+
+def cks(request):
+    if request.method == 'POST':
+        cksform = CksForm(request.POST)
+        if cksform.is_valid():
+            pointA = cksform.cleaned_data['pointA']
+            pointB = cksform.cleaned_data['pointB']
+            policer_cks = cksform.cleaned_data['policer_cks']
+            type_cks = cksform.cleaned_data['type_cks']
+            exist_service = cksform.cleaned_data['exist_service']
+            if type_cks and type_cks == 'trunk':
+                request.session['counter_line_services'] = 1
+            try:
+                all_cks_in_tr = request.session['all_cks_in_tr']
+            except KeyError:
+                all_cks_in_tr = dict()
+            tag_service = request.session['tag_service']
+            service = tag_service[0]['cks']
+            all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks, 'type_cks': type_cks, 'exist_service': exist_service}})
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            request.session['all_cks_in_tr'] = all_cks_in_tr
+            return redirect(next(iter(tag_service[0])))
+    else:
+        tag_service = request.session['tag_service']
+        service = tag_service[0]['cks']
+        user = User.objects.get(username=request.user.username)
+        credent = cache.get(user)
+        username = credent['username']
+        password = credent['password']
+        types_change_service = request.session.get('types_change_service')
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
+        try:
+            tochka = request.session['tochka']
+            list_cks = match_cks(tochka, username, password)
+        except KeyError:
+            list_cks = request.session['cks_points']
+        if list_cks[0] == 'Access denied':
+            messages.warning(request, 'Нет доступа в ИС Холдинга')
+            response = redirect('login_for_service')
+            response['Location'] += '?next={}'.format(request.path)
+            return response
+        else:
+            if len(list_cks) == 2:
+                pointA = list_cks[0]
+                pointB = list_cks[1]
+                cksform = CksForm(initial={'pointA': pointA, 'pointB': pointB})
+                return render(request, 'tickets/cks.html', {
+                    'cksform': cksform,
+                    'services_cks': service,
+                    'trunk_turnoff_on': trunk_turnoff_on,
+                    'trunk_turnoff_off': trunk_turnoff_off
+                })
+            else:
+                cksform = CksForm()
+                return render(request, 'tickets/cks.html', {
+                    'cksform': cksform,
+                    'list_strok': list_cks,
+                    'services_cks': service,
+                    'trunk_turnoff_on': trunk_turnoff_on,
+                    'trunk_turnoff_off': trunk_turnoff_off
+                })
+
+
+def shpd(request):
+    if request.method == 'POST':
+        shpdform = ShpdForm(request.POST)
+        if shpdform.is_valid():
+            router_shpd = shpdform.cleaned_data['router']
+            type_shpd = shpdform.cleaned_data['type_shpd']
+            exist_service = shpdform.cleaned_data['exist_service']
+            if type_shpd == 'trunk':
+                request.session['counter_line_services'] = 1
+            try:
+                all_shpd_in_tr = request.session['all_shpd_in_tr']
+            except KeyError:
+                all_shpd_in_tr = dict()
+            tag_service = request.session['tag_service']
+            service = tag_service[0]['shpd']
+            all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
+            request.session['all_shpd_in_tr'] = all_shpd_in_tr
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        types_change_service = request.session.get('types_change_service')
+        tag_service = request.session['tag_service']
+        service = tag_service[0]['shpd']
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
+        shpdform = ShpdForm(initial={'shpd': 'access'})
+        context = {
+            'shpdform': shpdform,
+            'services_shpd': service,
+            'trunk_turnoff_on': trunk_turnoff_on,
+            'trunk_turnoff_off': trunk_turnoff_off
+        }
+        return render(request, 'tickets/shpd.html', context)
+
+
+def portvk(request):
+    if request.method == 'POST':
+        portvkform = PortVKForm(request.POST)
+        if portvkform.is_valid():
+            new_vk = portvkform.cleaned_data['new_vk']
+            exist_vk = '"{}"'.format(portvkform.cleaned_data['exist_vk'])
+            policer_vk = portvkform.cleaned_data['policer_vk']
+            type_portvk = portvkform.cleaned_data['type_portvk']
+            exist_service = portvkform.cleaned_data['exist_service']
+            if type_portvk == 'trunk':
+                request.session['counter_line_services'] = 1
+            try:
+                all_portvk_in_tr = request.session['all_portvk_in_tr']
+            except KeyError:
+                all_portvk_in_tr = dict()
+            tag_service = request.session['tag_service']
+            service = tag_service[0]['portvk']
+            all_portvk_in_tr.update({service:{'new_vk': new_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk, 'type_portvk': type_portvk, 'exist_service': exist_service}})
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            request.session['all_portvk_in_tr'] = all_portvk_in_tr
+            return redirect(next(iter(tag_service[0])))
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        services_vk = []
+        for service in services_plus_desc:
+            if 'Порт ВЛС' in service:
+                services_vk.append(service)
+        types_change_service = request.session.get('types_change_service')
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
+        portvkform = PortVKForm()
+        context = {'portvkform': portvkform,
+                   'services_vk': services_vk,
+                   'trunk_turnoff_on': trunk_turnoff_on,
+                   'trunk_turnoff_off': trunk_turnoff_off
+                   }
+        return render(request, 'tickets/portvk.html', context)
+
+
+def portvm(request):
+    if request.method == 'POST':
+        portvmform = PortVMForm(request.POST)
+        if portvmform.is_valid():
+            new_vm = portvmform.cleaned_data['new_vm']
+            exist_vm = '"{}"'.format(portvmform.cleaned_data['exist_vm'])
+            policer_vm = portvmform.cleaned_data['policer_vm']
+            vm_inet = portvmform.cleaned_data['vm_inet']
+            type_portvm = portvmform.cleaned_data['type_portvm']
+            exist_service_vm = portvmform.cleaned_data['exist_service_vm']
+            if type_portvm == 'trunk':
+                request.session['counter_line_services'] = 1
+            request.session['policer_vm'] = policer_vm
+            request.session['new_vm'] = new_vm
+            request.session['exist_vm'] = exist_vm
+            request.session['vm_inet'] = vm_inet
+            request.session['type_portvm'] = type_portvm
+            request.session['exist_service_vm'] = exist_service_vm
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        services_vm = []
+        for service in services_plus_desc:
+            if 'Порт ВМ' in service:
+                services_vm.append(service)
+        types_change_service = request.session.get('types_change_service')
+        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
+        portvmform = PortVMForm()
+        context = {'portvmform': portvmform,
+                   'services_vm': services_vm,
+                   'trunk_turnoff_on': trunk_turnoff_on,
+                   'trunk_turnoff_off': trunk_turnoff_off
+                   }
+        return render(request, 'tickets/portvm.html', context)
+
+
+def video(request):
+    if request.method == 'POST':
+        videoform = VideoForm(request.POST)
+        if videoform.is_valid():
+            print(videoform.cleaned_data)
+            camera_number = videoform.cleaned_data['camera_number']
+            camera_model = videoform.cleaned_data['camera_model']
+            voice = videoform.cleaned_data['voice']
+            deep_archive = videoform.cleaned_data['deep_archive']
+            camera_place_one = videoform.cleaned_data['camera_place_one']
+            camera_place_two = videoform.cleaned_data['camera_place_two']
+            request.session['camera_number'] = str(camera_number)
+            request.session['camera_model'] = camera_model
+            request.session['voice'] = voice
+            request.session['deep_archive'] = deep_archive
+            request.session['camera_place_one'] = camera_place_one
+            request.session['camera_place_two'] = camera_place_two
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        services_plus_desc = request.session['services_plus_desc']
+        for service in services_plus_desc:
+            if 'Видеонаблюдение' in service:
+                service_video = service
+                request.session['service_video'] = service_video
+                break
+        task_otpm = request.session['task_otpm']
+        videoform = VideoForm()
+        context = {
+            'service_video': service_video,
+            'videoform': videoform,
+            'task_otpm': task_otpm
+        }
+        return render(request, 'tickets/video.html', context)
+
+
+@cache_check
+def get_resources(request):
+    """Данный метод получает от пользователя номер договора. с помощью метода get_contract_id получает ID договора.
+     С помощью метода get_contract_resources получает ресурсы с контракта. Отправляет пользователя на страницу, где
+    отображаются эти ресурсы.
+    Если несколько договоров удовлетворяющих поиску - перенаправляет на страницу выбора конкретного договора."""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        contractform = ContractForm(request.POST)
+        if contractform.is_valid():
+            contract = contractform.cleaned_data['contract']
+            contract_id = get_contract_id(username, password, contract)
+            if isinstance(contract_id, list):
+                request.session['contract_id'] = contract_id
+                request.session['contract'] = contract
+                return redirect('contract_id_formset')
+            else:
+                if contract_id == 'Такого договора не найдено':
+                    messages.warning(request, 'Договора не найдено')
+                    return redirect('get_resources')
+                ono = get_contract_resources(username, password, contract_id)
+                phone_address = check_contract_phone_exist(username, password, contract_id)
+                if phone_address:
+                    request.session['phone_address'] = phone_address
+                request.session['ono'] = ono
+                request.session['contract'] = contract
+                return redirect('resources_formset')
+    else:
+        contractform = ContractForm()
+    return render(request, 'tickets/contract.html', {'contractform': contractform})
+
+
+@cache_check
+def add_spp(request, dID):
+    """Данный метод принимает параметр заявки СПП, проверяет наличие данных в БД с таким параметром. Если в БД есть
+     ТР с таким параметром, то помечает данную заявку как новую версию, если нет, то помечает как версию 1.
+     Получает данные с помощью метода for_spp_view и добавляет в БД. Перенаправляет на метод spp_view_save"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    try:
+        current_spp = SPP.objects.filter(dID=dID).latest('created')
+    except ObjectDoesNotExist:
+        spp_params = for_spp_view(username, password, dID)
+        if spp_params.get('Access denied') == 'Access denied':
+            messages.warning(request, 'Нет доступа в ИС Холдинга')
+            response = redirect('login_for_service')
+            response['Location'] += '?next={}'.format(request.path)
+            return response
+        else:
+            version = 1
+            ticket_spp = SPP()
+            ticket_spp.dID = dID
+            ticket_spp.ticket_k = spp_params['Заявка К']
+            ticket_spp.client = spp_params['Клиент']
+            ticket_spp.type_ticket = spp_params['Тип заявки']
+            ticket_spp.manager = spp_params['Менеджер']
+            ticket_spp.technolog = spp_params['Технолог']
+            ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
+            ticket_spp.des_tr = spp_params['Состав Заявки ТР']
+            ticket_spp.services = spp_params['Перечень требуемых услуг']
+            ticket_spp.comment = spp_params['Примечание']
+            ticket_spp.version = version
+            ticket_spp.process = True
+            user = User.objects.get(username=request.user.username)
+            ticket_spp.user = user
+            ticket_spp.save()
+            return redirect('spp_view_save', dID, ticket_spp.id)
+    else:
+        if current_spp.process == True:
+            messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
+            return redirect('ortr')
+
+        else:
+            spp_params = for_spp_view(username, password, dID)
+            if spp_params.get('Access denied') == 'Access denied':
+                messages.warning(request, 'Нет доступа в ИС Холдинга')
+                response = redirect('login_for_service')
+                response['Location'] += '?next={}'.format(request.path)
+                return response
+            else:
+                exist_dID = len(SPP.objects.filter(dID=dID))
+                version = exist_dID + 1
+                ticket_spp = SPP()
+                ticket_spp.dID = dID
+                ticket_spp.ticket_k = spp_params['Заявка К']
+                ticket_spp.client = spp_params['Клиент']
+                ticket_spp.type_ticket = spp_params['Тип заявки']
+                ticket_spp.manager = spp_params['Менеджер']
+                ticket_spp.technolog = spp_params['Технолог']
+                ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
+                ticket_spp.des_tr = spp_params['Состав Заявки ТР']
+                ticket_spp.services = spp_params['Перечень требуемых услуг']
+                ticket_spp.comment = spp_params['Примечание']
+                ticket_spp.version = version
+                ticket_spp.process = True
+                user = User.objects.get(username=request.user.username)
+                ticket_spp.user = user
+                ticket_spp.save()
+                #request.session['ticket_spp_id'] = ticket_spp.id
+                return redirect('spp_view_save', dID, ticket_spp.id)
+
+def remove_spp_process(request, ticket_spp_id):
+    """Данный метод удаляет заявку из обрабатываемых заявок"""
+    current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
+    current_ticket_spp.process = False
+    current_ticket_spp.save()
+    messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
+    return redirect('ortr')
+
+
+def remove_spp_wait(request, ticket_spp_id):
+    """Данный метод удаляет заявку из заявок в ожидании"""
+    current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
+    current_ticket_spp.wait = False
+    current_ticket_spp.save()
+    messages.success(request, 'Заявка {} возвращена из ожидания'.format(current_ticket_spp.ticket_k))
+    return redirect('ortr')
+
+def add_spp_wait(request, ticket_spp_id):
+    """Данный метод добавляет заявку в заявки в ожидании"""
+    current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
+    current_ticket_spp.wait = True
+    current_ticket_spp.was_waiting = True
+    current_ticket_spp.process = False
+    current_ticket_spp.save()
+    messages.success(request, 'Заявка {} перемещена в ожидание'.format(current_ticket_spp.ticket_k))
+    return redirect('wait')
+
+
+def spp_view_save(request, dID, ticket_spp_id):
+    """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
+     получает из БД"""
+    request.session['ticket_spp_id'] = ticket_spp_id
+    request.session['dID'] = dID
+    current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
+    return render(request, 'tickets/spp_view_save.html', {'current_ticket_spp': current_ticket_spp})
+
+@cache_check
+def spp_view(request, dID):
+    """Данный метод отображает html-страничку с данными заявки находящейся в пуле ОРТР. Данные о заявке получает
+    с помощью метода for_spp_view из СПП."""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    spp_params = for_spp_view(username, password, dID)
+    if spp_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
+
+
+@cache_check
+def add_tr(request, dID, tID, trID):
+    """Данный метод получает данные о ТР из СПП и добавляет ТР новой точки подключения в АРМ"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        ticket_spp_id = request.session['ticket_spp_id']
+        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        request.session['ticket_tr_id'] = ticket_tr_id
+        return redirect('project_tr', dID, tID, trID)
+
+
+def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
+    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки в АРМ.
+    создает ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
+    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
+    if ticket_spp.children.filter(ticket_tr=trID):
+        ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
+    else:
+        ticket_tr = TR()
+    ticket_tr.ticket_k = ticket_spp
+    ticket_tr.ticket_tr = trID
+    ticket_tr.pps = tr_params['Узел подключения клиента']
+    ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
+    ticket_tr.info_tr = tr_params['Информация для разработки ТР']
+    ticket_tr.services = tr_params['Перечень требуемых услуг']
+    ticket_tr.oattr = tr_params['Решение ОТПМ']
+    ticket_tr.vID = tr_params['vID']
+    ticket_tr.save()
+    ticket_tr_id = ticket_tr.id
+    return ticket_tr_id
+
+
+def tr_view_save(request, dID, ticket_spp_id, trID):
+    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
+    #get_object_or_404 не используется т.к. 'RelatedManager' object has no attribute 'get_object_or_404'
+    try:
+        ticket_tr = ticket_spp.children.get(ticket_tr=trID)
+    except TR.DoesNotExist:
+        raise Http404("ТР не создавалось")
+
+    try:
+        ortr = ticket_tr.ortrtr_set.all()[0]
+    except IndexError:
+        raise Http404("Блока ОРТР нет")
+    return render(request, 'tickets/tr_view_save.html', {'ticket_tr': ticket_tr, 'ortr': ortr})
+
+
+@cache_check
+def tr_view(request, dID, tID, trID):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    ticket_tr = for_tr_view(username, password, dID, tID, trID)
+    if ticket_tr.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
+
+
+@cache_check
+def contract_id_formset(request):
+    """Данный метод отображает форму, в которой пользователь выбирает 1 из договоров наиболее удовлетворяющих
+     поисковому запросу договора, с помощью метода get_contract_resources получает ресурсы с этого договора
+      и перенаправляет на форму для выбора ресурса для работ.
+      Если выбрано более одного или ни одного договора возвращает эту же форму повторно."""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    contract_id = request.session['contract_id']
+    ListContractIdFormSet = formset_factory(ListContractIdForm, extra=len(contract_id))
+    if request.method == 'POST':
+        formset = ListContractIdFormSet(request.POST)
+        if formset.is_valid():
+            data = formset.cleaned_data
+            selected_contract_id = []
+            unselected_contract_id = []
+            selected = zip(contract_id, data)
+            for contract_id, data in selected:
+                if bool(data):
+                    selected_contract_id.append(contract_id.get('id'))
+            if selected_contract_id:
+                if len(selected_contract_id) > 1:
+                    messages.warning(request, 'Было выбрано более 1 ресурса')
+                    return redirect('contract_id_formset')
+                else:
+                    ono = get_contract_resources(username, password, selected_contract_id[0])
+                    if ono:
+                        phone_address = check_contract_phone_exist(username, password, selected_contract_id[0])
+                        if phone_address:
+                            request.session['phone_address'] = phone_address
+                        request.session['ono'] = ono
+                        return redirect('resources_formset')
+                    else:
+                        messages.warning(request, 'На контракте нет ресурсов')
+                        return redirect('contract_id_formset')
+            else:
+                messages.warning(request, 'Контракты не выбраны')
+                return redirect('contract_id_formset')
+    else:
+        formset = ListContractIdFormSet()
+        context = {
+            'contract_id': contract_id,
+            'formset': formset,
+        }
+        return render(request, 'tickets/contract_id_formset.html', context)
+
+
+
+def resources_formset(request):
+    """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
+     только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
+      коммутатором в итоговый список. Если выбрано более одного или ни одного ресурса возвращает эту же форму повторно.
+      По точке подключения(город, улица) проверяет наличие телефонии на договоре. Отправляет пользователя на страницу
+      формирования заголовка."""
+    ono = request.session['ono']
+    try:
+        phone_address = request.session['phone_address']
+    except KeyError:
+        phone_address = None
+    ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
+    if request.method == 'POST':
+        formset = ListResourcesFormSet(request.POST)
+        if formset.is_valid():
+            data = formset.cleaned_data
+            selected_ono = []
+            unselected_ono = []
+            selected = zip(ono, data)
+            for ono, data in selected:
+                if bool(data):
+                    selected_ono.append(ono)
+                else:
+                    unselected_ono.append(ono)
+            if selected_ono:
+                if len(selected_ono) > 1:
+                    messages.warning(request, 'Было выбрано более 1 ресурса')
+                    return redirect('resources_formset')
+                else:
+                    for i in unselected_ono:
+                        if selected_ono[0][-2] == i[-2]:
+                            selected_ono.append(i)
+                    if phone_address:
+                        if any(phone_addr in selected_ono[0][3] for phone_addr in phone_address):
+                            phone_exist = True
+                        else:
+                            phone_exist = False
+                    else:
+                        phone_exist = False
+                    request.session['phone_exist'] = phone_exist
+                    request.session['selected_ono'] = selected_ono
+                    return redirect('forming_header')
+            else:
+                messages.warning(request, 'Ресурсы не выбраны')
+                return redirect('resources_formset')
+    else:
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        task_otpm = ticket_tr.ticket_k.task_otpm
+        formset = ListResourcesFormSet()
+        ono_for_formset = []
+        for resource_for_formset in ono:
+            resource_for_formset.pop(2)
+            resource_for_formset.pop(1)
+            resource_for_formset.pop(0)
+            ono_for_formset.append(resource_for_formset)
+        context = {
+            'ono_for_formset': ono_for_formset,
+            'formset': formset,
+            'task_otpm': task_otpm
+        }
+        return render(request, 'tickets/resources_formset.html', context)
+
+
+def job_formset(request):
+    """Данный метод получает спискок услуг из ТР. Отображает форму, в которой пользователь для каждой услуги выбирает
+    необходимое действие(перенос, изменение, организация) и формируется соответствующие списки услуг."""
+    head = request.session['head']
+    ticket_tr_id = request.session['ticket_tr_id']
+    ticket_tr = TR.objects.get(id=ticket_tr_id)
+    oattr = ticket_tr.oattr
+    pps = ticket_tr.pps
+    services = ticket_tr.services
+    services_con = []
+    for service in services:
+        if service.startswith('Телефон'):
+            if len(services_con) != 0:
+                for i in range(len(services_con)):
+                    if services_con[i].startswith('Телефон'):
+                        services_con[i] = services_con[i] +' '+ service[len('Телефон'):]
+                        break
+                    else:
+                        if i == len(services_con)-1:
+                            services_con.append(service)
+            else:
+                services_con.append(service)
+        elif service.startswith('ЛВС'):
+            if len(services_con) != 0:
+                for i in range(len(services_con)):
+                    if services_con[i].startswith('ЛВС'):
+                        services_con[i] = services_con[i] +' '+ service[len('ЛВС'):]
+                        break
+                    else:
+                        if i == len(services_con)-1:
+                            services_con.append(service)
+            else:
+                services_con.append(service)
+        elif service.startswith('Видеонаблюдение'):
+            if len(services_con) != 0:
+                for i in range(len(services_con)):
+                    if services_con[i].startswith('Видеонаблюдение'):
+                        services_con[i] = services_con[i] +' '+ service[len('Видеонаблюдение'):]
+                        break
+                    else:
+                        if i == len(services_con) - 1:
+                            services_con.append(service)
+            else:
+                services_con.append(service)
+        elif service.startswith('HotSpot'):
+            if len(services_con) != 0:
+                for i in range(len(services_con)):
+                    if services_con[i].startswith('HotSpot'):
+                        services_con[i] = services_con[i] +' '+ service[len('HotSpot'):]
+                        break
+                    else:
+                        if i == len(services_con) - 1:
+                            services_con.append(service)
+            else:
+                services_con.append(service)
+        else:
+            services_con.append(service)
+    services = services_con
+    ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
+    if request.method == 'POST':
+        formset = ListJobsFormSet(request.POST)
+        if formset.is_valid():
+            pass_job_services = []
+            change_job_services = []
+            new_job_services = []
+            data = formset.cleaned_data
+            selected = zip(services, data)
+            for services, data in selected:
+                if data == {'jobs': 'Организация/Изменение, СПД'}:
+                    new_job_services.append(services)
+                elif data == {'jobs': 'Перенос, СПД'}:
+                    pass_job_services.append(services)
+                elif data == {'jobs': 'Изменение, не СПД'}:
+                    change_job_services.append(services)
+                elif data == {'jobs': 'Не требуется'}:
+                    pass
+            request.session['new_job_services'] = new_job_services
+            request.session['pass_job_services'] = pass_job_services
+            request.session['change_job_services'] = change_job_services
+            return redirect('project_tr_exist_cl')
+    else:
+        formset = ListJobsFormSet()
+        context = {
+            'head': head,
+            'oattr': oattr,
+            'pps': pps,
+            'services': services,
+            'formset': formset
+        }
+        return render(request, 'tickets/job_formset.html', context)
+
+
+@cache_check
+def forming_header(request):
+    """Данный метод проверяет если клиент подключен через CSW или WDA, то проверяет наличие на этих устройтсвах других
+     договоров и если есть такие договоры, то добавляет их ресурсы в список выбранных ресурсов с договора клиента."""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    selected_ono = request.session['selected_ono']
+
+    selected_client = selected_ono[0][0]
+    selected_device = selected_ono[0][-2]
+    request.session['selected_device'] = selected_device
+    request.session['selected_client'] = selected_client
+    if selected_device.startswith('CSW') or selected_device.startswith('WDA'):
+        extra_selected_ono = _get_extra_selected_ono(username, password, selected_device, selected_client)
+        if extra_selected_ono:
+            for i in extra_selected_ono:
+                selected_ono.append(i)
+
+    request.session['selected_ono'] = selected_ono
+    context = {
+        'ono': selected_ono,
+
+    }
+    return redirect('forming_chain_header')
+
+
+@cache_check
+def forming_chain_header(request):
+    """Данный метод собирает данные обо всех устройствах через которые подключен клиент и отправляет на страницу
+    формирования заголовка из этих данных"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    chain_device = request.session['selected_device']
+    selected_ono = request.session['selected_ono']
+    phone_exist = request.session['phone_exist']
+    chains = _get_chain_data(username, password, chain_device)
+    if chains:
+        downlink = _get_downlink(chains, chain_device)
+        node_device = _get_node_device(chains, chain_device)
+        nodes_vgw = []
+        if phone_exist or node_device.endswith(', КК') or node_device.endswith(', WiFi'):
+            vgw_on_node = _get_vgw_on_node(chains, chain_device)
+            if vgw_on_node:
+                nodes_vgw.append(chain_device)
+        max_level = 20
+        uplink, max_level = _get_uplink(chains, chain_device, max_level)
+        all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
+        selected_client = 'No client'
+        if all_chain[0] == None:
+            node_uplink = node_device
+            if phone_exist:
+                extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
+                if extra_node_device:
+                    for extra in extra_node_device:
+                        extra_chains = _get_chain_data(username, password, extra)
+                        extra_vgw = _get_vgw_on_node(extra_chains, extra)
+                        if extra_vgw:
+                            nodes_vgw.append(extra)
+        else:
+            node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
+            for all_chain_device in all_chain:
+                if all_chain_device.startswith('CSW'):
+                    extra_chains = _get_chain_data(username, password, all_chain_device)
+                    extra_vgw = _get_vgw_on_node(extra_chains, all_chain_device)
+                    if extra_vgw:
+                        nodes_vgw.append(all_chain_device)
+                    extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
+                    if extra_selected_ono:
+                        for i in extra_selected_ono:
+                            selected_ono.append(i)
+        if downlink:
+            for link_device in downlink:
+                extra_vgw = _get_vgw_on_node(chains, link_device)
+                if extra_vgw:
+                    nodes_vgw.append(link_device)
+                extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
+                if extra_selected_ono:
+                    for i in extra_selected_ono:
+                        selected_ono.append(i)
+
+        all_vgws = []
+        if nodes_vgw:
+            for i in nodes_vgw:
+                parsing_vgws = _parsing_vgws_by_node_name(username, password, Switch=i)
+                for vgw in parsing_vgws:
+                    all_vgws.append(vgw)
+        selected_clients_for_vgw = [client[0] for client in selected_ono]
+        contracts_for_vgw = list(set(selected_clients_for_vgw))
+        selected_vgw, waste_vgw = check_client_on_vgw(contracts_for_vgw, all_vgws, username, password)
+        request.session['node_mon'] = node_uplink
+        request.session['uplink'] = all_chain
+        request.session['downlink'] = downlink
+        request.session['vgw_chains'] = selected_vgw
+        request.session['waste_vgw'] = waste_vgw
+        return redirect('head')
+    else:
+        return redirect('no_data')
+
+
+@cache_check
+def head(request):
+    """Данный метод приводит данные для заголовка в читаемый формат на основе шаблона в КБЗ и отправляет на страницу
+    выбора шаблонов для ТР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    node_mon = request.session['node_mon']
+    uplink = request.session['uplink']
+    downlink = request.session['downlink']
+    vgw_chains = request.session['vgw_chains']
+    selected_ono = request.session['selected_ono']
+    waste_vgw = request.session['waste_vgw']
+
+    templates = ckb_parse(username, password)
+    result_services = []
+    static_vars = {}
+    hidden_vars = {}
+    stroka = templates.get("Заголовок")
+    static_vars['указать номер договора'] = selected_ono[0][0]
+    static_vars['указать название клиента'] = selected_ono[0][1]
+    static_vars['указать точку подключения'] = selected_ono[0][3]
+    node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК ', ', WiFi': 'WiFi '}
+    for key, item in node_templates.items():
+        if node_mon.endswith(key):
+            finish_node = item + node_mon[:node_mon.index(key)]
+            request.session['independent_pps'] = node_mon
+    static_vars['указать узел связи'] = finish_node
+    if uplink == [None]:
+        static_vars['указать название коммутатора'] = selected_ono[0][-2]
+        request.session['independent_kad'] = selected_ono[0][-2]
+        static_vars['указать порт'] = selected_ono[0][-1]
+        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
+        stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
+    else:
+        static_vars['указать название коммутатора'] = uplink[-1].split()[0]
+        request.session['independent_kad'] = uplink[-1].split()[0]
+        static_vars['указать порт'] = ' '.join(uplink[-1].split()[1:])
+        list_stroka_device = []
+        if len(uplink) > 1:
+            for i in range(len(uplink)-2, -1, -1):
+                extra_stroka_device = '- {}\n'.format(uplink[i])
+                list_stroka_device.append(extra_stroka_device)
+            if selected_ono[0][-2].startswith('WDA'):
+                extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
+                list_stroka_device.append(extra_stroka_device)
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
+            else:
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
+        elif len(uplink) == 1:
+            if selected_ono[0][-2].startswith('WDA'):
+                extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
+                list_stroka_device.append(extra_stroka_device)
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
+            else:
+                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
+                list_stroka_device.append(extra_stroka_device)
+        if downlink:
+            for i in range(len(downlink)-1, -1, -1):
+                extra_stroka_device = '- {}\n'.format(downlink[i])
+                list_stroka_device.append(extra_stroka_device)
+        extra_extra_stroka_device = ''.join(list_stroka_device)
+        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
+        stroka = stroka[:index_of_device] + extra_extra_stroka_device + ' \n' + stroka[index_of_device:]
+    if selected_ono[0][-2].startswith('CSW'):
+        old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
+                                                                                       password)
+        request.session['old_model_csw'] = old_model_csw
+        request.session['node_csw'] = node_csw
+
+    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -',
+                    '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
+    service_shpd_bgp = ['BGP', 'bgp']
+    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
+    service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
+    service_hotspot = ['hotspot']
+    service_itv = ['itv']
+    list_stroka_main_client_service = []
+    list_stroka_other_client_service = []
+    readable_services = dict()
+    counter_exist_line = set()
+    stick = False
+    counter_stick = 0
+    port_stick = set()
+    for i in selected_ono:
+        if selected_ono[0][0] == i[0]:
+            if i[2] == 'IP-адрес или подсеть':
+                if any(serv in i[-3] for serv in service_shpd_bgp) or '212.49.97.' in i[-4]:
+                    extra_stroka_main_client_service = f'- услугу "Подключение по BGP" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    if list_stroka_main_client_service:
+                        for ind, main in enumerate(list_stroka_main_client_service):
+                            if i[-1] in main:
+                                main = main[
+                                       :main.index('"(')] + f', услугу "Подключение по BGP" c реквизитами "{i[-4]}"' + main[
+                                                                                                                   main.index(
+                                                                                                                       '"('):]
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('"Подключение по BGP"')
+                    readable_services = _readable(curr_value, readable_services, '"Подключение по BGP"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3] for serv in service_shpd):
+                    extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('"ШПД в интернет"')
+                    readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3].lower() for serv in service_hotspot):
+                    extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('Хот-спот')
+                    readable_services = _readable(curr_value, readable_services, 'Хот-спот', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3].lower() for serv in service_itv):
+                    extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('Вебург.ТВ')
+                    readable_services = _readable(curr_value, readable_services, 'Вебург.ТВ', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+            elif i[2] == 'Порт виртуального коммутатора':
+                if any(serv in i[-3].lower() for serv in service_portvk):
+                    extra_stroka_main_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('Порт ВЛС')
+                    readable_services = _readable(curr_value, readable_services, 'Порт ВЛС', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3].lower() for serv in service_portvm):
+                    extra_stroka_main_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]})\n'
+                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                    curr_value = readable_services.get('Порт ВМ')
+                    readable_services = _readable(curr_value, readable_services, 'Порт ВМ', i[-4])
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+            elif i[2] == 'Etherline':
+                counter_stick += 1
+                port_stick.add(i[-1])
+                if 'Физический стык' in i[4]:
+                    stick = True
+                    break
+                else:
+                    if counter_stick == 5 and len(port_stick) == 1:
+                        stick = True
+                        break
+                extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})\n'
+                list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                curr_value = readable_services.get('ЦКС')
+                readable_services = _readable(curr_value, readable_services, 'ЦКС', i[-4])
+                counter_exist_line.add(f'{i[-2]} {i[-1]}')
+        else:
+            if i[2] == 'IP-адрес или подсеть':
+                if any(serv in i[-3] for serv in service_shpd):
+                    extra_stroka_other_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3].lower() for serv in service_hotspot):
+                    extra_stroka_other_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3].lower() for serv in service_itv):
+                    extra_stroka_other_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+            elif i[2] == 'Порт виртуального коммутатора':
+                if any(serv in i[-3].lower() for serv in service_portvk):
+                    extra_stroka_other_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+                elif any(serv in i[-3].lower() for serv in service_portvm):
+                    extra_stroka_other_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
+            elif i[2] == 'Etherline':
+                extra_stroka_other_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                list_stroka_other_client_service.append(extra_stroka_other_client_service)
+                counter_exist_line.add(f'{i[-2]} {i[-1]}')
+    if not stick:
+        if vgw_chains:
+            old_name_model_vgws = []
+            for i in vgw_chains:
+                model = i.get('model')
+                name = i.get('name')
+                vgw_uplink = i.get('uplink').replace('\r\n', '')
+                room = i.get('type')
+                if model == 'ITM SIP':
+                    extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
+                    counter_exist_line.add(f'{vgw_uplink}')
+                    readable_services.update({'"Телефония"': 'через IP-транк'})
+                else:
+                    extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
+                    old_name_model_vgws.append(f'{model} {name}')
+                    readable_services.update({'"Телефония"': None})
+                list_stroka_main_client_service.append(extra_stroka_main_client_service)
+                readable_services.update({'"Телефония"': None})
+            if old_name_model_vgws:
+                request.session['old_name_model_vgws'] = ', '.join(old_name_model_vgws)
+        extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
+        extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
+        index_of_service = stroka.index('В данной точке %клиент потребляет/c клиентом организован L2-стык%') + len('В данной точке %клиент потребляет/c клиентом организован L2-стык%')+1
+        stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + '\n' + extra_extra_stroka_other_client_service + stroka[index_of_service:]
+        if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
+            if waste_vgw:
+                list_stroka_other_vgw =[]
+                for i in waste_vgw:
+                    model = i.get('model')
+                    name = i.get('name')
+                    vgw_uplink = i.get('uplink').replace('\r\n', '')
+                    room = i.get('type')
+                    contracts = i.get('contracts')
+                    if bool(contracts) == False:
+                        contracts = 'Нет контрактов'
+                    if model == 'ITM SIP':
+                        extra_stroka_other_vgw = f'Также есть подключение по IP-транк {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                    else:
+                        extra_stroka_other_vgw = f'Также есть тел. шлюз {model} {name} ({vgw_uplink}). Контракт: {contracts}\n'
+                    list_stroka_other_vgw.append(extra_stroka_other_vgw)
+                extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
+                stroka = stroka + '\n' + extra_stroka_other_vgw
+        counter_exist_line = len(counter_exist_line)
+        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'клиент потребляет:'
+        if (selected_ono[0][-2].startswith('SW') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('IAS') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('AR') and counter_exist_line > 1):
+            pass
+        else:
+            hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
+    else:
+        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'c клиентом организован L2-стык.'
+        hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
+        counter_exist_line = 0
+        request.session['stick'] = True
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    result_services = ''.join(result_services)
+    rev_result_services = result_services[::-1]
+    index_of_head = rev_result_services.index('''-----------------------------------------------------------------------------------\n''')
+    rev_result_services = rev_result_services[:index_of_head]
+    head = rev_result_services[::-1]
+    request.session['head'] = head.strip()
+    request.session['readable_services'] = readable_services
+    request.session['counter_exist_line'] = counter_exist_line
+    return redirect('job_formset')
+
+
+@cache_check
+def add_tr_exist_cl(request, dID, tID, trID):
+    """Данный метод работает для существующей точки подключения. Получает данные о ТР в СПП, добавляет ТР в БД,
+    перенаправляет на страницу запроса контракта клиента. """
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        ticket_spp_id = request.session['ticket_spp_id']
+        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
+        request.session['spplink'] = spplink
+        request.session['ticket_tr_id'] = ticket_tr_id
+        return redirect('get_resources')
+
+
+def project_tr_exist_cl(request):
+    """Данный метод формирует последовательность url'ов по которым необходимо пройти для получения данных от
+     пользователя и перенаправляет на первый из них. Используется для существующей точки подключения."""
+    ticket_tr_id = request.session['ticket_tr_id']
+    ticket_tr = TR.objects.get(id=ticket_tr_id)
+    oattr = ticket_tr.oattr
+    pps = ticket_tr.pps
+    pps = pps.strip()
+    turnoff = ticket_tr.turnoff
+    task_otpm = ticket_tr.ticket_k.task_otpm
+    services_plus_desc = ticket_tr.services
+    des_tr = ticket_tr.ticket_k.des_tr
+    address = None
+    for i in range(len(des_tr)):
+        if ticket_tr.ticket_tr in next(iter(des_tr[i].keys())):
+            while address == None:
+                if next(iter(des_tr[i].values())):
+                    i -= 1
+                else:
+                    address = next(iter(des_tr[i].keys()))
+                    address = address.replace(', д.', ' ')
+    request.session['address'] = address
+    cks_points = []
+    for point in des_tr:
+        if next(iter(point.keys())).startswith('г.'):
+            cks_points.append(next(iter(point.keys())).split('ул.')[1])
+    request.session['cks_points'] = cks_points
+    request.session['services_plus_desc'] = services_plus_desc
+    request.session['task_otpm'] = task_otpm
+    request.session['pps'] = pps
+    if oattr:
+        request.session['oattr'] = oattr
+        wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+        ftth_temp = ['Alpha', 'ОК-1']
+        vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+        if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+            sreda = '3'
+        elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+            sreda = '4'
+        elif any(vo in oattr for vo in vols_temp):
+            sreda = '2'
+        else:
+            sreda = '1'
+    else:
+        request.session['oattr'] = None
+        sreda = '1'
+        request.session['sreda'] = '1'
+    new_job_services = request.session['new_job_services']
+    pass_job_services = request.session['pass_job_services']
+    change_job_services = request.session['change_job_services']
+    type_pass = []
+    tag_service = []
+    if pass_job_services:
+        type_pass.append('Перенос, СПД')
+        tag_service.append({'pass_serv': None})
+
+    if new_job_services:
+        type_pass.append('Организация/Изменение, СПД')
+        counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(new_job_services)
+        new_job_services = services_plus_desc
+        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_job_services)
+        for tag in tags:
+            tag_service.append(tag)
+        request.session['new_job_services'] = new_job_services
+        if change_job_services:
+            type_pass.append('Изменение, не СПД')
+            tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
+            for tag in tags:
+                tag_service.insert(0, tag)
+                tag_service.insert(0, {'change_serv': None})
+
+        if counter_line_services == 0:
+            tag_service.append({'data': None})
+        else:
+            if sreda == '1':
+                tag_service.append({'copper': None})
+            elif sreda == '2' or sreda == '4':
+                tag_service.append({'vols': None})
+            elif sreda == '3':
+                tag_service.append({'wireless': None})
+
+        request.session['hotspot_points'] = hotspot_points
+        request.session['hotspot_users'] = hotspot_users
+        request.session['premium_plus'] = premium_plus
+        request.session['counter_line_services'] = counter_line_services
+        request.session['services_plus_desc'] = services_plus_desc
+        request.session['counter_line_services'] = counter_line_services
+
+    if change_job_services and not new_job_services and not pass_job_services:
+        type_pass.append('Изменение, не СПД')
+        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
+        for tag in tags:
+            tag_service.insert(0, tag)
+            tag_service.insert(0, {'change_serv': None})
+        tag_service.append({'data': None})
+
+    request.session['oattr'] = oattr
+    request.session['pps'] = pps
+    request.session['turnoff'] = turnoff
+    request.session['sreda'] = sreda
+    request.session['type_pass'] = type_pass
+    request.session['tag_service'] = tag_service
+    return redirect(next(iter(tag_service[0])))
+
+
+def change_serv(request):
+    """Данный метод отображает форму для выбора изменения услуги ШПД или организации услуг ШПД, ЦКС, порт ВК, порт ВМ
+    без монтаж. работ"""
+    if request.method == 'POST':
+        changeservform = ChangeServForm(request.POST)
+        if changeservform.is_valid():
+            type_change_service = changeservform.cleaned_data['type_change_service']
+            try:
+                types_change_service = request.session['types_change_service']
+            except KeyError:
+                types_change_service = []
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            types_change_service.append({type_change_service: next(iter(tag_service[0].values()))})
+            if type_change_service == "Организация доп IPv6":
+                if len(tag_service) == 0:
+                    tag_service.append({'data': None})
+            else:
+                tag_service.insert(0, {'change_params_serv': None})
+            request.session['types_change_service'] = types_change_service
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        changeservform = ChangeServForm()
+        tag_service = request.session['tag_service']
+        service = next(iter(tag_service[1].values()))
+        context = {
+            'changeservform': changeservform,
+            'service': service
+        }
+        return render(request, 'tickets/change_serv.html', context)
+
+
+def change_params_serv(request):
+    """Данный метод отображает форму с параметрами услуги ШПД(новая подсеть/маршрутизируемая подсеть)"""
+    if request.method == 'POST':
+        changeparamsform = ChangeParamsForm(request.POST)
+        if changeparamsform.is_valid():
+            new_mask = changeparamsform.cleaned_data['new_mask']
+            routed_ip = changeparamsform.cleaned_data['routed_ip']
+            routed_vrf = changeparamsform.cleaned_data['routed_vrf']
+            request.session['new_mask'] = new_mask
+            request.session['routed_ip'] = routed_ip
+            request.session['routed_vrf'] = routed_vrf
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            if len(tag_service) == 0:
+                tag_service.append({'data': None})
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+    else:
+        head = request.session['head']
+        types_change_service = request.session['types_change_service']
+        for i in range(len(types_change_service)):
+            types_cks_vk_vm_trunk = [
+                "Организация порта ВМ trunk'ом",
+                "Организация порта ВЛС trunk'ом",
+                "Организация ЦКС trunk'ом",
+                "Организация ШПД trunk'ом",
+                "Организация ШПД trunk'ом с простоем",
+                "Организация ЦКС trunk'ом с простоем",
+                "Организация порта ВЛС trunk'ом с простоем",
+                "Организация порта ВМ trunk'ом с простоем"
+            ]
+            if next(iter(types_change_service[i].keys())) in types_cks_vk_vm_trunk:
+                tag_service = request.session['tag_service']
+                tag_service.pop(0)
+                if next(iter(types_change_service[i].keys())) == "Организация ШПД trunk'ом":
+                    tag_service.pop(0)
+                request.session['tag_service'] = tag_service
+                return redirect(next(iter(tag_service[0])))
+
+            types_only_mask = ["Организация доп connected",
+                               "Замена connected на connected",
+                               "Изменение cхемы организации ШПД"
+                               ]
+            if next(iter(types_change_service[i].keys())) in types_only_mask:
+                only_mask = True
+                tag_service = request.session['tag_service']
+                tag_service.pop(0)
+                request.session['tag_service'] = tag_service
+            else:
+                only_mask = False
+            if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
+                routed = True
+                tag_service = request.session['tag_service']
+                tag_service.pop(0)
+                request.session['tag_service'] = tag_service
+            else:
+                routed = False
+        changeparamsform = ChangeParamsForm()
+        context = {
+            'head': head,
+            'changeparamsform': changeparamsform,
+            'only_mask': only_mask,
+            'routed': routed
+        }
+        return render(request, 'tickets/change_params_serv.html', context)
+
+
+def change_log_shpd(request):
+    """Данный метод отображает форму выбора для услуги ШПД новой адресации или существующей"""
+    if request.method == 'POST':
+        changelogshpdform = ChangeLogShpdForm(request.POST)
+        if changelogshpdform.is_valid():
+            change_log_shpd = changelogshpdform.cleaned_data['change_log_shpd']
+            request.session['change_log_shpd'] = change_log_shpd
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            return redirect(next(iter(tag_service[0])))
+    else:
+        head = request.session['head']
+        kad = request.session['kad']
+        subnet_for_change_log_shpd = request.session['subnet_for_change_log_shpd']
+        changelogshpdform = ChangeLogShpdForm()
+        if request.session.get('pass_job_services'):
+            services = request.session.get('pass_job_services')
+        elif request.session.get('new_job_services'):
+            services = request.session.get('new_job_services')
+        else:
+            services = None
+        context = {
+            'head': head,
+            'kad': kad,
+            'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
+            'pass_job_services': services,
+            'changelogshpdform': changelogshpdform
+        }
+        return render(request, 'tickets/change_log_shpd.html', context)
+
+
+def params_extend_service(request):
+    """Данный метод отображает форму с параметрами скорости и ограничения полосы для расширения услуг ЦКС, порт ВК,
+    порт ВМ"""
+    if request.method == 'POST':
+        extendserviceform = ExtendServiceForm(request.POST)
+
+        if extendserviceform.is_valid():
+            extend_speed = extendserviceform.cleaned_data['extend_speed']
+            extend_policer_cks_vk = extendserviceform.cleaned_data['extend_policer_cks_vk']
+            extend_policer_vm = extendserviceform.cleaned_data['extend_policer_vm']
+            request.session['extend_speed'] = extend_speed
+            request.session['extend_policer_cks_vk'] = extend_policer_cks_vk
+            request.session['extend_policer_vm'] = extend_policer_vm
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            if len(tag_service) == 0:
+                tag_service.append({'data': None})
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+
+    else:
+        desc_service = request.session.get('desc_service')
+        extendserviceform = ExtendServiceForm()
+        pass_job_services = request.session.get('pass_job_services')
+        context = {
+            'desc_service': desc_service,
+            'pass_job_services': pass_job_services,
+            'extendserviceform': extendserviceform
+        }
+        return render(request, 'tickets/params_extend_service.html', context)
+
+
+def pass_serv(request):
+    """Данный метод отображает форму с параметрами переноса/расширения услуг"""
+    if request.method == 'POST':
+        passservform = PassServForm(request.POST)
+        if passservform.is_valid():
+            type_passage = passservform.cleaned_data['type_passage']
+            change_log = passservform.cleaned_data['change_log']
+            exist_sreda = passservform.cleaned_data['exist_sreda']
+            request.session['type_passage'] = type_passage
+            request.session['change_log'] = change_log
+            request.session['exist_sreda'] = exist_sreda
+            tag_service = request.session['tag_service']
+            readable_services = request.session['readable_services']
+            selected_ono = request.session['selected_ono']
+            type_pass = request.session['type_pass']
+            sreda = request.session['sreda']
+            tag_service.pop(0)
+            if 'Перенос, СПД' not in type_pass:
+                return redirect(next(iter(tag_service[0])))
+            else:
+                pass_job_services = request.session.get('pass_job_services')
+                if change_log == 'Порт и КАД не меняется':
+                    if type_passage == 'Перевод на гигабит':
+                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
+                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+                            request.session['desc_service'] = desc_service
+                            tag_service.insert(0, {'params_extend_service': None})
+                            return redirect(next(iter(tag_service[0])))
+                    elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and request.session.get('turnoff'):
+                        tag_service.insert(0, {'pass_turnoff': None})
+                        return redirect(next(iter(tag_service[0])))
+                else:
+                    if type_passage == 'Перевод на гигабит':
+                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
+                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+                            request.session['desc_service'] = desc_service
+                            tag_service.insert(0, {'params_extend_service': None})
+                    phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
+                    if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
+                        tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
+                        request.session['phone_in_pass'] = ' '.join(phone_in_pass)
+                    if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
+                        pass
+                    else:
+                        if {'data': None} in tag_service:
+                            tag_service.remove({'data': None})
+                        if sreda == '1':
+                            tag_service.append({'copper': None})
+                        elif sreda == '2' or sreda == '4':
+                            tag_service.append({'vols': None})
+                        elif sreda == '3':
+                            tag_service.append({'wireless': None})
+                if len(tag_service) == 0:
+                    tag_service.append({'data': None})
+                return redirect(next(iter(tag_service[0])))
+    else:
+        oattr = request.session['oattr']
+        pps = request.session['pps']
+        head = request.session['head']
+        passservform = PassServForm()
+        context = {
+            'passservform': passservform,
+            'oattr': oattr,
+            'pps': pps,
+            'head': head
+        }
+        return render(request, 'tickets/pass_serv.html', context)
+
+
+def pass_turnoff(request):
+    """Данный метод отображает форму для ввода ППР на случае если в ТР осуществляется перенос услуг без изменения
+    логического подключения, но при этом в ТР заказано отключение других клиентов"""
+    if request.method == 'POST':
+        passturnoffform = PassTurnoffForm(request.POST)
+        if passturnoffform.is_valid():
+            ppr = passturnoffform.cleaned_data['ppr']
+            request.session['ppr'] = ppr
+            tag_service = request.session['tag_service']
+            tag_service.pop(0)
+            if len(tag_service) == 0:
+                tag_service.append({'data': None})
+            request.session['tag_service'] = tag_service
+            return redirect(next(iter(tag_service[0])))
+
+    else:
+        oattr = request.session['oattr']
+        pps = request.session['pps']
+        head = request.session['head']
+        spplink = request.session['spplink']
+        regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
+        match_link = re.search(regex_link, spplink)
+        dID = match_link.group(1)
+        tID = match_link.group(2)
+        trID = match_link.group(3)
+        passturnoffform = PassTurnoffForm()
+        context = {
+            'passturnoffform': passturnoffform,
+            'oattr': oattr,
+            'pps': pps,
+            'head': head,
+            'dID': dID,
+            'tID': tID,
+            'trID': trID
+        }
+        return render(request, 'tickets/pass_turnoff.html', context)
+
+
+
+def static_formset(request):
+    """Не используется, задел на будущее"""
+    template_static = """Присоединение к СПД по медной линии связи.
+-----------------------------------------------------------------------------------
+
+%ОИПМ/ОИПД% проведение работ.
+- Организовать медную линию связи от %указать узел связи% до клиентcкого оборудования.
+- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%."""
+
+    TemplatesStaticFormSet = formset_factory(TemplatesStaticForm, extra=4)
+    if request.method == 'POST':
+        formset = TemplatesStaticFormSet(request.POST)
+        if formset.is_valid():
+
+            data = formset.cleaned_data
+            print('!!!!!!!!dataresources_formset')
+            print(data)
+            static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
+            selected_ono = []
+            unselected_ono = []
+            static_vars = {}
+            selected = zip(static_vav, data)
+            for static_vav, data in selected:
+                # static_vars.update({static_vav: data})
+                static_vars[static_vav] = next(iter(data.values()))
+            print('!!!!static_vars')
+            print(static_vars)
+            return redirect('no_data')
+    else:
+        template_static = """Присоединение к СПД по медной линии связи.
+        -----------------------------------------------------------------------------------
+
+        %ОИПМ/ОИПД% проведение работ.
+        - Организовать медную линию связи от %указать узел связи% до клиентcкого оборудования.
+        - Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%."""
+        static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
+        formset = TemplatesStaticFormSet()
+        context = {
+            'ono_for_formset': static_vav,
+            # 'contract': contract,
+            'formset': formset
+        }
+
+        return render(request, 'tickets/template_static_formset.html', context)
+
+
+
+# def _list_kad(value_vars):
+#     """Данный метод формирует список всех КАД на узле в строку     может надо удалить, вроде не используется"""
+#     list_kad = []
+#
+#     list_switches = value_vars.get('list_switches')
+#     if len(list_switches) == 1:
+#         kad = list_switches[0][0]
+#     else:
+#         for i in range(len(list_switches)):
+#             if (list_switches[i][0].startswith('IAS')) or (list_switches[i][0].startswith('AR')):
+#                 pass
+#             else:
+#                 list_kad.append(list_switches[i][0])
+#         kad = ' или '.join(list_kad)
+#     value_vars.update({'kad': kad})
+#     return kad, value_vars
+
+
+# def flush_session(request):
+#   """может надо удалить"""
+#     list_session_keys = []
+#     for key in request.session.keys():
+#         if key.startswith('_'):
+#             pass
+#         else:
+#             list_session_keys.append(key)
+#     for key in list_session_keys:
+#         del request.session[key]
+#
+#     return render(request, 'tickets/flush.html', {'clear': 'clear'})
+
+
 # def get_tr(request, ticket_tr, ticket_id):
 #     """Данный метод можно будет удалить"""
 #     services_one_tr = []
@@ -1532,753 +3339,6 @@ def manually_tr(request, dID, tID, trID):
 #     return '\n'.join(need)[:-1]+'.'
 
 
-
-
-
-
-
-@cache_check
-def send_to_spp(request):
-    """Данный метод заполняет поля блока ОРТР в СПП готовым ТР"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    spplink = request.session['spplink']
-    url = spplink.replace('dem_begin', 'dem_point')
-    req_check = requests.get(url, verify=False, auth=HTTPBasicAuth(username, password))
-    if req_check.status_code == 200:
-        ticket_tr_id = request.session['ticket_tr_id']
-        ticket_tr = TR.objects.get(id=ticket_tr_id)
-        trOTO_AV = ticket_tr.pps
-        trOTO_Comm = ticket_tr.kad
-        vID = ticket_tr.vID
-        if ticket_tr.ortrtr_set.all():
-            ortr = ticket_tr.ortrtr_set.all()[0]
-            trOTO_Resolution = ortr.ortr
-            trOTS_Resolution = ortr.ots
-            print(trOTO_Resolution)
-        data = {'trOTO_Resolution': trOTO_Resolution, 'trOTS_Resolution': trOTS_Resolution, 'action': 'saveVariant',
-                'trOTO_AV': trOTO_AV, 'trOTO_Comm': trOTO_Comm, 'vID': vID}
-        req = requests.post(url, verify=False, auth=HTTPBasicAuth(username, password), data=data)
-        return redirect(spplink)
-    else:
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-
-
-def flush_session(request):
-    list_session_keys = []
-    for key in request.session.keys():
-        if key.startswith('_'):
-            pass
-        else:
-            list_session_keys.append(key)
-    for key in list_session_keys:
-        del request.session[key]
-
-    return render(request, 'tickets/flush.html', {'clear': 'clear'})
-
-def flush_session_key(request_request):
-    """Данный метод в качестве параметра принимает request, очищает сессию от переменных, полученных при
-    проектировании предыдущих ТР, при этом оставляет в сессии переменные относящиеся к пользователю, и возвращает тот же
-     request"""
-    list_session_keys = []
-    for key in request_request.session.keys():
-        if key.startswith('_'):
-            pass
-        else:
-            list_session_keys.append(key)
-    for key in list_session_keys:
-        del request_request.session[key]
-    return request_request
-
-
-
-
-def hotspot(request):
-    if request.method == 'POST':
-        hotspotform = HotspotForm(request.POST)
-
-        if hotspotform.is_valid():
-            print(hotspotform.cleaned_data)
-            hotspot_points = hotspotform.cleaned_data['hotspot_points']
-            hotspot_users = hotspotform.cleaned_data['hotspot_users']
-            exist_hotspot_client = hotspotform.cleaned_data['exist_hotspot_client']
-            services_plus_desc = request.session['services_plus_desc']
-            counter_line_services = request.session['counter_line_services']
-            if hotspot_points:
-                for index_service in range(len(services_plus_desc)):
-                    if 'HotSpot' in services_plus_desc[index_service]:
-                        for i in range(int(hotspot_points)):
-                            services_plus_desc[index_service] += '|'
-                counter_line_services += hotspot_points-1
-            request.session['counter_line_services'] = counter_line_services
-            request.session['services_plus_desc'] = services_plus_desc
-            request.session['hotspot_points'] = str(hotspot_points)
-            request.session['hotspot_users'] = str(hotspot_users)
-            request.session['exist_hotspot_client'] = exist_hotspot_client
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-    else:
-        hotspot_points = request.session['hotspot_points']
-        hotspot_users = request.session['hotspot_users']
-        premium_plus = request.session['premium_plus']
-        services_plus_desc = request.session['services_plus_desc']
-        for service in services_plus_desc:
-            if 'HotSpot' in service:
-                service_hotspot = service
-                break
-        hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
-        context = {
-            'premium_plus': premium_plus,
-            'hotspotform': hotspotform,
-            'service_hotspot': service_hotspot
-        }
-        return render(request, 'tickets/hotspot.html', context)
-
-def phone(request):
-    if request.method == 'POST':
-        phoneform = PhoneForm(request.POST)
-
-        if phoneform.is_valid():
-            type_phone = phoneform.cleaned_data['type_phone']
-            vgw = phoneform.cleaned_data['vgw']
-            channel_vgw = phoneform.cleaned_data['channel_vgw']
-            ports_vgw = phoneform.cleaned_data['ports_vgw']
-            type_ip_trunk = phoneform.cleaned_data['type_ip_trunk']
-            form_exist_vgw_model = phoneform.cleaned_data['form_exist_vgw_model']
-            form_exist_vgw_name = phoneform.cleaned_data['form_exist_vgw_name']
-            form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
-            services_plus_desc = request.session['services_plus_desc']
-            new_job_services = request.session.get('new_job_services')
-            phone_in_pass = request.session.get('phone_in_pass')
-            # if new_job_services and request.session.get('phone_in_pass'):
-            #     new_job_services.append(''.join(request.session.get('phone_in_pass')))
-            # elif request.session.get('phone_in_pass'):
-            #     new_job_services = []
-            #     new_job_services.append(''.join(request.session.get('phone_in_pass')))
-
-
-            tag_service = request.session['tag_service']
-            print('!!!!! def phone before new_job_services')
-            print(new_job_services)
-
-            for index_service in range(len(services_plus_desc)):
-                if 'Телефон' in services_plus_desc[index_service]:
-                    if type_phone == 'ak' or type_phone == 'st':
-                        if new_job_services:
-                            for ind in range(len(new_job_services)):
-                                if new_job_services[ind] == services_plus_desc[index_service]:
-                                    new_job_services[ind] += '|'
-                                    print('!!!new_job_services[ind]')
-                                    print(new_job_services[ind])
-                                    print(new_job_services)
-                                    #new_job_services = request.session['new_job_services']
-                                    print(new_job_services)
-                        services_plus_desc[index_service] += '|'
-                        if phone_in_pass:
-                            phone_in_pass += '|'
-                            request.session['phone_in_pass'] = phone_in_pass
-                            # counter_exist_line = request.session['counter_exist_line']
-                            # print('!!!!counter_exist_line')
-                            # print(counter_exist_line)
-                            # if type_phone == 'st':
-                            #     request.session['type_ip_trunk'] = type_ip_trunk
-                            #     if type_ip_trunk == 'trunk':
-                            #         request.session['counter_exist_line'] = 1
-                            #     elif type_ip_trunk == 'access':
-                            #         counter_exist_line += 1
-                            #         request.session['counter_exist_line'] = counter_exist_line
-                            # if type_phone == 'ak':
-                            #     counter_exist_line += 1
-                            #     request.session['counter_exist_line'] = counter_exist_line
-                        else:
-                            try:
-                                counter_line_services = request.session['counter_line_services']
-                            except KeyError:
-                                counter_line_services = 0
-
-                            if type_phone == 'st':
-                                request.session['type_ip_trunk'] = type_ip_trunk
-                                if type_ip_trunk == 'trunk':
-                                    request.session['counter_line_services'] = 1
-                                elif type_ip_trunk == 'access':
-                                    counter_line_services += 1
-                                    request.session['counter_line_services'] = counter_line_services
-                            if type_phone == 'ak':
-                                counter_line_services += 1
-                                request.session['counter_line_services'] = counter_line_services
-                        sreda = request.session['sreda']
-                        if sreda == '2' or sreda == '4':
-                            if {'vols': None} in tag_service:
-                                pass
-                            else:
-                                tag_service.insert(1, {'vols': None})
-                        elif sreda == '3':
-                            if {'wireless': None} in tag_service:
-                                pass
-                            else:
-                                tag_service.insert(1, {'wireless': None})
-                        elif sreda == '1':
-                            if {'copper': None} in tag_service:
-                                pass
-                            else:
-                                tag_service.insert(1, {'copper': None})
-                        if {'data': None} in tag_service:
-                            tag_service.remove({'data': None})
-                    elif type_phone == 'ap':
-                        if new_job_services:
-                            for ind in range(len(new_job_services)):
-                                if new_job_services[ind] == services_plus_desc[index_service]:
-                                    new_job_services[ind] += '/'
-                                    #new_job_services = request.session['new_job_services']
-                        if phone_in_pass:
-                            phone_in_pass += '/'
-                            request.session['phone_in_pass'] = phone_in_pass
-                        services_plus_desc[index_service] += '/'
-                        if {'copper': None} in tag_service:
-                            pass
-                        else:
-                            tag_service.insert(1, {'copper': None})
-                    elif type_phone == 'ab':
-                        if new_job_services:
-                            for ind in range(len(new_job_services)):
-                                if new_job_services[ind] == services_plus_desc[index_service]:
-                                    new_job_services[ind] += '\\'
-                                    #new_job_services = request.session['new_job_services']
-                        if phone_in_pass:
-                            phone_in_pass += '\\'
-                            request.session['phone_in_pass'] = phone_in_pass
-                        services_plus_desc[index_service] += '\\'
-                        request.session['form_exist_vgw_model'] = form_exist_vgw_model
-                        request.session['form_exist_vgw_name'] = form_exist_vgw_name
-                        request.session['form_exist_vgw_port'] = form_exist_vgw_port
-
-            print('!!!!! def phone new_job_services')
-            print(new_job_services)
-            request.session['services_plus_desc'] = services_plus_desc
-            request.session['vgw'] = vgw
-            request.session['channel_vgw'] = channel_vgw
-            request.session['ports_vgw'] = ports_vgw
-            request.session['type_phone'] = type_phone
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        # if request.session.get('phone_in_pass'):
-        #     services_plus_desc.append(''.join(request.session.get('phone_in_pass')))
-        #     request.session['services_plus_desc'] = services_plus_desc
-        print('!!!!def phone services_plus_desc')
-        print(services_plus_desc)
-        oattr = request.session['oattr']
-        for service in services_plus_desc:
-            if 'Телефон' in service:
-                regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
-                for regex in regex_ports_vgw:
-                    match_ports_vgw = re.search(regex, service)
-                    if match_ports_vgw:
-                        print('!!!match_ports_vgw')
-                        print(match_ports_vgw)
-                        reg_ports_vgw = match_ports_vgw.group(1)
-                    else:
-                        reg_ports_vgw = 'Нет данных'
-                    break
-
-                regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
-                for regex in regex_channel_vgw:
-                    match_channel_vgw = re.search(regex, service)
-                    if match_channel_vgw:
-                        reg_channel_vgw = match_channel_vgw.group(1)
-                    else:
-                        reg_channel_vgw = 'Нет данных'
-                    break
-                service_vgw = service
-                if 'ватс' in service.lower():
-                    vats = True
-                else:
-                    vats = False
-                break
-
-        phoneform = PhoneForm(initial={'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw})
-        context = {
-            'service_vgw': service_vgw,
-            'vats': vats,
-            'oattr': oattr,
-            'phoneform': phoneform
-        }
-
-        return render(request, 'tickets/phone.html', context)
-
-def local(request):
-    if request.method == 'POST':
-        localform = LocalForm(request.POST)
-
-        if localform.is_valid():
-            local_type = localform.cleaned_data['local_type']
-            local_ports = localform.cleaned_data['local_ports']
-            request.session['local_type'] = local_type
-            request.session['local_ports'] = str(local_ports)
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            if local_type == 'СКС':
-                return redirect('sks')
-            elif local_type == 'ЛВС':
-                return redirect('lvs')
-            else:
-                new_job_services = request.session.get('new_job_services')
-                if new_job_services:
-                    new_job_services[:] = [x for x in new_job_services if not x.startswith('ЛВС')]
-                services_plus_desc = request.session['services_plus_desc']
-                services_plus_desc[:] = [x for x in services_plus_desc if not x.startswith('ЛВС')]
-                request.session['services_plus_desc'] = services_plus_desc
-                print('def local')
-                print('!!!!!next(iter(tag_service[0]))')
-                return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        for service in services_plus_desc:
-            if 'ЛВС' in service:
-                service_lvs = service
-                request.session['service_lvs'] = service_lvs
-                break
-
-        localform = LocalForm()
-        context = {
-            'service_lvs': service_lvs,
-            'localform': localform
-        }
-
-        return render(request, 'tickets/local.html', context)
-
-
-def sks(request):
-    if request.method == 'POST':
-        sksform = SksForm(request.POST)
-
-        if sksform.is_valid():
-            sks_poe = sksform.cleaned_data['sks_poe']
-            sks_router = sksform.cleaned_data['sks_router']
-            request.session['sks_poe'] = sks_poe
-            request.session['sks_router'] = sks_router
-            tag_service = request.session['tag_service']
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        service_lvs = request.session['service_lvs']
-        sksform = SksForm()
-        context = {
-            'service_lvs': service_lvs,
-            'sksform': sksform
-        }
-
-        return render(request, 'tickets/sks.html', context)
-
-
-def lvs(request):
-    if request.method == 'POST':
-        lvsform = LvsForm(request.POST)
-
-        if lvsform.is_valid():
-            lvs_busy = lvsform.cleaned_data['lvs_busy']
-            lvs_switch = lvsform.cleaned_data['lvs_switch']
-            request.session['lvs_busy'] = lvs_busy
-            request.session['lvs_switch'] = lvs_switch
-            tag_service = request.session['tag_service']
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        service_lvs = request.session['service_lvs']
-        lvsform = LvsForm()
-        context = {
-            'service_lvs': service_lvs,
-            'lvsform': lvsform
-        }
-
-        return render(request, 'tickets/lvs.html', context)
-
-
-
-
-def itv(request):
-    if request.method == 'POST':
-        itvform = ItvForm(request.POST)
-
-        if itvform.is_valid():
-            type_itv = itvform.cleaned_data['type_itv']
-            cnt_itv = itvform.cleaned_data['cnt_itv']
-            router_itv = itvform.cleaned_data['router_itv']
-            services_plus_desc = request.session['services_plus_desc']
-            tag_service = request.session['tag_service']
-
-            # for index_service in range(len(services_plus_desc)):
-            #     if 'iTV' in services_plus_desc[index_service]:
-            #         if type_itv == 'novl':
-            #             services_plus_desc[index_service] = services_plus_desc[index_service][:-1]
-            #             counter_line_services = request.session['counter_line_services']
-            #             counter_line_services -= 1
-            #             request.session['counter_line_services'] = counter_line_services
-            #             if len(services_plus_desc) == 1:
-            #                 tag_service.pop()
-            #                 tag_service.append({'data': None})
-            # request.session['type_itv'] = type_itv
-            # request.session['cnt_itv'] = cnt_itv
-            # request.session['services_plus_desc'] = services_plus_desc
-            #
-            # print('!!!!tagservice')
-            # print(tag_service)
-            # request.session['tag_service'] = tag_service
-
-            try:
-                new_job_services = request.session['new_job_services']
-            except KeyError:
-                new_job_services = None
-                if type_itv == 'novlexist':
-                    messages.warning(request, 'Нельзя выбрать действующее ШПД, проектирование в нов. точке')
-                    return redirect(next(iter(tag_service[0])))
-
-
-            for index_service in range(len(services_plus_desc)):
-                if 'iTV' in services_plus_desc[index_service]:
-                    if type_itv == 'vl':
-                        if new_job_services:
-                            for ind in range(len(new_job_services)):
-                                if new_job_services[ind] == services_plus_desc[index_service]:
-                                    new_job_services[ind] += '|'
-                                    #new_job_services = request.session['new_job_services']
-                        services_plus_desc[index_service] += '|'
-                        counter_line_services = request.session['counter_line_services']
-                        counter_line_services += 1
-                        request.session['counter_line_services'] = counter_line_services
-                        sreda = request.session['sreda']
-                        if sreda == '2' or sreda == '4':
-                            if {'vols': None} not in tag_service:
-                                tag_service.insert(1, {'vols': None})
-                        elif sreda == '3':
-                            if 'wireless' not in tag_service:
-                                tag_service.insert(1, {'wireless': None})
-                        elif sreda == '1':
-                            if 'copper' not in tag_service:
-                                tag_service.insert(1, {'copper': None})
-                        if {'data': None} in tag_service:
-                            tag_service.remove({'data': None})
-            print('!!!!! def itv new_job_services')
-            print(new_job_services)
-            request.session['new_job_services'] = new_job_services
-            request.session['services_plus_desc'] = services_plus_desc
-            request.session['type_itv'] = type_itv
-            request.session['cnt_itv'] = cnt_itv
-            request.session['router_itv'] = router_itv
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-            #return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        for service in services_plus_desc:
-            if 'iTV' in service:
-                service_itv = service
-                break
-        itvform = ItvForm(initial={'type_itv': 'novl'})
-        return render(request, 'tickets/itv.html', {'itvform': itvform, 'service_itv': service_itv})
-
-
-def trunk_turnoff_shpd_cks_vk_vm(service, types_change_service):
-    """Данный метод в качестве параметров получает обрабатываемый сервис и массив всех сервисов со значением
-     выбранных работ(например организовать trunk'ом с простоем/без простоя). По значению выбранных работ определяет для
-     данного сервиса использовать блок ТТР с простоем или без"""
-    trunk_turnoff_on = False
-    trunk_turnoff_off = False
-    if types_change_service:
-        for type_change_service in types_change_service:
-            if next(iter(type_change_service.values())) == service:
-                if "с простоем" in next(iter(type_change_service.keys())):
-                    trunk_turnoff_on = True
-                else:
-                    trunk_turnoff_off = True
-    return trunk_turnoff_on, trunk_turnoff_off
-
-def cks(request):
-    if request.method == 'POST':
-        cksform = CksForm(request.POST)
-
-        if cksform.is_valid():
-            pointA = cksform.cleaned_data['pointA']
-            pointB = cksform.cleaned_data['pointB']
-            policer_cks = cksform.cleaned_data['policer_cks']
-            type_cks = cksform.cleaned_data['type_cks']
-            exist_service = cksform.cleaned_data['exist_service']
-            if type_cks and type_cks == 'trunk':
-                request.session['counter_line_services'] = 1
-            try:
-                all_cks_in_tr = request.session['all_cks_in_tr']
-            except KeyError:
-                all_cks_in_tr = dict()
-
-            tag_service = request.session['tag_service']
-            service = tag_service[0]['cks']
-            all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks, 'type_cks': type_cks, 'exist_service': exist_service}})
-            print('!!!!all_cks_in_tr')
-            print(all_cks_in_tr)
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            request.session['all_cks_in_tr'] = all_cks_in_tr
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        #services_plus_desc = request.session['services_plus_desc']
-        tag_service = request.session['tag_service']
-        service = tag_service[0]['cks']
-        #services_cks = []
-        #for service in services_plus_desc:
-        #    if 'ЦКС' in service:
-        #        services_cks.append(service)
-
-        user = User.objects.get(username=request.user.username)
-        credent = cache.get(user)
-        username = credent['username']
-        password = credent['password']
-
-        types_change_service = request.session.get('types_change_service')
-        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
-
-
-
-        try:
-            tochka = request.session['tochka']
-            list_cks = match_cks(tochka, username, password)
-        except KeyError:
-            list_cks = request.session['cks_points']
-        if list_cks[0] == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        else:
-            print('!!!!!cks')
-            print('trunk_turnoff_on')
-            print(trunk_turnoff_on)
-
-            if len(list_cks) == 2:
-                #pointsCKS = list_strok[0].split('-')
-                pointA = list_cks[0]
-                pointB = list_cks[1]
-                cksform = CksForm(initial={'pointA': pointA, 'pointB': pointB})
-                return render(request, 'tickets/cks.html', {
-                    'cksform': cksform,
-                    'services_cks': service,
-                    'trunk_turnoff_on': trunk_turnoff_on,
-                    'trunk_turnoff_off': trunk_turnoff_off
-                })
-            else:
-                cksform = CksForm()
-                return render(request, 'tickets/cks.html', {
-                    'cksform': cksform,
-                    'list_strok': list_cks,
-                    'services_cks': service,
-                    'trunk_turnoff_on': trunk_turnoff_on,
-                    'trunk_turnoff_off': trunk_turnoff_off
-                })
-
-
-def shpd(request):
-    if request.method == 'POST':
-        shpdform = ShpdForm(request.POST)
-
-        if shpdform.is_valid():
-            router_shpd = shpdform.cleaned_data['router']
-            type_shpd = shpdform.cleaned_data['type_shpd']
-            exist_service = shpdform.cleaned_data['exist_service']
-            if type_shpd == 'trunk':
-                request.session['counter_line_services'] = 1
-            try:
-                all_shpd_in_tr = request.session['all_shpd_in_tr']
-            except KeyError:
-                all_shpd_in_tr = dict()
-
-            tag_service = request.session['tag_service']
-            service = tag_service[0]['shpd']
-            all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
-
-            request.session['all_shpd_in_tr'] = all_shpd_in_tr
-            #request.session['router_shpd'] = router_shpd
-            #request.session['type_shpd'] = type_shpd
-            #request.session['exist_service_type_shpd'] = exist_service_type_shpd
-            #tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        # services_plus_desc = request.session['services_plus_desc']
-        # services_shpd = []
-        # for service in services_plus_desc:
-        #     if 'Интернет, DHCP' in service or 'Интернет, блок Адресов Сети Интернет' in service:
-        #         services_shpd.append(service)
-        types_change_service = request.session.get('types_change_service')
-        tag_service = request.session['tag_service']
-        service = tag_service[0]['shpd']
-
-        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service) #services_shpd[0]
-        shpdform = ShpdForm(initial={'shpd': 'access'})
-        context = {'shpdform': shpdform, 'services_shpd': service, 'trunk_turnoff_on': trunk_turnoff_on, 'trunk_turnoff_off': trunk_turnoff_off} #services_shpd
-        return render(request, 'tickets/shpd.html', context)
-
-
-def portvk(request):
-    if request.method == 'POST':
-        portvkform = PortVKForm(request.POST)
-
-        if portvkform.is_valid():
-            new_vk = portvkform.cleaned_data['new_vk']
-            exist_vk = '"{}"'.format(portvkform.cleaned_data['exist_vk'])
-            policer_vk = portvkform.cleaned_data['policer_vk']
-            type_portvk = portvkform.cleaned_data['type_portvk']
-            exist_service = portvkform.cleaned_data['exist_service']
-            if type_portvk == 'trunk':
-                request.session['counter_line_services'] = 1
-
-            try:
-                all_portvk_in_tr = request.session['all_portvk_in_tr']
-            except KeyError:
-                all_portvk_in_tr = dict()
-
-            tag_service = request.session['tag_service']
-            service = tag_service[0]['portvk']
-            all_portvk_in_tr.update({service:{'new_vk': new_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk, 'type_portvk': type_portvk, 'exist_service': exist_service}})
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            request.session['all_portvk_in_tr'] = all_portvk_in_tr
-
-            #request.session['policer_vk'] = policer_vk
-            #request.session['new_vk'] = new_vk
-            #request.session['exist_vk'] = exist_vk
-            #request.session['type_portvk'] = type_portvk
-            #tag_service = request.session['tag_service']
-            #tag_service.pop(0)
-            #request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        services_vk = []
-        for service in services_plus_desc:
-            if 'Порт ВЛС' in service:
-                services_vk.append(service)
-        types_change_service = request.session.get('types_change_service')
-        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
-        portvkform = PortVKForm()
-        context = {'portvkform': portvkform,
-                   'services_vk': services_vk,
-                   'trunk_turnoff_on': trunk_turnoff_on,
-                   'trunk_turnoff_off': trunk_turnoff_off
-                   }
-        return render(request, 'tickets/portvk.html', context)
-
-def portvm(request):
-    if request.method == 'POST':
-        portvmform = PortVMForm(request.POST)
-
-        if portvmform.is_valid():
-            new_vm = portvmform.cleaned_data['new_vm']
-            exist_vm = '"{}"'.format(portvmform.cleaned_data['exist_vm'])
-            policer_vm = portvmform.cleaned_data['policer_vm']
-            vm_inet = portvmform.cleaned_data['vm_inet']
-            type_portvm = portvmform.cleaned_data['type_portvm']
-            exist_service_vm = portvmform.cleaned_data['exist_service_vm']
-            if type_portvm == 'trunk':
-                request.session['counter_line_services'] = 1
-
-            request.session['policer_vm'] = policer_vm
-            request.session['new_vm'] = new_vm
-            request.session['exist_vm'] = exist_vm
-            request.session['vm_inet'] = vm_inet
-            request.session['type_portvm'] = type_portvm
-            request.session['exist_service_vm'] = exist_service_vm
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        services_vm = []
-        for service in services_plus_desc:
-            if 'Порт ВМ' in service:
-                services_vm.append(service)
-        types_change_service = request.session.get('types_change_service')
-        trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
-        portvmform = PortVMForm()
-        context = {'portvmform': portvmform,
-                   'services_vm': services_vm,
-                   'trunk_turnoff_on': trunk_turnoff_on,
-                   'trunk_turnoff_off': trunk_turnoff_off
-                   }
-        return render(request, 'tickets/portvm.html', context)
-
-
-def video(request):
-    if request.method == 'POST':
-        videoform = VideoForm(request.POST)
-
-        if videoform.is_valid():
-            print(videoform.cleaned_data)
-            camera_number = videoform.cleaned_data['camera_number']
-            camera_model = videoform.cleaned_data['camera_model']
-            voice = videoform.cleaned_data['voice']
-            deep_archive = videoform.cleaned_data['deep_archive']
-            camera_place_one = videoform.cleaned_data['camera_place_one']
-            camera_place_two = videoform.cleaned_data['camera_place_two']
-
-
-            request.session['camera_number'] = str(camera_number)
-            request.session['camera_model'] = camera_model
-            request.session['voice'] = voice
-            request.session['deep_archive'] = deep_archive
-            request.session['camera_place_one'] = camera_place_one
-            request.session['camera_place_two'] = camera_place_two
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-    else:
-        services_plus_desc = request.session['services_plus_desc']
-        for service in services_plus_desc:
-            if 'Видеонаблюдение' in service:
-                service_video = service
-                request.session['service_video'] = service_video
-                break
-        task_otpm = request.session['task_otpm']
-        videoform = VideoForm() #initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
-        context = {
-            'service_video': service_video,
-            'videoform': videoform,
-            'task_otpm': task_otpm
-        }
-        return render(request, 'tickets/video.html', context)
-
 # def get_contract_id(login, password, contract):
 #     url = f'https://cis.corp.itmh.ru/doc/crm/contract_ajax.ashx?term={contract}'
 #     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
@@ -2312,39 +3372,7 @@ def video(request):
 #         ono.append(ono_inner)
 #     return ono
 
-@cache_check
-def get_resources(request):
-    """Данный метод получает от пользователя номер договора. с помощью метода get_contract_id получает ID договора.
-     С помощью метода get_contract_resources получает ресурсы с контракта. Отправляет пользователя на страницу, где
-    отображаются эти ресурсы. 
-    Если несколько договоров удовлетворяющих поиску - перенаправляет на страницу выбора конкретного договора."""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    if request.method == 'POST':
-        contractform = ContractForm(request.POST)
-        if contractform.is_valid():
-            contract = contractform.cleaned_data['contract']
-            contract_id = get_contract_id(username, password, contract)
-            if isinstance(contract_id, list):
-                request.session['contract_id'] = contract_id
-                request.session['contract'] = contract
-                return redirect('contract_id_formset')
-            else:
-                if contract_id == 'Такого договора не найдено':
-                    messages.warning(request, 'Договора не найдено')
-                    return redirect('get_resources')
-                ono = get_contract_resources(username, password, contract_id)
-                phone_address = check_contract_phone_exist(username, password, contract_id)
-                if phone_address:
-                    request.session['phone_address'] = phone_address
-                request.session['ono'] = ono
-                request.session['contract'] = contract
-                return redirect('resources_formset')
-    else:
-        contractform = ContractForm()
-    return render(request, 'tickets/contract.html', {'contractform': contractform})
+
 
 # def show_resources(request):
 #     """Данный метод отображает html-страничку"""
@@ -2357,13 +3385,13 @@ def get_resources(request):
 #     return render(request, 'tickets/show_resources.html', context)
 
 
-def _replace_wda_wds(device):
-    """Данный метод из названия WDA получает название WDS"""
-    replace_wda_wds = device.split('-')
-    replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
-    replace_wda_wds.pop(1)
-    device = '-'.join(replace_wda_wds)
-    return device
+# def _replace_wda_wds(device):
+#     """Данный метод из названия WDA получает название WDS"""
+#     replace_wda_wds = device.split('-')
+#     replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
+#     replace_wda_wds.pop(1)
+#     device = '-'.join(replace_wda_wds)
+#     return device
 
 # def _get_chain_data(login, password, device):
 #     url = f'https://mon.itss.mirasystem.net/mp/index.py/chain_update?hostname={device}'
@@ -2372,105 +3400,104 @@ def _replace_wda_wds(device):
 #     return chains
 
 
-def _get_downlink(chains, device):
-    """Данный метод в качестве параметров получает название оборудования, от которого подключен клиент, цепочку
-     устройств, в которой состоит это оборудование, и определяет нижестоящее оборудование"""
-    if device.startswith('WDA'):
-        device = _replace_wda_wds(device)
-    downlink = []
-    downlevel = 20
-    for chain in chains:
-        if device == chain.get('host_name'):
-            downlevel = chain.get('level')
-        elif downlevel < chain.get('level'):
-            if device.startswith('WDS'):
-                if device == chain.get('host_name'):
-                    pass
-                elif chain.get('host_name').startswith(device.split('-')[0].replace('S', 'A')):
-                    pass
-                else:
-                    if 'VGW' not in chain.get('host_name'):
-                        downlink.append(chain.get('host_name'))
-            elif device.startswith('CSW'):
-                if device != chain.get('host_name'):
-                    if 'VGW' not in chain.get('host_name'):
-                        print('!!!downle')
-                        print(downlevel)
-                        downlink.append(chain.get('host_name'))
-    return downlink
-
-def _get_vgw_on_node(chains, device):
-    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
-     это оборудование, и определяет существуют тел. шлюзы, подключенные от этого оборудования или нет"""
-    vgw_on_node = None
-    level_device = 0
-    for chain in chains:
-        if device == chain.get('host_name'):
-            level_device = chain.get('level')
-
-        if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDA'):
-            if 'VGW' in chain.get('host_name'):
-                level_vgw = chain.get('level')
-                if level_vgw == level_device + 1:
-                    #vgw_on_node.append(chain.get('host_name'))
-                    vgw_on_node = 'exist'
-                    break
-    return vgw_on_node
-
-def _get_node_device(chains, device):
-    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
-    это оборудование, и определяет название узла связи"""
-    for chain in chains:
-        if device == chain.get('host_name'):
-            node_device = chain.get('alias')
-    return node_device
-
-def _get_extra_node_device(chains, device, node_device):
-    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
-    это оборудование, название узла связи и определяет иные устройства на данном узле связи"""
-    extra_node_device = []
-    for chain in chains:
-        if node_device == chain.get('alias') and device != chain.get('host_name'):
-            extra_node_device.append(chain.get('host_name'))
-    return extra_node_device
-
-
-def _get_uplink(chains, device, max_level):
-    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
-        это оборудование и определяет название и порт вышестоящего узла. Парамерт max_level изначально задается
-        выше возможно максимального и впоследствии используется, чтобы однозначно определить вышестоящий узел"""
-    if device.startswith('WDA'):
-        device = _replace_wda_wds(device)
-    elif device.startswith('WFA'):
-        replace_wfa_wfs = device.split('-')
-        replace_wfa_wfs[0] = replace_wfa_wfs[0].replace('WFA', 'WFS')
-        replace_wfa_wfs.pop(1)
-        device = '-'.join(replace_wfa_wfs)
-    uplink = None
-    for chain in chains:
-        if device in chain.get('title'):
-            temp_chains2 = chain.get('title').split('\nLink')
-            for i in temp_chains2:
-                if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
-                    if f'-{device}' in i:  # для всех случаев подключения CSW, WDS, WFS
-                        preuplink = i.split(f'-{device}')
-                        preuplink = preuplink[0]
-                        match_uplink = re.search('_(\S+?)_(\S+)', preuplink)
-                        uplink_host = match_uplink.group(1)
-                        uplink_port = match_uplink.group(2)
-                        if uplink_host == chain.get('host_name') and chain.get('level') < max_level:
-                            max_level = chain.get('level')
-                            if 'thernet' in uplink_port:
-                                uplink_port = uplink_port.replace('_', '/')
-                            else:
-                                uplink_port = uplink_port.replace('_', ' ')
-                            uplink = uplink_host + ' ' + uplink_port
-                        else:
-                            pass
-                    elif device in i and 'WDA' in i:  # исключение только для случая, когда CSW подключен от WDA
-                        link = i.split('-WDA')
-                        uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
-    return uplink, max_level
+# def _get_downlink(chains, device):
+#     """Данный метод в качестве параметров получает название оборудования, от которого подключен клиент, цепочку
+#      устройств, в которой состоит это оборудование, и определяет нижестоящее оборудование"""
+#     if device.startswith('WDA'):
+#         device = _replace_wda_wds(device)
+#     downlink = []
+#     downlevel = 20
+#     for chain in chains:
+#         if device == chain.get('host_name'):
+#             downlevel = chain.get('level')
+#         elif downlevel < chain.get('level'):
+#             if device.startswith('WDS'):
+#                 if device == chain.get('host_name'):
+#                     pass
+#                 elif chain.get('host_name').startswith(device.split('-')[0].replace('S', 'A')):
+#                     pass
+#                 else:
+#                     if 'VGW' not in chain.get('host_name'):
+#                         downlink.append(chain.get('host_name'))
+#             elif device.startswith('CSW'):
+#                 if device != chain.get('host_name'):
+#                     if 'VGW' not in chain.get('host_name'):
+#                         downlink.append(chain.get('host_name'))
+#     return downlink
+#
+#
+# def _get_vgw_on_node(chains, device):
+#     """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+#      это оборудование, и определяет существуют тел. шлюзы, подключенные от этого оборудования или нет"""
+#     vgw_on_node = None
+#     level_device = 0
+#     for chain in chains:
+#         if device == chain.get('host_name'):
+#             level_device = chain.get('level')
+#
+#         if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDA'):
+#             if 'VGW' in chain.get('host_name'):
+#                 level_vgw = chain.get('level')
+#                 if level_vgw == level_device + 1:
+#                     vgw_on_node = 'exist'
+#                     break
+#     return vgw_on_node
+#
+# def _get_node_device(chains, device):
+#     """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+#     это оборудование, и определяет название узла связи"""
+#     for chain in chains:
+#         if device == chain.get('host_name'):
+#             node_device = chain.get('alias')
+#     return node_device
+#
+#
+# def _get_extra_node_device(chains, device, node_device):
+#     """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+#     это оборудование, название узла связи и определяет иные устройства на данном узле связи"""
+#     extra_node_device = []
+#     for chain in chains:
+#         if node_device == chain.get('alias') and device != chain.get('host_name'):
+#             extra_node_device.append(chain.get('host_name'))
+#     return extra_node_device
+#
+#
+# def _get_uplink(chains, device, max_level):
+#     """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+#         это оборудование и определяет название и порт вышестоящего узла. Парамерт max_level изначально задается
+#         выше возможно максимального и впоследствии используется, чтобы однозначно определить вышестоящий узел"""
+#     if device.startswith('WDA'):
+#         device = _replace_wda_wds(device)
+#     elif device.startswith('WFA'):
+#         replace_wfa_wfs = device.split('-')
+#         replace_wfa_wfs[0] = replace_wfa_wfs[0].replace('WFA', 'WFS')
+#         replace_wfa_wfs.pop(1)
+#         device = '-'.join(replace_wfa_wfs)
+#     uplink = None
+#     for chain in chains:
+#         if device in chain.get('title'):
+#             temp_chains2 = chain.get('title').split('\nLink')
+#             for i in temp_chains2:
+#                 if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
+#                     if f'-{device}' in i:  # для всех случаев подключения CSW, WDS, WFS
+#                         preuplink = i.split(f'-{device}')
+#                         preuplink = preuplink[0]
+#                         match_uplink = re.search('_(\S+?)_(\S+)', preuplink)
+#                         uplink_host = match_uplink.group(1)
+#                         uplink_port = match_uplink.group(2)
+#                         if uplink_host == chain.get('host_name') and chain.get('level') < max_level:
+#                             max_level = chain.get('level')
+#                             if 'thernet' in uplink_port:
+#                                 uplink_port = uplink_port.replace('_', '/')
+#                             else:
+#                                 uplink_port = uplink_port.replace('_', ' ')
+#                             uplink = uplink_host + ' ' + uplink_port
+#                         else:
+#                             pass
+#                     elif device in i and 'WDA' in i:  # исключение только для случая, когда CSW подключен от WDA
+#                         link = i.split('-WDA')
+#                         uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
+#     return uplink, max_level
 
 # @cache_check
 # def get_chain(request):
@@ -2581,47 +3608,47 @@ def _get_uplink(chains, device, max_level):
 #     print(services_plus_desc)
 #     return counter_line_services, hotspot_points, services_plus_desc
 
-def _tag_service_for_new_serv(services_plus_desc):
-    """Данный метод принимает на входе список новых услуг и формирует последовательность url'ов услуг, по которым
-    необходимо пройти пользователю. Также определяет для услиги Хот-спот количество пользователей и принадлежность
-    к услуге премиум+"""
-    tag_service = []
-    hotspot_users = None
-    premium_plus = None
-    for index_service in range(len(services_plus_desc)):
-        if 'Телефон' in services_plus_desc[index_service]:
-            tag_service.append({'phone': services_plus_desc[index_service]})
-        elif 'iTV' in services_plus_desc[index_service]:
-            tag_service.append({'itv': services_plus_desc[index_service]})
-        elif 'Интернет, DHCP' in services_plus_desc[index_service] or 'Интернет, блок Адресов Сети Интернет' in \
-                services_plus_desc[index_service]:
-            tag_service.append({'shpd': services_plus_desc[index_service]})
-        elif 'ЦКС' in services_plus_desc[index_service]:
-            tag_service.append({'cks': services_plus_desc[index_service]})
-        elif 'Порт ВЛС' in services_plus_desc[index_service]:
-            tag_service.append({'portvk': services_plus_desc[index_service]})
-        elif 'Порт ВМ' in services_plus_desc[index_service]:
-            tag_service.append({'portvm': services_plus_desc[index_service]})
-        elif 'Видеонаблюдение' in services_plus_desc[index_service]:
-            tag_service.append({'video': services_plus_desc[index_service]})
-        elif 'HotSpot' in services_plus_desc[index_service]:
-            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
-            if any(type in services_plus_desc[index_service].lower() for type in types_premium):
-                premium_plus = True
-            else:
-                premium_plus = False
-
-            regex_hotspot_users = ['(\d+)посетит', '(\d+) посетит', '(\d+) польз', '(\d+)польз', '(\d+)чел',
-                                   '(\d+) чел']
-            for regex in regex_hotspot_users:
-                match_hotspot_users = re.search(regex, services_plus_desc[index_service])
-                if match_hotspot_users:
-                    hotspot_users = match_hotspot_users.group(1)
-                    break
-            tag_service.append({'hotspot': services_plus_desc[index_service]})
-        elif 'ЛВС' in services_plus_desc[index_service]:
-            tag_service.append({'local': services_plus_desc[index_service]})
-    return tag_service, hotspot_users, premium_plus
+# def _tag_service_for_new_serv(services_plus_desc):
+#     """Данный метод принимает на входе список новых услуг и формирует последовательность url'ов услуг, по которым
+#     необходимо пройти пользователю. Также определяет для услиги Хот-спот количество пользователей и принадлежность
+#     к услуге премиум+"""
+#     tag_service = []
+#     hotspot_users = None
+#     premium_plus = None
+#     for index_service in range(len(services_plus_desc)):
+#         if 'Телефон' in services_plus_desc[index_service]:
+#             tag_service.append({'phone': services_plus_desc[index_service]})
+#         elif 'iTV' in services_plus_desc[index_service]:
+#             tag_service.append({'itv': services_plus_desc[index_service]})
+#         elif 'Интернет, DHCP' in services_plus_desc[index_service] or 'Интернет, блок Адресов Сети Интернет' in \
+#                 services_plus_desc[index_service]:
+#             tag_service.append({'shpd': services_plus_desc[index_service]})
+#         elif 'ЦКС' in services_plus_desc[index_service]:
+#             tag_service.append({'cks': services_plus_desc[index_service]})
+#         elif 'Порт ВЛС' in services_plus_desc[index_service]:
+#             tag_service.append({'portvk': services_plus_desc[index_service]})
+#         elif 'Порт ВМ' in services_plus_desc[index_service]:
+#             tag_service.append({'portvm': services_plus_desc[index_service]})
+#         elif 'Видеонаблюдение' in services_plus_desc[index_service]:
+#             tag_service.append({'video': services_plus_desc[index_service]})
+#         elif 'HotSpot' in services_plus_desc[index_service]:
+#             types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
+#             if any(type in services_plus_desc[index_service].lower() for type in types_premium):
+#                 premium_plus = True
+#             else:
+#                 premium_plus = False
+#
+#             regex_hotspot_users = ['(\d+)посетит', '(\d+) посетит', '(\d+) польз', '(\d+)польз', '(\d+)чел',
+#                                    '(\d+) чел']
+#             for regex in regex_hotspot_users:
+#                 match_hotspot_users = re.search(regex, services_plus_desc[index_service])
+#                 if match_hotspot_users:
+#                     hotspot_users = match_hotspot_users.group(1)
+#                     break
+#             tag_service.append({'hotspot': services_plus_desc[index_service]})
+#         elif 'ЛВС' in services_plus_desc[index_service]:
+#             tag_service.append({'local': services_plus_desc[index_service]})
+#     return tag_service, hotspot_users, premium_plus
 
 
 
@@ -2641,56 +3668,7 @@ def _tag_service_for_new_serv(services_plus_desc):
 #     return templates
 
 #@login_required(login_url='login/', redirect_field_name='next')
-@cache_check
-def ortr(request):
-    """Данный метод перенаправляет на страницу Новые заявки, которые находятся в пуле ОРТР/в работе.
-        1. Получает данные от redis о логин/пароле
-        2. Получает данные о всех заявках в пуле ОРТР с помощью метода in_work_ortr
-        3. Получает данные о всех заявках которые уже находятся в БД(в работе)
-        4. Удаляет из списка в пуле заявки, которые есть в работе
-        5. Формирует итоговый список всех заявок в пуле/в работе"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    request = flush_session_key(request)
-    search = in_work_ortr(username, password)
-    if search[0] == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        list_search = []
-        for i in search:
-            list_search.append(i[0])
-        spp_proc = SPP.objects.filter(process=True)
-        list_spp_proc = []
-        for i in spp_proc:
-            list_spp_proc.append(i.ticket_k)
-        spp_wait = SPP.objects.filter(wait=True)
-        list_spp_wait = []
-        return_from_wait = []
-        for i in spp_wait:
-            if i.ticket_k in list_search:
-                list_spp_wait.append(i.ticket_k)
-            else:
-                i.wait = False
-                i.save()
-                return_from_wait.append(i.ticket_k)
-        list_search_rem = []
-        for i in list_spp_proc:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        for i in list_spp_wait:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-        if return_from_wait:
-            messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
-        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
+
 
 
 # def primer_get_tr(request, ticket_tr, ticket_id):
@@ -2711,129 +3689,7 @@ def ortr(request):
 
 
 
-@cache_check
-def add_spp(request, dID):
-    """Данный метод принимает параметр заявки СПП, проверяет наличие данных в БД с таким параметром. Если в БД есть
-     ТР с таким параметром, то помечает данную заявку как новую версию, если нет, то помечает как версию 1.
-     Получает данные с помощью метода for_spp_view и добавляет в БД. Перенаправляет на метод spp_view_save"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    try:
-        current_spp = SPP.objects.filter(dID=dID).latest('created')
-    except ObjectDoesNotExist:
-        spp_params = for_spp_view(username, password, dID)
-        if spp_params.get('Access denied') == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        else:
-            version = 1
-            ticket_spp = SPP()
-            ticket_spp.dID = dID
-            ticket_spp.ticket_k = spp_params['Заявка К']
-            ticket_spp.client = spp_params['Клиент']
-            ticket_spp.type_ticket = spp_params['Тип заявки']
-            ticket_spp.manager = spp_params['Менеджер']
-            ticket_spp.technolog = spp_params['Технолог']
-            ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
-            ticket_spp.des_tr = spp_params['Состав Заявки ТР']
-            ticket_spp.services = spp_params['Перечень требуемых услуг']
-            ticket_spp.comment = spp_params['Примечание']
-            ticket_spp.version = version
-            ticket_spp.process = True
-            user = User.objects.get(username=request.user.username)
-            ticket_spp.user = user
-            ticket_spp.save()
-            return redirect('spp_view_save', dID, ticket_spp.id)
-    else:
-        if current_spp.process == True:
-            messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
-            return redirect('ortr')
 
-        else:
-            spp_params = for_spp_view(username, password, dID)
-            if spp_params.get('Access denied') == 'Access denied':
-                messages.warning(request, 'Нет доступа в ИС Холдинга')
-                response = redirect('login_for_service')
-                response['Location'] += '?next={}'.format(request.path)
-                return response
-            else:
-                exist_dID = len(SPP.objects.filter(dID=dID))
-                version = exist_dID + 1
-                ticket_spp = SPP()
-                ticket_spp.dID = dID
-                ticket_spp.ticket_k = spp_params['Заявка К']
-                ticket_spp.client = spp_params['Клиент']
-                ticket_spp.type_ticket = spp_params['Тип заявки']
-                ticket_spp.manager = spp_params['Менеджер']
-                ticket_spp.technolog = spp_params['Технолог']
-                ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
-                ticket_spp.des_tr = spp_params['Состав Заявки ТР']
-                ticket_spp.services = spp_params['Перечень требуемых услуг']
-                ticket_spp.comment = spp_params['Примечание']
-                ticket_spp.version = version
-                ticket_spp.process = True
-                user = User.objects.get(username=request.user.username)
-                ticket_spp.user = user
-                ticket_spp.save()
-                #request.session['ticket_spp_id'] = ticket_spp.id
-                return redirect('spp_view_save', dID, ticket_spp.id)
-
-def remove_spp_process(request, ticket_spp_id):
-    """Данный метод удаляет заявку из обрабатываемых заявок"""
-    current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
-    current_ticket_spp.process = False
-    current_ticket_spp.save()
-    messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
-    return redirect('ortr')
-
-
-def remove_spp_wait(request, ticket_spp_id):
-    """Данный метод удаляет заявку из заявок в ожидании"""
-    current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
-    current_ticket_spp.wait = False
-    current_ticket_spp.save()
-    messages.success(request, 'Заявка {} возвращена из ожидания'.format(current_ticket_spp.ticket_k))
-    return redirect('ortr')
-
-def add_spp_wait(request, ticket_spp_id):
-    """Данный метод добавляет заявку в заявки в ожидании"""
-    current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
-    current_ticket_spp.wait = True
-    current_ticket_spp.was_waiting = True
-    current_ticket_spp.process = False
-    current_ticket_spp.save()
-    messages.success(request, 'Заявка {} перемещена в ожидание'.format(current_ticket_spp.ticket_k))
-    return redirect('wait')
-
-
-def spp_view_save(request, dID, ticket_spp_id):
-    """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
-     получает из БД"""
-    request.session['ticket_spp_id'] = ticket_spp_id
-    request.session['dID'] = dID
-    current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
-    return render(request, 'tickets/spp_view_save.html', {'current_ticket_spp': current_ticket_spp})
-
-@cache_check
-def spp_view(request, dID):
-    """Данный метод отображает html-страничку с данными заявки находящейся в пуле ОРТР. Данные о заявке получает
-    с помощью метода for_spp_view из СПП."""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    spp_params = for_spp_view(username, password, dID)
-    if spp_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
 
 # def for_spp_view(login, password, dID):
 #     spp_params = {}
@@ -2892,81 +3748,6 @@ def spp_view(request, dID):
 #         return spp_params
 
 
-
-
-
-@cache_check
-def add_tr(request, dID, tID, trID):
-    """Данный метод получает данные о ТР из СПП и добавляет ТР новой точки подключения в АРМ"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    tr_params = for_tr_view(username, password, dID, tID, trID)
-    if tr_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        ticket_spp_id = request.session['ticket_spp_id']
-        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
-        request.session['ticket_tr_id'] = ticket_tr_id
-        return redirect('project_tr', dID, tID, trID)
-
-
-def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
-    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки в АРМ.
-    создает ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
-    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
-    if ticket_spp.children.filter(ticket_tr=trID):
-        ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
-    else:
-        ticket_tr = TR()
-    ticket_tr.ticket_k = ticket_spp
-    ticket_tr.ticket_tr = trID
-    ticket_tr.pps = tr_params['Узел подключения клиента']
-    ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
-    ticket_tr.info_tr = tr_params['Информация для разработки ТР']
-    ticket_tr.services = tr_params['Перечень требуемых услуг']
-    ticket_tr.oattr = tr_params['Решение ОТПМ']
-    ticket_tr.vID = tr_params['vID']
-    ticket_tr.save()
-    ticket_tr_id = ticket_tr.id
-    return ticket_tr_id
-
-
-
-
-def tr_view_save(request, dID, ticket_spp_id, trID):
-    ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
-    #get_object_or_404 не используется т.к. 'RelatedManager' object has no attribute 'get_object_or_404'
-    try:
-        ticket_tr = ticket_spp.children.get(ticket_tr=trID)
-    except TR.DoesNotExist:
-        raise Http404("ТР не создавалось")
-
-    try:
-        ortr = ticket_tr.ortrtr_set.all()[0]
-    except IndexError:
-        raise Http404("Блока ОРТР нет")
-    return render(request, 'tickets/tr_view_save.html', {'ticket_tr': ticket_tr, 'ortr': ortr})
-
-
-@cache_check
-def tr_view(request, dID, tID, trID):
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    ticket_tr = for_tr_view(username, password, dID, tID, trID)
-    if ticket_tr.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
 
 
 # def for_tr_view(login, password, dID, tID, trID):
@@ -3733,22 +4514,7 @@ def tr_view(request, dID, tID, trID):
 #     value_vars.update({'name_new_service': name_new_service})
 #     return result_services, result_services_ots, value_vars
 
-def _list_kad(value_vars):
-    """Данный метод формирует список всех КАД на узле в строку"""
-    list_kad = []
 
-    list_switches = value_vars.get('list_switches')
-    if len(list_switches) == 1:
-        kad = list_switches[0][0]
-    else:
-        for i in range(len(list_switches)):
-            if (list_switches[i][0].startswith('IAS')) or (list_switches[i][0].startswith('AR')):
-                pass
-            else:
-                list_kad.append(list_switches[i][0])
-        kad = ' или '.join(list_kad)
-    value_vars.update({'kad': kad})
-    return kad, value_vars
 
 # def _readable_node(node_mon):
 #     """Данный метод приводит название узла к читаемой форме"""
@@ -4671,258 +5437,12 @@ def _list_kad(value_vars):
 #     return JsonResponse(data, safe=False)
 
 
-from django.forms import formset_factory
-#ArticleFormSet = formset_factory(ListResourcesForm, extra=2)
-#formset = ArticleFormSet()
-
-@cache_check
-def contract_id_formset(request):
-    """Данный метод отображает форму, в которой пользователь выбирает 1 из договоров наиболее удовлетворяющих
-     поисковому запросу договора, с помощью метода get_contract_resources получает ресурсы с этого договора
-      и перенаправляет на форму для выбора ресурса для работ.
-      Если выбрано более одного или ни одного договора возвращает эту же форму повторно."""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    contract_id = request.session['contract_id']
-    ListContractIdFormSet = formset_factory(ListContractIdForm, extra=len(contract_id))
-    if request.method == 'POST':
-        formset = ListContractIdFormSet(request.POST)
-        if formset.is_valid():
-            data = formset.cleaned_data
-            selected_contract_id = []
-            unselected_contract_id = []
-            selected = zip(contract_id, data)
-            for contract_id, data in selected:
-                if bool(data):
-                    selected_contract_id.append(contract_id.get('id'))
-            if selected_contract_id:
-                if len(selected_contract_id) > 1:
-                    messages.warning(request, 'Было выбрано более 1 ресурса')
-                    return redirect('contract_id_formset')
-                else:
-                    ono = get_contract_resources(username, password, selected_contract_id[0])
-                    if ono:
-                        phone_address = check_contract_phone_exist(username, password, selected_contract_id[0])
-                        if phone_address:
-                            request.session['phone_address'] = phone_address
-                        request.session['ono'] = ono
-                        return redirect('resources_formset')
-                    else:
-                        messages.warning(request, 'На контракте нет ресурсов')
-                        return redirect('contract_id_formset')
-            else:
-                messages.warning(request, 'Контракты не выбраны')
-                return redirect('contract_id_formset')
-    else:
-        formset = ListContractIdFormSet()
-        context = {
-            'contract_id': contract_id,
-            'formset': formset,
-        }
-        return render(request, 'tickets/contract_id_formset.html', context)
 
 
 
-def resources_formset(request):
-    """Данный метод получает спискок ресурсов с выбранного договора. Формирует форму, в которой пользователь выбирает
-     только 1 ресурс, который будет участвовать в ТР. По коммутатору этого ресурса метод добавляет все ресурсы с данным
-      коммутатором в итоговый список. Если выбрано более одного или ни одного ресурса возвращает эту же форму повторно.
-      По точке подключения(город, улица) проверяет наличие телефонии на договоре. Отправляет пользователя на страницу
-      формирования заголовка."""
-    ono = request.session['ono']
-    try:
-        phone_address = request.session['phone_address']
-    except KeyError:
-        phone_address = None
-    ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
-    if request.method == 'POST':
-        formset = ListResourcesFormSet(request.POST)
-        if formset.is_valid():
-            data = formset.cleaned_data
-            selected_ono = []
-            unselected_ono = []
-            selected = zip(ono, data)
-            for ono, data in selected:
-                if bool(data):
-                    selected_ono.append(ono)
-                else:
-                    unselected_ono.append(ono)
-            if selected_ono:
-                if len(selected_ono) > 1:
-                    messages.warning(request, 'Было выбрано более 1 ресурса')
-                    return redirect('resources_formset')
-                else:
-                    for i in unselected_ono:
-                        if selected_ono[0][-2] == i[-2]:
-                            selected_ono.append(i)
-                    if phone_address:
-                        if any(phone_addr in selected_ono[0][3] for phone_addr in phone_address):
-                            phone_exist = True
-                        else:
-                            phone_exist = False
-                    else:
-                        phone_exist = False
-                    request.session['phone_exist'] = phone_exist
-                    request.session['selected_ono'] = selected_ono
-                    return redirect('forming_header')
-            else:
-                messages.warning(request, 'Ресурсы не выбраны')
-                return redirect('resources_formset')
-    else:
-        ticket_tr_id = request.session['ticket_tr_id']
-        ticket_tr = TR.objects.get(id=ticket_tr_id)
-        task_otpm = ticket_tr.ticket_k.task_otpm
-        formset = ListResourcesFormSet()
-        ono_for_formset = []
-        for resource_for_formset in ono:
-            resource_for_formset.pop(2)
-            resource_for_formset.pop(1)
-            resource_for_formset.pop(0)
-            ono_for_formset.append(resource_for_formset)
-        context = {
-            'ono_for_formset': ono_for_formset,
-            'formset': formset,
-            'task_otpm': task_otpm
-        }
-        return render(request, 'tickets/resources_formset.html', context)
 
 
-def job_formset(request):
-    """Данный метод получает спискок услуг из ТР. Отображает форму, в которой пользователь для каждой услуги выбирает
-    необходимое действие(перенос, изменение, организация) и формируется соответствующие списки услуг."""
-    head = request.session['head']
-    ticket_tr_id = request.session['ticket_tr_id']
-    ticket_tr = TR.objects.get(id=ticket_tr_id)
-    oattr = ticket_tr.oattr
-    pps = ticket_tr.pps
-    services = ticket_tr.services
-    services_con = []
-    for service in services:
-        if service.startswith('Телефон'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('Телефон'):
-                        services_con[i] = services_con[i] +' '+ service[len('Телефон'):]
-                        break
-                    else:
-                        if i == len(services_con)-1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        elif service.startswith('ЛВС'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('ЛВС'):
-                        services_con[i] = services_con[i] +' '+ service[len('ЛВС'):]
-                        break
-                    else:
-                        if i == len(services_con)-1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        elif service.startswith('Видеонаблюдение'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('Видеонаблюдение'):
-                        services_con[i] = services_con[i] +' '+ service[len('Видеонаблюдение'):]
-                        break
-                    else:
-                        if i == len(services_con) - 1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        elif service.startswith('HotSpot'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('HotSpot'):
-                        services_con[i] = services_con[i] +' '+ service[len('HotSpot'):]
-                        break
-                    else:
-                        if i == len(services_con) - 1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        else:
-            services_con.append(service)
-    services = services_con
-    ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
-    if request.method == 'POST':
-        formset = ListJobsFormSet(request.POST)
-        if formset.is_valid():
-            pass_job_services = []
-            change_job_services = []
-            new_job_services = []
-            data = formset.cleaned_data
-            selected = zip(services, data)
-            for services, data in selected:
-                if data == {'jobs': 'Организация/Изменение, СПД'}:
-                    new_job_services.append(services)
-                elif data == {'jobs': 'Перенос, СПД'}:
-                    pass_job_services.append(services)
-                elif data == {'jobs': 'Изменение, не СПД'}:
-                    change_job_services.append(services)
-                elif data == {'jobs': 'Не требуется'}:
-                    pass
-            request.session['new_job_services'] = new_job_services
-            request.session['pass_job_services'] = pass_job_services
-            request.session['change_job_services'] = change_job_services
-            return redirect('project_tr_exist_cl')
-    else:
-        formset = ListJobsFormSet()
-        context = {
-            'head': head,
-            'oattr': oattr,
-            'pps': pps,
-            'services': services,
-            'formset': formset
-        }
-        return render(request, 'tickets/job_formset.html', context)
 
-def static_formset(request):
-    template_static = """Присоединение к СПД по медной линии связи.
------------------------------------------------------------------------------------
-  
-%ОИПМ/ОИПД% проведение работ.
-- Организовать медную линию связи от %указать узел связи% до клиентcкого оборудования.
-- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%."""
-
-    TemplatesStaticFormSet = formset_factory(TemplatesStaticForm, extra=4)
-    if request.method == 'POST':
-        formset = TemplatesStaticFormSet(request.POST)
-        if formset.is_valid():
-
-            data = formset.cleaned_data
-            print('!!!!!!!!dataresources_formset')
-            print(data)
-            static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
-            selected_ono = []
-            unselected_ono = []
-            static_vars = {}
-            selected = zip(static_vav, data)
-            for static_vav, data in selected:
-                #static_vars.update({static_vav: data})
-                static_vars[static_vav] = next(iter(data.values()))
-            print('!!!!static_vars')
-            print(static_vars)
-            return redirect('no_data')
-    else:
-        template_static = """Присоединение к СПД по медной линии связи.
-        -----------------------------------------------------------------------------------
-
-        %ОИПМ/ОИПД% проведение работ.
-        - Организовать медную линию связи от %указать узел связи% до клиентcкого оборудования.
-        - Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%."""
-        static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
-        formset = TemplatesStaticFormSet()
-        context = {
-            'ono_for_formset': static_vav,
-            #'contract': contract,
-            'formset': formset
-        }
-
-        return render(request, 'tickets/template_static_formset.html', context)
 
 
 # def _parsing_model_and_node_client_device_by_device_name(name, login, password):
@@ -4984,164 +5504,67 @@ def static_formset(request):
 #             config_ports_client_device.append(inner_list)
 #     return config_ports_client_device
 
-def _compare_config_ports_client_device(config_ports_client_device, main_client):
-    """Данный метод на входе получает список портконфигов на клиентском устройстве и номер договора клиента. Проходит
-     по списку портконфигов и составляет список других договоров на данном клиентском устройстве"""
-    extra_clients = []
-    extra_name_clients = []
-    for config_port in config_ports_client_device:
-        if extra_name_clients:
-            if config_port[2] in extra_name_clients or main_client == config_port[2]:
-                pass
-            else:
-                extra_name_clients.append(config_port[2])
-                extra_clients.append(config_port)
-        else:
-            if main_client == config_port[2]:
-                pass
-            else:
-                extra_name_clients.append(config_port[2])
-                extra_clients.append(config_port)
-    return extra_clients
-
-@cache_check
-def forming_header(request):
-    """Данный метод проверяет если клиент подключен через CSW или WDA, то проверяет наличие на этих устройтсвах других
-     договоров и если есть такие договоры, то добавляет их ресурсы в список выбранных ресурсов с договора клиента."""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    selected_ono = request.session['selected_ono']
-
-    selected_client = selected_ono[0][0]
-    selected_device = selected_ono[0][-2]
-    request.session['selected_device'] = selected_device
-    request.session['selected_client'] = selected_client
-    if selected_device.startswith('CSW') or selected_device.startswith('WDA'):
-        extra_selected_ono = _get_extra_selected_ono(username, password, selected_device, selected_client)
-        if extra_selected_ono:
-            for i in extra_selected_ono:
-                selected_ono.append(i)
-
-    request.session['selected_ono'] = selected_ono
-    context = {
-        'ono': selected_ono,
-
-    }
-    return redirect('forming_chain_header')
+# def _compare_config_ports_client_device(config_ports_client_device, main_client):
+#     """Данный метод на входе получает список портконфигов на клиентском устройстве и номер договора клиента. Проходит
+#      по списку портконфигов и составляет список других договоров на данном клиентском устройстве"""
+#     extra_clients = []
+#     extra_name_clients = []
+#     for config_port in config_ports_client_device:
+#         if extra_name_clients:
+#             if config_port[2] in extra_name_clients or main_client == config_port[2]:
+#                 pass
+#             else:
+#                 extra_name_clients.append(config_port[2])
+#                 extra_clients.append(config_port)
+#         else:
+#             if main_client == config_port[2]:
+#                 pass
+#             else:
+#                 extra_name_clients.append(config_port[2])
+#                 extra_clients.append(config_port)
+#     return extra_clients
 
 
-def _get_extra_selected_ono(username, password, selected_device, selected_client):
-    """Данные метод на входе получает устройство клиента, по нему получает ID клиентского устройства, по ID получает
-    портконфиги устройства, по портконфигам определяет другие договора на клиентском устройстве. По договорам
-    определяет ресурсы и добавляет их в заголовок"""
-    extra_selected_ono = []
-    id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
-    config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
-    extra_clients = _compare_config_ports_client_device(config_ports_client_device, selected_client)
-    if extra_clients:
-        for extra_client in extra_clients:
-            contract = extra_client[2]
-            contract_id = get_contract_id(username, password, contract)
-            extra_resources = get_contract_resources(username, password, contract_id)
-            for extra_resource in extra_resources:
-                if extra_resource[-2] == selected_device:
-                    extra_selected_ono.append(extra_resource)
-    return extra_selected_ono
-
-def _get_all_chain(chains, chain_device, uplink, max_level):
-    """Данный метод проверяет является ли uplink КАД/УПА/РУА, если нет, то формирует цепочку из промежуточных
-     устройств"""
-    all_chain = []
-    all_chain.append(uplink)
-    if uplink:
-        while uplink.startswith('CSW') or uplink.startswith('WDA'):
-            next_chain_device = uplink.split()
-            all_chain.pop()
-            if uplink.startswith('CSW') and chain_device.startswith('WDA'):
-                all_chain.append(_replace_wda_wds(chain_device))
-            all_chain.append(next_chain_device[0])
-            if uplink.startswith('WDA'):
-                all_chain.append(_replace_wda_wds(next_chain_device[0]))
-            uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
-            all_chain.append(uplink)
-    return all_chain
 
 
-@cache_check
-def forming_chain_header(request):
-    """Данный метод собирает данные обо всех устройствах через которые подключен клиент и отправляет на страницу
-    формирования заголовка из этих данных"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    chain_device = request.session['selected_device']
-    selected_ono = request.session['selected_ono']
-    phone_exist = request.session['phone_exist']
-    chains = _get_chain_data(username, password, chain_device)
-    if chains:
-        downlink = _get_downlink(chains, chain_device)
-        node_device = _get_node_device(chains, chain_device)
-        nodes_vgw = []
-        if phone_exist or node_device.endswith(', КК') or node_device.endswith(', WiFi'):
-            vgw_on_node = _get_vgw_on_node(chains, chain_device)
-            if vgw_on_node:
-                nodes_vgw.append(chain_device)
-        max_level = 20
-        uplink, max_level = _get_uplink(chains, chain_device, max_level)
-        all_chain = _get_all_chain(chains, chain_device, uplink, max_level)
-        selected_client = 'No client'
-        if all_chain[0] == None:
-            node_uplink = node_device
-            if phone_exist:
-                extra_node_device = _get_extra_node_device(chains, chain_device, node_device)
-                if extra_node_device:
-                    for extra in extra_node_device:
-                        extra_chains = _get_chain_data(username, password, extra)
-                        extra_vgw = _get_vgw_on_node(extra_chains, extra)
-                        if extra_vgw:
-                            nodes_vgw.append(extra)
-        else:
-            node_uplink = _get_node_device(chains, all_chain[-1].split()[0])
-            for all_chain_device in all_chain:
-                if all_chain_device.startswith('CSW'):
-                    extra_chains = _get_chain_data(username, password, all_chain_device)
-                    extra_vgw = _get_vgw_on_node(extra_chains, all_chain_device)
-                    if extra_vgw:
-                        nodes_vgw.append(all_chain_device)
-                    extra_selected_ono = _get_extra_selected_ono(username, password, all_chain_device, selected_client)
-                    if extra_selected_ono:
-                        for i in extra_selected_ono:
-                            selected_ono.append(i)
-        if downlink:
-            for link_device in downlink:
-                extra_vgw = _get_vgw_on_node(chains, link_device)
-                if extra_vgw:
-                    nodes_vgw.append(link_device)
-                extra_selected_ono = _get_extra_selected_ono(username, password, link_device, selected_client)
-                if extra_selected_ono:
-                    for i in extra_selected_ono:
-                        selected_ono.append(i)
+# def _get_extra_selected_ono(username, password, selected_device, selected_client):
+#     """Данные метод на входе получает устройство клиента, по нему получает ID клиентского устройства, по ID получает
+#     портконфиги устройства, по портконфигам определяет другие договора на клиентском устройстве. По договорам
+#     определяет ресурсы и добавляет их в заголовок"""
+#     extra_selected_ono = []
+#     id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
+#     config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
+#     extra_clients = _compare_config_ports_client_device(config_ports_client_device, selected_client)
+#     if extra_clients:
+#         for extra_client in extra_clients:
+#             contract = extra_client[2]
+#             contract_id = get_contract_id(username, password, contract)
+#             extra_resources = get_contract_resources(username, password, contract_id)
+#             for extra_resource in extra_resources:
+#                 if extra_resource[-2] == selected_device:
+#                     extra_selected_ono.append(extra_resource)
+#     return extra_selected_ono
+#
+# def _get_all_chain(chains, chain_device, uplink, max_level):
+#     """Данный метод проверяет является ли uplink КАД/УПА/РУА, если нет, то формирует цепочку из промежуточных
+#      устройств"""
+#     all_chain = []
+#     all_chain.append(uplink)
+#     if uplink:
+#         while uplink.startswith('CSW') or uplink.startswith('WDA'):
+#             next_chain_device = uplink.split()
+#             all_chain.pop()
+#             if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+#                 all_chain.append(_replace_wda_wds(chain_device))
+#             all_chain.append(next_chain_device[0])
+#             if uplink.startswith('WDA'):
+#                 all_chain.append(_replace_wda_wds(next_chain_device[0]))
+#             uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
+#             all_chain.append(uplink)
+#     return all_chain
 
-        all_vgws = []
-        if nodes_vgw:
-            for i in nodes_vgw:
-                parsing_vgws = _parsing_vgws_by_node_name(username, password, Switch=i)
-                for vgw in parsing_vgws:
-                    all_vgws.append(vgw)
-        selected_clients_for_vgw = [client[0] for client in selected_ono]
-        contracts_for_vgw = list(set(selected_clients_for_vgw))
-        selected_vgw, waste_vgw = check_client_on_vgw(contracts_for_vgw, all_vgws, username, password)
-        request.session['node_mon'] = node_uplink
-        request.session['uplink'] = all_chain
-        request.session['downlink'] = downlink
-        request.session['vgw_chains'] = selected_vgw
-        request.session['waste_vgw'] = waste_vgw
-        return redirect('head')
-    else:
-        return redirect('no_data')
+
+
 
 
 
@@ -5185,23 +5608,19 @@ def forming_chain_header(request):
 #
 #     return vgws
 
-def check_client_on_vgw(contracts, vgws, login, password):
-    """Данный метод получает на входе контракт клиента и список тел. шлюзов и проверяет наличие этого контракта
-     на тел. шлюзах"""
-    selected_vgw = []
-    waste_vgws = []
-    for vgw in vgws:
-        print('!!!vgws')
-        print(vgws)
-        contracts_on_vgw = _parsing_config_ports_vgw(vgw.get('ports'), login, password)
-        print('!!!!contracts_on_vgw')
-        print(contracts_on_vgw)
-        if any(contract in contracts_on_vgw for contract in contracts):
-            selected_vgw.append(vgw)
-        else:
-            vgw.update({'contracts': contracts_on_vgw})
-            waste_vgws.append(vgw)
-    return selected_vgw, waste_vgws
+# def check_client_on_vgw(contracts, vgws, login, password):
+#     """Данный метод получает на входе контракт клиента и список тел. шлюзов и проверяет наличие этого контракта
+#      на тел. шлюзах"""
+#     selected_vgw = []
+#     waste_vgws = []
+#     for vgw in vgws:
+#         contracts_on_vgw = _parsing_config_ports_vgw(vgw.get('ports'), login, password)
+#         if any(contract in contracts_on_vgw for contract in contracts):
+#             selected_vgw.append(vgw)
+#         else:
+#             vgw.update({'contracts': contracts_on_vgw})
+#             waste_vgws.append(vgw)
+#     return selected_vgw, waste_vgws
 
 
 # def _parsing_config_ports_vgw(href_ports, login, password):
@@ -5252,663 +5671,27 @@ def check_client_on_vgw(contracts, vgws, login, password):
 #     return phone_address
 
 
-def _readable(curr_value, readable_services, serv, res):
-    """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
-    if serv in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
-        if curr_value == None:
-            readable_services.update({serv: f' "{res}"'})
-        elif type(curr_value) == str:
-            readable_services.update({serv: [curr_value, f' "{res}"']})
-        elif type(curr_value) == list:
-            curr_value.append(f' "{res}"')
-            readable_services.update({serv: curr_value})
-    else:
-        if curr_value == None:
-            readable_services.update({serv: f'c реквизитами "{res}"'})
-        elif type(curr_value) == str:
-            readable_services.update({serv: [curr_value, f'c реквизитами "{res}"']})
-        elif type(curr_value) == list:
-            curr_value.append(f'c реквизитами "{res}"')
-            readable_services.update({serv: curr_value})
-    return readable_services
+# def _readable(curr_value, readable_services, serv, res):
+#     """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
+#     if serv in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+#         if curr_value == None:
+#             readable_services.update({serv: f' "{res}"'})
+#         elif type(curr_value) == str:
+#             readable_services.update({serv: [curr_value, f' "{res}"']})
+#         elif type(curr_value) == list:
+#             curr_value.append(f' "{res}"')
+#             readable_services.update({serv: curr_value})
+#     else:
+#         if curr_value == None:
+#             readable_services.update({serv: f'c реквизитами "{res}"'})
+#         elif type(curr_value) == str:
+#             readable_services.update({serv: [curr_value, f'c реквизитами "{res}"']})
+#         elif type(curr_value) == list:
+#             curr_value.append(f'c реквизитами "{res}"')
+#             readable_services.update({serv: curr_value})
+#     return readable_services
 
 
-@cache_check
-def head(request):
-    """Данный метод приводит данные для заголовка в читаемый формат на основе шаблона в КБЗ и отправляет на страницу
-    выбора шаблонов для ТР"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    node_mon = request.session['node_mon']
-    uplink = request.session['uplink']
-    downlink = request.session['downlink']
-    vgw_chains = request.session['vgw_chains']
-    selected_ono = request.session['selected_ono']
-    waste_vgw = request.session['waste_vgw']
-
-    templates = ckb_parse(username, password)
-    result_services = []
-    static_vars = {}
-    hidden_vars = {}
-    stroka = templates.get("Заголовок")
-    static_vars['указать номер договора'] = selected_ono[0][0]
-    static_vars['указать название клиента'] = selected_ono[0][1]
-    static_vars['указать точку подключения'] = selected_ono[0][3]
-    node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК ', ', WiFi': 'WiFi '}
-    for key, item in node_templates.items():
-        if node_mon.endswith(key):
-            finish_node = item + node_mon[:node_mon.index(key)]
-            request.session['independent_pps'] = node_mon
-    static_vars['указать узел связи'] = finish_node
-    if uplink == [None]:
-        static_vars['указать название коммутатора'] = selected_ono[0][-2]
-        request.session['independent_kad'] = selected_ono[0][-2]
-        static_vars['указать порт'] = selected_ono[0][-1]
-        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
-        stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
-    else:
-        static_vars['указать название коммутатора'] = uplink[-1].split()[0]
-        request.session['independent_kad'] = uplink[-1].split()[0]
-        static_vars['указать порт'] = ' '.join(uplink[-1].split()[1:])
-        list_stroka_device = []
-        if len(uplink) > 1:
-            for i in range(len(uplink)-2, -1, -1):
-                extra_stroka_device = '- {}\n'.format(uplink[i])
-                list_stroka_device.append(extra_stroka_device)
-            if selected_ono[0][-2].startswith('WDA'):
-                extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
-                list_stroka_device.append(extra_stroka_device)
-                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
-                list_stroka_device.append(extra_stroka_device)
-            else:
-                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
-                list_stroka_device.append(extra_stroka_device)
-        elif len(uplink) == 1:
-            if selected_ono[0][-2].startswith('WDA'):
-                extra_stroka_device = '- {}\n'.format(_replace_wda_wds(selected_ono[0][-2]))
-                list_stroka_device.append(extra_stroka_device)
-                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
-                list_stroka_device.append(extra_stroka_device)
-            else:
-                extra_stroka_device = '- {}\n'.format(selected_ono[0][-2])
-                list_stroka_device.append(extra_stroka_device)
-        if downlink:
-            for i in range(len(downlink)-1, -1, -1):
-                extra_stroka_device = '- {}\n'.format(downlink[i])
-                list_stroka_device.append(extra_stroka_device)
-        extra_extra_stroka_device = ''.join(list_stroka_device)
-        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
-        stroka = stroka[:index_of_device] + extra_extra_stroka_device + ' \n' + stroka[index_of_device:]
-    if selected_ono[0][-2].startswith('CSW'):
-        old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
-                                                                                       password)
-        request.session['old_model_csw'] = old_model_csw
-        request.session['node_csw'] = node_csw
-
-    service_shpd = ['DA', 'BB', 'inet', 'Inet', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -',
-                    '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '107 -', '109 -', '483 -']
-    service_shpd_bgp = ['BGP', 'bgp']
-    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
-    service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
-    service_hotspot = ['hotspot']
-    service_itv = ['itv']
-    list_stroka_main_client_service = []
-    list_stroka_other_client_service = []
-    readable_services = dict()
-    counter_exist_line = set()
-    stick = False
-    counter_stick = 0
-    port_stick = set()
-    for i in selected_ono:
-        if selected_ono[0][0] == i[0]:
-            if i[2] == 'IP-адрес или подсеть':
-                if any(serv in i[-3] for serv in service_shpd_bgp) or '212.49.97.' in i[-4]:
-                    extra_stroka_main_client_service = f'- услугу "Подключение по BGP" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
-                    if list_stroka_main_client_service:
-                        for ind, main in enumerate(list_stroka_main_client_service):
-                            if i[-1] in main:
-                                main = main[
-                                       :main.index('"(')] + f', услугу "Подключение по BGP" c реквизитами "{i[-4]}"' + main[
-                                                                                                                   main.index(
-                                                                                                                       '"('):]
-                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('"Подключение по BGP"')
-                    readable_services = _readable(curr_value, readable_services, '"Подключение по BGP"', i[-4])
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3] for serv in service_shpd):
-                    extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
-                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('"ШПД в интернет"')
-                    readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
-                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('Хот-спот')
-                    readable_services = _readable(curr_value, readable_services, 'Хот-спот', i[-4])
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
-                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('Вебург.ТВ')
-                    readable_services = _readable(curr_value, readable_services, 'Вебург.ТВ', i[-4])
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-            elif i[2] == 'Порт виртуального коммутатора':
-                if any(serv in i[-3].lower() for serv in service_portvk):
-                    extra_stroka_main_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]})\n'
-                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('Порт ВЛС')
-                    readable_services = _readable(curr_value, readable_services, 'Порт ВЛС', i[-4])
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_portvm):
-                    extra_stroka_main_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]})\n'
-                    list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('Порт ВМ')
-                    readable_services = _readable(curr_value, readable_services, 'Порт ВМ', i[-4])
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-            elif i[2] == 'Etherline':
-                counter_stick += 1
-                port_stick.add(i[-1])
-                if 'Физический стык' in i[4]:
-                    stick = True
-                    break
-                else:
-                    if counter_stick == 5 and len(port_stick) == 1:
-                        stick = True
-                        break
-                extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})\n'
-                list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                curr_value = readable_services.get('ЦКС')
-                readable_services = _readable(curr_value, readable_services, 'ЦКС', i[-4])
-                counter_exist_line.add(f'{i[-2]} {i[-1]}')
-        else:
-            if i[2] == 'IP-адрес или подсеть':
-                if any(serv in i[-3] for serv in service_shpd):
-                    extra_stroka_other_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
-                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_other_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
-                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_other_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
-                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-            elif i[2] == 'Порт виртуального коммутатора':
-                if any(serv in i[-3].lower() for serv in service_portvk):
-                    extra_stroka_other_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
-                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_portvm):
-                    extra_stroka_other_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
-                    list_stroka_other_client_service.append(extra_stroka_other_client_service)
-                    counter_exist_line.add(f'{i[-2]} {i[-1]}')
-            elif i[2] == 'Etherline':
-                extra_stroka_other_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
-                list_stroka_other_client_service.append(extra_stroka_other_client_service)
-                counter_exist_line.add(f'{i[-2]} {i[-1]}')
-    if not stick:
-        if vgw_chains:
-            old_name_model_vgws = []
-            for i in vgw_chains:
-                model = i.get('model')
-                name = i.get('name')
-                vgw_uplink = i.get('uplink').replace('\r\n', '')
-                room = i.get('type')
-                if model == 'ITM SIP':
-                    extra_stroka_main_client_service = f'- услугу "Телефония" через IP-транк {name} ({vgw_uplink})'
-                    counter_exist_line.add(f'{vgw_uplink}')
-                    readable_services.update({'"Телефония"': 'через IP-транк'})
-                else:
-                    extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
-                    old_name_model_vgws.append(f'{model} {name}')
-                    readable_services.update({'"Телефония"': None})
-                list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                readable_services.update({'"Телефония"': None})
-            if old_name_model_vgws:
-                request.session['old_name_model_vgws'] = ', '.join(old_name_model_vgws)
-        extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
-        extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
-        index_of_service = stroka.index('В данной точке %клиент потребляет/c клиентом организован L2-стык%') + len('В данной точке %клиент потребляет/c клиентом организован L2-стык%')+1
-        stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + '\n' + extra_extra_stroka_other_client_service + stroka[index_of_service:]
-        if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
-            if waste_vgw:
-                list_stroka_other_vgw =[]
-                for i in waste_vgw:
-                    model = i.get('model')
-                    name = i.get('name')
-                    vgw_uplink = i.get('uplink').replace('\r\n', '')
-                    room = i.get('type')
-                    contracts = i.get('contracts')
-                    if bool(contracts) == False:
-                        contracts = 'Нет контрактов'
-                    if model == 'ITM SIP':
-                        extra_stroka_other_vgw = f'Также есть подключение по IP-транк {name} ({vgw_uplink}). Контракт: {contracts}\n'
-                    else:
-                        extra_stroka_other_vgw = f'Также есть тел. шлюз {model} {name} ({vgw_uplink}). Контракт: {contracts}\n'
-                    list_stroka_other_vgw.append(extra_stroka_other_vgw)
-                extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
-                stroka = stroka + '\n' + extra_stroka_other_vgw
-        counter_exist_line = len(counter_exist_line)
-        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'клиент потребляет:'
-        if (selected_ono[0][-2].startswith('SW') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('IAS') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('AR') and counter_exist_line > 1):
-            pass
-        else:
-            hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
-    else:
-        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'c клиентом организован L2-стык.'
-        hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
-        counter_exist_line = 0
-        request.session['stick'] = True
-    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    result_services = ''.join(result_services)
-    rev_result_services = result_services[::-1]
-    index_of_head = rev_result_services.index('''-----------------------------------------------------------------------------------\n''')
-    rev_result_services = rev_result_services[:index_of_head]
-    head = rev_result_services[::-1]
-    request.session['head'] = head.strip()
-    request.session['readable_services'] = readable_services
-    request.session['counter_exist_line'] = counter_exist_line
-    return redirect('job_formset')
-
-
-@cache_check
-def add_tr_exist_cl(request, dID, tID, trID):
-    """Данный метод работает для существующей точки подключения. Получает данные о ТР в СПП, добавляет ТР в БД,
-    перенаправляет на страницу запроса контракта клиента. """
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    tr_params = for_tr_view(username, password, dID, tID, trID)
-    if tr_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        ticket_spp_id = request.session['ticket_spp_id']
-        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
-        spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
-        request.session['spplink'] = spplink
-        request.session['ticket_tr_id'] = ticket_tr_id
-        return redirect('get_resources')
-
-
-def project_tr_exist_cl(request):
-    """Данный метод формирует последовательность url'ов по которым необходимо пройти для получения данных от
-     пользователя и перенаправляет на первый из них. Используется для существующей точки подключения."""
-    ticket_tr_id = request.session['ticket_tr_id']
-    ticket_tr = TR.objects.get(id=ticket_tr_id)
-    oattr = ticket_tr.oattr
-    pps = ticket_tr.pps
-    pps = pps.strip()
-    turnoff = ticket_tr.turnoff
-    task_otpm = ticket_tr.ticket_k.task_otpm
-    services_plus_desc = ticket_tr.services
-    des_tr = ticket_tr.ticket_k.des_tr
-    address = None
-    for i in range(len(des_tr)):
-        if ticket_tr.ticket_tr in next(iter(des_tr[i].keys())):
-            while address == None:
-                if next(iter(des_tr[i].values())):
-                    i -= 1
-                else:
-                    address = next(iter(des_tr[i].keys()))
-                    address = address.replace(', д.', ' ')
-    request.session['address'] = address
-    cks_points = []
-    for point in des_tr:
-        if next(iter(point.keys())).startswith('г.'):
-            cks_points.append(next(iter(point.keys())).split('ул.')[1])
-    request.session['cks_points'] = cks_points
-    request.session['services_plus_desc'] = services_plus_desc
-    request.session['task_otpm'] = task_otpm
-    request.session['pps'] = pps
-    if oattr:
-        request.session['oattr'] = oattr
-        wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
-        ftth_temp = ['Alpha', 'ОК-1']
-        vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
-        if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
-            sreda = '3'
-        elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
-            sreda = '4'
-        elif any(vo in oattr for vo in vols_temp):
-            sreda = '2'
-        else:
-            sreda = '1'
-    else:
-        request.session['oattr'] = None
-        sreda = '1'
-        request.session['sreda'] = '1'
-    new_job_services = request.session['new_job_services']
-    pass_job_services = request.session['pass_job_services']
-    change_job_services = request.session['change_job_services']
-    type_pass = []
-    tag_service = []
-    if pass_job_services:
-        type_pass.append('Перенос, СПД')
-        tag_service.append({'pass_serv': None})
-
-    if new_job_services:
-        type_pass.append('Организация/Изменение, СПД')
-        counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(new_job_services)
-        new_job_services = services_plus_desc
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_job_services)
-        for tag in tags:
-            tag_service.append(tag)
-        request.session['new_job_services'] = new_job_services
-        if change_job_services:
-            type_pass.append('Изменение, не СПД')
-            tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
-            for tag in tags:
-                tag_service.insert(0, tag)
-                tag_service.insert(0, {'change_serv': None})
-
-        if counter_line_services == 0:
-            tag_service.append({'data': None})
-        else:
-            if sreda == '1':
-                tag_service.append({'copper': None})
-            elif sreda == '2' or sreda == '4':
-                tag_service.append({'vols': None})
-            elif sreda == '3':
-                tag_service.append({'wireless': None})
-
-        request.session['hotspot_points'] = hotspot_points
-        request.session['hotspot_users'] = hotspot_users
-        request.session['premium_plus'] = premium_plus
-        request.session['counter_line_services'] = counter_line_services
-        request.session['services_plus_desc'] = services_plus_desc
-        request.session['counter_line_services'] = counter_line_services
-
-    if change_job_services and not new_job_services and not pass_job_services:
-        type_pass.append('Изменение, не СПД')
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
-        for tag in tags:
-            tag_service.insert(0, tag)
-            tag_service.insert(0, {'change_serv': None})
-        tag_service.append({'data': None})
-
-    request.session['oattr'] = oattr
-    request.session['pps'] = pps
-    request.session['turnoff'] = turnoff
-    request.session['sreda'] = sreda
-    request.session['type_pass'] = type_pass
-    request.session['tag_service'] = tag_service
-    return redirect(next(iter(tag_service[0])))
-
-def change_serv(request):
-    """Данный метод отображает форму для выбора изменения услуги ШПД или организации услуг ШПД, ЦКС, порт ВК, порт ВМ
-    без монтаж. работ"""
-    if request.method == 'POST':
-        changeservform = ChangeServForm(request.POST)
-        if changeservform.is_valid():
-            type_change_service = changeservform.cleaned_data['type_change_service']
-            try:
-                types_change_service = request.session['types_change_service']
-            except KeyError:
-                types_change_service = []
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            types_change_service.append({type_change_service: next(iter(tag_service[0].values()))})
-            if type_change_service == "Организация доп IPv6":
-                if len(tag_service) == 0:
-                    tag_service.append({'data': None})
-            else:
-                tag_service.insert(0, {'change_params_serv': None})
-            request.session['types_change_service'] = types_change_service
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-    else:
-        changeservform = ChangeServForm()
-        tag_service = request.session['tag_service']
-        service = next(iter(tag_service[1].values()))
-        context = {
-            'changeservform': changeservform,
-            'service': service
-        }
-        return render(request, 'tickets/change_serv.html', context)
-
-def change_params_serv(request):
-    """Данный метод отображает форму с параметрами услуги ШПД(новая подсеть/маршрутизируемая подсеть)"""
-    if request.method == 'POST':
-        changeparamsform = ChangeParamsForm(request.POST)
-        if changeparamsform.is_valid():
-            new_mask = changeparamsform.cleaned_data['new_mask']
-            routed_ip = changeparamsform.cleaned_data['routed_ip']
-            routed_vrf = changeparamsform.cleaned_data['routed_vrf']
-            request.session['new_mask'] = new_mask
-            request.session['routed_ip'] = routed_ip
-            request.session['routed_vrf'] = routed_vrf
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if len(tag_service) == 0:
-                tag_service.append({'data': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-    else:
-        head = request.session['head']
-        types_change_service = request.session['types_change_service']
-        for i in range(len(types_change_service)):
-            types_cks_vk_vm_trunk = [
-                "Организация порта ВМ trunk'ом",
-                "Организация порта ВЛС trunk'ом",
-                "Организация ЦКС trunk'ом",
-                "Организация ШПД trunk'ом",
-                "Организация ШПД trunk'ом с простоем",
-                "Организация ЦКС trunk'ом с простоем",
-                "Организация порта ВЛС trunk'ом с простоем",
-                "Организация порта ВМ trunk'ом с простоем"
-            ]
-            if next(iter(types_change_service[i].keys())) in types_cks_vk_vm_trunk:
-                tag_service = request.session['tag_service']
-                tag_service.pop(0)
-                if next(iter(types_change_service[i].keys())) == "Организация ШПД trunk'ом":
-                    tag_service.pop(0)
-                request.session['tag_service'] = tag_service
-                return redirect(next(iter(tag_service[0])))
-
-            types_only_mask = ["Организация доп connected",
-                               "Замена connected на connected",
-                               "Изменение cхемы организации ШПД"
-                               ]
-            if next(iter(types_change_service[i].keys())) in types_only_mask:
-                only_mask = True
-                tag_service = request.session['tag_service']
-                tag_service.pop(0)
-                request.session['tag_service'] = tag_service
-            else:
-                only_mask = False
-            if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
-                routed = True
-                tag_service = request.session['tag_service']
-                tag_service.pop(0)
-                request.session['tag_service'] = tag_service
-            else:
-                routed = False
-        changeparamsform = ChangeParamsForm()
-        context = {
-            'head': head,
-            'changeparamsform': changeparamsform,
-            'only_mask': only_mask,
-            'routed': routed
-        }
-        return render(request, 'tickets/change_params_serv.html', context)
-
-
-def change_log_shpd(request):
-    """Данный метод отображает форму выбора для услуги ШПД новой адресации или существующей"""
-    if request.method == 'POST':
-        changelogshpdform = ChangeLogShpdForm(request.POST)
-        if changelogshpdform.is_valid():
-            change_log_shpd = changelogshpdform.cleaned_data['change_log_shpd']
-            request.session['change_log_shpd'] = change_log_shpd
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            return redirect(next(iter(tag_service[0])))
-    else:
-        head = request.session['head']
-        kad = request.session['kad']
-        subnet_for_change_log_shpd = request.session['subnet_for_change_log_shpd']
-        changelogshpdform = ChangeLogShpdForm()
-        if request.session.get('pass_job_services'):
-            services = request.session.get('pass_job_services')
-        elif request.session.get('new_job_services'):
-            services = request.session.get('new_job_services')
-        else:
-            services = None
-        context = {
-            'head': head,
-            'kad': kad,
-            'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
-            'pass_job_services': services,
-            'changelogshpdform': changelogshpdform
-        }
-        return render(request, 'tickets/change_log_shpd.html', context)
-
-
-def params_extend_service(request):
-    """Данный метод отображает форму с параметрами скорости и ограничения полосы для расширения услуг ЦКС, порт ВК,
-    порт ВМ"""
-    if request.method == 'POST':
-        extendserviceform = ExtendServiceForm(request.POST)
-
-        if extendserviceform.is_valid():
-            extend_speed = extendserviceform.cleaned_data['extend_speed']
-            extend_policer_cks_vk = extendserviceform.cleaned_data['extend_policer_cks_vk']
-            extend_policer_vm = extendserviceform.cleaned_data['extend_policer_vm']
-            request.session['extend_speed'] = extend_speed
-            request.session['extend_policer_cks_vk'] = extend_policer_cks_vk
-            request.session['extend_policer_vm'] = extend_policer_vm
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if len(tag_service) == 0:
-                tag_service.append({'data': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-    else:
-        desc_service = request.session.get('desc_service')
-        extendserviceform = ExtendServiceForm()
-        pass_job_services = request.session.get('pass_job_services')
-        context = {
-            'desc_service': desc_service,
-            'pass_job_services': pass_job_services,
-            'extendserviceform': extendserviceform
-        }
-        return render(request, 'tickets/params_extend_service.html', context)
-
-
-def pass_serv(request):
-    """Данный метод отображает форму с параметрами переноса/расширения услуг"""
-    if request.method == 'POST':
-        passservform = PassServForm(request.POST)
-        if passservform.is_valid():
-            type_passage = passservform.cleaned_data['type_passage']
-            change_log = passservform.cleaned_data['change_log']
-            exist_sreda = passservform.cleaned_data['exist_sreda']
-            request.session['type_passage'] = type_passage
-            request.session['change_log'] = change_log
-            request.session['exist_sreda'] = exist_sreda
-            tag_service = request.session['tag_service']
-            readable_services = request.session['readable_services']
-            selected_ono = request.session['selected_ono']
-            type_pass = request.session['type_pass']
-            sreda = request.session['sreda']
-            tag_service.pop(0)
-            if 'Перенос, СПД' not in type_pass:
-                return redirect(next(iter(tag_service[0])))
-            else:
-                pass_job_services = request.session.get('pass_job_services')
-                if change_log == 'Порт и КАД не меняется':
-                    if type_passage == 'Перевод на гигабит':
-                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
-                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
-                            request.session['desc_service'] = desc_service
-                            tag_service.insert(0, {'params_extend_service': None})
-                            return redirect(next(iter(tag_service[0])))
-                    elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and request.session.get('turnoff'):
-                        tag_service.insert(0, {'pass_turnoff': None})
-                        return redirect(next(iter(tag_service[0])))
-                else:
-                    if type_passage == 'Перевод на гигабит':
-                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
-                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
-                            request.session['desc_service'] = desc_service
-                            tag_service.insert(0, {'params_extend_service': None})
-                    phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
-                    if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
-                        tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
-                        request.session['phone_in_pass'] = ' '.join(phone_in_pass)
-                    if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
-                        pass
-                    else:
-                        if {'data': None} in tag_service:
-                            tag_service.remove({'data': None})
-                        if sreda == '1':
-                            tag_service.append({'copper': None})
-                        elif sreda == '2' or sreda == '4':
-                            tag_service.append({'vols': None})
-                        elif sreda == '3':
-                            tag_service.append({'wireless': None})
-                if len(tag_service) == 0:
-                    tag_service.append({'data': None})
-                return redirect(next(iter(tag_service[0])))
-    else:
-        oattr = request.session['oattr']
-        pps = request.session['pps']
-        head = request.session['head']
-        passservform = PassServForm()
-        context = {
-            'passservform': passservform,
-            'oattr': oattr,
-            'pps': pps,
-            'head': head
-        }
-        return render(request, 'tickets/pass_serv.html', context)
-
-
-def pass_turnoff(request):
-    """Данный метод отображает форму для ввода ППР на случае если в ТР осуществляется перенос услуг без изменения
-    логического подключения, но при этом в ТР заказано отключение других клиентов"""
-    if request.method == 'POST':
-        passturnoffform = PassTurnoffForm(request.POST)
-        if passturnoffform.is_valid():
-            ppr = passturnoffform.cleaned_data['ppr']
-            request.session['ppr'] = ppr
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if len(tag_service) == 0:
-                tag_service.append({'data': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
-
-    else:
-        oattr = request.session['oattr']
-        pps = request.session['pps']
-        head = request.session['head']
-        spplink = request.session['spplink']
-        regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
-        match_link = re.search(regex_link, spplink)
-        dID = match_link.group(1)
-        tID = match_link.group(2)
-        trID = match_link.group(3)
-        passturnoffform = PassTurnoffForm()
-        context = {
-            'passturnoffform': passturnoffform,
-            'oattr': oattr,
-            'pps': pps,
-            'head': head,
-            'dID': dID,
-            'tID': tID,
-            'trID': trID
-        }
-        return render(request, 'tickets/pass_turnoff.html', context)
 
 
 

@@ -2,7 +2,44 @@ import requests
 from requests.auth import HTTPBasicAuth
 import re
 from bs4 import BeautifulSoup
-from .utils import _counter_line_services
+
+
+
+def _counter_line_services(services_plus_desc):
+    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
+     где требуется линия добавляется спец. символ. Метод возвращает количество требуемых линий"""
+    hotspot_points = None
+    for index_service in range(len(services_plus_desc)):
+        if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+            replace_index = services_plus_desc[index_service]
+            services_plus_desc.remove(replace_index)
+            services_plus_desc.insert(0, replace_index)
+        elif 'Интернет, DHCP' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+            replace_index = services_plus_desc[index_service]
+            services_plus_desc.remove(replace_index)
+            services_plus_desc.insert(0, replace_index)
+        elif 'ЦКС' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'Порт ВЛС' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'Порт ВМ' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+        elif 'HotSpot' in services_plus_desc[index_service]:
+            services_plus_desc[index_service] += '|'
+            regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
+            for regex in regex_hotspot_point:
+                match_hotspot_point = re.search(regex, services_plus_desc[index_service])
+                if match_hotspot_point:
+                    hotspot_points = match_hotspot_point.group(1)
+                    break
+    counter_line_services = 0
+    for i in services_plus_desc:
+        while i.endswith('|'):
+            counter_line_services += 1
+            i = i[:-1]
+    return counter_line_services, hotspot_points, services_plus_desc
 
 
 def parse_tr(login, password, url):
@@ -416,7 +453,7 @@ def _parsing_config_ports_client_device(id_client_device, login, password):
     return config_ports_client_device
 
 
-def _parsing_config_ports_vgw(href_ports, login, password):
+def parsing_config_ports_vgw(href_ports, login, password):
     """Данный метод получает на входе ссылку на портконфиги тел. шлюза и парсит страницу с конфигом портов,
      чтобы получить список договоров на этом тел. шлюзе"""
     url = 'https://cis.corp.itmh.ru' + href_ports

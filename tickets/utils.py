@@ -1,41 +1,43 @@
 import re
 import pymorphy2
+from .parsing import parsing_config_ports_vgw
+from .parsing import _parsing_id_client_device_by_device_name
+from .parsing import _parsing_config_ports_client_device
+from .parsing import get_contract_id
+from .parsing import get_contract_resources
+from .parsing import stash
 
-def _counter_line_services(services_plus_desc):
-    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
-     где требуется линия добавляется спец. символ. Метод возвращает количество требуемых линий"""
-    hotspot_points = None
-    for index_service in range(len(services_plus_desc)):
-        if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            replace_index = services_plus_desc[index_service]
-            services_plus_desc.remove(replace_index)
-            services_plus_desc.insert(0, replace_index)
-        elif 'Интернет, DHCP' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            replace_index = services_plus_desc[index_service]
-            services_plus_desc.remove(replace_index)
-            services_plus_desc.insert(0, replace_index)
-        elif 'ЦКС' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'Порт ВЛС' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'Порт ВМ' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'HotSpot' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
-            for regex in regex_hotspot_point:
-                match_hotspot_point = re.search(regex, services_plus_desc[index_service])
-                if match_hotspot_point:
-                    hotspot_points = match_hotspot_point.group(1)
-                    break
-    counter_line_services = 0
-    for i in services_plus_desc:
-        while i.endswith('|'):
-            counter_line_services += 1
-            i = i[:-1]
-    return counter_line_services, hotspot_points, services_plus_desc
+from collections import OrderedDict
+
+
+def add_portconfig_to_list_swiches(list_switches, username, password):
+    switch_name = []
+    for i in range(len(list_switches)):
+        if list_switches[i][-1] == '-':
+            pass
+        else:
+            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+            if switch_ports_var == None:
+                pass
+            else:
+                for port in switch_ports_var.keys():
+                    if list_switches[i][10].get(port) == None:
+                        switch_ports_var[port].insert(0, '-')
+                        switch_ports_var[port].insert(0, '-')
+                        list_switches[i][10].update({port: switch_ports_var[port]})
+                    else:
+                        for from_dev in switch_ports_var[port]:
+                            list_switches[i][10][port].append(from_dev)
+                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+        switch_name.append(list_switches[i][0])
+    if len(switch_name) == 1:
+        switches_name = switch_name[0]
+    else:
+        switches_name = ' или '.join(switch_name)
+    return list_switches, switches_name
+
+
+
 
 
 def _get_policer(service):
@@ -199,3 +201,281 @@ def pluralizer_vars(stroka, counter_plur):
             elif 'NOUN' in pluralize.tag:
                 stroka = stroka.replace(replased_word, pluralize.inflect({'plur'}).word)
     return stroka
+
+
+def flush_session_key(request_request):
+    """Данный метод в качестве параметра принимает request, очищает сессию от переменных, полученных при
+    проектировании предыдущих ТР, при этом оставляет в сессии переменные относящиеся к пользователю, и возвращает тот же
+     request"""
+    list_session_keys = []
+    for key in request_request.session.keys():
+        if key.startswith('_'):
+            pass
+        else:
+            list_session_keys.append(key)
+    for key in list_session_keys:
+        del request_request.session[key]
+    return request_request
+
+
+def trunk_turnoff_shpd_cks_vk_vm(service, types_change_service):
+    """Данный метод в качестве параметров получает обрабатываемый сервис и массив всех сервисов со значением
+     выбранных работ(например организовать trunk'ом с простоем/без простоя). По значению выбранных работ определяет для
+     данного сервиса использовать блок ТТР с простоем или без"""
+    trunk_turnoff_on = False
+    trunk_turnoff_off = False
+    if types_change_service:
+        for type_change_service in types_change_service:
+            if next(iter(type_change_service.values())) == service:
+                if "с простоем" in next(iter(type_change_service.keys())):
+                    trunk_turnoff_on = True
+                else:
+                    trunk_turnoff_off = True
+    return trunk_turnoff_on, trunk_turnoff_off
+
+
+def _tag_service_for_new_serv(services_plus_desc):
+    """Данный метод принимает на входе список новых услуг и формирует последовательность url'ов услуг, по которым
+    необходимо пройти пользователю. Также определяет для услиги Хот-спот количество пользователей и принадлежность
+    к услуге премиум+"""
+    tag_service = []
+    hotspot_users = None
+    premium_plus = None
+    for index_service in range(len(services_plus_desc)):
+        if 'Телефон' in services_plus_desc[index_service]:
+            tag_service.append({'phone': services_plus_desc[index_service]})
+        elif 'iTV' in services_plus_desc[index_service]:
+            tag_service.append({'itv': services_plus_desc[index_service]})
+        elif 'Интернет, DHCP' in services_plus_desc[index_service] or 'Интернет, блок Адресов Сети Интернет' in \
+                services_plus_desc[index_service]:
+            tag_service.append({'shpd': services_plus_desc[index_service]})
+        elif 'ЦКС' in services_plus_desc[index_service]:
+            tag_service.append({'cks': services_plus_desc[index_service]})
+        elif 'Порт ВЛС' in services_plus_desc[index_service]:
+            tag_service.append({'portvk': services_plus_desc[index_service]})
+        elif 'Порт ВМ' in services_plus_desc[index_service]:
+            tag_service.append({'portvm': services_plus_desc[index_service]})
+        elif 'Видеонаблюдение' in services_plus_desc[index_service]:
+            tag_service.append({'video': services_plus_desc[index_service]})
+        elif 'HotSpot' in services_plus_desc[index_service]:
+            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
+            if any(type in services_plus_desc[index_service].lower() for type in types_premium):
+                premium_plus = True
+            else:
+                premium_plus = False
+
+            regex_hotspot_users = ['(\d+)посетит', '(\d+) посетит', '(\d+) польз', '(\d+)польз', '(\d+)чел',
+                                   '(\d+) чел']
+            for regex in regex_hotspot_users:
+                match_hotspot_users = re.search(regex, services_plus_desc[index_service])
+                if match_hotspot_users:
+                    hotspot_users = match_hotspot_users.group(1)
+                    break
+            tag_service.append({'hotspot': services_plus_desc[index_service]})
+        elif 'ЛВС' in services_plus_desc[index_service]:
+            tag_service.append({'local': services_plus_desc[index_service]})
+    return tag_service, hotspot_users, premium_plus
+
+
+def _replace_wda_wds(device):
+    """Данный метод из названия WDA получает название WDS"""
+    replace_wda_wds = device.split('-')
+    replace_wda_wds[0] = replace_wda_wds[0].replace('WDA', 'WDS')
+    replace_wda_wds.pop(1)
+    device = '-'.join(replace_wda_wds)
+    return device
+
+
+def _get_downlink(chains, device):
+    """Данный метод в качестве параметров получает название оборудования, от которого подключен клиент, цепочку
+     устройств, в которой состоит это оборудование, и определяет нижестоящее оборудование"""
+    if device.startswith('WDA'):
+        device = _replace_wda_wds(device)
+    downlink = []
+    downlevel = 20
+    for chain in chains:
+        if device == chain.get('host_name'):
+            downlevel = chain.get('level')
+        elif downlevel < chain.get('level'):
+            if device.startswith('WDS'):
+                if device == chain.get('host_name'):
+                    pass
+                elif chain.get('host_name').startswith(device.split('-')[0].replace('S', 'A')):
+                    pass
+                else:
+                    if 'VGW' not in chain.get('host_name'):
+                        downlink.append(chain.get('host_name'))
+            elif device.startswith('CSW'):
+                if device != chain.get('host_name'):
+                    if 'VGW' not in chain.get('host_name'):
+                        downlink.append(chain.get('host_name'))
+    return downlink
+
+
+def _get_vgw_on_node(chains, device):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+     это оборудование, и определяет существуют тел. шлюзы, подключенные от этого оборудования или нет"""
+    vgw_on_node = None
+    level_device = 0
+    for chain in chains:
+        if device == chain.get('host_name'):
+            level_device = chain.get('level')
+
+        if device.startswith('SW') or device.startswith('CSW') or device.startswith('WDA'):
+            if 'VGW' in chain.get('host_name'):
+                level_vgw = chain.get('level')
+                if level_vgw == level_device + 1:
+                    vgw_on_node = 'exist'
+                    break
+    return vgw_on_node
+
+def _get_node_device(chains, device):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+    это оборудование, и определяет название узла связи"""
+    for chain in chains:
+        if device == chain.get('host_name'):
+            node_device = chain.get('alias')
+    return node_device
+
+
+def _get_extra_node_device(chains, device, node_device):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+    это оборудование, название узла связи и определяет иные устройства на данном узле связи"""
+    extra_node_device = []
+    for chain in chains:
+        if node_device == chain.get('alias') and device != chain.get('host_name'):
+            extra_node_device.append(chain.get('host_name'))
+    return extra_node_device
+
+
+def _get_uplink(chains, device, max_level):
+    """Данный метод в качестве параметров получает название оборудования, цепочку устройств, в которой состоит
+        это оборудование и определяет название и порт вышестоящего узла. Парамерт max_level изначально задается
+        выше возможно максимального и впоследствии используется, чтобы однозначно определить вышестоящий узел"""
+    if device.startswith('WDA'):
+        device = _replace_wda_wds(device)
+    elif device.startswith('WFA'):
+        replace_wfa_wfs = device.split('-')
+        replace_wfa_wfs[0] = replace_wfa_wfs[0].replace('WFA', 'WFS')
+        replace_wfa_wfs.pop(1)
+        device = '-'.join(replace_wfa_wfs)
+    uplink = None
+    for chain in chains:
+        if device in chain.get('title'):
+            temp_chains2 = chain.get('title').split('\nLink')
+            for i in temp_chains2:
+                if device.startswith('CSW') or device.startswith('WDS') or device.startswith('WFS'):
+                    if f'-{device}' in i:  # для всех случаев подключения CSW, WDS, WFS
+                        preuplink = i.split(f'-{device}')
+                        preuplink = preuplink[0]
+                        match_uplink = re.search('_(\S+?)_(\S+)', preuplink)
+                        uplink_host = match_uplink.group(1)
+                        uplink_port = match_uplink.group(2)
+                        if uplink_host == chain.get('host_name') and chain.get('level') < max_level:
+                            max_level = chain.get('level')
+                            if 'thernet' in uplink_port:
+                                uplink_port = uplink_port.replace('_', '/')
+                            else:
+                                uplink_port = uplink_port.replace('_', ' ')
+                            uplink = uplink_host + ' ' + uplink_port
+                        else:
+                            pass
+                    elif device in i and 'WDA' in i:  # исключение только для случая, когда CSW подключен от WDA
+                        link = i.split('-WDA')
+                        uplink = 'WDA' + link[1].replace('_', ' ').replace('\n', '')
+    return uplink, max_level
+
+
+def _compare_config_ports_client_device(config_ports_client_device, main_client):
+    """Данный метод на входе получает список портконфигов на клиентском устройстве и номер договора клиента. Проходит
+     по списку портконфигов и составляет список других договоров на данном клиентском устройстве"""
+    extra_clients = []
+    extra_name_clients = []
+    for config_port in config_ports_client_device:
+        if extra_name_clients:
+            if config_port[2] in extra_name_clients or main_client == config_port[2]:
+                pass
+            else:
+                extra_name_clients.append(config_port[2])
+                extra_clients.append(config_port)
+        else:
+            if main_client == config_port[2]:
+                pass
+            else:
+                extra_name_clients.append(config_port[2])
+                extra_clients.append(config_port)
+    return extra_clients
+
+
+def _get_extra_selected_ono(username, password, selected_device, selected_client):
+    """Данные метод на входе получает устройство клиента, по нему получает ID клиентского устройства, по ID получает
+    портконфиги устройства, по портконфигам определяет другие договора на клиентском устройстве. По договорам
+    определяет ресурсы и добавляет их в заголовок"""
+    extra_selected_ono = []
+    id_client_device = _parsing_id_client_device_by_device_name(selected_device, username, password)
+    config_ports_client_device = _parsing_config_ports_client_device(id_client_device, username, password)
+    extra_clients = _compare_config_ports_client_device(config_ports_client_device, selected_client)
+    if extra_clients:
+        for extra_client in extra_clients:
+            contract = extra_client[2]
+            contract_id = get_contract_id(username, password, contract)
+            extra_resources = get_contract_resources(username, password, contract_id)
+            for extra_resource in extra_resources:
+                if extra_resource[-2] == selected_device:
+                    extra_selected_ono.append(extra_resource)
+    return extra_selected_ono
+
+
+def _get_all_chain(chains, chain_device, uplink, max_level):
+    """Данный метод проверяет является ли uplink КАД/УПА/РУА, если нет, то формирует цепочку из промежуточных
+     устройств"""
+    all_chain = []
+    all_chain.append(uplink)
+    if uplink:
+        while uplink.startswith('CSW') or uplink.startswith('WDA'):
+            next_chain_device = uplink.split()
+            all_chain.pop()
+            if uplink.startswith('CSW') and chain_device.startswith('WDA'):
+                all_chain.append(_replace_wda_wds(chain_device))
+            all_chain.append(next_chain_device[0])
+            if uplink.startswith('WDA'):
+                all_chain.append(_replace_wda_wds(next_chain_device[0]))
+            uplink, max_level = _get_uplink(chains, next_chain_device[0], max_level)
+            all_chain.append(uplink)
+    return all_chain
+
+
+def check_client_on_vgw(contracts, vgws, login, password):
+    """Данный метод получает на входе контракт клиента и список тел. шлюзов и проверяет наличие этого контракта
+     на тел. шлюзах"""
+    selected_vgw = []
+    waste_vgws = []
+    for vgw in vgws:
+        contracts_on_vgw = parsing_config_ports_vgw(vgw.get('ports'), login, password)
+        if any(contract in contracts_on_vgw for contract in contracts):
+            selected_vgw.append(vgw)
+        else:
+            vgw.update({'contracts': contracts_on_vgw})
+            waste_vgws.append(vgw)
+    return selected_vgw, waste_vgws
+
+
+def _readable(curr_value, readable_services, serv, res):
+    """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
+    if serv in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+        if curr_value == None:
+            readable_services.update({serv: f' "{res}"'})
+        elif type(curr_value) == str:
+            readable_services.update({serv: [curr_value, f' "{res}"']})
+        elif type(curr_value) == list:
+            curr_value.append(f' "{res}"')
+            readable_services.update({serv: curr_value})
+    else:
+        if curr_value == None:
+            readable_services.update({serv: f'c реквизитами "{res}"'})
+        elif type(curr_value) == str:
+            readable_services.update({serv: [curr_value, f'c реквизитами "{res}"']})
+        elif type(curr_value) == list:
+            curr_value.append(f'c реквизитами "{res}"')
+            readable_services.update({serv: curr_value})
+    return readable_services
