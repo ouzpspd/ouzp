@@ -739,3 +739,14 @@ def in_work_ortr(login, password):
     else:
         lines.append('Access denied')
     return lines
+
+
+def get_sw_config(sw, login, password):
+    """Данный метод парсит конфиг КК"""
+    url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        switch_config = req.content.decode('utf-8')
+        return switch_config
+
+

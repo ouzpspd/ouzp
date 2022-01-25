@@ -38,6 +38,7 @@ from .parsing import _parsing_config_ports_client_device
 from .parsing import _get_chain_data
 from .parsing import _counter_line_services
 
+
 from .constructing_tr import *
 from .constructing_tr import _separate_services_and_subnet_dhcp
 from .constructing_tr import _titles
@@ -54,7 +55,6 @@ from .utils import _get_extra_selected_ono
 from .utils import _get_all_chain
 from .utils import _tag_service_for_new_serv
 from .utils import _readable
-
 
 
 logger = logging.getLogger(__name__)
@@ -2468,6 +2468,7 @@ def head(request):
 
     templates = ckb_parse(username, password)
     result_services = []
+    switch_config = None
     static_vars = {}
     hidden_vars = {}
     stroka = templates.get("Заголовок")
@@ -2522,6 +2523,8 @@ def head(request):
     if selected_ono[0][-2].startswith('CSW'):
         old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
                                                                                        password)
+        switch_config = get_sw_config(selected_ono[0][-2], username, password)
+
         request.session['old_model_csw'] = old_model_csw
         request.session['node_csw'] = node_csw
 
@@ -2556,19 +2559,31 @@ def head(request):
                     readable_services = _readable(curr_value, readable_services, '"Подключение по BGP"', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3] for serv in service_shpd):
-                    extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    if switch_config:
+                        service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
+                        extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                    else:
+                        extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('"ШПД в интернет"')
                     readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    if switch_config:
+                        service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
+                        extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                    else:
+                        extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Хот-спот')
                     readable_services = _readable(curr_value, readable_services, 'Хот-спот', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    if switch_config:
+                        service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
+                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                    else:
+                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Вебург.ТВ')
                     readable_services = _readable(curr_value, readable_services, 'Вебург.ТВ', i[-4])

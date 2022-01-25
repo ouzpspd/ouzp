@@ -479,3 +479,36 @@ def _readable(curr_value, readable_services, serv, res):
             curr_value.append(f'c реквизитами "{res}"')
             readable_services.update({serv: curr_value})
     return readable_services
+
+
+def get_extra_service_port_csw(service_port, switch_config, model):
+    """Данный метод ищет порты на КК, если услуга выдана в несколько портов"""
+    if 'D-Link' in model and model != 'D-Link DIR-100':
+        config_ports_device = {}
+        regex_description = 'config port_vlan (\d+|\d+-\d+) pvid (\d+)'
+        match_description = re.finditer(regex_description, switch_config)
+        for i in match_description:
+            config_ports_device.update({i.group(1): i.group(2)})
+        port = service_port.split()[-1]
+        vlan = config_ports_device.get(port)
+        for key, value in config_ports_device.items():
+            if key != port and value == vlan and value not in ['1', '4094']:
+                service_port = service_port + f',{key}'
+    elif 'SNR' in model or 'Cisco' in model or 'Orion' in model:
+        port = service_port
+        for interface in switch_config.split('!'):
+            if port+'\n' in interface or port+'\r\n' in interface:
+                regex_interface = 'switchport access vlan (\d+)'
+                match = re.search(regex_interface, interface)
+                if match.group(1) not in ['1', '4094']:
+                    vlan = match.group(1)
+        extra_ports = []
+        for interface in switch_config.split('!'):
+            if f'switchport access vlan {vlan}' in interface and port not in interface:
+                regex_port = "nterface (.+)['\n'|'\r\n']"
+                match = re.search(regex_port, interface)
+                extra_port = match.group(1).split('/')[-1]
+                extra_ports.append(extra_port)
+        if extra_ports:
+            service_port = service_port + ',' + ','.join(extra_ports)
+    return service_port
