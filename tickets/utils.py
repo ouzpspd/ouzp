@@ -5,7 +5,7 @@ from .parsing import _parsing_id_client_device_by_device_name
 from .parsing import _parsing_config_ports_client_device
 from .parsing import get_contract_id
 from .parsing import get_contract_resources
-from .parsing import stash
+from .parsing import get_sw_config
 
 from collections import OrderedDict
 
@@ -16,7 +16,8 @@ def add_portconfig_to_list_swiches(list_switches, username, password):
         if list_switches[i][-1] == '-':
             pass
         else:
-            switch_ports_var = stash(list_switches[i][0], list_switches[i][1], username, password)
+            switch_config = get_sw_config(list_switches[i][0], username, password)
+            switch_ports_var = get_vlan_4094_and_description(switch_config, list_switches[i][1])
             if switch_ports_var == None:
                 pass
             else:
@@ -512,3 +513,65 @@ def get_extra_service_port_csw(service_port, switch_config, model):
         if extra_ports:
             service_port = service_port + ',' + ','.join(extra_ports)
     return service_port
+
+
+def get_vlan_4094_and_description(switch_config, model):
+    """Данный метод на основе модели КАД подставляет соответствующие regex для формирования данных по портам КАД"""
+    if 'SNR' in model or 'Cisco' in model or 'Orion' in model:
+        regex_description = '\wnterface (\S+\/\S+)(.+?)!'
+        match_description = re.finditer(regex_description, switch_config, flags=re.DOTALL)
+        # чтобы найти description блок интерфейса разделяется по \r\n, если не получается разделить, разделяется по \n
+        config_ports_device = {}
+        for i in match_description:
+            if 'description' in i.group(2):
+                desc = i.group(2).split('\r\n')
+                if len(desc) == 1:
+                    desc = i.group(2).split('\n')
+                    if 'description' in desc[1]:
+                        desc = i.group(2).split('\n')[1].split()[1]
+                    else:
+                        desc = i.group(2).split('\n')[2].split()[1]
+                else:
+                    if 'description' in desc[1]:
+                        desc = i.group(2).split('\r\n')[1].split()[1]
+                    else:
+                        desc = i.group(2).split('\r\n')[2].split()[1]
+            else:
+                desc = '-'
+            if 'switchport access vlan 4094' in i.group(2):
+                vlan = 'Заглушка 4094'
+            else:
+                vlan = '-'
+            config_ports_device[i.group(1)] = [desc, vlan]
+
+    elif 'D-Link' in model and model != 'D-Link DIR-100':
+        config_ports_device = {}
+        regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
+        match_description = re.finditer(regex_description, switch_config)
+        for i in match_description:
+            if '-' in i.group(1):
+                start, stop = [int(j) for j in i.group(1).split('-')]
+                for one_desc in list(range(start, stop + 1)):
+                    config_ports_device['Port {}'.format(one_desc)] = [i.group(2), '-']
+            else:
+                config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
+        if '1100' in model:
+            regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
+        else:
+            regex_free = 'config vlan stub add untagged (\S+)'
+        match_free = re.search(regex_free, switch_config)
+        port_free = []
+        if match_free:
+            for i in match_free.group(1).split(','):
+                if '-' in i:
+                    start, stop = [int(j) for j in i.split('-')]
+                    port_free += list(range(start, stop+1))
+                else:
+                    port_free.append(int(i))
+
+            for i in port_free:
+                if config_ports_device.get('Port {}'.format(i)):
+                    config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
+                else:
+                    config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
+    return config_ports_device

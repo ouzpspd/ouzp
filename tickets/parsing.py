@@ -495,75 +495,6 @@ def check_contract_phone_exist(login, password, contract_id):
     return phone_address
 
 
-def stash(sw, model, login, password):
-    """Данный метод принимает в качестве параметров Название КАД и модель КАД. Обращается к stash.itmh.ru и парсит
-    конфиг коммутатора по названию. На основе модели КАД подставляет соответствующие regex для формирования данных по портам КАД"""
-    url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    if req.status_code == 404:
-        config_ports_device = {}
-    else:
-        switch = req.content.decode('utf-8')
-        if 'SNR' in model or 'Cisco' in model or 'Orion' in model:
-            regex_description = '\wnterface (\S+\/\S+)(.+?)!'
-            match_description = re.finditer(regex_description, switch, flags=re.DOTALL)
-            # чтобы найти description блок интерфейса разделяется по \r\n, если не получается разделить, разделяется по \n
-            config_ports_device = {}
-            for i in match_description:
-                if 'description' in i.group(2):
-                    desc = i.group(2).split('\r\n')
-                    if len(desc) == 1:
-                        desc = i.group(2).split('\n')
-                        if 'description' in desc[1]:
-                            desc = i.group(2).split('\n')[1].split()[1]
-                        else:
-                            desc = i.group(2).split('\n')[2].split()[1]
-                    else:
-                        if 'description' in desc[1]:
-                            desc = i.group(2).split('\r\n')[1].split()[1]
-                        else:
-                            desc = i.group(2).split('\r\n')[2].split()[1]
-                else:
-                    desc = '-'
-                if 'switchport access vlan 4094' in i.group(2):
-                    vlan = 'Заглушка 4094'
-                else:
-                    vlan = '-'
-                config_ports_device[i.group(1)] = [desc, vlan]
-
-        elif 'D-Link' in model and model != 'D-Link DIR-100':
-            config_ports_device = {}
-            regex_description = 'config ports (\d+|\d+-\d+) (?:.+?) description (\".*?\")\n'
-            match_description = re.finditer(regex_description, switch)
-            for i in match_description:
-                if '-' in i.group(1):
-                    start, stop = [int(j) for j in i.group(1).split('-')]
-                    for one_desc in list(range(start, stop + 1)):
-                        config_ports_device['Port {}'.format(one_desc)] = [i.group(2), '-']
-                else:
-                    config_ports_device['Port {}'.format(i.group(1))] = [i.group(2), '-']
-            if '1100' in model:
-                regex_free = 'config vlan vlanid 4094 add untagged (\S+)'
-            else:
-                regex_free = 'config vlan stub add untagged (\S+)'
-            match_free = re.search(regex_free, switch)
-            port_free = []
-            if match_free:
-                for i in match_free.group(1).split(','):
-                    if '-' in i:
-                        start, stop = [int(j) for j in i.split('-')]
-                        port_free += list(range(start, stop+1))
-                    else:
-                        port_free.append(int(i))
-
-                for i in port_free:
-                    if config_ports_device.get('Port {}'.format(i)):
-                        config_ports_device['Port {}'.format(i)][1] = 'Заглушка 4094'
-                    else:
-                        config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
-    return config_ports_device
-
-
 def _get_chain_data(login, password, device):
     """Данный метод принимает в качестве параметра Название оборудования, от которого подключен клиент. Обращается к
      https://mon.itss.mirasystem.net/mp/ и парсит цепочку устройств в которой состоит это оборудование."""
@@ -742,7 +673,7 @@ def in_work_ortr(login, password):
 
 
 def get_sw_config(sw, login, password):
-    """Данный метод парсит конфиг КК"""
+    """Данный метод парсит конфиг коммутатора со stash"""
     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     switch_config = None

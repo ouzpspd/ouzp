@@ -5,7 +5,7 @@ from .forms import TrForm, PortForm, LinkForm, HotspotForm, SPPForm, ServiceForm
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ChainForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm
 
 import logging
 from django.contrib import messages
@@ -18,12 +18,7 @@ from django.http import Http404
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 
-import re
-from requests.auth import HTTPBasicAuth
-import requests
-from bs4 import BeautifulSoup
-from collections import OrderedDict
-import pymorphy2
+
 import datetime
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
@@ -3151,6 +3146,29 @@ def static_formset(request):
         }
 
         return render(request, 'tickets/template_static_formset.html', context)
+
+
+from django.http import JsonResponse
+from django.core import serializers
+
+def search(request):
+    #user = User.objects.get(username=request.user.username)
+    if request.method == 'POST':
+        searchticketsform = SearchTicketsForm(request.POST)
+        if searchticketsform.is_valid():
+            pps = searchticketsform.cleaned_data['pps']
+            results = TR.objects.filter(pps__icontains=pps)
+            print(results)
+            data = serializers.serialize('json', results)
+            return HttpResponse(data, content_type="application/json")
+            # response = {'pps': data}
+            # return JsonResponse(response)
+    else:
+        searchticketsform = SearchTicketsForm()
+        context = {
+            'searchticketsform': searchticketsform
+        }
+        return render(request, 'tickets/search.html', context)
 
 
 

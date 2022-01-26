@@ -44,7 +44,6 @@ class ServiceForm(forms.ModelForm):
         fields = '__all__'
 
 
-
 class PortForm(forms.Form):
     kad = forms.CharField(max_length=100, label='Коммутатор')
     model = forms.CharField(max_length=100, label='Модель')
@@ -56,8 +55,10 @@ class OrtrForm(forms.Form):
     kad = forms.CharField(label='КАД', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     ots_field = forms.CharField(label='Решение ОТС', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))
 
+
 class LinkForm(forms.Form):
     spplink =forms.CharField(max_length=150, label='Ссылка на ТР', widget=forms.TextInput(attrs={'class': 'form-control'}))
+
 
 class LocalForm(forms.Form):
     types = [('СКС', 'СКС'), ('ЛВС', 'ЛВС'), ('Под видеонаблюдение', 'Под видеонаблюдение')]
@@ -65,11 +66,13 @@ class LocalForm(forms.Form):
     local_ports = forms.IntegerField(max_value=24, label='Количество портов',
                                    widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
+
 class SksForm(forms.Form):
     sks_poe = forms.BooleanField(label='PoE-инжектор', required=False,
                                       widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     sks_router = forms.BooleanField(label='Подключить в марш.', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
 
 class LvsForm(forms.Form):
     lvs_busy = forms.BooleanField(label='Все порты заняты', required=False,
@@ -85,6 +88,7 @@ class HotspotForm(forms.Form):
     exist_hotspot_client = forms.BooleanField(label='Существующий клиент', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     hotspot_points = forms.IntegerField(max_value=10, required=False, label='Количество точек', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     hotspot_users = forms.IntegerField(max_value=1000, label='Количество пользователей', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+
 
 class PhoneForm(forms.Form):
     types = [('ak', 'Аналог, установка шлюза у клиента'), ('ap', 'Аналог, установка шлюза на ППС'), ('ab', 'Аналог, установка шлюза не требуется'), ('s', 'SIP, по логину/паролю'), ('st', 'SIP, IP-транк')]
@@ -166,6 +170,7 @@ class CopperForm(forms.Form):
     logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
+
 class WirelessForm(forms.Form):
     ap_types = [('AirGrid 23 M5 или LiteBeam LBE-M5-23', 'LiteBeam LBE-M5-23'),
              ('AirGrid 27 M5', 'AirGrid 27 M5'),
@@ -217,6 +222,7 @@ class CswForm(forms.Form):
     model_csw = forms.CharField(label='Модель', required=False, widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
     port_csw = forms.CharField(label='Порт', required=False, widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
 
+
 class ShpdForm(forms.Form):
     router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
@@ -224,6 +230,7 @@ class ShpdForm(forms.Form):
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
 
 class ExtendServiceForm(forms.Form):
     type_police_cks_vk = [
@@ -254,9 +261,9 @@ class CksForm(forms.Form):
     types = [('access', 'access'), ('trunk', 'trunk')]
     type_cks = forms.CharField(label='Режим порта', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    #types_exist_service = [("access(native)", "access(native)"), ('trunk', 'trunk')]
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
 
 class PortVKForm(forms.Form):
     new_vk = forms.BooleanField(label='Новая ВЛС', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -268,6 +275,7 @@ class PortVKForm(forms.Form):
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+
 
 class PortVMForm(forms.Form):
     new_vm = forms.BooleanField(label='Новый ВМ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -285,24 +293,34 @@ class VideoForm(forms.Form):
     camera_number = forms.IntegerField(max_value=9, label='Количество камер',
                                        widget=forms.NumberInput(attrs={'class': 'form-control'}))
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    voice = forms.BooleanField(label='Запись звука', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    voice = forms.BooleanField(label='Запись звука', required=False,
+                               widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30')]
-    deep_archive = forms.CharField(label='Глубина архива камеры', widget=forms.Select(choices=type_deep_archive, attrs={'class': 'form-control'}))
-    camera_place_one = forms.CharField(label='Место установки Камеры №1', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), help_text='только если 1 или 2 камеры')
-    camera_place_two = forms.CharField(label='Место установки Камеры №2', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), help_text='только если 1 или 2 камеры')
+    deep_archive = forms.CharField(label='Глубина архива камеры',
+                                   widget=forms.Select(choices=type_deep_archive, attrs={'class': 'form-control'}))
+    camera_place_one = forms.CharField(label='Место установки Камеры №1', required=False,
+                                       widget=forms.TextInput(attrs={'class': 'form-control'}),
+                                       help_text='только если 1 или 2 камеры')
+    camera_place_two = forms.CharField(label='Место установки Камеры №2', required=False,
+                                       widget=forms.TextInput(attrs={'class': 'form-control'}),
+                                       help_text='только если 1 или 2 камеры')
 
 
 class ContractForm(forms.Form):
     contract =forms.CharField(max_length=150, label='Договор', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
+
 class ChainForm(forms.Form):
     chain_device =forms.CharField(max_length=150, label='Девайс', widget=forms.TextInput(attrs={'class': 'form-control'}))
+
 
 class ListResourcesForm(forms.Form):
     resource = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
+
 class ListContractIdForm(forms.Form):
     resource = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
 
 class ListJobsForm(forms.Form):
     types = [
@@ -318,6 +336,7 @@ class ListJobsForm(forms.Form):
 class TemplatesHiddenForm(forms.Form):
     hidden = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
+
 class TemplatesStaticForm(forms.Form):
     static = forms.CharField(label='', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
@@ -325,8 +344,8 @@ class TemplatesStaticForm(forms.Form):
 class PassTurnoffForm(forms.Form):
     ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
-class PassServForm(forms.Form):
 
+class PassServForm(forms.Form):
     types_exist_sreda = [
         ('1', 'UTP'),
         ('2', 'ВОЛС'),
@@ -351,28 +370,15 @@ class PassServForm(forms.Form):
                                  widget=forms.Select(choices=types_change_log, attrs={'class': 'form-control'}))
 
 
-
 class ChangeLogShpdForm(forms.Form):
     types_change_log_shpd = [
         ('существующая адресация', 'существующая адресация'),
         ('Новая подсеть /30', 'Новая подсеть /30'),
         ('Новая подсеть /32', 'Новая подсеть /32'),
-        #('Сменить /32 на /32', 'Сменить /32 на /32'),
-        #('Сменить /30 на /32', 'Сменить /30 на /32'),
-        #('Сменить /32 на /30', 'Сменить /32 на /30'),
     ]
     change_log_shpd = forms.CharField(label='Изменение схемы ШПД для подсетей с маской /32',
                                       widget=forms.Select(choices=types_change_log_shpd,
                                                           attrs={'class': 'form-control'}))
-
-# class AddServInstCswForm(forms.Form):
-#     types = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),
-#              ('ВОЛС и порт не меняются', 'ВОЛС и порт не меняются'),
-#              ('Перевод на гигабит переключение с меди на ВОЛС', 'Перевод на гигабит переключение с меди на ВОЛС'),
-#              ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
-#              ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
-#              ('Перевод на гигабит/перенос на новый узел', 'Перевод на гигабит/перенос на новый узел')]
-#     type_install_csw = forms.CharField(label='Варианты установки КК', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 
 class ChangeServForm(forms.Form):
@@ -392,6 +398,7 @@ class ChangeServForm(forms.Form):
              ]
     type_change_service = forms.CharField(label='Варианты ТР', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
+
 class ChangeParamsForm(forms.Form):
     types_mask = [('/32', '/32'),
                   ('/30', '/30'),
@@ -399,12 +406,24 @@ class ChangeParamsForm(forms.Form):
                   ('/28', '/28')]
     new_mask = forms.CharField(label='Новая маска', required=False,
                                        widget=forms.Select(choices=types_mask, attrs={'class': 'form-control'}))
-    #new_mask = forms.CharField(max_length=2, required=False, label='Новая маска',
-    #                                   widget=forms.TextInput(attrs={'class': 'form-control'}))
-    #types_port = [("access'ом (native vlan)", "access'ом (native vlan)"), ("trunk", "trunk"), ("в неизменном виде", "в неизменном виде")]
-    #change_type_port_exist_serv = forms.CharField(required=False, label='Режим порта существующей услуги',
-    #                             widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
-    #change_type_port_new_serv = forms.CharField(required=False, label='Режим порта новой услуги',
-    #                                       widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
-    routed_ip = forms.CharField(max_length=20, required=False, label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    routed_vrf = forms.CharField(max_length=50, required=False, label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    routed_ip = forms.CharField(max_length=20, required=False,
+                                label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    routed_vrf = forms.CharField(max_length=50, required=False,
+                                 label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+
+class SearchTicketsForm(forms.Form):
+    # user = forms.CharField(label='Технолог', required=False,
+    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # ticket_k = forms.CharField(label='Заявка СПП', required=False,
+    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # ticket_tr = forms.CharField(label='ТР', required=False,
+    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
+    pps = forms.CharField(label='ППС', required=False,
+                               widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # client = forms.CharField(label='Клиент', required=False,
+    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # ortr = forms.CharField(label='Поле ОРТР', required=False,
+    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # start = forms.DateTimeField(label='Дата начала', required=False)
+    # stop = forms.DateTimeField(label='Дата окончания', required=False)

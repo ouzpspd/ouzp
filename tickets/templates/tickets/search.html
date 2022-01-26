@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'search' %}" method="post" id="myForm">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+            {{ searchticketsform.as_p }}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+        </div>
+</div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <script>
+        $('#myForm').submit(function(){
+            $.ajax({
+            url: '{% url 'search' %}',
+            type: 'post',
+            data:$('#myForm').serialize(),
+            success:function(){
+                alert("Спасибо, что обратились к нам " + response)
+            }
+        });
+        });
+    </script>
+
+{% endblock %}
