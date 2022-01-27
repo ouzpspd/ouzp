@@ -3152,23 +3152,36 @@ from django.http import JsonResponse
 from django.core import serializers
 
 def search(request):
+    """Данный метод отображает html-страницу с поиском заявок"""
     #user = User.objects.get(username=request.user.username)
-    if request.method == 'POST':
-        searchticketsform = SearchTicketsForm(request.POST)
-        if searchticketsform.is_valid():
-            pps = searchticketsform.cleaned_data['pps']
+    # if request.method == 'POST':
+    #     searchticketsform = SearchTicketsForm(request.POST)
+    #     if searchticketsform.is_valid():
+    #         pps = searchticketsform.cleaned_data['pps']
+    #         results = TR.objects.filter(pps__icontains=pps)
+    #         print(results)
+    #         data = serializers.serialize('json', results)
+    #         return HttpResponse(data, content_type="application/json")
+    #         # response = {'pps': data}
+    #         # return JsonResponse(response)
+    #else:
+    searchticketsform = SearchTicketsForm(request.GET)
+    if searchticketsform.is_valid():
+
+        pps = searchticketsform.cleaned_data['pps']
+        searchticketsform = SearchTicketsForm(initial={'pps': pps})
+        context = {
+            'searchticketsform': searchticketsform,
+        }
+        if request.GET:
             results = TR.objects.filter(pps__icontains=pps)
-            print(results)
-            data = serializers.serialize('json', results)
-            return HttpResponse(data, content_type="application/json")
-            # response = {'pps': data}
-            # return JsonResponse(response)
+            context.update({'results': results})
+
     else:
-        searchticketsform = SearchTicketsForm()
         context = {
             'searchticketsform': searchticketsform
         }
-        return render(request, 'tickets/search.html', context)
+    return render(request, 'tickets/search.html', context)
 
 
 

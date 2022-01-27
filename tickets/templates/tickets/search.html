@@ -6,8 +6,7 @@
 <div class="card mb-2">
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">
-<form action="{% url 'search' %}" method="post" id="myForm">
-    {% csrf_token %}
+<form action="{% url 'search' %}" method="get" id="myForm">
     <div class="container">
         <div class="row">
             <div class="col-4">
@@ -24,22 +23,75 @@
         </div>
 </div>
 </div>
+<p>{{results}}</p>
+
+{% for tr in results %}
+<p>
+    {{tr.ticket_k}}
+    {{tr.ticket_k.version}}
+    {{tr}}
+    {{tr.ticket_k.client}}
+    {{tr.ticket_k.user.lastname}}
+    {{tr.ticket_k.created|date:"d.m.Y"}}
+    {{tr.ticket_k.created|time:"H:i"}}
+    {{tr.ticket_k.complited|time:"H:i"}}
+</p>
+{%endfor%}
+
+<div class="container">
+
+    <div class="row mt-3">
+<table class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th scope="col"></th>
+            <th scope="col">Дата</th>
+          <th scope="col">№ Заявки</th>
+            <th scope="col">Версия</th>
+            <th scope="col">ТР</th>
+          <th scope="col">Клиент</th>
+            <th scope="col">Точка подключения</th>
+            <th scope="col">Время начала</th>
+            <th scope="col">Время окончания</th>
+            <th scope="col">Технолог</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tbody>
+      {% for tr in results %}
+        <tr>
+            <th scope="row">{{search|length|add:forloop.counter}}</th>
+
+            <td class="custom">{{tr.ticket_k.created|date:"d.m.Y"}}</td>
+            <td><a href="{% url 'spp_view_save' tr.ticket_k.dID tr.ticket_k.id %}">{{tr.ticket_k}}</a></td>
+            <td>{{tr.ticket_k.version}}</td>
+            <td><a href="{% url 'tr_view_save' tr.ticket_k.dID tr.ticket_k.id tr.ticket_tr %}">{{tr.ticket_tr}}</a></td>
+            <td>{{tr.ticket_k.client}}</td>
+            <td> {%comment%}{{tr.ticket_k.des_tr}}{%endcomment%}
+                {% for it in tr.ticket_k.des_tr %}
+                {% for k, v in it.items %}
+               {% if 'г.' in k and forloop.counter == 1 or forloop.counter == 2 %}
+               {{k}}
+                {% endif %}
+               {%endfor%}
+               {%endfor%}
+
+
+            </td>
+            <td>{{tr.ticket_k.created|time:"H:i"}}</td>
+            <td>{{tr.ticket_k.complited|time:"H:i"}}</td>
+
+            <td>{{tr.ticket_k.user.last_name}}</td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+    </div>
+</div>
 {% endblock %}
 
-{% block javascript %}
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
-    <script>
-        $('#myForm').submit(function(){
-            $.ajax({
-            url: '{% url 'search' %}',
-            type: 'post',
-            data:$('#myForm').serialize(),
-            success:function(){
-                alert("Спасибо, что обратились к нам " + response)
-            }
-        });
-        });
-    </script>
 
-{% endblock %}
