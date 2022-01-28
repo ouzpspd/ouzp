@@ -624,6 +624,7 @@ def for_tr_view(login, password, dID, tID, trID):
             if i.attrs['type'] == 'hidden':
                 if i['name'] == 'vID':
                     spp_params[i['name']] = i['value']
+        spp_params['Точка подключения'] = get_connection_point(dID, tID, login, password)
         return spp_params
     else:
         spp_params['Access denied'] = 'Access denied'
@@ -676,9 +677,22 @@ def get_sw_config(sw, login, password):
     """Данный метод парсит конфиг коммутатора со stash"""
     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    switch_config = None
-    if req.status_code == 200:
+
+    if req.status_code == 404:
+        switch_config = None
+    else:
         switch_config = req.content.decode('utf-8')
     return switch_config
 
 
+def get_connection_point(dID, tID, username, password):
+    """Данный метод парсит страницу Точки подключения в заявке СПП. По параметрам dID, tID определяет точку
+    подключения"""
+    connection_point = None
+    url = f'https://sss.corp.itmh.ru/dem_tr/dem_point_panel.php?dID={dID}&amp;tID={tID}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(username, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        point = soup.find('a', id="Point_209981")
+        connection_point = point.text.strip()
+        return connection_point

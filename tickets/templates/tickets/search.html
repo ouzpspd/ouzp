@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-
+{% load custom_filters %}
 
 <div class="container">
 <div class="card mb-2">
@@ -68,15 +68,7 @@
             <td>{{tr.ticket_k.version}}</td>
             <td><a href="{% url 'tr_view_save' tr.ticket_k.dID tr.ticket_k.id tr.ticket_tr %}">{{tr.ticket_tr}}</a></td>
             <td>{{tr.ticket_k.client}}</td>
-            <td> {%comment%}{{tr.ticket_k.des_tr}}{%endcomment%}
-                {% for it in tr.ticket_k.des_tr %}
-                {% for k, v in it.items %}
-               {% if 'г.' in k and forloop.counter == 1 or forloop.counter == 2 %}
-               {{k}}
-                {% endif %}
-               {%endfor%}
-               {%endfor%}
-
+            <td> {{tr.connection_point}}
 
             </td>
             <td>{{tr.ticket_k.created|time:"H:i"}}</td>

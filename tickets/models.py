@@ -34,6 +34,7 @@ class TR(models.Model):
     info_tr = models.TextField(verbose_name='Инфо для разработки', blank=True, null=True)
     oattr = models.TextField(verbose_name='Решение ОТПМ', blank=True, null=True)
     services = models.JSONField(verbose_name='Перечень требуемых услуг')
+    connection_point = models.CharField(default='Неизвестно', max_length=400, verbose_name='Точка подключения')
     kad = models.CharField(max_length=200, verbose_name='КАД')
     #tr_OTO_Pay = models.IntegerField()
     #tr_OTS_Pay = models.IntegerField()

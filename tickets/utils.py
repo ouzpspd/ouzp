@@ -16,20 +16,20 @@ def add_portconfig_to_list_swiches(list_switches, username, password):
         if list_switches[i][-1] == '-':
             pass
         else:
+            print(list_switches[i][0])
             switch_config = get_sw_config(list_switches[i][0], username, password)
-            switch_ports_var = get_vlan_4094_and_description(switch_config, list_switches[i][1])
-            if switch_ports_var == None:
-                pass
-            else:
-                for port in switch_ports_var.keys():
-                    if list_switches[i][10].get(port) == None:
-                        switch_ports_var[port].insert(0, '-')
-                        switch_ports_var[port].insert(0, '-')
-                        list_switches[i][10].update({port: switch_ports_var[port]})
-                    else:
-                        for from_dev in switch_ports_var[port]:
-                            list_switches[i][10][port].append(from_dev)
-                list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
+            if switch_config:
+                switch_ports_var = get_vlan_4094_and_description(switch_config, list_switches[i][1])
+                if switch_ports_var:
+                    for port in switch_ports_var.keys():
+                        if list_switches[i][10].get(port) == None:
+                            switch_ports_var[port].insert(0, '-')
+                            switch_ports_var[port].insert(0, '-')
+                            list_switches[i][10].update({port: switch_ports_var[port]})
+                        else:
+                            for from_dev in switch_ports_var[port]:
+                                list_switches[i][10][port].append(from_dev)
+                    list_switches[i][10] = OrderedDict(sorted(list_switches[i][10].items(), key=lambda t: t[0][-2:]))
         switch_name.append(list_switches[i][0])
     if len(switch_name) == 1:
         switches_name = switch_name[0]
@@ -575,3 +575,5 @@ def get_vlan_4094_and_description(switch_config, model):
                 else:
                     config_ports_device['Port {}'.format(i)] = ['-', 'Заглушка 4094']
     return config_ports_device
+
+

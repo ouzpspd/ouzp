@@ -51,11 +51,14 @@ from .utils import _get_all_chain
 from .utils import _tag_service_for_new_serv
 from .utils import _readable
 
+from django import template
+register = template.Library()
+
 
 logger = logging.getLogger(__name__)
 
 
-def register(request):
+def registration(request):
     """Данный метод отвечает за регистрацию пользователей в АРМ"""
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
@@ -2099,6 +2102,7 @@ def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
     ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
     ticket_tr.info_tr = tr_params['Информация для разработки ТР']
     ticket_tr.services = tr_params['Перечень требуемых услуг']
+    ticket_tr.connection_point = tr_params['Точка подключения']
     ticket_tr.oattr = tr_params['Решение ОТПМ']
     ticket_tr.vID = tr_params['vID']
     ticket_tr.save()
@@ -3146,6 +3150,12 @@ def static_formset(request):
         }
 
         return render(request, 'tickets/template_static_formset.html', context)
+
+
+
+
+
+
 
 
 from django.http import JsonResponse
