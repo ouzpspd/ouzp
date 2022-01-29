@@ -693,6 +693,6 @@ def get_connection_point(dID, tID, username, password):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(username, password))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        point = soup.find('a', id="Point_209981")
+        point = soup.find('a', id=f"Point_{tID}")
         connection_point = point.text.strip()
         return connection_point
