@@ -12,6 +12,25 @@
             <div class="col-4">
             {{ searchticketsform.as_p }}
             </div>
+
+            <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
+
+    {{ searchticketsform.start}}
+    <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
+        <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+    </div>
+</div>
+<script>
+    $(function () {
+        $("#datetimepicker1").datetimepicker({
+            locale: 'ru',
+            format: 'DD.MM.YYYY',
+        });
+    });
+</script>
+
+
+
         </div>
         <div class="row mt-3">
             <div class="col-4">
@@ -23,20 +42,6 @@
         </div>
 </div>
 </div>
-<p>{{results}}</p>
-
-{% for tr in results %}
-<p>
-    {{tr.ticket_k}}
-    {{tr.ticket_k.version}}
-    {{tr}}
-    {{tr.ticket_k.client}}
-    {{tr.ticket_k.user.lastname}}
-    {{tr.ticket_k.created|date:"d.m.Y"}}
-    {{tr.ticket_k.created|time:"H:i"}}
-    {{tr.ticket_k.complited|time:"H:i"}}
-</p>
-{%endfor%}
 
 <div class="container">
 

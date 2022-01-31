@@ -3163,29 +3163,42 @@ from django.core import serializers
 
 def search(request):
     """Данный метод отображает html-страницу с поиском заявок"""
-    #user = User.objects.get(username=request.user.username)
-    # if request.method == 'POST':
-    #     searchticketsform = SearchTicketsForm(request.POST)
-    #     if searchticketsform.is_valid():
-    #         pps = searchticketsform.cleaned_data['pps']
-    #         results = TR.objects.filter(pps__icontains=pps)
-    #         print(results)
-    #         data = serializers.serialize('json', results)
-    #         return HttpResponse(data, content_type="application/json")
-    #         # response = {'pps': data}
-    #         # return JsonResponse(response)
-    #else:
     searchticketsform = SearchTicketsForm(request.GET)
     if searchticketsform.is_valid():
 
         pps = searchticketsform.cleaned_data['pps']
-        searchticketsform = SearchTicketsForm(initial={'pps': pps})
+        ortr = searchticketsform.cleaned_data['ortr']
+        client = searchticketsform.cleaned_data['client']
+        start = searchticketsform.cleaned_data['start']
+        initial_params = {}
+        if pps:
+            initial_params.update({'pps': pps})
+        if client:
+            initial_params.update({'client': client})
+        if ortr:
+            initial_params.update({'ortr': ortr})
+
+        searchticketsform = SearchTicketsForm(initial=initial_params)
         context = {
             'searchticketsform': searchticketsform,
         }
         if request.GET:
-            results = TR.objects.filter(pps__icontains=pps)
-            context.update({'results': results})
+            query = None
+            if request.GET.get('pps'):
+                query_pps = Q(pps__icontains=pps)
+                query = query_pps if query is None else query & query_pps
+            if request.GET.get('client'):
+                query_client = Q(ticket_k__client__icontains=client)
+                query = query_client if query is None else query & query_client
+            if request.GET.get('ortr'):
+                query_ortr = Q(ortrtr__ortr__icontains=ortr)
+                query = query_ortr if query is None else query & query_ortr
+            if request.GET.get('start'):
+                query_start = Q(ticket_k__created__gte=start)
+                query = query_start if query is None else query & query_start
+            if query is not None:
+                results = TR.objects.filter(query)
+                context.update({'results': results})
 
     else:
         context = {
