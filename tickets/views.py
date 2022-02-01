@@ -3165,18 +3165,31 @@ def search(request):
     """Данный метод отображает html-страницу с поиском заявок"""
     searchticketsform = SearchTicketsForm(request.GET)
     if searchticketsform.is_valid():
-
+        spp = searchticketsform.cleaned_data['spp']
+        tr = searchticketsform.cleaned_data['tr']
         pps = searchticketsform.cleaned_data['pps']
+        connection_point = searchticketsform.cleaned_data['connection_point']
         ortr = searchticketsform.cleaned_data['ortr']
         client = searchticketsform.cleaned_data['client']
         start = searchticketsform.cleaned_data['start']
+        stop = searchticketsform.cleaned_data['stop']
         initial_params = {}
+        if spp:
+            initial_params.update({'spp': spp})
+        if tr:
+            initial_params.update({'tr': tr})
         if pps:
             initial_params.update({'pps': pps})
+        if pps:
+            initial_params.update({'connection_point': connection_point})
         if client:
             initial_params.update({'client': client})
         if ortr:
             initial_params.update({'ortr': ortr})
+        if start:
+            initial_params.update({'start': start})
+        if stop:
+            initial_params.update({'stop': stop})
 
         searchticketsform = SearchTicketsForm(initial=initial_params)
         context = {
@@ -3184,20 +3197,32 @@ def search(request):
         }
         if request.GET:
             query = None
+            if request.GET.get('spp'):
+                query_spp = Q(ticket_k__ticket_k__icontains=spp)
+                query = query_spp if query is None else query & query_spp
+            if request.GET.get('tr'):
+                query_tr = Q(ticket_tr__icontains=tr)
+                query = query_tr if query is None else query & query_tr
             if request.GET.get('pps'):
                 query_pps = Q(pps__icontains=pps)
                 query = query_pps if query is None else query & query_pps
+            if request.GET.get('connection_point'):
+                query_connection_point = Q(connection_point__icontains=connection_point)
+                query = query_connection_point if query is None else query & query_connection_point
             if request.GET.get('client'):
                 query_client = Q(ticket_k__client__icontains=client)
                 query = query_client if query is None else query & query_client
             if request.GET.get('ortr'):
-                query_ortr = Q(ortrtr__ortr__icontains=ortr)
+                query_ortr = Q(ortrtr__ortr__icontains=ortr) | Q(ortrtr__ots__icontains=ortr)
                 query = query_ortr if query is None else query & query_ortr
             if request.GET.get('start'):
                 query_start = Q(ticket_k__created__gte=start)
                 query = query_start if query is None else query & query_start
+            if request.GET.get('stop'):
+                query_stop = Q(ticket_k__complited__lt=stop)
+                query = query_stop if query is None else query & query_stop
             if query is not None:
-                results = TR.objects.filter(query)
+                results = TR.objects.filter(query).order_by('-ticket_k__created')
                 context.update({'results': results})
 
     else:

@@ -413,24 +413,30 @@ class ChangeParamsForm(forms.Form):
 
 
 class SearchTicketsForm(forms.Form):
-    # user = forms.CharField(label='Технолог', required=False,
-    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
-    # ticket_k = forms.CharField(label='Заявка СПП', required=False,
-    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
-    # ticket_tr = forms.CharField(label='ТР', required=False,
-    #                            widget=forms.TextInput(attrs={'class': 'form-control'}))
+    spp = forms.CharField(label='Заявка СПП', required=False,
+                               widget=forms.TextInput(attrs={'class': 'form-control'}))
+    tr = forms.CharField(label='ТР', required=False,
+                               widget=forms.TextInput(attrs={'class': 'form-control'}))
     pps = forms.CharField(label='ППС', required=False,
                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    connection_point = forms.CharField(label='Точка подключения', required=False,
+                          widget=forms.TextInput(attrs={'class': 'form-control'}))
     client = forms.CharField(label='Клиент', required=False,
                                widget=forms.TextInput(attrs={'class': 'form-control'}))
     ortr = forms.CharField(label='Поле ОРТР', required=False,
                                widget=forms.TextInput(attrs={'class': 'form-control'}))
     start = forms.DateTimeField(label='Дата начала', required=False,
                                 # widget=forms.DateTimeInput(attrs={'class': 'form-control'})
-                                input_formats = ['%d/%m/%Y %H:%M'],
+                                input_formats = ['%d.%m.%Y'],
                                                 widget = forms.DateTimeInput(attrs={
                                     'class': 'form-control datetimepicker-input',
                                     'data-target': '#datetimepicker1'
                                 })
                                 )
-    # stop = forms.DateTimeField(label='Дата окончания', required=False)
+    stop = forms.DateTimeField(label='Дата окончания', required=False,
+                                input_formats=['%d.%m.%Y'],
+                                widget=forms.DateTimeInput(attrs={
+                                    'class': 'form-control datetimepicker-input',
+                                    'data-target': '#datetimepicker2'
+                                })
+                                )
