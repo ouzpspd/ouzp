@@ -147,7 +147,7 @@ class VolsForm(forms.Form):
                                            widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
                                           widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
+    logic_change_gi_csw = forms.BooleanField(label='Перевод КК 1G', required=False,
                                               widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 
@@ -167,7 +167,7 @@ class CopperForm(forms.Form):
                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
+    logic_change_gi_csw = forms.BooleanField(label='Перевод КК 1G', required=False,
                                    widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 

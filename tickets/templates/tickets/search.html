@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+
 {% block nav_active %}
 <li class="nav-item">
   <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
@@ -121,6 +122,37 @@
 </div>
 </div>
 
+{% if page_obj.has_other_pages %}
+<nav class="mt-3" aria-label="Page navigation">
+  <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?{% url_replace page=page_obj.previous_page_number %}" aria-label="Previous">  {%comment%}href="?page={{ page_obj.previous_page_number }}"{%endcomment%}
+        <span aria-hidden="true">&laquo;</span>
+        <span class="sr-only">Previous</span>
+      </a>
+    </li>
+      {% endif %}
+      {% for p in page_obj.paginator.page_range %}
+      {% if page_obj.number == p %}
+    <li class="page-item active" aria-current="page"><a class="page-link" href="?{% url_replace page=p %}">{{ p }}<span class="sr-only">(current)</span></a> {%comment%}href="?page={{ p }}"{%endcomment%}
+    </li>
+      {% elif p < page_obj.number|add:3 and p > page_obj.number|add:-3 %}
+      <li class="page-item"><a class="page-link" href="?{% url_replace page=p %}">{{ p }}</a></li> {%comment%}href="?page={{ p }}"{%endcomment%}
+      {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?{% url_replace page=page_obj.next_page_number %}" aria-label="Next"> {%comment%}href="?page={{ page_obj.next_page_number }}"{%endcomment%}
+        <span aria-hidden="true">&raquo;</span>
+        <span class="sr-only">Next</span>
+      </a>
+    </li>
+      {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
 <div class="container">
 
 
@@ -141,10 +173,15 @@
       <tbody>
 
         <tbody>
-      {% for tr in results %}
+      {% for tr in page_obj %}
         <tr>
-            <th scope="row">{{search|length|add:forloop.counter}}</th>
-
+            {% if page_obj.number == 1 %}
+            <th scope="row">{{forloop.counter}}</th>
+            {% elif page_obj.number == 2 %}
+            <th scope="row">{{forloop.counter|add:50}} </th>
+            {% else %}
+            <th scope="row">{{ page_obj.number | multiply:50 | add:forloop.counter}} </th>
+            {% endif %}
             <td class="custom">{{tr.ticket_k.created|date:"d.m.Y"}}</td>
             <td><a href="{% url 'spp_view_save' tr.ticket_k.dID tr.ticket_k.id %}">{{tr.ticket_k}}</a></td>
             <td><a href="{% url 'tr_view_save' tr.ticket_k.dID tr.ticket_k.id tr.ticket_tr %}">{{tr.ticket_tr}}</a></td>

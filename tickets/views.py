@@ -121,7 +121,10 @@ def private_page(request):
     """Данный метод в Личном пространстве пользователя отображает все задачи этого пользователя"""
     request = flush_session_key(request)
     spp_success = SPP.objects.filter(user=request.user).order_by('-created')
-    return render(request, 'tickets/private_page.html', {'spp_success': spp_success})
+    paginator = Paginator(spp_success, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'tickets/private_page.html', {'page_obj': page_obj}) # 'spp_success': spp_success,
 
 
 def login_for_service(request):
@@ -1324,6 +1327,7 @@ def manually_tr(request, dID, tID, trID):
             ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
             ticket_tr.info_tr = tr_params['Информация для разработки ТР']
             ticket_tr.services = tr_params['Перечень требуемых услуг']
+            ticket_tr.connection_point = tr_params['Точка подключения']
             ticket_tr.oattr = tr_params['Решение ОТПМ']
             ticket_tr.vID = tr_params['vID']
             ticket_tr.save()
@@ -3223,13 +3227,22 @@ def search(request):
                 query = query_stop if query is None else query & query_stop
             if query is not None:
                 results = TR.objects.filter(query).order_by('-ticket_k__created')
-                context.update({'results': results})
+                paginator = Paginator(results, 50)
+                page_number = request.GET.get('page')
+                page_obj = paginator.get_page(page_number)
+                context.update({'page_obj': page_obj}) # 'results': results
 
     else:
         context = {
             'searchticketsform': searchticketsform
         }
     return render(request, 'tickets/search.html', context)
+
+
+from django.core.paginator import Paginator
+
+
+
 
 
 
