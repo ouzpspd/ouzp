@@ -520,9 +520,9 @@ def _new_services(result_services, value_vars):
                         '- Подтвердить восстановление связи для порта ЛВС который был переключен в установленный коммутатор.'] = '- Подтвердить восстановление связи для порта ЛВС который был переключен в установленный коммутатор.'
                 lvs_switch = value_vars.get('lvs_switch')
                 static_vars['указать модель коммутатора'] = lvs_switch
-                if lvs_switch == ('TP-Link TL-SG105 V4' or 'ZYXEL GS1200-5'):
+                if lvs_switch in ['TP-Link TL-SG105 V4', 'ZYXEL GS1200-5']:
                     static_vars['5/8/16/24'] = '5'
-                elif lvs_switch == ('TP-Link TL-SG108 V4' or 'ZYXEL GS1200-8'):
+                elif lvs_switch in ['TP-Link TL-SG108 V4', 'ZYXEL GS1200-8']:
                     static_vars['5/8/16/24'] = '8'
                 elif lvs_switch == 'D-link DGS-1100-16/B':
                     static_vars['5/8/16/24'] = '16'
@@ -1727,7 +1727,6 @@ def _passage_services_on_csw(result_services, value_vars):
                         '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
                 static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
             services, service_shpd_change = _separate_services_and_subnet_dhcp(value_vars.get('readable_services'), value_vars.get('change_log_shpd'))
-
             if service_shpd_change:
                 hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
                 hidden_vars['ОНИТС СПД подготовиться к работам:'] = 'ОНИТС СПД подготовиться к работам:'

@@ -3,7 +3,7 @@
 
 
 <div class="container">
-  <div class="row mt-2">
+
 <table class="table table-bordered">
   <tbody>
     {% for key, value in ticket_tr.items %}
@@ -79,7 +79,7 @@
     {% elif 'vID' in key %}
     {% elif 'ОТПМ' in key %}
     {% elif 'ОРТР' in key %}
-    {% elif 'ОТС' in key %}
+    {% elif 'ОТC' in key %}
     {% else %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
@@ -89,7 +89,7 @@
     {% endfor %}
   </tbody>
 </table>
-  </div>
+
 </div>
 <div class="container">
     {% for key, value in ticket_tr.items %}
