@@ -53,10 +53,10 @@
               <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'get_link_tr' %}">Проектировать ТР</a>
+              <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
+              <a class="nav-link" href="{% url 'get_title_tr' %}">Форм. заголовка</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{% url 'search' %}">Поиск</a>

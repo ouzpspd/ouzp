@@ -79,5 +79,7 @@ urlpatterns = [
     path('job_formset/', job_formset, name='job_formset'),
     path('contract_id_formset/', contract_id_formset, name='contract_id_formset'),
     path('search/', search, name='search'),
+    path('title/', title_tr, name='title_tr'),
+    path('get_title_tr/', get_title_tr, name='get_title_tr'),
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
 ]

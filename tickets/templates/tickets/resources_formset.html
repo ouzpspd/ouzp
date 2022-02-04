@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 
+{% if task_otpm %}
 <div class="container">
 
 <table class="table table-bordered">
@@ -13,10 +14,10 @@
 </table>
 
 </div>
-
+{% endif %}
 
 <div class="container">
-    <div class="card mb-2">
+    <div class="card mt-2">
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">
       <p class="card-text">Выбрать 1 ресурс для работ</p>

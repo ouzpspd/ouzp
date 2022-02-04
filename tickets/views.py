@@ -2145,6 +2145,18 @@ def tr_view(request, dID, tID, trID):
         return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
 
 
+def get_title_tr(request):
+    """Данный метод очищает сессию и перенаправляет на get_resources"""
+    flush_session_key(request)
+    return redirect('get_resources')
+
+
+def title_tr(request):
+    """Данный метод отображает html-страничку с шапкой ТР"""
+    head = request.session['head']
+    return render(request, 'tickets/title_tr.html', {'head': head})
+
+
 @cache_check
 def contract_id_formset(request):
     """Данный метод отображает форму, в которой пользователь выбирает 1 из договоров наиболее удовлетворяющих
@@ -2241,9 +2253,12 @@ def resources_formset(request):
                 messages.warning(request, 'Ресурсы не выбраны')
                 return redirect('resources_formset')
     else:
-        ticket_tr_id = request.session['ticket_tr_id']
-        ticket_tr = TR.objects.get(id=ticket_tr_id)
-        task_otpm = ticket_tr.ticket_k.task_otpm
+        if request.session.get('ticket_tr_id'):
+            ticket_tr_id = request.session['ticket_tr_id']
+            ticket_tr = TR.objects.get(id=ticket_tr_id)
+            task_otpm = ticket_tr.ticket_k.task_otpm
+        else:
+            task_otpm = None
         formset = ListResourcesFormSet()
         ono_for_formset = []
         for resource_for_formset in ono:
@@ -2708,7 +2723,10 @@ def head(request):
     request.session['head'] = head.strip()
     request.session['readable_services'] = readable_services
     request.session['counter_exist_line'] = counter_exist_line
-    return redirect('job_formset')
+    if request.session.get('ticket_tr_id'):
+        return redirect('job_formset')
+    else:
+        return redirect('title_tr')
 
 
 @cache_check

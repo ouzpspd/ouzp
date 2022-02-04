@@ -1,21 +1,5 @@
 {% extends 'base.html' %}
 
-{% block nav_active %}
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link active" aria-current="page" href="{% url 'get_link_tr' %}">Проектировать ТР</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'search' %}">Поиск</a>
-</li>
-{% endblock %}
-
-
 {% block content %}
 <form action="{% url 'get_link_tr' %}" method="post">
     {% csrf_token %}
