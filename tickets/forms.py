@@ -25,30 +25,6 @@ class AuthForServiceForm(forms.Form):
     password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
 
-class SPPForm(forms.ModelForm):
-    class Meta:
-        model = SPP
-        fields = '__all__'
-
-
-class TrForm(forms.ModelForm):
-    class Meta:
-        model = TR
-        fields = ('ticket_k', 'ticket_tr')
-
-
-
-class ServiceForm(forms.ModelForm):
-    class Meta:
-        model = ServicesTR
-        fields = '__all__'
-
-
-class PortForm(forms.Form):
-    kad = forms.CharField(max_length=100, label='Коммутатор')
-    model = forms.CharField(max_length=100, label='Модель')
-
-
 class OrtrForm(forms.Form):
     ortr_field = forms.CharField(label='Решение ОРТР', widget=forms.Textarea(attrs={'class': 'form-control'}))
     pps = forms.CharField(label='ППС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -308,10 +284,6 @@ class VideoForm(forms.Form):
 
 class ContractForm(forms.Form):
     contract =forms.CharField(max_length=150, label='Договор', widget=forms.TextInput(attrs={'class': 'form-control'}))
-
-
-class ChainForm(forms.Form):
-    chain_device =forms.CharField(max_length=150, label='Девайс', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 
 class ListResourcesForm(forms.Form):

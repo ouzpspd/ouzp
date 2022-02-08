@@ -11,12 +11,12 @@ from collections import OrderedDict
 
 
 def add_portconfig_to_list_swiches(list_switches, username, password):
+    """Данный метод добавляет портконфиги коммутаторов в массив данных о коммутаторах"""
     switch_name = []
     for i in range(len(list_switches)):
         if list_switches[i][-1] == '-':
             pass
         else:
-            print(list_switches[i][0])
             switch_config = get_sw_config(list_switches[i][0], username, password)
             if switch_config:
                 switch_ports_var = get_vlan_4094_and_description(switch_config, list_switches[i][1])

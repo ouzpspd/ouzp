@@ -152,7 +152,6 @@ def parse_tr(login, password, url):
         try:
             manager = match_manager.group(1)
             manager = ' '.join(manager.split())
-            print(manager)
         except AttributeError:
             manager = None
         regex_technolog = 'Технологи\r\n            </td>\r\n            <td align="left" colspan="3">\r\n(.+)</td>'
