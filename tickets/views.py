@@ -1041,21 +1041,33 @@ def data(request):
     if value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
         result_services, result_services_ots, value_vars = change_services(value_vars)
 
-    if not value_vars.get('type_pass'):
+    if value_vars.get('not_required'):
+        result_services = 'Решение ОУЗП СПД не требуется'
+        result_services_ots = None
+
+    if not value_vars.get('type_pass') and not value_vars.get('not_required'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
 
-    titles = _titles(result_services, result_services_ots)
+
     userlastname = None
     if request.user.is_authenticated:
         userlastname = request.user.last_name
     now = datetime.datetime.now()
     now = now.strftime("%d.%m.%Y")
-    titles = ''.join(titles)
-    result_services = '\n\n\n'.join(result_services)
     need = get_need(value_vars)
     if value_vars.get('type_pass'):
+        titles = _titles(result_services, result_services_ots)
+        titles = ''.join(titles)
+        request.session['titles'] = titles
+        result_services = '\n\n\n'.join(result_services)
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
+    elif value_vars.get('not_required'):
+        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services
     else:
+        titles = _titles(result_services, result_services_ots)
+        titles = ''.join(titles)
+        request.session['titles'] = titles
+        result_services = '\n\n\n'.join(result_services)
         result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
     counter_str_ortr = result_services.count('\n')
 
@@ -1066,9 +1078,8 @@ def data(request):
         result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
         counter_str_ots = result_services_ots.count('\n')
 
-    request.session['kad'] = value_vars.get('kad')
-    request.session['pps'] = value_vars.get('pps')
-    request.session['titles'] = titles
+    request.session['kad'] = value_vars.get('kad') if value_vars.get('kad') else 'Не требуется'
+    request.session['pps'] = value_vars.get('pps') if value_vars.get('pps') else 'Не требуется'
     request.session['result_services'] = result_services
     request.session['counter_str_ortr'] = counter_str_ortr
     request.session['result_services_ots'] = result_services_ots
@@ -2750,6 +2761,37 @@ def add_tr_exist_cl(request, dID, tID, trID):
         request.session['spplink'] = spplink
         request.session['ticket_tr_id'] = ticket_tr_id
         return redirect('get_resources')
+
+
+@cache_check
+def add_tr_not_required(request, dID, tID, trID):
+    """Данный метод работает для существующей точки подключения. Получает данные о ТР в СПП, добавляет ТР в БД,
+    перенаправляет на страницу запроса контракта клиента. """
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    else:
+        ticket_spp_id = request.session['ticket_spp_id']
+        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
+        request.session['spplink'] = spplink
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        services_plus_desc = ticket_tr.services
+        oattr = ticket_tr.oattr
+        request.session['services_plus_desc'] = services_plus_desc
+        request.session['oattr'] = oattr
+        request.session['ticket_tr_id'] = ticket_tr_id
+        request.session['not_required'] = True
+        return redirect('data')
+
+
 
 
 def project_tr_exist_cl(request):

@@ -81,5 +81,6 @@ urlpatterns = [
     path('search/', search, name='search'),
     path('title/', title_tr, name='title_tr'),
     path('get_title_tr/', get_title_tr, name='get_title_tr'),
+    path('add_tr_not_required/<int:dID>/<int:tID>/<int:trID>/', add_tr_not_required, name='add_tr_not_required'),
     #path('send/<int:dID>/<int:tID>/<int:trID>/', send_to_spp, name='send_to_spp'),
 ]
