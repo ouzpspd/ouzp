@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container">
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
+
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="container">
+    <div class="card mb-2">
+        <h5 class="card-header">Параметры</h5>
+            <div class="card-body">
+<form action="{% url 'change_params_serv' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+
+        {% if only_mask %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
+                    {{changeparamsform.new_mask}}
+                </div>
+            </div>
+        </div>
+        {% elif routed %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
+                    {{changeparamsform.new_mask}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changeparamsform.routed_ip.id_for_label}}">Ip-адрес</label>
+                    {{changeparamsform.routed_ip}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changeparamsform.routed_vrf.id_for_label}}">VRF</label>
+                    {{changeparamsform.routed_vrf}}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        </div>
+        <div class="row mt-1">
+            <div class="d-grid gap-2 col-4">
+                <button type="submit" class="btn btn-primary">Продолжить</button>
+            </div>
+        </div>
+
+    </div>
+</form>
+            </div>
+    </div>
+</div>
+
+{% endblock %}

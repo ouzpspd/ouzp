@@ -3,7 +3,7 @@
 
 
 <div class="container">
-  <div class="row mt-2">
+
 <table class="table table-bordered">
   <tbody>
     {% for key, value in ticket_tr.items %}
@@ -62,17 +62,24 @@
         <tr>
             <th class="table-secondary text-right" style="width: 25%; color: red">{{key}}</th>
             <td class="table-light" style="width: 75%">
-                <ul>Требуется отключение</ul>
-                Файлы:<br />
+                {{value}}
+            </td>
+        </tr>
+        {% endif %}
+    {% elif 'Файлы' in key %}
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+            <td class="table-light" style="width: 75%">
                 {% for k, v in value.items %}
-                    <ul><a href="https://sss.corp.itmh.ru/dem_tr/{{v}}">{{k}}</a></ul>
+                <ul><a href="https://sss.corp.itmh.ru/dem_tr/{{v}}">{{k}}</a></ul>
                 {% endfor %}
 
             </td>
         </tr>
-        {% endif %}
     {% elif 'vID' in key %}
     {% elif 'ОТПМ' in key %}
+    {% elif 'ОРТР' in key %}
+    {% elif 'ОТC' in key %}
     {% else %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
@@ -82,22 +89,45 @@
     {% endfor %}
   </tbody>
 </table>
-  </div>
+
+</div>
+<div class="container">
     {% for key, value in ticket_tr.items %}
         {% if 'ОТПМ' in key %}
-        <div class="row mb-2">
-
-            <div class="card">
-              <div class="card-header">
-                Решение ОТПМ
-              </div>
+        <div class="card mb-2">
+              <h5 class="card-header">Решение ОТПМ</h5>
               <div class="card-body">
-                {{value|linebreaksbr}}
+                  {% if value %}
+                    <p class="card-text">{{value|linebreaksbr}}</p>
+                  {% else %}
+                  <p class="card-text">Нет решения</p>
+                  {% endif %}
               </div>
-            </div>
+        </div>
+        {% elif 'ОРТР' in key %}
+        <div class="card mb-2">
+            <h5 class="card-header">Решение ОРТР</h5>
+              <div class="card-body">
+                  {% if value %}
+                    <p class="card-text">{{value|linebreaksbr}}</p>
+                  {% else %}
+                  <p class="card-text">Нет решения</p>
+                  {% endif %}
+              </div>
+        </div>
+        {% elif 'ОТС' in key and value%}
+        <div class="card mb-2">
+            <h5 class="card-header">Решение ОТС</h5>
+
+              <div class="card-body">
+
+                    <p class="card-text">{{value|linebreaksbr}}</p>
+
+              </div>
         </div>
         {% endif %}
     {% endfor %}
+
 
 </div>
 

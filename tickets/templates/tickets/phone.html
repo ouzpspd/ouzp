@@ -11,7 +11,24 @@
   </tbody>
 </table>
 </div>
+<div class="container">
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Решение ОТПМ</a>
+      </h5>
+    </div>
 
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
 {% if vats == True %}
 <div class="container">
 <div class="card mb-2">
@@ -22,12 +39,69 @@
     <div class="container">
         <div class="row">
             <div class="col-4">
-            {{ phoneform.as_p }}
+                <div class="form-group">
+                    <label for="{{ phoneform.type_phone.id_for_label }}">Тип телефонии</label>
+                    {{phoneform.type_phone}}
+                </div>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.form_exist_vgw_name.id_for_label }}">Название существующего шлюза</label>
+                    {{phoneform.form_exist_vgw_name}}
+                </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.vgw.id_for_label }}">Установка шлюза</label>
+                    {{phoneform.vgw}}
+                </div>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.form_exist_vgw_model.id_for_label }}">Модель существующего шлюза</label>
+                    {{phoneform.form_exist_vgw_model}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.channel_vgw.id_for_label }}">Количество каналов</label>
+                    {{phoneform.channel_vgw}}
+                </div>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.form_exist_vgw_port.id_for_label }}">Порты существующего шлюза</label>
+                    {{phoneform.form_exist_vgw_port}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.ports_vgw.id_for_label }}">Количество портов ВАТС</label>
+                    {{phoneform.ports_vgw}}
+                </div>
+            </div>
+        </div>
+
         <div class="row mt-3">
             <div class="col-4">
                 <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <a class="btn btn-info btn-block" href="{% url 'vgws' %}" target ="_blank" role="button">Шлюзы</a>
             </div>
         </div>
     </div>
@@ -50,12 +124,28 @@
                     {{phoneform.type_phone}}
                 </div>
             </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.form_exist_vgw_name.id_for_label }}">Название существующего шлюза</label>
+                    {{phoneform.form_exist_vgw_name}}
+                </div>
+            </div>
         </div>
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
-                    <label for="{{ phoneform.vgw.id_for_label }}">Шлюз</label>
+                    <label for="{{ phoneform.vgw.id_for_label }}">Установка шлюза</label>
                     {{phoneform.vgw}}
+                </div>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.form_exist_vgw_model.id_for_label }}">Модель существующего шлюза</label>
+                    {{phoneform.form_exist_vgw_model}}
                 </div>
             </div>
         </div>
@@ -66,11 +156,31 @@
                     {{phoneform.channel_vgw}}
                 </div>
             </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.form_exist_vgw_port.id_for_label }}">Порты существующего шлюза</label>
+                    {{phoneform.form_exist_vgw_port}}
+                </div>
+            </div>
         </div>
-
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ phoneform.types_ip_trunk.id_for_label }}">Режим порта для IP-транк</label>
+                    {{phoneform.type_ip_trunk}}
+                </div>
+            </div>
+        </div>
         <div class="row mt-3">
             <div class="col-4">
                 <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col-4">
+                <a class="btn btn-info btn-block" href="{% url 'vgws' %}" target ="_blank" role="button">Шлюзы</a>
             </div>
         </div>
     </div>

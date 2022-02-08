@@ -45,13 +45,24 @@
             {% for k, v in i.items %}
             {% if 'Техрешение' in k or 'Тех Решение' in k %}
             <ul>
-                {%comment%}<a href="/{{current_ticket_spp.dID}}/{{v.0}}/{{v.1}}">{{k}}</a><br >{%endcomment%}
                 <a href="{% url 'tr_view_save' current_ticket_spp.dID current_ticket_spp.id v.1 %}">{{k}}</a><br >
                 {% if current_ticket_spp.user.username == user.username and current_ticket_spp.process == True%}
-                <a class="btn btn-outline-danger" href="{% url 'add_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Проектировать</a>{% comment %}?next={{ request.path }}{% endcomment %}
-                {% comment %}<a class="btn btn-outline-danger" href="{% url 'edit_tr' current_ticket_spp.dID current_ticket_spp.id v.1 %}" role="button">Редактировать</a>{% endcomment %}
-                <a class="btn btn-outline-danger" href="{% url 'manually_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Редактировать</a>
-                <a class="btn btn-outline-danger" href="{% url 'add_spp_wait' current_ticket_spp.id %}" role="button">В ожидание</a>
+
+                <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+
+                  <div class="btn-group" role="group">
+                    <button id="btnGroupDrop1" type="button" class="btn btn-outline-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Проектировать
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+                      <a class="dropdown-item" href="{% url 'add_tr' current_ticket_spp.dID v.0 v.1 %}">Нов. точка</a>
+                      <a class="dropdown-item" href="{% url 'add_tr_exist_cl' current_ticket_spp.dID v.0 v.1 %}">Сущ. точка</a>
+                        <a class="dropdown-item" href="{% url 'add_tr_not_required' current_ticket_spp.dID v.0 v.1 %}">Не требуется</a>
+                    </div>
+                  </div>
+                    <a class="btn btn-outline-danger" href="{% url 'manually_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Редактировать</a>
+                    <a class="btn btn-outline-danger" href="{% url 'add_spp_wait' current_ticket_spp.id %}" role="button">В ожидание</a>
+                </div>
                 {% endif %}
             </ul>
             {% else %}

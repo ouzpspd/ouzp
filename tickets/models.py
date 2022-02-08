@@ -34,11 +34,8 @@ class TR(models.Model):
     info_tr = models.TextField(verbose_name='Инфо для разработки', blank=True, null=True)
     oattr = models.TextField(verbose_name='Решение ОТПМ', blank=True, null=True)
     services = models.JSONField(verbose_name='Перечень требуемых услуг')
+    connection_point = models.CharField(default='Неизвестно', max_length=400, verbose_name='Точка подключения')
     kad = models.CharField(max_length=400, verbose_name='КАД')
-    #tr_OTO_Pay = models.IntegerField()
-    #tr_OTS_Pay = models.IntegerField()
-    #trOTMPType = models.IntegerField()
-    #trArticle = models.IntegerField()
     vID = models.IntegerField()
 
     def __str__(self):
@@ -54,16 +51,9 @@ class ServicesTR(models.Model):
 
 class OrtrTR(models.Model):
     ticket_tr = models.ForeignKey(TR, on_delete=models.CASCADE)
-    #title_ortr = models.CharField(max_length=300, verbose_name='Заголовки ОРТР', blank=True, null=True)
     ortr = models.TextField(verbose_name='Решение ОРТР')
     ots = models.TextField(verbose_name='Решение ОТС',  null=True, blank=True)
 
     def __str__(self):
         return self.ortr
 
-#class OtsTR(models.Model):
-#    ticket_tr = models.ForeignKey(TR, on_delete=models.CASCADE)
-#
-#
-#    def __str__(self):
-#        return self.title_ots

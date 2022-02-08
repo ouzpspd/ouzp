@@ -25,10 +25,58 @@
     {% csrf_token %}
     <div class="container">
         <div class="row">
-            <div class="col-4">
-            {{ portvmform.as_p }}
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{portvmform.new_vm.id_for_label}}">Новый ВМ</label>
+                    {{portvmform.new_vm}}
+                </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{portvmform.exist_vm.id_for_label}}">Cуществующий ВМ</label>
+                    {{portvmform.exist_vm}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{portvmform.policer_vm.id_for_label}}">Ограничение</label>
+                    {{portvmform.policer_vm}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{portvmform.vm_inet.id_for_label}}">С доступом в Интернет</label>
+                    {{portvmform.vm_inet}}
+                </div>
+            </div>
+        </div>
+
+        {% if trunk_turnoff_off %}
+        {% elif trunk_turnoff_on %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{portvmform.exist_service_vm.id_for_label}}">Режим порта существующей услуги</label>
+                    {{portvmform.exist_service_vm}}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{portvmform.type_portvm.id_for_label}}">Режим порта</label>
+                    {{portvmform.type_portvm}}
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="row mt-3">
             <div class="col-4">
                 <button type="submit" class="btn btn-primary btn-block">Продолжить</button>

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container">
+    <div class="card mb-2">
+      <h5 class="card-header">chain</h5>
+      <div class="card-body">
+        <p class="card-text">{{node_mon}}</p>
+          <p class="card-text">{{uplink}}</p>
+          <p class="card-text">{{downlink}}</p>
+          <p class="card-text">{{vgw_chains}}</p>
+          <p class="card-text">{{waste_vgw}}</p>
+          <p class="card-text">{{selected_ono}}</p>
+      </div>
+    </div>
+</div>
+
+{%endblock%}

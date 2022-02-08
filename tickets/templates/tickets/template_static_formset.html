@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+    <div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+      <p class="card-text">Заполнить переменные</p>
+<form action="{% url 'static_formset' %}" method="post">
+    {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+                <table class="table table-striped">
+                      <thead>
+                        <tr>
+                          {%comment%}<th scope="col"></th>{%endcomment%}
+                          <th scope="col"></th>
+                          <th scope="col">Переменная</th>
+
+                        </tr>
+                      </thead>
+                      <tbody>
+                      {% for form in formset %}
+
+                        <tr>
+                          {%comment%}<th scope="row">{{forloop.counter}}</th>{%endcomment%}
+                          <td>{{ form.as_p }}</td>
+
+                              {% for element in ono_for_formset %}
+                                {% if forloop.counter == forloop.parentloop.counter %}
+                              <td>
+                                {{element}}
+                                  </td>
+
+                                {% endif %}
+                              {% endfor %}
+
+                        </tr>
+                      {% endfor %}
+                      </tbody>
+                </table>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+    </div>
+</div>
+{% endblock %}

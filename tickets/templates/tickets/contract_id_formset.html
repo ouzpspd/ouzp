@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+    <div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+      <p class="card-text">Выбрать 1 ресурс для работ</p>
+<form action="{% url 'contract_id_formset' %}" method="post">
+    {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+                <table class="table table-striped">
+                      <thead>
+                        <tr>
+                          {%comment%}<th scope="col"></th>{%endcomment%}
+                          <th class="col-1"></th>
+                          <th class="col-10">Контракт</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      {% for form in formset %}
+
+                        <tr>
+                          <td>{{ form.as_p }}</td>
+
+                              {% for element in contract_id %}
+                                {% if forloop.counter == forloop.parentloop.counter %}
+                              <td>
+                                  {%for key, value in element.items%}
+                                  {% if key == 'value'%}
+                                    {{value}}
+                                  {% endif %}
+                                  {%endfor%}
+                                  </td>
+                                {% endif %}
+                              {% endfor %}
+
+                        </tr>
+                      {% endfor %}
+                      </tbody>
+                </table>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+    </div>
+</div>
+{% endblock %}

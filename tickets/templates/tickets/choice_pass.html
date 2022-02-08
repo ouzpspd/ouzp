@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container">
+
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+          <th class="table-secondary text-right" style="width: 25%" >Узел связи</th>
+          <td class="table-light" style="width: 75%">{{pps}}</td>
+      </tr>
+      <tr>
+            <th class="table-secondary text-right" style="width: 25%" >Отключение</th>
+            <td class="table-light" style="width: 75%">{{turnoff}}</td>
+        </tr>
+
+  </tbody>
+</table>
+
+</div>
+
+
+<div class="container">
+    <div class="card mb-2">
+      <h5 class="card-header">Подключение</h5>
+      <div class="card-body">
+        <p class="card-text">{{head|linebreaksbr}}</p>
+      </div>
+    </div>
+
+
+
+    <div class="card mb-2">
+      <h5 class="card-header">Решение ОТПМ</h5>
+      <div class="card-body">
+        <p class="card-text">{{oattr|linebreaksbr}}</p>
+      </div>
+    </div>
+
+</div>
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'passage' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-6">
+            {{ passform.as_p }}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-4">
+                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+            </div>
+        </div>
+    </div>
+</form>
+  </div>
+</div>
+</div>
+
+
+
+
+
+
+{%endblock%}
