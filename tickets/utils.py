@@ -498,17 +498,21 @@ def get_extra_service_port_csw(service_port, switch_config, model):
     elif 'SNR' in model or 'Cisco' in model or 'Orion' in model:
         port = service_port
         for interface in switch_config.split('!'):
+
             if port+'\n' in interface or port+'\r\n' in interface:
                 regex_interface = 'switchport access vlan (\d+)'
                 match = re.search(regex_interface, interface)
-                if match.group(1) not in ['1', '4094']:
-                    vlan = match.group(1)
+                if match:
+                    if match.group(1) not in ['1', '4094']:
+                        vlan = match.group(1)
+                else:
+                    vlan = 'no vlan'
         extra_ports = []
         for interface in switch_config.split('!'):
             if f'switchport access vlan {vlan}' in interface and port not in interface:
                 regex_port = "nterface (.+)['\n'|'\r\n']"
                 match = re.search(regex_port, interface)
-                extra_port = match.group(1).split('/')[-1]
+                extra_port = match.group(1).split('/')[-1].strip()
                 extra_ports.append(extra_port)
         if extra_ports:
             service_port = service_port + ',' + ','.join(extra_ports)

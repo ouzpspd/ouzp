@@ -1128,8 +1128,8 @@ def saved_data(request):
         if ortrform.is_valid():
             services_plus_desc = request.session['services_plus_desc']
             oattr = request.session['oattr']
-            counter_str_ortr = request.session['counter_str_ortr']
-            counter_str_ots = request.session['counter_str_ots']
+            # counter_str_ortr = request.session['counter_str_ortr']
+            # counter_str_ots = request.session['counter_str_ots']
             result_services_ots = request.session['result_services_ots']
             try:
                 list_switches = request.session['list_switches']
@@ -1152,6 +1152,11 @@ def saved_data(request):
             ortr.ortr = ortr_field
             ortr.ots = ots_field
             ortr.save()
+            counter_str_ortr = ortr.ortr.count('\n')
+            if ortr.ots:
+                counter_str_ots = ortr.ots.count('\n')
+            else:
+                counter_str_ots = 1
 
             context = {
                 'ticket_k': ticket_k,
