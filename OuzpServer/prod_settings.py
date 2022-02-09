@@ -5,10 +5,8 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-print(BASE_DIR)
 
 dotenv_path = os.path.join(BASE_DIR, '.env')
-print(dotenv_path)
 load_dotenv(dotenv_path)
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
@@ -26,9 +24,9 @@ REDIS_LOCATION = os.getenv('REDIS_LOCATION')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '192.168.56.102']
+ALLOWED_HOSTS = [DB_HOST]
 
 DATABASES = {
     'default': {
@@ -52,4 +50,8 @@ CACHES = {
     }
 }
 
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATICFILES_DIRS = [
+    BASE_DIR / 'static'
+]
+
+#STATIC_ROOT = os.path.join(BASE_DIR, "static")
