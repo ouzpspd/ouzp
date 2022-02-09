@@ -264,19 +264,19 @@ def parsingByNodename(node_name, login, password):
                 req_switch_id = requests.get(url_switch_id, verify=False, auth=HTTPBasicAuth(login, password))
                 switch_id = req_switch_id.content.decode('utf-8')
 
-                regex_total_ports = 'for=\"TotalPorts\">(\d+)<'
+                regex_total_ports = 'for=\"TotalPorts\">([-+]?\d+)<'
                 match_total_ports = re.search(regex_total_ports, switch_id)
                 ports['Всего портов'] = match_total_ports.group(1)
 
-                regex_client_ports = 'for=\"ClientCableUsedPorts\">(\d+)<'
+                regex_client_ports = 'for=\"ClientCableUsedPorts\">([-+]?\d+)<'
                 match_client_ports = re.search(regex_client_ports, switch_id)
                 ports['Занятых клиентами'] = match_client_ports.group(1)
 
-                regex_link_ports = 'for=\"LinkUsedPorts\">(\d+)<'
+                regex_link_ports = 'for=\"LinkUsedPorts\">([-+]?\d+)<'
                 match_link_ports = re.search(regex_link_ports, switch_id)
                 ports['Занятых линками'] = match_link_ports.group(1)
 
-                regex_avail_ports = 'for=\"AvailablePorts\">(\d+)<'
+                regex_avail_ports = 'for=\"AvailablePorts\">([-+]?\d+)<'
                 match_avail_ports = re.search(regex_avail_ports, switch_id)
                 ports['Доступные'] = match_avail_ports.group(1)
                 list_ports.append(ports)
