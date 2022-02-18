@@ -1465,6 +1465,8 @@ def phone(request):
             new_job_services = request.session.get('new_job_services')
             phone_in_pass = request.session.get('phone_in_pass')
             tag_service = request.session['tag_service']
+            if phone_in_pass and phone_in_pass not in services_plus_desc:
+                services_plus_desc.append(phone_in_pass)
             for index_service in range(len(services_plus_desc)):
                 if 'Телефон' in services_plus_desc[index_service]:
                     if type_phone == 'ak' or type_phone == 'st':
@@ -1534,6 +1536,8 @@ def phone(request):
                         request.session['form_exist_vgw_model'] = form_exist_vgw_model
                         request.session['form_exist_vgw_name'] = form_exist_vgw_name
                         request.session['form_exist_vgw_port'] = form_exist_vgw_port
+            if phone_in_pass and phone_in_pass not in new_job_services:
+                services_plus_desc = [x for x in services_plus_desc if not x.startswith('Телефон')]
             request.session['services_plus_desc'] = services_plus_desc
             request.session['vgw'] = vgw
             request.session['channel_vgw'] = channel_vgw
@@ -1546,30 +1550,36 @@ def phone(request):
     else:
         services_plus_desc = request.session['services_plus_desc']
         oattr = request.session['oattr']
-        for service in services_plus_desc:
-            if 'Телефон' in service:
-                regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
-                for regex in regex_ports_vgw:
-                    match_ports_vgw = re.search(regex, service)
-                    if match_ports_vgw:
-                        reg_ports_vgw = match_ports_vgw.group(1)
+        if request.session.get('phone_in_pass'):
+            reg_ports_vgw = 'Нет данных'
+            reg_channel_vgw = 'Нет данных'
+            service_vgw = request.session.get('phone_in_pass')
+            vats = False
+        else:
+            for service in services_plus_desc:
+                if 'Телефон' in service:
+                    regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
+                    for regex in regex_ports_vgw:
+                        match_ports_vgw = re.search(regex, service)
+                        if match_ports_vgw:
+                            reg_ports_vgw = match_ports_vgw.group(1)
+                        else:
+                            reg_ports_vgw = 'Нет данных'
+                        break
+                    regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
+                    for regex in regex_channel_vgw:
+                        match_channel_vgw = re.search(regex, service)
+                        if match_channel_vgw:
+                            reg_channel_vgw = match_channel_vgw.group(1)
+                        else:
+                            reg_channel_vgw = 'Нет данных'
+                        break
+                    service_vgw = service
+                    if 'ватс' in service.lower():
+                        vats = True
                     else:
-                        reg_ports_vgw = 'Нет данных'
+                        vats = False
                     break
-                regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
-                for regex in regex_channel_vgw:
-                    match_channel_vgw = re.search(regex, service)
-                    if match_channel_vgw:
-                        reg_channel_vgw = match_channel_vgw.group(1)
-                    else:
-                        reg_channel_vgw = 'Нет данных'
-                    break
-                service_vgw = service
-                if 'ватс' in service.lower():
-                    vats = True
-                else:
-                    vats = False
-                break
         phoneform = PhoneForm(initial={
                                 'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw
                             })

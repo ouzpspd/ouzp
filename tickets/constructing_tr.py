@@ -6,7 +6,7 @@ from .utils import _separate_services_and_subnet_dhcp
 
 def _new_services(result_services, value_vars):
     """Данный метод формирует блоки ТТР организации новых сервисов"""
-    result_services_ots = None
+    result_services_ots = value_vars.get('result_services_ots')
     logic_csw = True if value_vars.get('logic_csw') or value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw') or value_vars.get('logic_replace_csw') else False
     services_plus_desc = value_vars.get('services_plus_desc')
     templates = value_vars.get('templates')
