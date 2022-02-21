@@ -257,7 +257,7 @@ def commercial(request):
             for index_j in range(len(list_search)):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
-        if search[0] == 'Empty list tickets':
+        if len(search) == 0 or search[0] == 'Empty list tickets':
             search = None
         else:
             search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
@@ -299,7 +299,7 @@ def pto(request):
             for index_j in range(len(list_search)):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
-        if search[0] == 'Empty list tickets':
+        if len(search) == 0 or search[0] == 'Empty list tickets':
             search = None
         else:
             search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
