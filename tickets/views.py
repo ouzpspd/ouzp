@@ -188,8 +188,9 @@ def ortr(request):
         return response
     else:
         list_search = []
-        for i in search:
-            list_search.append(i[0])
+        if type(search[0]) != str:
+            for i in search:
+                list_search.append(i[0])
         spp_proc = SPP.objects.filter(process=True)
         list_spp_proc = []
         for i in spp_proc:
@@ -214,6 +215,8 @@ def ortr(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         if return_from_wait:
             messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
         return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
@@ -238,11 +241,12 @@ def commercial(request):
         response['Location'] += '?next={}'.format(request.path)
         return response
     else:
-        search[:] = [x for x in search if 'ПТО' not in x[0]]
         list_search = []
-        for i in search:
-            if 'ПТО' not in i[0]:
-                list_search.append(i[0])
+        if type(search[0]) != str:
+            search[:] = [x for x in search if 'ПТО' not in x[0]]
+            for i in search:
+                if 'ПТО' not in i[0]:
+                    list_search.append(i[0])
         spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='Коммерческая')
         list_spp_process = []
         for i in spp_process:
@@ -253,6 +257,8 @@ def commercial(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         spp_process = SPP.objects.filter(process=True).filter(type_ticket='Коммерческая')
         return render(request, 'tickets/ortr.html', {'search': search, 'com_search': True, 'spp_process': spp_process})
 
@@ -276,11 +282,12 @@ def pto(request):
         response['Location'] += '?next={}'.format(request.path)
         return response
     else:
-        search[:] = [x for x in search if 'ПТО' in x[0]]
         list_search = []
-        for i in search:
-            if 'ПТО' in i[0]:
-                list_search.append(i[0])
+        if type(search[0]) != str:
+            search[:] = [x for x in search if 'ПТО' in x[0]]
+            for i in search:
+                if 'ПТО' in i[0]:
+                    list_search.append(i[0])
         spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='ПТО')
         list_spp_process = []
         for i in spp_process:
@@ -291,6 +298,8 @@ def pto(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         spp_process = SPP.objects.filter(process=True).filter(type_ticket='ПТО')
         return render(request, 'tickets/ortr.html', {'search': search, 'pto_search': True, 'spp_process': spp_process})
 
@@ -323,8 +332,9 @@ def all_com_pto_wait(request):
         return response
     else:
         list_search = []
-        for i in search:
-            list_search.append(i[0])
+        if type(search[0]) != str:
+            for i in search:
+                list_search.append(i[0])
         spp_proc_wait_all = SPP.objects.filter(Q(process=True) | Q(wait=True))
         list_spp_proc_wait_all = []
         for i in spp_proc_wait_all:
@@ -335,6 +345,8 @@ def all_com_pto_wait(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         spp_process = SPP.objects.filter(process=True)
         spp_wait = SPP.objects.filter(wait=True)
         return render(request, 'tickets/ortr.html', {'all_search': True, 'search': search, 'spp_process': spp_process, 'spp_wait': spp_wait})
@@ -1466,6 +1478,8 @@ def phone(request):
             new_job_services = request.session.get('new_job_services')
             phone_in_pass = request.session.get('phone_in_pass')
             tag_service = request.session['tag_service']
+            if phone_in_pass and phone_in_pass not in services_plus_desc:
+                services_plus_desc.append(phone_in_pass)
             for index_service in range(len(services_plus_desc)):
                 if 'Телефон' in services_plus_desc[index_service]:
                     if type_phone == 'ak' or type_phone == 'st':
@@ -1535,6 +1549,8 @@ def phone(request):
                         request.session['form_exist_vgw_model'] = form_exist_vgw_model
                         request.session['form_exist_vgw_name'] = form_exist_vgw_name
                         request.session['form_exist_vgw_port'] = form_exist_vgw_port
+            if phone_in_pass and phone_in_pass not in new_job_services:
+                services_plus_desc = [x for x in services_plus_desc if not x.startswith('Телефон')]
             request.session['services_plus_desc'] = services_plus_desc
             request.session['vgw'] = vgw
             request.session['channel_vgw'] = channel_vgw
@@ -1547,30 +1563,36 @@ def phone(request):
     else:
         services_plus_desc = request.session['services_plus_desc']
         oattr = request.session['oattr']
-        for service in services_plus_desc:
-            if 'Телефон' in service:
-                regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
-                for regex in regex_ports_vgw:
-                    match_ports_vgw = re.search(regex, service)
-                    if match_ports_vgw:
-                        reg_ports_vgw = match_ports_vgw.group(1)
+        if request.session.get('phone_in_pass'):
+            reg_ports_vgw = 'Нет данных'
+            reg_channel_vgw = 'Нет данных'
+            service_vgw = request.session.get('phone_in_pass')
+            vats = False
+        else:
+            for service in services_plus_desc:
+                if 'Телефон' in service:
+                    regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
+                    for regex in regex_ports_vgw:
+                        match_ports_vgw = re.search(regex, service)
+                        if match_ports_vgw:
+                            reg_ports_vgw = match_ports_vgw.group(1)
+                        else:
+                            reg_ports_vgw = 'Нет данных'
+                        break
+                    regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
+                    for regex in regex_channel_vgw:
+                        match_channel_vgw = re.search(regex, service)
+                        if match_channel_vgw:
+                            reg_channel_vgw = match_channel_vgw.group(1)
+                        else:
+                            reg_channel_vgw = 'Нет данных'
+                        break
+                    service_vgw = service
+                    if 'ватс' in service.lower():
+                        vats = True
                     else:
-                        reg_ports_vgw = 'Нет данных'
+                        vats = False
                     break
-                regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
-                for regex in regex_channel_vgw:
-                    match_channel_vgw = re.search(regex, service)
-                    if match_channel_vgw:
-                        reg_channel_vgw = match_channel_vgw.group(1)
-                    else:
-                        reg_channel_vgw = 'Нет данных'
-                    break
-                service_vgw = service
-                if 'ватс' in service.lower():
-                    vats = True
-                else:
-                    vats = False
-                break
         phoneform = PhoneForm(initial={
                                 'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw
                             })
