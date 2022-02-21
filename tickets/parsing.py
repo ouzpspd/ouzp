@@ -667,6 +667,8 @@ def in_work_ortr(login, password):
                 if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
                     lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
                     break
+        if lines == []:
+            lines.append('Empty list tickets')
     else:
         lines.append('Access denied')
     return lines

@@ -186,8 +186,9 @@ def ortr(request):
         return response
     else:
         list_search = []
-        for i in search:
-            list_search.append(i[0])
+        if type(search[0]) != str:
+            for i in search:
+                list_search.append(i[0])
         spp_proc = SPP.objects.filter(process=True)
         list_spp_proc = []
         for i in spp_proc:
@@ -212,6 +213,8 @@ def ortr(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         if return_from_wait:
             messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
         return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
@@ -236,11 +239,12 @@ def commercial(request):
         response['Location'] += '?next={}'.format(request.path)
         return response
     else:
-        search[:] = [x for x in search if 'ПТО' not in x[0]]
         list_search = []
-        for i in search:
-            if 'ПТО' not in i[0]:
-                list_search.append(i[0])
+        if type(search[0]) != str:
+            search[:] = [x for x in search if 'ПТО' not in x[0]]
+            for i in search:
+                if 'ПТО' not in i[0]:
+                    list_search.append(i[0])
         spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='Коммерческая')
         list_spp_process = []
         for i in spp_process:
@@ -251,6 +255,8 @@ def commercial(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         spp_process = SPP.objects.filter(process=True).filter(type_ticket='Коммерческая')
         return render(request, 'tickets/ortr.html', {'search': search, 'com_search': True, 'spp_process': spp_process})
 
@@ -274,11 +280,12 @@ def pto(request):
         response['Location'] += '?next={}'.format(request.path)
         return response
     else:
-        search[:] = [x for x in search if 'ПТО' in x[0]]
         list_search = []
-        for i in search:
-            if 'ПТО' in i[0]:
-                list_search.append(i[0])
+        if type(search[0]) != str:
+            search[:] = [x for x in search if 'ПТО' in x[0]]
+            for i in search:
+                if 'ПТО' in i[0]:
+                    list_search.append(i[0])
         spp_process = SPP.objects.filter(Q(process=True) | Q(wait=True)).filter(type_ticket='ПТО')
         list_spp_process = []
         for i in spp_process:
@@ -289,6 +296,8 @@ def pto(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         spp_process = SPP.objects.filter(process=True).filter(type_ticket='ПТО')
         return render(request, 'tickets/ortr.html', {'search': search, 'pto_search': True, 'spp_process': spp_process})
 
@@ -321,8 +330,9 @@ def all_com_pto_wait(request):
         return response
     else:
         list_search = []
-        for i in search:
-            list_search.append(i[0])
+        if type(search[0]) != str:
+            for i in search:
+                list_search.append(i[0])
         spp_proc_wait_all = SPP.objects.filter(Q(process=True) | Q(wait=True))
         list_spp_proc_wait_all = []
         for i in spp_proc_wait_all:
@@ -333,6 +343,8 @@ def all_com_pto_wait(request):
                 if i in list_search[index_j]:
                     list_search_rem.append(index_j)
         search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+        if search[0] == 'Empty list tickets':
+            search = None
         spp_process = SPP.objects.filter(process=True)
         spp_wait = SPP.objects.filter(wait=True)
         return render(request, 'tickets/ortr.html', {'all_search': True, 'search': search, 'spp_process': spp_process, 'spp_wait': spp_wait})

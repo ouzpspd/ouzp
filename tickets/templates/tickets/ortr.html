@@ -131,6 +131,7 @@
         </tr>
       </thead>
       <tbody>
+      {% if search %}
       {% for ticket in search %}
 
         <tr>
@@ -151,6 +152,7 @@
         </tr>
 
       {% endfor %}
+      {% endif %}
       </tbody>
         <tbody>
       {% for ticket in spp_process %}
