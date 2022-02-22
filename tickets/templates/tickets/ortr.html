@@ -186,10 +186,10 @@
             {% else %}
             <td>
                 {% if ticket.user.username == user.username%}
-                <a class="btn btn-outline-success custom" href="{% url 'remove_spp_process' ticket.id %}" role="button">Завешить<br /> {{ticket.user.last_name}}</a>
+                <a class="btn btn-outline-success custom" href="{% url 'remove_spp_process' ticket.id %}" role="button">Завершить<br /> {{ticket.user.last_name}}</a>
                 {% else %}
-                {% comment %}<a class="btn btn-outline-warning custom" href="#" role="button">Завешить<br /> {{ticket.user.last_name}}</a>{% endcomment %}
-                <button type="button" class="btn btn-outline-success custom" disabled>Завешить<br /> {{ticket.user.last_name}}</button>
+                {% comment %}<a class="btn btn-outline-warning custom" href="#" role="button">Завершить<br /> {{ticket.user.last_name}}</a>{% endcomment %}
+                <button type="button" class="btn btn-outline-success custom" disabled>Завершить<br /> {{ticket.user.last_name}}</button>
                 {% endif %}
             </td>
             <td>
