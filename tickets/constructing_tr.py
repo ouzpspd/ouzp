@@ -2022,6 +2022,10 @@ def extra_services_with_install_csw(value_vars):
     result_services, value_vars = exist_enviroment_install_csw(value_vars)
     result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
     result_services = _passage_services_on_csw(result_services, value_vars)
+    if value_vars.get('phone_in_pass'):
+        result_services, result_services_ots, value_vars = _passage_phone_service(result_services, value_vars)
+    else:
+        result_services_ots = None
     return result_services, result_services_ots, value_vars
 
 
