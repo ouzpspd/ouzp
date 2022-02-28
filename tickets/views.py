@@ -1062,7 +1062,6 @@ def data(request):
     if not value_vars.get('type_pass') and not value_vars.get('not_required'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
 
-
     userlastname = None
     if request.user.is_authenticated:
         userlastname = request.user.last_name
