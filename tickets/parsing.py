@@ -653,7 +653,7 @@ def in_work_ortr(login, password):
         search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
         search_demand_cur = soup.find_all('td', class_='demand_cur')
         for index in range(len(search_demand_num2)-1):
-            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Гумеров Р.Т.']:
+            if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.']:
                 pass
             else:
 
