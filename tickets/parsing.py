@@ -341,7 +341,7 @@ def _parsing_vgws_by_node_name(login, password, **kwargs):
         table = soup.find('table')
         rows_tr = table.find_all('tr')
         vgws = []
-        types_model_vgw = ['ITM SIP', 'D-Link', 'Eltex', 'Nateks', 'AddPac']
+        types_model_vgw = ['ITM SIP', 'D-Link', 'Eltex', 'Nateks', 'AddPac', 'Cisco']
         # модели задаются вручную, т.к. поле модели текстовое и проще его определить по совпадению из списка
         types_node_vgw = ['Узел связи', 'Помещение клиента']
         for row_tr in rows_tr:

@@ -356,7 +356,7 @@ def _new_services(result_services, value_vars):
                             'kad')
                     stroka = templates.get("Установка тел. шлюза у клиента")
                     static_vars['указать модель тел. шлюза'] = vgw
-                    if vgw in ['Eltex TAU-2M.IP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
+                    if vgw in ['D-Link DVG-5402SP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
                         static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
                     else:
                         static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
@@ -1505,7 +1505,7 @@ def _passage_phone_service(result_services, value_vars):
                         'kad')
             stroka = templates.get("Установка тел. шлюза у клиента")
             static_vars['указать модель тел. шлюза'] = vgw
-            if vgw in ['Eltex TAU-2M.IP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
+            if vgw in ['D-Link DVG-5402SP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
                 static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
             else:
                 static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
