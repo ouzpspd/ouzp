@@ -535,8 +535,9 @@ def copper(request):
                         readable_services = request.session['readable_services']
                         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
                                                                                     'Новая подсеть /32')
-                        request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                        tag_service.append({'change_log_shpd': None})
+                        if service_shpd_change:
+                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                            tag_service.append({'change_log_shpd': None})
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
@@ -667,8 +668,9 @@ def vols(request):
                         readable_services = request.session['readable_services']
                         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
                                                                                     'Новая подсеть /32')
-                        request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                        tag_service.append({'change_log_shpd': None})
+                        if service_shpd_change:
+                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                            tag_service.append({'change_log_shpd': None})
 
                 if logic_csw == True:
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
@@ -834,8 +836,9 @@ def wireless(request):
                         readable_services = request.session['readable_services']
                         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
                                                                                     'Новая подсеть /32')
-                        request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                        tag_service.append({'change_log_shpd': None})
+                        if service_shpd_change:
+                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                            tag_service.append({'change_log_shpd': None})
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
