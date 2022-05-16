@@ -1343,6 +1343,8 @@ def _passage_services(result_services, value_vars):
         elif value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
             services = []
             other_services = []
+            print('readable_services')
+            print(readable_services)
             for key, value in readable_services.items():
                 if type(value) == str:
                     if value_vars.get('selected_ono')[0][-4] in value:
@@ -1387,6 +1389,8 @@ def _passage_services(result_services, value_vars):
                         static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
                     else:
                         static_vars['указать сервис'] = ', '.join(services)
+                else:
+                    static_vars['указать сервис'] = ', '.join(services)
             else:
                 static_vars['указать сервис'] = ', '.join(services)
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
