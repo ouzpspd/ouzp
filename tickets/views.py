@@ -199,7 +199,7 @@ def ortr(request):
         list_spp_wait = []
         return_from_wait = []
         for i in spp_wait:
-            if i.ticket_k in list_search:
+            if i.ticket_k or i.ticket_k + ' ПТО' in list_search:
                 list_spp_wait.append(i.ticket_k)
             else:
                 i.wait = False
@@ -1092,6 +1092,7 @@ def data(request):
     else:
         result_services_ots = '\n\n\n'.join(result_services_ots)
         result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
+        print(f"!!! {result_services_ots}")
         counter_str_ots = result_services_ots.count('\n')
 
     request.session['kad'] = value_vars.get('kad') if value_vars.get('kad') else 'Не требуется'
