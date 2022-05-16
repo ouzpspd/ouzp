@@ -1343,8 +1343,6 @@ def _passage_services(result_services, value_vars):
         elif value_vars.get('type_passage') == 'Перенос сервиса в новую точку':
             services = []
             other_services = []
-            print('readable_services')
-            print(readable_services)
             for key, value in readable_services.items():
                 if type(value) == str:
                     if value_vars.get('selected_ono')[0][-4] in value:
