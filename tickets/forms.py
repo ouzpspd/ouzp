@@ -151,7 +151,7 @@ class WirelessForm(forms.Form):
     ap_types = [('AirGrid 23 M5 или LiteBeam LBE-M5-23', 'LiteBeam LBE-M5-23'),
              ('AirGrid 27 M5', 'AirGrid 27 M5'),
              ('Nanostation M5', 'Nanostation M5'),
-             ('Infinet H11', 'Infinet H11')]
+             ('Infinet E5', 'Infinet E5')]
     types_correct_sreda = [
         ('1', 'UTP'),
         ('2', 'ВОЛС'),
