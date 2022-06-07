@@ -1092,7 +1092,6 @@ def data(request):
     else:
         result_services_ots = '\n\n\n'.join(result_services_ots)
         result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
-        print(f"!!! {result_services_ots}")
         counter_str_ots = result_services_ots.count('\n')
 
     request.session['kad'] = value_vars.get('kad') if value_vars.get('kad') else 'Не требуется'
