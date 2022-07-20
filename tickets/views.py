@@ -1573,7 +1573,10 @@ def phone(request):
             reg_ports_vgw = 'Нет данных'
             reg_channel_vgw = 'Нет данных'
             service_vgw = request.session.get('phone_in_pass')
-            vats = False
+            if 'ватс' in service_vgw.lower():
+                vats = True
+            else:
+                vats = False
         else:
             for service in services_plus_desc:
                 if 'Телефон' in service:
