@@ -126,22 +126,22 @@ def private_page(request):
 
 def login_for_service(request):
     """Данный метод перенаправляет на страницу Авторизация в ИС Холдинга. Метод используется для получения данных от пользователя
-     для авторизации в ИС Холдинга. После получения данных, проверяет, что пароль не содержит русских символов и добавляет
+     для авторизации в ИС Холдинга. После получения данных, проверяет, что логин и пароль не содержат русских символов и добавляет
       логин с паролем в redis(задает время хранения в параметре timeout) и перенаправляет на страницу, с которой пришел запрос"""
     if request.method == 'POST':
         authform = AuthForServiceForm(request.POST)
         if authform.is_valid():
             username = authform.cleaned_data['username']
             password = authform.cleaned_data['password']
-            if re.search(r'[а-яА-Я]', password):
-                messages.warning(request, 'Русская клавиатура')
+            if re.search(r'[а-яА-Я]', username) or re.search(r'[а-яА-Я]', password):
+                messages.warning(request, 'Введен русский язык')
                 return redirect('login_for_service')
             else:
                 user = User.objects.get(username=request.user.username)
                 credent = dict()
                 credent.update({'username': username})
                 credent.update({'password': password})
-                cache.set(user, credent, timeout=10800)
+                cache.set(user, credent, timeout=28800)
 
                 if 'next' in request.GET:
                     return redirect(request.GET['next'])
