@@ -656,10 +656,11 @@ def in_work_ortr(login, password):
             if search_demand_cur[index].text in ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.']:
                 pass
             else:
-
-                lines.append([search_demand_num2[index].text, search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):], search_demand_cust[index].text, search_demand_point[index].text,
+                if lines and lines[-1][0] == search_demand_num2[index].text:
+                    lines[-1][3] = lines[-1][3] + ' ' + search_demand_point[index].text
+                else:
+                    lines.append([search_demand_num2[index].text, search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):], search_demand_cust[index].text, search_demand_point[index].text,
                           search_demand_tech[index].text, search_demand_cur[index].text])
-
         for index in range(len(lines)):
             if 'ПТО' in lines[index][0]:
                 lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]+' '+lines[index][0][lines[index][0].index('ПТО'):]
