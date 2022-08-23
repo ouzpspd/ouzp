@@ -1,3 +1,5 @@
+
+
 $(document).ready(function() {
 	$(".btn.btn-primary").on("click", function() {
    $(this).addClass("d-none");
