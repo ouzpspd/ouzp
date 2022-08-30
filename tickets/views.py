@@ -441,8 +441,8 @@ def project_tr(request, dID, tID, trID):
         request.session['trID'] = trID
         tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
         tag_service.insert(0, {'sppdata': None})
-        tag_service_back = []
-        request.session['tag_service_back'] = tag_service_back
+
+
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
         request.session['premium_plus'] = premium_plus
@@ -456,7 +456,18 @@ def project_tr(request, dID, tID, trID):
             elif sreda == '3':
                 tag_service.append({'wireless': None})
         request.session['tag_service'] = tag_service
+
+
+        #tag_service_index = [index for index in range(len(tag_service))]
+
+        print('tag_service_index')
+        print(tag_service)
+        #request.session['tag_service_index'] = tag_service_index
         return redirect(next(iter(tag_service[0])))
+        #return redirect('sppdata')
+        # return redirect(
+        #     next(iter(tag_service[tag_service_index[0]])), next=next(iter(tag_service[tag_service_index[1]])), cur=next(iter(tag_service[tag_service_index[0]])), index=0
+        # )
 
 
 def sppdata(request):
@@ -469,24 +480,23 @@ def sppdata(request):
     address = request.session['address']
     turnoff = request.session['turnoff']
     tag_service = request.session['tag_service']
+
     #tag_service.pop(0)
-    tag_service_back = request.session['tag_service_back']
-    print('tag_service_back')
-    print(tag_service_back)
+
     print('tag_service')
-    print(tag_service)
-    if tag_service_back:
-        print('tag_service_back[-1]')
-        print(tag_service_back[-1])
-        print(tag_service[0])
-    if tag_service_back and tag_service[0] == tag_service_back[-1]:
-        pass
-    else:
-        tag_service_back.append(tag_service.pop(0))
-        tag_service_back.append(tag_service[0])
-        request.session['tag_service_back'] = tag_service_back
-    next_link = next(iter(tag_service[0]))
-    request.session['tag_service'] = tag_service
+    print(next(iter(tag_service[0])))
+
+
+    tag_service_index = []
+    index = 0
+    tag_service_index.append(index)
+    request.session['tag_service_index'] = tag_service_index
+    next_link = next(iter(tag_service[1]))+f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+
+    # next_link = next(iter(tag_service[0]))
+    print('tag_service_index')
+    print(tag_service_index)
+    #request.session['tag_service'] = tag_service
     context = {
         'services_plus_desc': services_plus_desc,
         'client': client,
@@ -513,10 +523,10 @@ def copper(request):
             correct_sreda = copperform.cleaned_data['correct_sreda']
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
+            print('tag_service_copper')
+            print(tag_service)
             #tag_service.pop(0)
-            tag_service_back = request.session['tag_service_back']
-            tag_service_back.append(tag_service.pop(0))
-            request.session['tag_service_back'] = tag_service_back
+
             if correct_sreda == sreda:
                 logic_csw = copperform.cleaned_data['logic_csw']
                 logic_replace_csw = copperform.cleaned_data['logic_replace_csw']
@@ -576,8 +586,16 @@ def copper(request):
                         tag_service.append({'csw': None})
                         return redirect(next(iter(tag_service[0])))
                 else:
+                    tag_service_index = request.session['tag_service_index']
+                    print('tag_service_index')
+                    print(tag_service_index)
+                    index = tag_service_index[-1] + 1
+                    tag_service_index.append(index)
+                    request.session['tag_service_index'] = tag_service_index
+
                     tag_service.append({'data': None})
-                    return redirect(next(iter(tag_service[0])))
+                    #return redirect(next(iter(tag_service[0])))
+                    return redirect(next(iter(tag_service[index+1])))
             else:
                 if correct_sreda == '3':
                     tag_service.insert(0, {'wireless': None})
@@ -594,7 +612,16 @@ def copper(request):
         services_plus_desc = request.session['services_plus_desc']
         sreda = request.session['sreda']
         oattr = request.session['oattr']
-        tag_service_back = request.session['tag_service_back']
+        tag_service = request.session['tag_service']
+
+        print('tag_service_copper')
+        print(tag_service)
+        next_page = request.GET.get('next')
+        print(next_page)
+        cur_page = request.GET.get('cur')
+        print(cur_page)
+        index = int(request.GET.get('index'))
+
         try:
             type_pass = request.session['type_pass']
         except KeyError:
@@ -619,7 +646,7 @@ def copper(request):
             'list_switches': list_switches,
             'sreda': sreda,
             'copperform': copperform,
-            'back_link': next(iter(tag_service_back[-2]))
+            'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
         }
         return render(request, 'tickets/env.html', context)
 
@@ -639,10 +666,11 @@ def vols(request):
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
             #tag_service.pop(0)
-            tag_service_back = request.session['tag_service_back']
-            tag_service_back.append(tag_service.pop(0))
-            request.session['tag_service_back'] = tag_service_back
+            #back = tag_service.pop(0)
+            #request.session['back'] = back
+
             if correct_sreda == sreda:
+                print('in correct sreda')
                 device_client = volsform.cleaned_data['device_client']
                 device_pps = volsform.cleaned_data['device_pps']
                 logic_csw = volsform.cleaned_data['logic_csw']
@@ -723,10 +751,18 @@ def vols(request):
                         tag_service.append({'csw': None})
                         return redirect(next(iter(tag_service[0])))
                 else:
+                    tag_service_index = request.session['tag_service_index']
+                    print('tag_service_index')
+                    print(tag_service_index)
+                    index = tag_service_index[-1] + 1
+                    tag_service_index.append(index)
+                    request.session['tag_service_index'] = tag_service_index
+
                     request.session['device_client'] = device_client
                     #return redirect('data')
                     tag_service.append({'data': None})
-                    return redirect(next(iter(tag_service[0])))
+                    #return redirect(next(iter(tag_service[0])))
+                    return redirect(next(iter(tag_service[index+1])))
             else:
                 if correct_sreda == '1':
                     tag_service.insert(0, {'copper': None})
@@ -754,6 +790,14 @@ def vols(request):
         dID = match_link.group(1)
         tID = match_link.group(2)
         trID = match_link.group(3)
+        tag_service = request.session['tag_service']
+        print('tag_service_vols')
+        print(tag_service)
+        next_page = request.GET.get('next')
+        print(next_page)
+        cur_page = request.GET.get('cur')
+        print(cur_page)
+        index = int(request.GET.get('index'))
         try:
             type_pass = request.session['type_pass']
         except KeyError:
@@ -798,7 +842,8 @@ def vols(request):
             'dID': dID,
             'tID': tID,
             'trID': trID,
-            'volsform': volsform
+            'volsform': volsform,
+            'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
         }
         return render(request, 'tickets/env.html', context)
 
@@ -1801,24 +1846,57 @@ def cks(request):
             except KeyError:
                 all_cks_in_tr = dict()
             tag_service = request.session['tag_service']
-            service = tag_service[0]['cks']
+
+            tag_service_index = request.session['tag_service_index']
+            print('tag_service_index')
+            print(tag_service_index)
+            index = tag_service_index[-1] + 1
+            tag_service_index.append(index)
+            request.session['tag_service_index'] = tag_service_index
+
+            #service = tag_service[0]['cks']
+            service = tag_service[index]['cks']
             all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks, 'type_cks': type_cks, 'exist_service': exist_service}})
             #tag_service.pop(0)
-            tag_service_back = request.session['tag_service_back']
-            tag_service_back.append(tag_service.pop(0))
-            request.session['tag_service_back'] = tag_service_back
+
             request.session['tag_service'] = tag_service
             request.session['all_cks_in_tr'] = all_cks_in_tr
-            return redirect(next(iter(tag_service[0])))
+            #return redirect(next(iter(tag_service[0])))
+            response = redirect(next(iter(tag_service[index + 1])))
+            response['Location'] += f'?next={next(iter(tag_service[index + 1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+            return response
     else:
         tag_service = request.session['tag_service']
-        service = tag_service[0]['cks']
+        #service = tag_service[0]['cks']
         user = User.objects.get(username=request.user.username)
         credent = cache.get(user)
         username = credent['username']
         password = credent['password']
+
+
+        cur_page = request.GET.get('cur')
+        print(cur_page)
+        index = int(request.GET.get('index'))
+        print(index)
+        tag_service_index = request.session['tag_service_index']
+
+
+        if request.GET.get('prev') is None:
+            service = tag_service[index+1]['cks']
+            print('tag_service_index in get in forward')
+            print(tag_service_index)
+        else:
+            cur_page = next(iter(tag_service[index-1]))
+            service = tag_service[index]['shpd']
+            index -= 1
+            tag_service_index.pop()
+            request.session['tag_service_index'] = tag_service_index
+            print('tag_service_index in get in backward')
+            print(tag_service_index)
+
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
+
         try:
             tochka = request.session['tochka']
             list_cks = match_cks(tochka, username, password)
@@ -1838,7 +1916,8 @@ def cks(request):
                     'cksform': cksform,
                     'services_cks': service,
                     'trunk_turnoff_on': trunk_turnoff_on,
-                    'trunk_turnoff_off': trunk_turnoff_off
+                    'trunk_turnoff_off': trunk_turnoff_off,
+                    'back_link': next(iter(tag_service[index])) + f'?prev={cur_page}&index={index}'
                 })
             else:
                 cksform = CksForm()
@@ -1847,7 +1926,8 @@ def cks(request):
                     'list_strok': list_cks,
                     'services_cks': service,
                     'trunk_turnoff_on': trunk_turnoff_on,
-                    'trunk_turnoff_off': trunk_turnoff_off
+                    'trunk_turnoff_off': trunk_turnoff_off,
+                    'back_link': next(iter(tag_service[index])) + f'?prev={cur_page}&index={index}'
                 })
 
 
@@ -1866,22 +1946,59 @@ def shpd(request):
             except KeyError:
                 all_shpd_in_tr = dict()
             tag_service = request.session['tag_service']
-            service = tag_service[0]['shpd']
+
+            tag_service_index = request.session['tag_service_index']
+            print('tag_service_index')
+            print(tag_service_index)
+            index = tag_service_index[-1] + 1
+            tag_service_index.append(index)
+            request.session['tag_service_index'] = tag_service_index
+            # if back == tag_service[0]:
+            #     tag_service.pop(0)
+            service = tag_service[index]['shpd']
             all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
             request.session['all_shpd_in_tr'] = all_shpd_in_tr
-            #tag_service.pop(0)
-            tag_service_back = request.session['tag_service_back']
-            tag_service_back.append(tag_service.pop(0))
-            request.session['tag_service_back'] = tag_service_back
+
             request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            # return redirect(next(iter(tag_service[0])))
+            response = redirect(next(iter(tag_service[index+1])))
+            response['Location'] += f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+            return response
     else:
         types_change_service = request.session.get('types_change_service')
         tag_service = request.session['tag_service']
-        tag_service_back = request.session['tag_service_back']
-        print('tag_service_back')
-        print(tag_service_back)
-        service = tag_service[0]['shpd']
+
+        # if request.GET:
+        next_page = request.GET.get('next')
+        print(next_page)
+        cur_page = request.GET.get('cur')
+        print(cur_page)
+        index = int(request.GET.get('index'))
+        print(index)
+        tag_service_index = request.session['tag_service_index']
+
+
+        #service = tag_service[0]['shpd']
+        if request.GET.get('prev') is None:
+            service = tag_service[index+1]['shpd']
+            print('tag_service_index in get in forward')
+            print(tag_service_index)
+        else:
+            cur_page = next(iter(tag_service[index-1]))
+            service = tag_service[index]['shpd']
+            index -= 1
+            tag_service_index.pop()
+            request.session['tag_service_index'] = tag_service_index
+            print('tag_service_index in get in backward')
+            print(tag_service_index)
+
+        # tag_service_index = request.session['tag_service_index']
+        # tag_service_index.append(index+1)
+        # request.session['tag_service_index'] = tag_service_index
+        # next_link = next(iter(tag_service[tag_service_index + 1]))
+
+
+
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
         context = {
@@ -1889,7 +2006,7 @@ def shpd(request):
             'services_shpd': service,
             'trunk_turnoff_on': trunk_turnoff_on,
             'trunk_turnoff_off': trunk_turnoff_off,
-            'back_link': next(iter(tag_service_back[-2]))
+            'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
         }
         return render(request, 'tickets/shpd.html', context)
 
