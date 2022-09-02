@@ -491,8 +491,8 @@ def sppdata(request):
     index = 0
     tag_service_index.append(index)
     request.session['tag_service_index'] = tag_service_index
-    next_link = next(iter(tag_service[1]))+f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
-
+    #next_link = next(iter(tag_service[1]))+f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+    next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
     # next_link = next(iter(tag_service[0]))
     print('tag_service_index')
     print(tag_service_index)
@@ -666,8 +666,6 @@ def vols(request):
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
             #tag_service.pop(0)
-            #back = tag_service.pop(0)
-            #request.session['back'] = back
 
             if correct_sreda == sreda:
                 print('in correct sreda')
@@ -729,7 +727,22 @@ def vols(request):
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
                     request.session['device_client'] = device_client
                     tag_service.append({'csw': None})
-                    return redirect(next(iter(tag_service[0])))
+                    print('tag_service in csw')
+                    print(tag_service)
+                    tag_service_index = request.session['tag_service_index']
+
+                    index = tag_service_index[-1] + 1
+                    tag_service_index.append(index)
+                    request.session['tag_service_index'] = tag_service_index
+                    print('tag_service_index vols valid csw')
+                    print(tag_service_index)
+                    print(tag_service)
+                    print(index)
+                    #return redirect(next(iter(tag_service[0])))
+                    response = redirect(next(iter(tag_service[index + 1])))
+                    #response['Location'] += f'?next={next(iter(tag_service[index + 1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+                    response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+                    return response
                 elif logic_change_csw == True and logic_change_gi_csw == True or logic_change_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
@@ -751,6 +764,7 @@ def vols(request):
                         tag_service.append({'csw': None})
                         return redirect(next(iter(tag_service[0])))
                 else:
+
                     tag_service_index = request.session['tag_service_index']
                     print('tag_service_index')
                     print(tag_service_index)
@@ -790,20 +804,44 @@ def vols(request):
         dID = match_link.group(1)
         tID = match_link.group(2)
         trID = match_link.group(3)
-        tag_service = request.session['tag_service']
-        print('tag_service_vols')
-        print(tag_service)
-        next_page = request.GET.get('next')
-        print(next_page)
-        cur_page = request.GET.get('cur')
-        print(cur_page)
+        # tag_service = request.session['tag_service']
+        # print('tag_service_vols')
+        # print(tag_service)
+        # next_page = request.GET.get('next')
+        # print(next_page)
+        # cur_page = request.GET.get('cur')
+        prev_page = request.GET.get('prev_page')
+        print(prev_page)
         index = int(request.GET.get('index'))
+
+        tag_service_index = request.session['tag_service_index']
+        tag_service = request.session['tag_service']
+
+        # if request.GET.get('prev') is None:
+        if request.GET.get('next_page') is None:
+            print('tag_service_index in get in forward')
+            print(tag_service_index)
+        else:
+            prev_page = next(iter(tag_service[index - 1]))
+            index -= 1
+            tag_service_index.pop()
+            tag_service.pop()
+            request.session['tag_service_index'] = tag_service_index
+            request.session['tag_service'] = tag_service
+            print('tag_service_index in get in backward')
+            print(tag_service_index)
+
+
+
         try:
             type_pass = request.session['type_pass']
         except KeyError:
             type_pass = None
 
-        list_switches = parsingByNodename(pps, username, password)
+        if request.session.get('list_switches'):
+            list_switches = request.session.get('list_switches')
+        else:
+            list_switches = parsingByNodename(pps, username, password)
         if list_switches[0] == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
@@ -843,7 +881,8 @@ def vols(request):
             'tID': tID,
             'trID': trID,
             'volsform': volsform,
-            'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
+            # 'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/env.html', context)
 
@@ -997,9 +1036,24 @@ def csw(request):
             if not type_install_csw:
                 request.session['logic_csw'] = True
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
+            #tag_service.pop(0)
+
+            tag_service_index = request.session['tag_service_index']
+            print('tag_service_index')
+            print(tag_service_index)
+            index = tag_service_index[-1] + 1
+            tag_service_index.append(index)
+            request.session['tag_service_index'] = tag_service_index
+
+            # return redirect(next(iter(tag_service[0])))
             tag_service.append({'data': None})
-            return redirect(next(iter(tag_service[0])))
+
+            response = redirect(next(iter(tag_service[index + 1])))
+            response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+            return response
+
+            #return redirect(next(iter(tag_service[0])))
+            #return redirect(next(iter(tag_service[index+1])))
     else:
         sreda = request.session['sreda']
         try:
@@ -1042,6 +1096,23 @@ def csw(request):
                 logic_change_gi_csw = False
                 logic_replace_csw = False
 
+        tag_service = request.session['tag_service']
+        prev_page = request.GET.get('prev_page')
+        index = int(request.GET.get('index'))
+        tag_service_index = request.session['tag_service_index']
+        if request.GET.get('next_page') is None:
+            print('tag_service_index in get in forward')
+            print(tag_service_index)
+        else:
+            prev_page = next(iter(tag_service[index - 1]))
+            index -= 1
+            tag_service_index.pop()
+            tag_service.pop()
+            request.session['tag_service_index'] = tag_service_index
+            request.session['tag_service'] = tag_service
+            print('tag_service_index in get in backward')
+            print(tag_service_index)
+
         if sreda == '2' or sreda == '4':
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '6'})
         else:
@@ -1053,7 +1124,8 @@ def csw(request):
             'new_install': new_install,
             'logic_change_gi_csw': logic_change_gi_csw,
             'logic_replace_csw': logic_replace_csw,
-            'logic_change_csw': logic_change_csw
+            'logic_change_csw': logic_change_csw,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/csw.html', context)
 
@@ -1069,6 +1141,10 @@ def data(request):
     spp_link = request.session['spplink']
     templates = ckb_parse(username, password)
     request.session['templates'] = templates
+    if request.session.get('result_services'):
+        del request.session['result_services']
+    if request.session.get('result_services_ots'):
+        del request.session['result_services_ots']
     value_vars = {}
     for key, value in request.session.items():
         value_vars.update({key: value})
@@ -1077,6 +1153,8 @@ def data(request):
     type_ticket = ticket_tr.ticket_k.type_ticket
     value_vars.update({'type_ticket': type_ticket})
     readable_services = value_vars.get('readable_services')
+
+
 
     if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
         if (value_vars.get('logic_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')) or (value_vars.get('logic_change_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')):
@@ -1173,6 +1251,8 @@ def data(request):
     request.session['counter_str_ortr'] = counter_str_ortr
     request.session['result_services_ots'] = result_services_ots
     request.session['counter_str_ots'] = counter_str_ots
+
+
     try:
         manlink = request.session['manlink']
     except KeyError:
@@ -1181,6 +1261,12 @@ def data(request):
     if manlink:
         return redirect('unsaved_data')
     else:
+        # tag_service_index = request.session['tag_service_index']
+        # tag_service = request.session['tag_service']
+        # index = tag_service_index[-1]
+        # response = redirect(saved_data)
+        # response['Location'] += f'?cur={next(iter(tag_service[index]))}&index={index}'
+        # return response
         return redirect('saved_data')
 
 
@@ -1292,6 +1378,31 @@ def saved_data(request):
         ortr.ots = result_services_ots
         ortr.save()
         request.session['ortr_id'] = ortr.id
+
+        tag_service = request.session['tag_service']
+        index = tag_service.index(tag_service[-2])
+        # print('tag_service_saved')
+        # print(tag_service)
+        prev_page = next(iter(tag_service[index]))
+        # print(cur_page)
+        # index = int(request.GET.get('index'))
+        #
+        # tag_service_index = request.session['tag_service_index']
+        # tag_service = request.session['tag_service']
+
+        # if request.GET.get('prev') is None:
+        #     print('tag_service_index in get in forward')
+        #     print(tag_service_index)
+        # else:
+        # cur_page = next(iter(tag_service[index - 1]))
+        # index -= 1
+        # # tag_service_index.pop()
+        # # tag_service.pop()
+        # request.session['tag_service_index'] = tag_service_index
+        # request.session['tag_service'] = tag_service
+        # print('tag_service_index in get in backward')
+        # print(tag_service_index)
+
         ortrform = OrtrForm(initial={'ortr_field': ortr.ortr, 'ots_field': ortr.ots, 'pps': pps, 'kad': kad})
 
         context = {
@@ -1302,7 +1413,8 @@ def saved_data(request):
             'list_switches': list_switches,
             'counter_str_ortr': counter_str_ortr,
             'counter_str_ots': counter_str_ots,
-            'ortrform': ortrform
+            'ortrform': ortrform,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
 
         }
         return render(request, 'tickets/saved_data.html', context)
@@ -1887,7 +1999,7 @@ def cks(request):
             print(tag_service_index)
         else:
             cur_page = next(iter(tag_service[index-1]))
-            service = tag_service[index]['shpd']
+            service = tag_service[index]['cks']
             index -= 1
             tag_service_index.pop()
             request.session['tag_service_index'] = tag_service_index
@@ -1962,29 +2074,33 @@ def shpd(request):
             request.session['tag_service'] = tag_service
             # return redirect(next(iter(tag_service[0])))
             response = redirect(next(iter(tag_service[index+1])))
-            response['Location'] += f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+            #response['Location'] += f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+            response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
             return response
     else:
         types_change_service = request.session.get('types_change_service')
         tag_service = request.session['tag_service']
 
         # if request.GET:
-        next_page = request.GET.get('next')
-        print(next_page)
-        cur_page = request.GET.get('cur')
-        print(cur_page)
+        # next_page = request.GET.get('next')
+        # print(next_page)
+        #cur_page = request.GET.get('cur')
+        prev_page = request.GET.get('prev_page')
+        print(prev_page)
         index = int(request.GET.get('index'))
         print(index)
         tag_service_index = request.session['tag_service_index']
 
 
         #service = tag_service[0]['shpd']
-        if request.GET.get('prev') is None:
+        # if request.GET.get('prev') is None:
+        if request.GET.get('next_page') is None:
             service = tag_service[index+1]['shpd']
             print('tag_service_index in get in forward')
             print(tag_service_index)
         else:
-            cur_page = next(iter(tag_service[index-1]))
+            #cur_page = next(iter(tag_service[index-1]))
+            prev_page = next(iter(tag_service[index - 1]))
             service = tag_service[index]['shpd']
             index -= 1
             tag_service_index.pop()
@@ -2006,7 +2122,8 @@ def shpd(request):
             'services_shpd': service,
             'trunk_turnoff_on': trunk_turnoff_on,
             'trunk_turnoff_off': trunk_turnoff_off,
-            'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
+            #'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/shpd.html', context)
 
