@@ -727,17 +727,11 @@ def vols(request):
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
                     request.session['device_client'] = device_client
                     tag_service.append({'csw': None})
-                    print('tag_service in csw')
-                    print(tag_service)
                     tag_service_index = request.session['tag_service_index']
-
                     index = tag_service_index[-1] + 1
                     tag_service_index.append(index)
                     request.session['tag_service_index'] = tag_service_index
-                    print('tag_service_index vols valid csw')
-                    print(tag_service_index)
-                    print(tag_service)
-                    print(index)
+
                     #return redirect(next(iter(tag_service[0])))
                     response = redirect(next(iter(tag_service[index + 1])))
                     #response['Location'] += f'?next={next(iter(tag_service[index + 1]))}&cur={next(iter(tag_service[index]))}&index={index}'
@@ -766,8 +760,6 @@ def vols(request):
                 else:
 
                     tag_service_index = request.session['tag_service_index']
-                    print('tag_service_index')
-                    print(tag_service_index)
                     index = tag_service_index[-1] + 1
                     tag_service_index.append(index)
                     request.session['tag_service_index'] = tag_service_index
@@ -804,34 +796,28 @@ def vols(request):
         dID = match_link.group(1)
         tID = match_link.group(2)
         trID = match_link.group(3)
+
+        # prev_page = request.GET.get('prev_page')
+        # index = int(request.GET.get('index'))
+        # tag_service_index = request.session['tag_service_index']
         # tag_service = request.session['tag_service']
-        # print('tag_service_vols')
-        # print(tag_service)
-        # next_page = request.GET.get('next')
-        # print(next_page)
-        # cur_page = request.GET.get('cur')
-        prev_page = request.GET.get('prev_page')
-        print(prev_page)
-        index = int(request.GET.get('index'))
+        #
+        # # if request.GET.get('prev') is None:
+        # if request.GET.get('next_page') is None:
+        #     print('tag_service_index in get in forward')
+        #     print(tag_service_index)
+        # else:
+        #     prev_page = next(iter(tag_service[index - 1]))
+        #     index -= 1
+        #     tag_service_index.pop()
+        #     tag_service.pop()
+        #     request.session['tag_service_index'] = tag_service_index
+        #     request.session['tag_service'] = tag_service
+        #     print('tag_service_index in get in backward')
+        #     print(tag_service_index)
 
-        tag_service_index = request.session['tag_service_index']
+        request, prev_page, index = backward_page(request)
         tag_service = request.session['tag_service']
-
-        # if request.GET.get('prev') is None:
-        if request.GET.get('next_page') is None:
-            print('tag_service_index in get in forward')
-            print(tag_service_index)
-        else:
-            prev_page = next(iter(tag_service[index - 1]))
-            index -= 1
-            tag_service_index.pop()
-            tag_service.pop()
-            request.session['tag_service_index'] = tag_service_index
-            request.session['tag_service'] = tag_service
-            print('tag_service_index in get in backward')
-            print(tag_service_index)
-
-
 
         try:
             type_pass = request.session['type_pass']
@@ -1048,6 +1034,7 @@ def csw(request):
             # return redirect(next(iter(tag_service[0])))
             tag_service.append({'data': None})
 
+
             response = redirect(next(iter(tag_service[index + 1])))
             response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
             return response
@@ -1262,7 +1249,9 @@ def data(request):
         return redirect('unsaved_data')
     else:
         # tag_service_index = request.session['tag_service_index']
-        # tag_service = request.session['tag_service']
+        tag_service = request.session['tag_service']
+        print('tag_service in data')
+        print(tag_service)
         # index = tag_service_index[-1]
         # response = redirect(saved_data)
         # response['Location'] += f'?cur={next(iter(tag_service[index]))}&index={index}'
@@ -2060,59 +2049,37 @@ def shpd(request):
             tag_service = request.session['tag_service']
 
             tag_service_index = request.session['tag_service_index']
-            print('tag_service_index')
-            print(tag_service_index)
             index = tag_service_index[-1] + 1
             tag_service_index.append(index)
             request.session['tag_service_index'] = tag_service_index
-            # if back == tag_service[0]:
-            #     tag_service.pop(0)
+
             service = tag_service[index]['shpd']
             all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
             request.session['all_shpd_in_tr'] = all_shpd_in_tr
 
-            request.session['tag_service'] = tag_service
+            #request.session['tag_service'] = tag_service
             # return redirect(next(iter(tag_service[0])))
             response = redirect(next(iter(tag_service[index+1])))
-            #response['Location'] += f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
             response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
             return response
     else:
         types_change_service = request.session.get('types_change_service')
         tag_service = request.session['tag_service']
+        service_name = 'shpd'
 
-        # if request.GET:
-        # next_page = request.GET.get('next')
-        # print(next_page)
-        #cur_page = request.GET.get('cur')
-        prev_page = request.GET.get('prev_page')
-        print(prev_page)
-        index = int(request.GET.get('index'))
-        print(index)
-        tag_service_index = request.session['tag_service_index']
+        request, service, prev_page, index = backward_page_service(request, service_name)
 
-
-        #service = tag_service[0]['shpd']
-        # if request.GET.get('prev') is None:
-        if request.GET.get('next_page') is None:
-            service = tag_service[index+1]['shpd']
-            print('tag_service_index in get in forward')
-            print(tag_service_index)
-        else:
-            #cur_page = next(iter(tag_service[index-1]))
-            prev_page = next(iter(tag_service[index - 1]))
-            service = tag_service[index]['shpd']
-            index -= 1
-            tag_service_index.pop()
-            request.session['tag_service_index'] = tag_service_index
-            print('tag_service_index in get in backward')
-            print(tag_service_index)
-
+        # index = int(request.GET.get('index'))
         # tag_service_index = request.session['tag_service_index']
-        # tag_service_index.append(index+1)
-        # request.session['tag_service_index'] = tag_service_index
-        # next_link = next(iter(tag_service[tag_service_index + 1]))
-
+        # if request.GET.get('next_page'):
+        #     prev_page = next(iter(tag_service[index - 1]))
+        #     service = tag_service[index]['shpd']
+        #     index -= 1
+        #     tag_service_index.pop()
+        #     request.session['tag_service_index'] = tag_service_index
+        # else:
+        #     prev_page = request.GET.get('prev_page')
+        #     service = tag_service[index + 1]['shpd']
 
 
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -2126,6 +2093,37 @@ def shpd(request):
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/shpd.html', context)
+
+
+def backward_page_service(request, service_name):
+    index = int(request.GET.get('index'))
+    tag_service = request.session['tag_service']
+    tag_service_index = request.session['tag_service_index']
+    if request.GET.get('next_page'):
+        prev_page = next(iter(tag_service[index - 1]))
+        service = tag_service[index]['shpd']
+        index -= 1
+        tag_service_index.pop()
+        request.session['tag_service_index'] = tag_service_index
+    else:
+        prev_page = request.GET.get('prev_page')
+        service = tag_service[index + 1]['shpd']
+    return request, service, prev_page, index
+
+def backward_page(request):
+    index = int(request.GET.get('index'))
+    tag_service = request.session['tag_service']
+    tag_service_index = request.session['tag_service_index']
+    if request.GET.get('next_page'):
+        prev_page = next(iter(tag_service[index - 1]))
+        index -= 1
+        tag_service_index.pop()
+        tag_service.pop()
+        request.session['tag_service_index'] = tag_service_index
+        request.session['tag_service'] = tag_service
+    else:
+        prev_page = request.GET.get('prev_page')
+    return request, prev_page, index
 
 
 def portvk(request):
