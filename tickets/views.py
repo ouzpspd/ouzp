@@ -571,6 +571,12 @@ def copper(request):
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
+                    tag_service_index = request.session['tag_service_index']
+                    index = tag_service_index[-1] + 1
+                    tag_service_index.append(index)
+                    #request.session['tag_service_index'] = tag_service_index
+                    response = redirect(next(iter(tag_service[index + 1])))
+                    response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
                     return redirect(next(iter(tag_service[0])))
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
                     tag_service.append({'csw': None})
@@ -587,8 +593,6 @@ def copper(request):
                         return redirect(next(iter(tag_service[0])))
                 else:
                     tag_service_index = request.session['tag_service_index']
-                    print('tag_service_index')
-                    print(tag_service_index)
                     index = tag_service_index[-1] + 1
                     tag_service_index.append(index)
                     request.session['tag_service_index'] = tag_service_index
@@ -597,12 +601,23 @@ def copper(request):
                     #return redirect(next(iter(tag_service[0])))
                     return redirect(next(iter(tag_service[index+1])))
             else:
+                print('tag_service in copper ne sre')
+                print(tag_service)
                 if correct_sreda == '3':
                     tag_service.insert(0, {'wireless': None})
                 elif correct_sreda == '2' or correct_sreda == '4':
-                    tag_service.insert(0, {'vols': None})
+                    #tag_service.insert(0, {'vols': None})
+                    tag_service.pop()
+                    tag_service.append({'vols': None})
+                    tag_service_index = request.session['tag_service_index']
+                    index = tag_service_index[-1]
+                    #request.session['tag_service_index'] = tag_service_index
+
                 request.session['sreda'] = correct_sreda
-                return redirect(next(iter(tag_service[0])))
+                #return redirect(next(iter(tag_service[-1])))
+                response = redirect(next(iter(tag_service[index])))
+                response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+                return response
     else:
         user = User.objects.get(username=request.user.username)
         credent = cache.get(user)
@@ -614,20 +629,20 @@ def copper(request):
         oattr = request.session['oattr']
         tag_service = request.session['tag_service']
 
-        print('tag_service_copper')
-        print(tag_service)
-        next_page = request.GET.get('next')
-        print(next_page)
-        cur_page = request.GET.get('cur')
-        print(cur_page)
-        index = int(request.GET.get('index'))
+        request, prev_page, index = backward_page(request)
+
+
 
         try:
             type_pass = request.session['type_pass']
         except KeyError:
             type_pass = None
 
-        list_switches = parsingByNodename(pps, username, password)
+        if request.session.get('list_switches'):
+            list_switches = request.session.get('list_switches')
+        else:
+            list_switches = parsingByNodename(pps, username, password)
+
         if list_switches[0] == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
@@ -646,7 +661,7 @@ def copper(request):
             'list_switches': list_switches,
             'sreda': sreda,
             'copperform': copperform,
-            'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/env.html', context)
 
@@ -731,12 +746,13 @@ def vols(request):
                     index = tag_service_index[-1] + 1
                     tag_service_index.append(index)
                     request.session['tag_service_index'] = tag_service_index
-
-                    #return redirect(next(iter(tag_service[0])))
                     response = redirect(next(iter(tag_service[index + 1])))
-                    #response['Location'] += f'?next={next(iter(tag_service[index + 1]))}&cur={next(iter(tag_service[index]))}&index={index}'
                     response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
                     return response
+                    #return redirect(next(iter(tag_service[0])))
+
+                    #response['Location'] += f'?next={next(iter(tag_service[index + 1]))}&cur={next(iter(tag_service[index]))}&index={index}'
+
                 elif logic_change_csw == True and logic_change_gi_csw == True or logic_change_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
