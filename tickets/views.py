@@ -425,6 +425,7 @@ def project_tr(request, dID, tID, trID):
         task_otpm = data_sss[12]
         request.session['services_plus_desc'] = services_plus_desc
         request.session['counter_line_services'] = counter_line_services
+        request.session['counter_line_services_initial'] = counter_line_services
         request.session['pps'] = pps
         request.session['turnoff'] = turnoff
         request.session['sreda'] = sreda
@@ -1174,6 +1175,14 @@ def data(request):
     spp_link = request.session['spplink']
     templates = ckb_parse(username, password)
     request.session['templates'] = templates
+    counter_line_services = request.session['counter_line_services_initial']
+    if request.session.get('counter_line_phone'):
+        counter_line_services += request.session['counter_line_phone']
+    if request.session.get('counter_line_hotspot'):
+        counter_line_services += request.session['counter_line_hotspot']
+    request.session['counter_line_services'] = counter_line_services
+    print('data counter')
+    print(counter_line_services)
     if request.session.get('result_services'):
         del request.session['result_services']
     if request.session.get('result_services_ots'):
@@ -1652,37 +1661,34 @@ def hotspot(request):
             hotspot_users = hotspotform.cleaned_data['hotspot_users']
             exist_hotspot_client = hotspotform.cleaned_data['exist_hotspot_client']
             services_plus_desc = request.session['services_plus_desc']
-            counter_line_services = request.session['counter_line_services']
             if hotspot_points:
                 for index_service in range(len(services_plus_desc)):
                     if 'HotSpot' in services_plus_desc[index_service]:
+                        services_plus_desc[index_service] = services_plus_desc[index_service].strip('|')
                         for i in range(int(hotspot_points)):
                             services_plus_desc[index_service] += '|'
-                counter_line_services += hotspot_points-1
-            request.session['counter_line_services'] = counter_line_services
+                counter_line_hotspot = hotspot_points-1
+                request.session['counter_line_hotspot'] = counter_line_hotspot
             request.session['services_plus_desc'] = services_plus_desc
             request.session['hotspot_points'] = str(hotspot_points)
             request.session['hotspot_users'] = str(hotspot_users)
             request.session['exist_hotspot_client'] = exist_hotspot_client
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
 
     else:
         hotspot_points = request.session['hotspot_points']
         hotspot_users = request.session['hotspot_users']
         premium_plus = request.session['premium_plus']
-        services_plus_desc = request.session['services_plus_desc']
-        for service in services_plus_desc:
-            if 'HotSpot' in service:
-                service_hotspot = service
-                break
+        tag_service = request.session['tag_service']
+        service_name = 'hotspot'
+        request, service, prev_page, index = backward_page_service(request, service_name)
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
         context = {
             'premium_plus': premium_plus,
             'hotspotform': hotspotform,
-            'service_hotspot': service_hotspot
+            'service_hotspot': service,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/hotspot.html', context)
 
@@ -1704,6 +1710,7 @@ def phone(request):
             new_job_services = request.session.get('new_job_services')
             phone_in_pass = request.session.get('phone_in_pass')
             tag_service = request.session['tag_service']
+            current_index_local = request.session['current_index_local']
             if phone_in_pass and phone_in_pass not in services_plus_desc:
                 services_plus_desc.append(phone_in_pass)
             for index_service in range(len(services_plus_desc)):
@@ -1712,10 +1719,15 @@ def phone(request):
                         if new_job_services:
                             for ind in range(len(new_job_services)):
                                 if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] = new_job_services[ind].strip('\/|')
                                     new_job_services[ind] += '|'
+
+                        services_plus_desc[index_service] = services_plus_desc[index_service].strip('\/|')
                         services_plus_desc[index_service] += '|'
                         if phone_in_pass:
-                            phone_in_pass += '|'
+                            phone_in_pass = phone_in_pass.strip('\/')
+                            if not phone_in_pass.endswith('|'):
+                                phone_in_pass += '|'
                             request.session['phone_in_pass'] = phone_in_pass
                         else:
                             try:
@@ -1727,50 +1739,60 @@ def phone(request):
                                 if type_ip_trunk == 'trunk':
                                     request.session['counter_line_services'] = 1
                                 elif type_ip_trunk == 'access':
-                                    counter_line_services += 1
-                                    request.session['counter_line_services'] = counter_line_services
+                                    counter_line_phone = 1
+                                    request.session['counter_line_phone'] = counter_line_phone
                             if type_phone == 'ak':
-                                counter_line_services += 1
-                                request.session['counter_line_services'] = counter_line_services
+                                counter_line_phone = 1
+                                request.session['counter_line_phone'] = counter_line_phone
                         sreda = request.session['sreda']
                         if sreda == '2' or sreda == '4':
                             if {'vols': None} in tag_service:
                                 pass
                             else:
-                                tag_service.insert(1, {'vols': None})
+                                #tag_service.insert(1, {'vols': None})
+                                tag_service.insert(current_index_local + 1, {'vols': None})
                         elif sreda == '3':
                             if {'wireless': None} in tag_service:
                                 pass
                             else:
-                                tag_service.insert(1, {'wireless': None})
+                                #tag_service.insert(1, {'wireless': None})
+                                tag_service.insert(current_index_local + 1, {'wireless': None})
                         elif sreda == '1':
                             if {'copper': None} in tag_service:
                                 pass
                             else:
-                                tag_service.insert(1, {'copper': None})
+                                #tag_service.insert(1, {'copper': None})
+                                tag_service.insert(current_index_local + 1, {'copper': None})
                         if {'data': None} in tag_service:
                             tag_service.remove({'data': None})
                     elif type_phone == 'ap':
                         if new_job_services:
                             for ind in range(len(new_job_services)):
                                 if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] = new_job_services[ind].strip('\/|')
                                     new_job_services[ind] += '/'
                         if phone_in_pass:
+                            phone_in_pass = phone_in_pass.strip('\/|')
                             phone_in_pass += '/'
                             request.session['phone_in_pass'] = phone_in_pass
+                        services_plus_desc[index_service] = services_plus_desc[index_service].strip('\/|')
                         services_plus_desc[index_service] += '/'
                         if {'copper': None} in tag_service:
                             pass
                         else:
-                            tag_service.insert(1, {'copper': None})
+                            tag_service.insert(current_index_local + 1, {'copper': None})
+                            #tag_service.insert(1, {'copper': None})
                     elif type_phone == 'ab':
                         if new_job_services:
                             for ind in range(len(new_job_services)):
                                 if new_job_services[ind] == services_plus_desc[index_service]:
+                                    new_job_services[ind] = new_job_services[ind].strip('\/|')
                                     new_job_services[ind] += '\\'
                         if phone_in_pass:
+                            phone_in_pass = phone_in_pass.strip('\/|')
                             phone_in_pass += '\\'
                             request.session['phone_in_pass'] = phone_in_pass
+                        services_plus_desc[index_service] = services_plus_desc[index_service].strip('\/|')
                         services_plus_desc[index_service] += '\\'
                         request.session['form_exist_vgw_model'] = form_exist_vgw_model
                         request.session['form_exist_vgw_name'] = form_exist_vgw_name
@@ -1782,14 +1804,18 @@ def phone(request):
             request.session['channel_vgw'] = channel_vgw
             request.session['ports_vgw'] = ports_vgw
             request.session['type_phone'] = type_phone
-            tag_service = request.session['tag_service']
+            #tag_service = request.session['tag_service']
             #tag_service.pop(0)
-            tag_service_back = request.session['tag_service_back']
-            tag_service_back.append(tag_service.pop(0))
-            request.session['tag_service_back'] = tag_service_back
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            # tag_service_back = request.session['tag_service_back']
+            # tag_service_back.append(tag_service.pop(0))
+            # request.session['tag_service_back'] = tag_service_back
+            # request.session['tag_service'] = tag_service
+            # return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
+        if request.session.get('counter_line_phone'):
+            del request.session['counter_line_phone']
         services_plus_desc = request.session['services_plus_desc']
         oattr = request.session['oattr']
         if request.session.get('phone_in_pass'):
@@ -1825,6 +1851,14 @@ def phone(request):
                     else:
                         vats = False
                     break
+
+        tag_service = request.session['tag_service']
+        service_name = 'phone'
+        request, service, prev_page, index = backward_page_service(request, service_name)
+        request.session['current_service'] = service
+        request.session['current_index_local'] = index + 1
+        counter_line_services = request.session['counter_line_services']
+        request.session['counter_line_services_before_phone'] = counter_line_services
         phoneform = PhoneForm(initial={
                                 'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw
                             })
@@ -1832,7 +1866,8 @@ def phone(request):
             'service_vgw': service_vgw,
             'vats': vats,
             'oattr': oattr,
-            'phoneform': phoneform
+            'phoneform': phoneform,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/phone.html', context)
 
@@ -2158,26 +2193,26 @@ def portvk(request):
                 all_portvk_in_tr = request.session['all_portvk_in_tr']
             except KeyError:
                 all_portvk_in_tr = dict()
-            tag_service = request.session['tag_service']
-            service = tag_service[0]['portvk']
+
+            service = request.session['current_service']
             all_portvk_in_tr.update({service:{'new_vk': new_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk, 'type_portvk': type_portvk, 'exist_service': exist_service}})
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
             request.session['all_portvk_in_tr'] = all_portvk_in_tr
-            return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
-        services_plus_desc = request.session['services_plus_desc']
-        services_vk = []
-        for service in services_plus_desc:
-            if 'Порт ВЛС' in service:
-                services_vk.append(service)
+        tag_service = request.session['tag_service']
+        service_name = 'portvk'
+        request, service, prev_page, index = backward_page_service(request, service_name)
+        request.session['current_service'] = service
+
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         portvkform = PortVKForm()
         context = {'portvkform': portvkform,
-                   'services_vk': services_vk,
+                   'services_vk': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
-                   'trunk_turnoff_off': trunk_turnoff_off
+                   'trunk_turnoff_off': trunk_turnoff_off,
+                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
                    }
         return render(request, 'tickets/portvk.html', context)
 
@@ -2201,23 +2236,30 @@ def portvm(request):
             request.session['vm_inet'] = vm_inet
             request.session['type_portvm'] = type_portvm
             request.session['exist_service_vm'] = exist_service_vm
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            # tag_service = request.session['tag_service']
+            # tag_service.pop(0)
+            # request.session['tag_service'] = tag_service
+            # return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
-        services_plus_desc = request.session['services_plus_desc']
-        services_vm = []
-        for service in services_plus_desc:
-            if 'Порт ВМ' in service:
-                services_vm.append(service)
+        tag_service = request.session['tag_service']
+        service_name = 'portvm'
+        request, service, prev_page, index = backward_page_service(request, service_name)
+        request.session['current_service'] = service
+        # services_plus_desc = request.session['services_plus_desc']
+        # services_vm = []
+        # for service in services_plus_desc:
+        #     if 'Порт ВМ' in service:
+        #         services_vm.append(service)
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         portvmform = PortVMForm()
         context = {'portvmform': portvmform,
-                   'services_vm': services_vm,
+                   'services_vm': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
-                   'trunk_turnoff_off': trunk_turnoff_off
+                   'trunk_turnoff_off': trunk_turnoff_off,
+                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
                    }
         return render(request, 'tickets/portvm.html', context)
 
