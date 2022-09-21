@@ -2281,23 +2281,30 @@ def video(request):
             request.session['deep_archive'] = deep_archive
             request.session['camera_place_one'] = camera_place_one
             request.session['camera_place_two'] = camera_place_two
-            tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            # tag_service = request.session['tag_service']
+            # tag_service.pop(0)
+            # request.session['tag_service'] = tag_service
+            # return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
-        services_plus_desc = request.session['services_plus_desc']
-        for service in services_plus_desc:
-            if 'Видеонаблюдение' in service:
-                service_video = service
-                request.session['service_video'] = service_video
-                break
+        tag_service = request.session['tag_service']
+        service_name = 'video'
+        request, service, prev_page, index = backward_page_service(request, service_name)
+        request.session['current_service'] = service
+        # services_plus_desc = request.session['services_plus_desc']
+        # for service in services_plus_desc:
+        #     if 'Видеонаблюдение' in service:
+        #         service_video = service
+        #         request.session['service_video'] = service_video
+        #         break
         task_otpm = request.session['task_otpm']
         videoform = VideoForm()
         context = {
-            'service_video': service_video,
+            'service_video': service,
             'videoform': videoform,
-            'task_otpm': task_otpm
+            'task_otpm': task_otpm,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/video.html', context)
 
@@ -2744,6 +2751,9 @@ def job_formset(request):
                     change_job_services.append(services)
                 elif data == {'jobs': 'Не требуется'}:
                     pass
+            tag_service = []
+            tag_service.append({'job_formset': None})
+            request.session['tag_service'] = tag_service
             request.session['new_job_services'] = new_job_services
             request.session['pass_job_services'] = pass_job_services
             request.session['change_job_services'] = change_job_services
@@ -3225,7 +3235,8 @@ def project_tr_exist_cl(request):
     pass_job_services = request.session['pass_job_services']
     change_job_services = request.session['change_job_services']
     type_pass = []
-    tag_service = []
+    #tag_service = []
+    tag_service = request.session['tag_service']
     if pass_job_services:
         type_pass.append('Перенос, СПД')
         tag_service.append({'pass_serv': None})
@@ -3242,8 +3253,8 @@ def project_tr_exist_cl(request):
             type_pass.append('Изменение, не СПД')
             tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
             for tag in tags:
-                tag_service.insert(0, tag)
-                tag_service.insert(0, {'change_serv': None})
+                tag_service.insert(1, tag)
+                tag_service.insert(1, {'change_serv': None})
 
         if counter_line_services == 0:
             tag_service.append({'data': None})
@@ -3261,13 +3272,14 @@ def project_tr_exist_cl(request):
         request.session['counter_line_services'] = counter_line_services
         request.session['services_plus_desc'] = services_plus_desc
         request.session['counter_line_services'] = counter_line_services
+        request.session['counter_line_services_initial'] = counter_line_services
 
     if change_job_services and not new_job_services and not pass_job_services:
         type_pass.append('Изменение, не СПД')
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
-            tag_service.insert(0, tag)
-            tag_service.insert(0, {'change_serv': None})
+            tag_service.insert(1, tag)
+            tag_service.insert(1, {'change_serv': None})
         tag_service.append({'data': None})
 
     request.session['oattr'] = oattr
@@ -3276,7 +3288,16 @@ def project_tr_exist_cl(request):
     request.session['sreda'] = sreda
     request.session['type_pass'] = type_pass
     request.session['tag_service'] = tag_service
-    return redirect(next(iter(tag_service[0])))
+    print('tag_service in proj exist')
+    print(tag_service)
+    tag_service_index = []
+    index = 0
+    tag_service_index.append(index)
+    request.session['tag_service_index'] = tag_service_index
+    #next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+    #return redirect(next(iter(tag_service[1])))
+    response = get_response_with_prev_get_params(request)
+    return response
 
 
 def change_serv(request):
