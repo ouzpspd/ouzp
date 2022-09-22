@@ -3447,20 +3447,26 @@ def params_extend_service(request):
             request.session['extend_policer_cks_vk'] = extend_policer_cks_vk
             request.session['extend_policer_vm'] = extend_policer_vm
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if len(tag_service) == 0:
+            #tag_service.pop(0)
+            if tag_service[-1] == {'params_extend_service': None}:
                 tag_service.append({'data': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            #request.session['tag_service'] = tag_service
+            #return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
 
     else:
         desc_service = request.session.get('desc_service')
         extendserviceform = ExtendServiceForm()
         pass_job_services = request.session.get('pass_job_services')
+        tag_service = request.session['tag_service']
+        request, prev_page, index = backward_page(request)
         context = {
             'desc_service': desc_service,
+            #'services_cks': service,
             'pass_job_services': pass_job_services,
-            'extendserviceform': extendserviceform
+            'extendserviceform': extendserviceform,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/params_extend_service.html', context)
 
@@ -3478,6 +3484,7 @@ def pass_serv(request):
             request.session['exist_sreda'] = exist_sreda
             tag_service = request.session['tag_service']
             tag_service_index = request.session['tag_service_index']
+            index = tag_service_index[-1]
             readable_services = request.session['readable_services']
             selected_ono = request.session['selected_ono']
             type_pass = request.session['type_pass']
@@ -3493,13 +3500,13 @@ def pass_serv(request):
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
                             request.session['desc_service'] = desc_service
                             #tag_service.insert(1, {'params_extend_service': None})
-                            tag_service.insert(tag_service_index+1, {'params_extend_service': None})
+                            tag_service.append({'params_extend_service': None})
                             #return redirect(next(iter(tag_service[0])))
                             response = get_response_with_get_params(request)
                             return response
                     elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and request.session.get('turnoff'):
                         #tag_service.insert(0, {'pass_turnoff': None})
-                        tag_service.insert(tag_service_index + 1, {'pass_turnoff': None})
+                        tag_service.append({'pass_turnoff': None})
                         #return redirect(next(iter(tag_service[0])))
                         response = get_response_with_get_params(request)
                         return response
@@ -3509,7 +3516,10 @@ def pass_serv(request):
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
                             request.session['desc_service'] = desc_service
                             #tag_service.insert(0, {'params_extend_service': None})
-                            tag_service.insert(tag_service_index + 1, {'params_extend_service': None})
+                            print('in pass')
+                            print(tag_service_index)
+                            print(tag_service)
+                            tag_service.append({'params_extend_service': None})
                     phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
                     if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
                         #tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
