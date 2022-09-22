@@ -643,7 +643,6 @@ def copper(request):
         list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         request.session['list_switches'] = list_switches
         copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
-
         context = {
             'pps': pps,
             'oattr': oattr,
@@ -1175,7 +1174,10 @@ def data(request):
     spp_link = request.session['spplink']
     templates = ckb_parse(username, password)
     request.session['templates'] = templates
-    counter_line_services = request.session['counter_line_services_initial']
+    if request.session.get('counter_line_services_initial'):
+        counter_line_services = request.session['counter_line_services_initial']
+    else:
+        counter_line_services = 0
     if request.session.get('counter_line_phone'):
         counter_line_services += request.session['counter_line_phone']
     if request.session.get('counter_line_hotspot'):
@@ -3475,11 +3477,12 @@ def pass_serv(request):
             request.session['change_log'] = change_log
             request.session['exist_sreda'] = exist_sreda
             tag_service = request.session['tag_service']
+            tag_service_index = request.session['tag_service_index']
             readable_services = request.session['readable_services']
             selected_ono = request.session['selected_ono']
             type_pass = request.session['type_pass']
             sreda = request.session['sreda']
-            tag_service.pop(0)
+            #tag_service.pop(0)
             if 'Перенос, СПД' not in type_pass:
                 return redirect(next(iter(tag_service[0])))
             else:
@@ -3489,20 +3492,28 @@ def pass_serv(request):
                         desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
                             request.session['desc_service'] = desc_service
-                            tag_service.insert(0, {'params_extend_service': None})
-                            return redirect(next(iter(tag_service[0])))
+                            #tag_service.insert(1, {'params_extend_service': None})
+                            tag_service.insert(tag_service_index+1, {'params_extend_service': None})
+                            #return redirect(next(iter(tag_service[0])))
+                            response = get_response_with_get_params(request)
+                            return response
                     elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and request.session.get('turnoff'):
-                        tag_service.insert(0, {'pass_turnoff': None})
-                        return redirect(next(iter(tag_service[0])))
+                        #tag_service.insert(0, {'pass_turnoff': None})
+                        tag_service.insert(tag_service_index + 1, {'pass_turnoff': None})
+                        #return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 else:
                     if type_passage == 'Перевод на гигабит':
                         desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
                             request.session['desc_service'] = desc_service
-                            tag_service.insert(0, {'params_extend_service': None})
+                            #tag_service.insert(0, {'params_extend_service': None})
+                            tag_service.insert(tag_service_index + 1, {'params_extend_service': None})
                     phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
                     if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
-                        tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
+                        #tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
+                        tag_service.insert(tag_service_index + 1, {'phone': ''.join(phone_in_pass)})
                         request.session['phone_in_pass'] = ' '.join(phone_in_pass)
                     if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                         pass
@@ -3515,19 +3526,28 @@ def pass_serv(request):
                             tag_service.append({'vols': None})
                         elif sreda == '3':
                             tag_service.append({'wireless': None})
-                if len(tag_service) == 0:
+                if tag_service[-1] == {'pass_serv': None}:
                     tag_service.append({'data': None})
-                return redirect(next(iter(tag_service[0])))
+                print('tag_service in pass_serv')
+                print(tag_service)
+                #return redirect(next(iter(tag_service[0])))
+                response = get_response_with_get_params(request)
+                return response
     else:
         oattr = request.session['oattr']
         pps = request.session['pps']
         head = request.session['head']
+        tag_service = request.session['tag_service']
+        request, prev_page, index = backward_page(request)
         passservform = PassServForm()
+        print('backlink')
+        print(next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}')
         context = {
             'passservform': passservform,
             'oattr': oattr,
             'pps': pps,
-            'head': head
+            'head': head,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/pass_serv.html', context)
 
