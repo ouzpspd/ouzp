@@ -552,7 +552,7 @@ def copper(request):
                         type_passage = request.session['type_passage']
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '128 -', '107 -', '109 -', '483 -']
+                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -', '64 -', '68 -', '67 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -730,8 +730,8 @@ def vols(request):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
                             service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -',
-                                            '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -',
-                                            '125 -', '131 -', '128 -', '107 -', '109 -', '483 -']
+                                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                                            '125 -', '131 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -771,21 +771,28 @@ def vols(request):
                     request.session['device_client'] = device_client
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
-                            tag_service.insert(0, {'pass_serv': None})
+                            #tag_service.insert(0, {'pass_serv': None})
+                            tag_service.append({'pass_serv': None})
                         tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                        #return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
                     if type_pass:
                         tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                        #return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 elif logic_change_gi_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
                     if type_pass:
                         tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                        #return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 else:
                     request.session['device_client'] = device_client
                     tag_service.append({'data': None})
@@ -964,8 +971,8 @@ def wireless(request):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
                             service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -',
-                                            '57 -', '60 -', '62 -', '64 -', '68 -', '92 -', '96 -', '101 -', '105 -',
-                                            '125 -', '131 -', '128 -', '107 -', '109 -', '483 -']
+                                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                                            '125 -', '131 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -1197,7 +1204,6 @@ def data(request):
     type_ticket = ticket_tr.ticket_k.type_ticket
     value_vars.update({'type_ticket': type_ticket})
     readable_services = value_vars.get('readable_services')
-
 
 
     if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
@@ -2952,7 +2958,7 @@ def head(request):
         request.session['node_csw'] = node_csw
 
     service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '57 -', '60 -', '62 -',
-                    '64 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '128 -', '107 -', '109 -', '483 -']
+                    '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
     service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
@@ -3280,8 +3286,9 @@ def project_tr_exist_cl(request):
         type_pass.append('Изменение, не СПД')
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
-            tag_service.insert(1, tag)
-            tag_service.insert(1, {'change_serv': None})
+            #tag_service.insert(1, tag)
+            #tag_service.insert(1, {'change_serv': None})
+            tag_service.insert(1, {'change_serv': tag})
         tag_service.append({'data': None})
 
     request.session['oattr'] = oattr
@@ -3313,24 +3320,61 @@ def change_serv(request):
                 types_change_service = request.session['types_change_service']
             except KeyError:
                 types_change_service = []
+            types_cks_vk_vm_trunk = [
+                "Организация порта ВМ trunk'ом",
+                "Организация порта ВЛС trunk'ом",
+                "Организация ЦКС trunk'ом",
+                "Организация ШПД trunk'ом",
+                "Организация ШПД trunk'ом с простоем",
+                "Организация ЦКС trunk'ом с простоем",
+                "Организация порта ВЛС trunk'ом с простоем",
+                "Организация порта ВМ trunk'ом с простоем"
+            ]
+            types_only_mask = ["Организация доп connected",
+                               "Замена connected на connected",
+                               "Изменение cхемы организации ШПД"
+                               ]
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            types_change_service.append({type_change_service: next(iter(tag_service[0].values()))})
+            current_index_local = request.session['current_index_local']
+            print('next iter tag values')
+            print(next(iter(tag_service[current_index_local].values())))
+            if type_change_service in types_cks_vk_vm_trunk \
+                    and next(iter(tag_service[current_index_local].values())) != tag_service[current_index_local+1]:
+                tag_service.insert(current_index_local + 1, next(iter(tag_service[current_index_local].values())))
+                types_change_service.append(
+                    {type_change_service: next(iter(tag_service[current_index_local + 1].values()))}
+                )
+            elif type_change_service in types_only_mask:
+                tag_service.insert(current_index_local + 1, {'change_params_serv': None})
+            if tag_service[-1] != {'data': None}:
+                tag_service.append({'data': None})
+            #tag_service.pop(0)
+
             if type_change_service == "Организация доп IPv6":
                 if len(tag_service) == 0:
                     tag_service.append({'data': None})
-            else:
-                tag_service.insert(0, {'change_params_serv': None})
+            # else:
+            #     tag_service.insert(current_index_local + 1, {'change_params_serv': None})
+                #tag_service.insert(0, {'change_params_serv': None})
             request.session['types_change_service'] = types_change_service
             request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            #return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
         changeservform = ChangeServForm()
         tag_service = request.session['tag_service']
-        service = next(iter(tag_service[1].values()))
+        service_name = 'change_serv'
+        request, service, prev_page, index = backward_page_service(request, service_name)
+        current_index_local = index + 1
+        request.session['current_index_local'] = current_index_local
+        #service = next(iter(next(iter(tag_service[current_index_local].values()))))
+        service_change = next(iter(service))
+
         context = {
             'changeservform': changeservform,
-            'service': service
+            'service': service_change,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/change_serv.html', context)
 
@@ -3347,14 +3391,17 @@ def change_params_serv(request):
             request.session['routed_ip'] = routed_ip
             request.session['routed_vrf'] = routed_vrf
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if len(tag_service) == 0:
+            # tag_service.pop(0)
+            if {'data': None} not in tag_service:
                 tag_service.append({'data': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            #request.session['tag_service'] = tag_service
+            #return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
         head = request.session['head']
         types_change_service = request.session['types_change_service']
+        request, prev_page, index = backward_page(request)
         for i in range(len(types_change_service)):
             types_cks_vk_vm_trunk = [
                 "Организация порта ВМ trunk'ом",
@@ -3366,13 +3413,13 @@ def change_params_serv(request):
                 "Организация порта ВЛС trunk'ом с простоем",
                 "Организация порта ВМ trunk'ом с простоем"
             ]
-            if next(iter(types_change_service[i].keys())) in types_cks_vk_vm_trunk:
-                tag_service = request.session['tag_service']
-                tag_service.pop(0)
-                if next(iter(types_change_service[i].keys())) == "Организация ШПД trunk'ом":
-                    tag_service.pop(0)
-                request.session['tag_service'] = tag_service
-                return redirect(next(iter(tag_service[0])))
+            # if next(iter(types_change_service[i].keys())) in types_cks_vk_vm_trunk:
+            #     tag_service = request.session['tag_service']
+            #     tag_service.pop(0)
+            #     if next(iter(types_change_service[i].keys())) == "Организация ШПД trunk'ом":
+            #         tag_service.pop(0)
+            #     request.session['tag_service'] = tag_service
+            #     return redirect(next(iter(tag_service[0])))
 
             types_only_mask = ["Организация доп connected",
                                "Замена connected на connected",
@@ -3381,14 +3428,14 @@ def change_params_serv(request):
             if next(iter(types_change_service[i].keys())) in types_only_mask:
                 only_mask = True
                 tag_service = request.session['tag_service']
-                tag_service.pop(0)
+                #tag_service.pop(index + 2)
                 request.session['tag_service'] = tag_service
             else:
                 only_mask = False
             if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
                 routed = True
                 tag_service = request.session['tag_service']
-                tag_service.pop(0)
+                #tag_service.pop(index + 2)
                 request.session['tag_service'] = tag_service
             else:
                 routed = False
@@ -3397,7 +3444,8 @@ def change_params_serv(request):
             'head': head,
             'changeparamsform': changeparamsform,
             'only_mask': only_mask,
-            'routed': routed
+            'routed': routed,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/change_params_serv.html', context)
 
@@ -3410,8 +3458,27 @@ def change_log_shpd(request):
             change_log_shpd = changelogshpdform.cleaned_data['change_log_shpd']
             request.session['change_log_shpd'] = change_log_shpd
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            return redirect(next(iter(tag_service[0])))
+            csw_exist = [
+                request.session.get('logic_csw'),
+                request.session.get('logic_replace_csw'),
+                request.session.get('logic_change_gi_csw'),
+                request.session.get('logic_change_csw'),
+            ]
+            csw_change_exist = [
+                request.session.get('logic_change_gi_csw'),
+                request.session.get('logic_change_csw'),
+            ]
+            if tag_service[-1] == {'change_log_shpd': None} and any(csw_change_exist):
+                type_pass = request.session.get('type_pass')
+                if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
+                    tag_service.append({'pass_serv': None})
+            if tag_service[-1] == {'change_log_shpd': None} and any(csw_exist):
+                tag_service.append({'csw': None})
+            elif tag_service[-1] == {'change_log_shpd': None}:
+                tag_service.append({'data': None})
+            # return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
     else:
         head = request.session['head']
         kad = request.session['kad']
@@ -3423,12 +3490,15 @@ def change_log_shpd(request):
             services = request.session.get('new_job_services')
         else:
             services = None
+        tag_service = request.session['tag_service']
+        request, prev_page, index = backward_page(request)
         context = {
             'head': head,
             'kad': kad,
             'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
             'pass_job_services': services,
-            'changelogshpdform': changelogshpdform
+            'changelogshpdform': changelogshpdform,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/change_log_shpd.html', context)
 
@@ -3491,7 +3561,11 @@ def pass_serv(request):
             sreda = request.session['sreda']
             #tag_service.pop(0)
             if 'Перенос, СПД' not in type_pass:
-                return redirect(next(iter(tag_service[0])))
+                #return redirect(next(iter(tag_service[0])))
+                if tag_service[-1] == {'pass_serv': None}:
+                    tag_service.append({'csw': None})
+                response = get_response_with_get_params(request)
+                return response
             else:
                 pass_job_services = request.session.get('pass_job_services')
                 if change_log == 'Порт и КАД не меняется':
