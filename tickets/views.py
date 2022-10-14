@@ -1312,9 +1312,9 @@ def data(request):
         return redirect('unsaved_data')
     else:
         # tag_service_index = request.session['tag_service_index']
-        tag_service = request.session['tag_service']
-        print('tag_service in data')
-        print(tag_service)
+        # tag_service = request.session['tag_service']
+        # print('tag_service in data')
+        # print(tag_service)
         # index = tag_service_index[-1]
         # response = redirect(saved_data)
         # response['Location'] += f'?cur={next(iter(tag_service[index]))}&index={index}'
@@ -1395,8 +1395,21 @@ def saved_data(request):
                 'list_switches': list_switches,
                 'counter_str_ortr': counter_str_ortr,
                 'counter_str_ots': counter_str_ots,
-                'ortrform': ortrform
+                'ortrform': ortrform,
+                'not_required_tr': True,
             }
+
+            tag_service = request.session.get('tag_service')
+            if tag_service:
+                index = tag_service.index(tag_service[-2])
+                prev_page = next(iter(tag_service[index]))
+                context.update({
+                    'not_required_tr': False,
+                })
+                context.update({
+                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+                })
+
             return render(request, 'tickets/saved_data.html', context)
 
     else:
@@ -1431,30 +1444,6 @@ def saved_data(request):
         ortr.save()
         request.session['ortr_id'] = ortr.id
 
-        tag_service = request.session['tag_service']
-        index = tag_service.index(tag_service[-2])
-        # print('tag_service_saved')
-        # print(tag_service)
-        prev_page = next(iter(tag_service[index]))
-        # print(cur_page)
-        # index = int(request.GET.get('index'))
-        #
-        # tag_service_index = request.session['tag_service_index']
-        # tag_service = request.session['tag_service']
-
-        # if request.GET.get('prev') is None:
-        #     print('tag_service_index in get in forward')
-        #     print(tag_service_index)
-        # else:
-        # cur_page = next(iter(tag_service[index - 1]))
-        # index -= 1
-        # # tag_service_index.pop()
-        # # tag_service.pop()
-        # request.session['tag_service_index'] = tag_service_index
-        # request.session['tag_service'] = tag_service
-        # print('tag_service_index in get in backward')
-        # print(tag_service_index)
-
         ortrform = OrtrForm(initial={'ortr_field': ortr.ortr, 'ots_field': ortr.ots, 'pps': pps, 'kad': kad})
 
         context = {
@@ -1466,9 +1455,20 @@ def saved_data(request):
             'counter_str_ortr': counter_str_ortr,
             'counter_str_ots': counter_str_ots,
             'ortrform': ortrform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
-
+            'not_required_tr': True,
         }
+
+        tag_service = request.session.get('tag_service')
+        if tag_service:
+            index = tag_service.index(tag_service[-2])
+            prev_page = next(iter(tag_service[index]))
+            context.update({
+                'not_required_tr': False,
+            })
+            context.update({
+                'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            })
+
         return render(request, 'tickets/saved_data.html', context)
 
 
@@ -2141,7 +2141,6 @@ def shpd(request):
         service_name = 'shpd'
         request, service, prev_page, index = backward_page_service(request, service_name)
         request.session['current_service'] = service
-
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
         context = {
@@ -3328,48 +3327,70 @@ def change_serv(request):
                 "Организация ШПД trunk'ом с простоем",
                 "Организация ЦКС trunk'ом с простоем",
                 "Организация порта ВЛС trunk'ом с простоем",
-                "Организация порта ВМ trunk'ом с простоем"
+                "Организация порта ВМ trunk'ом с простоем",
             ]
             types_only_mask = ["Организация доп connected",
+                               "Организация доп маршрутизируемой",
                                "Замена connected на connected",
-                               "Изменение cхемы организации ШПД"
+                               "Изменение cхемы организации ШПД",
                                ]
             tag_service = request.session['tag_service']
             current_index_local = request.session['current_index_local']
+
             print('next iter tag values')
             print(next(iter(tag_service[current_index_local].values())))
-            if type_change_service in types_cks_vk_vm_trunk \
-                    and next(iter(tag_service[current_index_local].values())) != tag_service[current_index_local+1]:
+            print('types_change_service')
+            print(types_change_service)
+            if type_change_service in types_cks_vk_vm_trunk or type_change_service == "Организация доп IPv6":
                 tag_service.insert(current_index_local + 1, next(iter(tag_service[current_index_local].values())))
                 types_change_service.append(
                     {type_change_service: next(iter(tag_service[current_index_local + 1].values()))}
                 )
+
             elif type_change_service in types_only_mask:
                 tag_service.insert(current_index_local + 1, {'change_params_serv': None})
+                types_change_service.append(
+                    {type_change_service: tag_service[current_index_local]['change_serv']}
+                )
             if tag_service[-1] != {'data': None}:
                 tag_service.append({'data': None})
-            #tag_service.pop(0)
-
-            if type_change_service == "Организация доп IPv6":
-                if len(tag_service) == 0:
-                    tag_service.append({'data': None})
-            # else:
-            #     tag_service.insert(current_index_local + 1, {'change_params_serv': None})
-                #tag_service.insert(0, {'change_params_serv': None})
             request.session['types_change_service'] = types_change_service
             request.session['tag_service'] = tag_service
-            #return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
     else:
         changeservform = ChangeServForm()
         tag_service = request.session['tag_service']
+        print('tag_service')
+        print(tag_service)
         service_name = 'change_serv'
         request, service, prev_page, index = backward_page_service(request, service_name)
         current_index_local = index + 1
+        print('tag_service[current_index_local]')
+        print(tag_service[current_index_local])
+        if request.GET.get('next_page') and \
+                next(iter(tag_service[current_index_local].values())) == tag_service[current_index_local+1]:
+            removed_tag = tag_service.pop(current_index_local+1)
+            print('removed_tag')
+            print(removed_tag)
+            types_change_service = request.session.get('types_change_service')
+            for type_change_service in types_change_service:
+                print('type_change_service')
+                print(type_change_service)
+                if next(iter(type_change_service.values())) == next(iter(removed_tag.values())):
+                    types_change_service.remove(type_change_service)
+            print('types_change_service')
+            print(types_change_service)
+        elif request.GET.get('next_page') and tag_service[current_index_local+1] == {'change_params_serv': None}:
+            types_change_service = request.session.get('types_change_service')
+            tag_service.pop(current_index_local + 1)
+            for type_change_service in types_change_service:
+                print('type_change_service')
+                print(type_change_service)
+                if next(iter(type_change_service.values())) == tag_service[current_index_local]['change_serv']:
+                    types_change_service.remove(type_change_service)
         request.session['current_index_local'] = current_index_local
-        #service = next(iter(next(iter(tag_service[current_index_local].values()))))
-        service_change = next(iter(service))
+        service_change = next(iter(service.values()))
 
         context = {
             'changeservform': changeservform,
@@ -3402,6 +3423,8 @@ def change_params_serv(request):
         head = request.session['head']
         types_change_service = request.session['types_change_service']
         request, prev_page, index = backward_page(request)
+        print('types_change_service')
+        print(types_change_service)
         for i in range(len(types_change_service)):
             types_cks_vk_vm_trunk = [
                 "Организация порта ВМ trunk'ом",
@@ -3645,16 +3668,22 @@ def pass_turnoff(request):
             ppr = passturnoffform.cleaned_data['ppr']
             request.session['ppr'] = ppr
             tag_service = request.session['tag_service']
-            tag_service.pop(0)
-            if len(tag_service) == 0:
+            if tag_service[-1] == {'pass_turnoff': None}:
                 tag_service.append({'data': None})
-            request.session['tag_service'] = tag_service
-            return redirect(next(iter(tag_service[0])))
+            # tag_service.pop(0)
+            # if len(tag_service) == 0:
+            #     tag_service.append({'data': None})
+            # request.session['tag_service'] = tag_service
+            # return redirect(next(iter(tag_service[0])))
+            response = get_response_with_get_params(request)
+            return response
 
     else:
         oattr = request.session['oattr']
         pps = request.session['pps']
         head = request.session['head']
+        tag_service = request.session['tag_service']
+        request, prev_page, index = backward_page(request)
         spplink = request.session['spplink']
         regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
         match_link = re.search(regex_link, spplink)
@@ -3669,7 +3698,8 @@ def pass_turnoff(request):
             'head': head,
             'dID': dID,
             'tID': tID,
-            'trID': trID
+            'trID': trID,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/pass_turnoff.html', context)
 
