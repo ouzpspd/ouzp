@@ -30,7 +30,7 @@
 
         {% if only_mask %}
         <div class="row">
-            <div class="col-4 mb-1">
+            <div class="col-4">
                 <div class="form-group">
                     <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
                     {{changeparamsform.new_mask}}
@@ -39,7 +39,7 @@
         </div>
         {% elif routed %}
         <div class="row">
-            <div class="col-4 mb-1">
+            <div class="col-4">
                 <div class="form-group">
                     <label for="{{ changeparamsform.new_mask.id_for_label }}">Маска подсети</label>
                     {{changeparamsform.new_mask}}
@@ -48,7 +48,7 @@
         </div>
 
         <div class="row">
-            <div class="col-4 mb-1">
+            <div class="col-4">
                 <div class="form-group">
                     <label for="{{changeparamsform.routed_ip.id_for_label}}">Ip-адрес</label>
                     {{changeparamsform.routed_ip}}
@@ -57,7 +57,7 @@
         </div>
 
         <div class="row">
-            <div class="col-4 mb-1">
+            <div class="col-4">
                 <div class="form-group">
                     <label for="{{changeparamsform.routed_vrf.id_for_label}}">VRF</label>
                     {{changeparamsform.routed_vrf}}
@@ -65,7 +65,7 @@
             </div>
         </div>
         {% endif %}
-        </div>
+
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
@@ -78,7 +78,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </form>
             </div>

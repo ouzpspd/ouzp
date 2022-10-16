@@ -457,18 +457,8 @@ def project_tr(request, dID, tID, trID):
             elif sreda == '3':
                 tag_service.append({'wireless': None})
         request.session['tag_service'] = tag_service
-
-
-        #tag_service_index = [index for index in range(len(tag_service))]
-
-        print('tag_service_index')
-        print(tag_service)
-        #request.session['tag_service_index'] = tag_service_index
         return redirect(next(iter(tag_service[0])))
-        #return redirect('sppdata')
-        # return redirect(
-        #     next(iter(tag_service[tag_service_index[0]])), next=next(iter(tag_service[tag_service_index[1]])), cur=next(iter(tag_service[tag_service_index[0]])), index=0
-        # )
+
 
 
 def sppdata(request):
@@ -481,23 +471,11 @@ def sppdata(request):
     address = request.session['address']
     turnoff = request.session['turnoff']
     tag_service = request.session['tag_service']
-
-    #tag_service.pop(0)
-
-    print('tag_service')
-    print(next(iter(tag_service[0])))
-
-
     tag_service_index = []
     index = 0
     tag_service_index.append(index)
     request.session['tag_service_index'] = tag_service_index
-    #next_link = next(iter(tag_service[1]))+f'?next={next(iter(tag_service[index+1]))}&cur={next(iter(tag_service[index]))}&index={index}'
     next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-    # next_link = next(iter(tag_service[0]))
-    print('tag_service_index')
-    print(tag_service_index)
-    #request.session['tag_service'] = tag_service
     context = {
         'services_plus_desc': services_plus_desc,
         'client': client,
@@ -524,10 +502,6 @@ def copper(request):
             correct_sreda = copperform.cleaned_data['correct_sreda']
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
-            print('tag_service_copper')
-            print(tag_service)
-            #tag_service.pop(0)
-
             if correct_sreda == sreda:
                 logic_csw = copperform.cleaned_data['logic_csw']
                 logic_replace_csw = copperform.cleaned_data['logic_replace_csw']
@@ -535,7 +509,6 @@ def copper(request):
                 logic_change_csw = copperform.cleaned_data['logic_change_csw']
                 port = copperform.cleaned_data['port']
                 kad = copperform.cleaned_data['kad']
-                tag_service = request.session['tag_service']
                 request.session['logic_csw'] = logic_csw
                 request.session['logic_replace_csw'] = logic_replace_csw
                 request.session['logic_change_csw'] = logic_change_csw
@@ -576,35 +549,32 @@ def copper(request):
                     return response
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
                     tag_service.append({'csw': None})
-                    return redirect(next(iter(tag_service[0])))
+                    response = get_response_with_get_params(request)
+                    return response
                 elif logic_change_csw == True and logic_change_gi_csw == True or logic_change_csw == True:
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
-                            tag_service.insert(0, {'pass_serv': None})
+                            tag_service.append({'pass_serv': None})
                         tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 elif logic_change_gi_csw == True:
                     if type_pass:
                         tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 else:
                     tag_service.append({'data': None})
                     response = get_response_with_get_params(request)
                     return response
             else:
                 if correct_sreda == '3':
-                    #tag_service.insert(0, {'wireless': None})
                     tag_service.pop()
                     tag_service.append({'wireless': None})
                 elif correct_sreda == '2' or correct_sreda == '4':
-                    #tag_service.insert(0, {'vols': None})
                     tag_service.pop()
                     tag_service.append({'vols': None})
                 request.session['sreda'] = correct_sreda
-                # tag_service_index = request.session['tag_service_index']
-                # index = tag_service_index[-1]
-                # response = redirect(next(iter(tag_service[index+1])))
-                # response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
                 response = get_response_with_prev_get_params(request)
                 return response
     else:
@@ -617,11 +587,7 @@ def copper(request):
         sreda = request.session['sreda']
         oattr = request.session['oattr']
         tag_service = request.session['tag_service']
-
         request, prev_page, index = backward_page(request)
-
-
-
         try:
             type_pass = request.session['type_pass']
         except KeyError:
@@ -654,29 +620,6 @@ def copper(request):
         return render(request, 'tickets/env.html', context)
 
 
-def get_response_with_get_params(request):
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
-    index = tag_service_index[-1] + 1
-    tag_service_index.append(index)
-    print('response')
-    print(tag_service)
-    print(tag_service_index)
-    response = redirect(next(iter(tag_service[index + 1])))
-    response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-    return response
-
-
-def get_response_with_prev_get_params(request):
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
-    index = tag_service_index[-1]
-    response = redirect(next(iter(tag_service[index + 1])))
-    response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-    return response
-
-
-
 @cache_check
 def vols(request):
     """Данный метод отображает html-страничку с параметрами для ВОЛС"""
@@ -691,10 +634,8 @@ def vols(request):
             correct_sreda = volsform.cleaned_data['correct_sreda']
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
-            #tag_service.pop(0)
 
             if correct_sreda == sreda:
-                print('in correct sreda')
                 device_client = volsform.cleaned_data['device_client']
                 device_pps = volsform.cleaned_data['device_pps']
                 logic_csw = volsform.cleaned_data['logic_csw']
@@ -755,26 +696,13 @@ def vols(request):
                     tag_service.append({'csw': None})
                     response = get_response_with_get_params(request)
                     return response
-                    # tag_service_index = request.session['tag_service_index']
-                    # index = tag_service_index[-1] + 1
-                    # tag_service_index.append(index)
-                    # request.session['tag_service_index'] = tag_service_index
-                    # response = redirect(next(iter(tag_service[index + 1])))
-                    # response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-                    # return response
-                    #return redirect(next(iter(tag_service[0])))
-
-                    #response['Location'] += f'?next={next(iter(tag_service[index + 1]))}&cur={next(iter(tag_service[index]))}&index={index}'
-
                 elif logic_change_csw == True and logic_change_gi_csw == True or logic_change_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     request.session['device_client'] = device_client
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
-                            #tag_service.insert(0, {'pass_serv': None})
                             tag_service.append({'pass_serv': None})
                         tag_service.append({'csw': None})
-                        #return redirect(next(iter(tag_service[0])))
                         response = get_response_with_get_params(request)
                         return response
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
@@ -782,7 +710,6 @@ def vols(request):
                     request.session['device_client'] = device_client
                     if type_pass:
                         tag_service.append({'csw': None})
-                        #return redirect(next(iter(tag_service[0])))
                         response = get_response_with_get_params(request)
                         return response
                 elif logic_change_gi_csw == True:
@@ -790,7 +717,6 @@ def vols(request):
                     request.session['device_client'] = device_client
                     if type_pass:
                         tag_service.append({'csw': None})
-                        #return redirect(next(iter(tag_service[0])))
                         response = get_response_with_get_params(request)
                         return response
                 else:
@@ -798,41 +724,22 @@ def vols(request):
                     tag_service.append({'data': None})
                     response = get_response_with_get_params(request)
                     return response
-                    # tag_service_index = request.session['tag_service_index']
-                    # index = tag_service_index[-1] + 1
-                    # tag_service_index.append(index)
-                    # request.session['tag_service_index'] = tag_service_index
-                    #
-                    #
-                    #return redirect('data')
-
-                    #return redirect(next(iter(tag_service[0])))
-                    #return redirect(next(iter(tag_service[index+1])))
             else:
                 if correct_sreda == '1':
-                    #tag_service.insert(0, {'copper': None})
                     tag_service.pop()
                     tag_service.append({'copper': None})
                 elif correct_sreda == '3':
-                    #tag_service.insert(0, {'wireless': None})
                     tag_service.pop()
                     tag_service.append({'wireless': None})
                 elif correct_sreda == '2':
-                    #tag_service.insert(0, {'vols': None})
                     tag_service.pop()
                     tag_service.append({'vols': None})
                 elif correct_sreda == '4':
-                    #tag_service.insert(0, {'vols': None})
                     tag_service.pop()
                     tag_service.append({'vols': None})
                 request.session['sreda'] = correct_sreda
-                # tag_service_index = request.session['tag_service_index']
-                # index = tag_service_index[-1]
-                # response = redirect(next(iter(tag_service[index+1])))
-                # response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
                 response = get_response_with_prev_get_params(request)
                 return response
-                #return redirect(next(iter(tag_service[0])))
     else:
         user = User.objects.get(username=request.user.username)
         credent = cache.get(user)
@@ -849,26 +756,6 @@ def vols(request):
         dID = match_link.group(1)
         tID = match_link.group(2)
         trID = match_link.group(3)
-
-        # prev_page = request.GET.get('prev_page')
-        # index = int(request.GET.get('index'))
-        # tag_service_index = request.session['tag_service_index']
-        # tag_service = request.session['tag_service']
-        #
-        # # if request.GET.get('prev') is None:
-        # if request.GET.get('next_page') is None:
-        #     print('tag_service_index in get in forward')
-        #     print(tag_service_index)
-        # else:
-        #     prev_page = next(iter(tag_service[index - 1]))
-        #     index -= 1
-        #     tag_service_index.pop()
-        #     tag_service.pop()
-        #     request.session['tag_service_index'] = tag_service_index
-        #     request.session['tag_service'] = tag_service
-        #     print('tag_service_index in get in backward')
-        #     print(tag_service_index)
-
         request, prev_page, index = backward_page(request)
         tag_service = request.session['tag_service']
 
@@ -920,7 +807,6 @@ def vols(request):
             'tID': tID,
             'trID': trID,
             'volsform': volsform,
-            # 'back_link': next(iter(tag_service[index]))+f'?prev={cur_page}&index={index}'
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/env.html', context)
@@ -936,10 +822,6 @@ def wireless(request):
             correct_sreda = wirelessform.cleaned_data['correct_sreda']
             sreda = request.session['sreda']
             tag_service = request.session['tag_service']
-            #tag_service.pop(0)
-            tag_service_back = request.session['tag_service_back']
-            tag_service_back.append(tag_service.pop(0))
-            request.session['tag_service_back'] = tag_service_back
             if correct_sreda == sreda:
                 access_point = wirelessform.cleaned_data['access_point']
                 port = wirelessform.cleaned_data['port']
@@ -993,23 +875,29 @@ def wireless(request):
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
-                    return redirect(next(iter(tag_service[0])))
+                    response = get_response_with_get_params(request)
+                    return response
                 elif logic_change_csw == True or logic_change_gi_csw == True:
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
-                            tag_service.insert(0, {'pass_serv': None})
+                            tag_service.append({'pass_serv': None})
                         tag_service.append({'csw': None})
-                        return redirect(next(iter(tag_service[0])))
+                        response = get_response_with_get_params(request)
+                        return response
                 else:
                     tag_service.append({'data': None})
-                    return redirect(next(iter(tag_service[0])))
+                    response = get_response_with_get_params(request)
+                    return response
             else:
                 if correct_sreda == '1':
-                    tag_service.insert(0, {'copper': None})
+                    tag_service.pop()
+                    tag_service.append({'copper': None})
                 elif correct_sreda == '2' or correct_sreda == '4':
-                    tag_service.insert(0, {'vols': None})
+                    tag_service.pop()
+                    tag_service.append({'vols': None})
                 request.session['sreda'] = correct_sreda
-                return redirect(next(iter(tag_service[0])))
+                response = get_response_with_prev_get_params(request)
+                return response
     else:
         user = User.objects.get(username=request.user.username)
         credent = cache.get(user)
@@ -1019,8 +907,12 @@ def wireless(request):
         turnoff = request.session['turnoff']
         sreda = request.session['sreda']
         oattr = request.session['oattr']
-
-        list_switches = parsingByNodename(pps, username, password)
+        request, prev_page, index = backward_page(request)
+        tag_service = request.session['tag_service']
+        if request.session.get('list_switches'):
+            list_switches = request.session.get('list_switches')
+        else:
+            list_switches = parsingByNodename(pps, username, password)
         if list_switches[0] == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
@@ -1038,7 +930,8 @@ def wireless(request):
             'list_switches': list_switches,
             'sreda': sreda,
             'turnoff': turnoff,
-            'wirelessform': wirelessform
+            'wirelessform': wirelessform,
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/env.html', context)
 
@@ -1075,25 +968,9 @@ def csw(request):
             if not type_install_csw:
                 request.session['logic_csw'] = True
             tag_service = request.session['tag_service']
-            #tag_service.pop(0)
-
-            tag_service_index = request.session['tag_service_index']
-            print('tag_service_index')
-            print(tag_service_index)
-            index = tag_service_index[-1] + 1
-            tag_service_index.append(index)
-            request.session['tag_service_index'] = tag_service_index
-
-            # return redirect(next(iter(tag_service[0])))
             tag_service.append({'data': None})
-
-
-            response = redirect(next(iter(tag_service[index + 1])))
-            response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+            response = get_response_with_get_params(request)
             return response
-
-            #return redirect(next(iter(tag_service[0])))
-            #return redirect(next(iter(tag_service[index+1])))
     else:
         sreda = request.session['sreda']
         try:
@@ -1137,22 +1014,7 @@ def csw(request):
                 logic_replace_csw = False
 
         tag_service = request.session['tag_service']
-        prev_page = request.GET.get('prev_page')
-        index = int(request.GET.get('index'))
-        tag_service_index = request.session['tag_service_index']
-        if request.GET.get('next_page') is None:
-            print('tag_service_index in get in forward')
-            print(tag_service_index)
-        else:
-            prev_page = next(iter(tag_service[index - 1]))
-            index -= 1
-            tag_service_index.pop()
-            tag_service.pop()
-            request.session['tag_service_index'] = tag_service_index
-            request.session['tag_service'] = tag_service
-            print('tag_service_index in get in backward')
-            print(tag_service_index)
-
+        request, prev_page, index = backward_page(request)
         if sreda == '2' or sreda == '4':
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '6'})
         else:
@@ -1190,8 +1052,6 @@ def data(request):
     if request.session.get('counter_line_hotspot'):
         counter_line_services += request.session['counter_line_hotspot']
     request.session['counter_line_services'] = counter_line_services
-    print('data counter')
-    print(counter_line_services)
     if request.session.get('result_services'):
         del request.session['result_services']
     if request.session.get('result_services_ots'):
@@ -1311,14 +1171,6 @@ def data(request):
     if manlink:
         return redirect('unsaved_data')
     else:
-        # tag_service_index = request.session['tag_service_index']
-        # tag_service = request.session['tag_service']
-        # print('tag_service in data')
-        # print(tag_service)
-        # index = tag_service_index[-1]
-        # response = redirect(saved_data)
-        # response['Location'] += f'?cur={next(iter(tag_service[index]))}&index={index}'
-        # return response
         return redirect('saved_data')
 
 
@@ -1663,7 +1515,6 @@ def hotspot(request):
     """Данный метод отображает html-страничку c формой для заполнения данных по услуге Хот-спот"""
     if request.method == 'POST':
         hotspotform = HotspotForm(request.POST)
-
         if hotspotform.is_valid():
             hotspot_points = hotspotform.cleaned_data['hotspot_points']
             hotspot_users = hotspotform.cleaned_data['hotspot_users']
@@ -1683,7 +1534,6 @@ def hotspot(request):
             request.session['exist_hotspot_client'] = exist_hotspot_client
             response = get_response_with_get_params(request)
             return response
-
     else:
         hotspot_points = request.session['hotspot_points']
         hotspot_users = request.session['hotspot_users']
@@ -1757,19 +1607,16 @@ def phone(request):
                             if {'vols': None} in tag_service:
                                 pass
                             else:
-                                #tag_service.insert(1, {'vols': None})
                                 tag_service.insert(current_index_local + 1, {'vols': None})
                         elif sreda == '3':
                             if {'wireless': None} in tag_service:
                                 pass
                             else:
-                                #tag_service.insert(1, {'wireless': None})
                                 tag_service.insert(current_index_local + 1, {'wireless': None})
                         elif sreda == '1':
                             if {'copper': None} in tag_service:
                                 pass
                             else:
-                                #tag_service.insert(1, {'copper': None})
                                 tag_service.insert(current_index_local + 1, {'copper': None})
                         if {'data': None} in tag_service:
                             tag_service.remove({'data': None})
@@ -1789,7 +1636,6 @@ def phone(request):
                             pass
                         else:
                             tag_service.insert(current_index_local + 1, {'copper': None})
-                            #tag_service.insert(1, {'copper': None})
                     elif type_phone == 'ab':
                         if new_job_services:
                             for ind in range(len(new_job_services)):
@@ -1812,13 +1658,6 @@ def phone(request):
             request.session['channel_vgw'] = channel_vgw
             request.session['ports_vgw'] = ports_vgw
             request.session['type_phone'] = type_phone
-            #tag_service = request.session['tag_service']
-            #tag_service.pop(0)
-            # tag_service_back = request.session['tag_service_back']
-            # tag_service_back.append(tag_service.pop(0))
-            # request.session['tag_service_back'] = tag_service_back
-            # request.session['tag_service'] = tag_service
-            # return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
     else:
@@ -1892,7 +1731,13 @@ def local(request):
             tag_service = request.session['tag_service']
             current_index_local = request.session['current_index_local']
             service = request.session['current_service']
+            services_plus_desc = request.session['services_plus_desc']
+            new_job_services = request.session.get('new_job_services')
             if local_type == 'СКС':
+                if service not in services_plus_desc:
+                    if new_job_services:
+                        new_job_services.append(service)
+                    services_plus_desc.append(service)
                 if {'lvs': service} in tag_service:
                     tag_service.remove({'lvs': service})
                 if {'sks': service} not in tag_service:
@@ -1900,6 +1745,10 @@ def local(request):
                 response = get_response_with_get_params(request)
                 return response
             elif local_type == 'ЛВС':
+                if service not in services_plus_desc:
+                    if new_job_services:
+                        new_job_services.append(service)
+                    services_plus_desc.append(service)
                 if {'sks': service} in tag_service:
                     tag_service.remove({'sks': service})
                 if {'lvs': service} not in tag_service:
@@ -1907,12 +1756,13 @@ def local(request):
                 response = get_response_with_get_params(request)
                 return response
             else:
-                new_job_services = request.session.get('new_job_services')
+                if {'lvs': service} in tag_service:
+                    tag_service.remove({'lvs': service})
+                if {'sks': service} in tag_service:
+                    tag_service.remove({'sks': service})
                 if new_job_services:
                     new_job_services[:] = [x for x in new_job_services if not x.startswith('ЛВС')]
-                services_plus_desc = request.session['services_plus_desc']
                 services_plus_desc[:] = [x for x in services_plus_desc if not x.startswith('ЛВС')]
-                request.session['services_plus_desc'] = services_plus_desc
                 response = get_response_with_get_params(request)
                 return response
     else:
@@ -2060,7 +1910,6 @@ def cks(request):
             service = request.session['current_service']
             all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks, 'type_cks': type_cks, 'exist_service': exist_service}})
             request.session['all_cks_in_tr'] = all_cks_in_tr
-
             response = get_response_with_get_params(request)
             return response
     else:
@@ -2069,12 +1918,9 @@ def cks(request):
         credent = cache.get(user)
         username = credent['username']
         password = credent['password']
-
         service_name = 'cks'
         request, service, prev_page, index = backward_page_service(request, service_name)
         request.session['current_service'] = service
-
-
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
 
@@ -2130,9 +1976,6 @@ def shpd(request):
             service = request.session['current_service']
             all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
             request.session['all_shpd_in_tr'] = all_shpd_in_tr
-            print('shpd before resp')
-            print(request.session['tag_service'])
-            print(request.session['tag_service_index'])
             response = get_response_with_get_params(request)
             return response
     else:
@@ -2151,37 +1994,6 @@ def shpd(request):
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
         return render(request, 'tickets/shpd.html', context)
-
-
-def backward_page_service(request, service_name):
-    index = int(request.GET.get('index'))
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
-    if request.GET.get('next_page'):
-        prev_page = next(iter(tag_service[index - 1]))
-        service = tag_service[index][service_name]
-        index -= 1
-        tag_service_index.pop()
-        request.session['tag_service_index'] = tag_service_index
-    else:
-        prev_page = request.GET.get('prev_page')
-        service = tag_service[index + 1][service_name]
-    return request, service, prev_page, index
-
-def backward_page(request):
-    index = int(request.GET.get('index'))
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
-    if request.GET.get('next_page'):
-        prev_page = next(iter(tag_service[index - 1]))
-        index -= 1
-        tag_service_index.pop()
-        tag_service.pop()
-        request.session['tag_service_index'] = tag_service_index
-        request.session['tag_service'] = tag_service
-    else:
-        prev_page = request.GET.get('prev_page')
-    return request, prev_page, index
 
 
 def portvk(request):
@@ -2243,10 +2055,6 @@ def portvm(request):
             request.session['vm_inet'] = vm_inet
             request.session['type_portvm'] = type_portvm
             request.session['exist_service_vm'] = exist_service_vm
-            # tag_service = request.session['tag_service']
-            # tag_service.pop(0)
-            # request.session['tag_service'] = tag_service
-            # return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
     else:
@@ -2254,11 +2062,6 @@ def portvm(request):
         service_name = 'portvm'
         request, service, prev_page, index = backward_page_service(request, service_name)
         request.session['current_service'] = service
-        # services_plus_desc = request.session['services_plus_desc']
-        # services_vm = []
-        # for service in services_plus_desc:
-        #     if 'Порт ВМ' in service:
-        #         services_vm.append(service)
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         portvmform = PortVMForm()
@@ -2288,10 +2091,6 @@ def video(request):
             request.session['deep_archive'] = deep_archive
             request.session['camera_place_one'] = camera_place_one
             request.session['camera_place_two'] = camera_place_two
-            # tag_service = request.session['tag_service']
-            # tag_service.pop(0)
-            # request.session['tag_service'] = tag_service
-            # return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
     else:
@@ -2299,12 +2098,6 @@ def video(request):
         service_name = 'video'
         request, service, prev_page, index = backward_page_service(request, service_name)
         request.session['current_service'] = service
-        # services_plus_desc = request.session['services_plus_desc']
-        # for service in services_plus_desc:
-        #     if 'Видеонаблюдение' in service:
-        #         service_video = service
-        #         request.session['service_video'] = service_video
-        #         break
         task_otpm = request.session['task_otpm']
         videoform = VideoForm()
         context = {
@@ -3242,7 +3035,6 @@ def project_tr_exist_cl(request):
     pass_job_services = request.session['pass_job_services']
     change_job_services = request.session['change_job_services']
     type_pass = []
-    #tag_service = []
     tag_service = request.session['tag_service']
     if pass_job_services:
         type_pass.append('Перенос, СПД')
@@ -3285,8 +3077,6 @@ def project_tr_exist_cl(request):
         type_pass.append('Изменение, не СПД')
         tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
-            #tag_service.insert(1, tag)
-            #tag_service.insert(1, {'change_serv': None})
             tag_service.insert(1, {'change_serv': tag})
         tag_service.append({'data': None})
 
@@ -3296,14 +3086,10 @@ def project_tr_exist_cl(request):
     request.session['sreda'] = sreda
     request.session['type_pass'] = type_pass
     request.session['tag_service'] = tag_service
-    print('tag_service in proj exist')
-    print(tag_service)
     tag_service_index = []
     index = 0
     tag_service_index.append(index)
     request.session['tag_service_index'] = tag_service_index
-    #next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-    #return redirect(next(iter(tag_service[1])))
     response = get_response_with_prev_get_params(request)
     return response
 
@@ -3337,16 +3123,11 @@ def change_serv(request):
             tag_service = request.session['tag_service']
             current_index_local = request.session['current_index_local']
 
-            print('next iter tag values')
-            print(next(iter(tag_service[current_index_local].values())))
-            print('types_change_service')
-            print(types_change_service)
             if type_change_service in types_cks_vk_vm_trunk or type_change_service == "Организация доп IPv6":
                 tag_service.insert(current_index_local + 1, next(iter(tag_service[current_index_local].values())))
                 types_change_service.append(
                     {type_change_service: next(iter(tag_service[current_index_local + 1].values()))}
                 )
-
             elif type_change_service in types_only_mask:
                 tag_service.insert(current_index_local + 1, {'change_params_serv': None})
                 types_change_service.append(
@@ -3361,32 +3142,20 @@ def change_serv(request):
     else:
         changeservform = ChangeServForm()
         tag_service = request.session['tag_service']
-        print('tag_service')
-        print(tag_service)
         service_name = 'change_serv'
         request, service, prev_page, index = backward_page_service(request, service_name)
         current_index_local = index + 1
-        print('tag_service[current_index_local]')
-        print(tag_service[current_index_local])
         if request.GET.get('next_page') and \
                 next(iter(tag_service[current_index_local].values())) == tag_service[current_index_local+1]:
             removed_tag = tag_service.pop(current_index_local+1)
-            print('removed_tag')
-            print(removed_tag)
             types_change_service = request.session.get('types_change_service')
             for type_change_service in types_change_service:
-                print('type_change_service')
-                print(type_change_service)
                 if next(iter(type_change_service.values())) == next(iter(removed_tag.values())):
                     types_change_service.remove(type_change_service)
-            print('types_change_service')
-            print(types_change_service)
         elif request.GET.get('next_page') and tag_service[current_index_local+1] == {'change_params_serv': None}:
             types_change_service = request.session.get('types_change_service')
             tag_service.pop(current_index_local + 1)
             for type_change_service in types_change_service:
-                print('type_change_service')
-                print(type_change_service)
                 if next(iter(type_change_service.values())) == tag_service[current_index_local]['change_serv']:
                     types_change_service.remove(type_change_service)
         request.session['current_index_local'] = current_index_local
@@ -3412,56 +3181,27 @@ def change_params_serv(request):
             request.session['routed_ip'] = routed_ip
             request.session['routed_vrf'] = routed_vrf
             tag_service = request.session['tag_service']
-            # tag_service.pop(0)
             if {'data': None} not in tag_service:
                 tag_service.append({'data': None})
-            #request.session['tag_service'] = tag_service
-            #return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
     else:
         head = request.session['head']
+        tag_service = request.session['tag_service']
         types_change_service = request.session['types_change_service']
         request, prev_page, index = backward_page(request)
-        print('types_change_service')
-        print(types_change_service)
+        only_mask = False
+        routed = False
         for i in range(len(types_change_service)):
-            types_cks_vk_vm_trunk = [
-                "Организация порта ВМ trunk'ом",
-                "Организация порта ВЛС trunk'ом",
-                "Организация ЦКС trunk'ом",
-                "Организация ШПД trunk'ом",
-                "Организация ШПД trunk'ом с простоем",
-                "Организация ЦКС trunk'ом с простоем",
-                "Организация порта ВЛС trunk'ом с простоем",
-                "Организация порта ВМ trunk'ом с простоем"
-            ]
-            # if next(iter(types_change_service[i].keys())) in types_cks_vk_vm_trunk:
-            #     tag_service = request.session['tag_service']
-            #     tag_service.pop(0)
-            #     if next(iter(types_change_service[i].keys())) == "Организация ШПД trunk'ом":
-            #         tag_service.pop(0)
-            #     request.session['tag_service'] = tag_service
-            #     return redirect(next(iter(tag_service[0])))
-
             types_only_mask = ["Организация доп connected",
                                "Замена connected на connected",
                                "Изменение cхемы организации ШПД"
                                ]
             if next(iter(types_change_service[i].keys())) in types_only_mask:
                 only_mask = True
-                tag_service = request.session['tag_service']
-                #tag_service.pop(index + 2)
-                request.session['tag_service'] = tag_service
-            else:
-                only_mask = False
             if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
                 routed = True
-                tag_service = request.session['tag_service']
-                #tag_service.pop(index + 2)
-                request.session['tag_service'] = tag_service
-            else:
-                routed = False
+
         changeparamsform = ChangeParamsForm()
         context = {
             'head': head,
@@ -3499,7 +3239,6 @@ def change_log_shpd(request):
                 tag_service.append({'csw': None})
             elif tag_service[-1] == {'change_log_shpd': None}:
                 tag_service.append({'data': None})
-            # return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
     else:
@@ -3540,11 +3279,8 @@ def params_extend_service(request):
             request.session['extend_policer_cks_vk'] = extend_policer_cks_vk
             request.session['extend_policer_vm'] = extend_policer_vm
             tag_service = request.session['tag_service']
-            #tag_service.pop(0)
             if tag_service[-1] == {'params_extend_service': None}:
                 tag_service.append({'data': None})
-            #request.session['tag_service'] = tag_service
-            #return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
 
@@ -3556,7 +3292,6 @@ def params_extend_service(request):
         request, prev_page, index = backward_page(request)
         context = {
             'desc_service': desc_service,
-            #'services_cks': service,
             'pass_job_services': pass_job_services,
             'extendserviceform': extendserviceform,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
@@ -3582,9 +3317,7 @@ def pass_serv(request):
             selected_ono = request.session['selected_ono']
             type_pass = request.session['type_pass']
             sreda = request.session['sreda']
-            #tag_service.pop(0)
             if 'Перенос, СПД' not in type_pass:
-                #return redirect(next(iter(tag_service[0])))
                 if tag_service[-1] == {'pass_serv': None}:
                     tag_service.append({'csw': None})
                 response = get_response_with_get_params(request)
@@ -3596,15 +3329,11 @@ def pass_serv(request):
                         desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
                             request.session['desc_service'] = desc_service
-                            #tag_service.insert(1, {'params_extend_service': None})
                             tag_service.append({'params_extend_service': None})
-                            #return redirect(next(iter(tag_service[0])))
                             response = get_response_with_get_params(request)
                             return response
                     elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and request.session.get('turnoff'):
-                        #tag_service.insert(0, {'pass_turnoff': None})
                         tag_service.append({'pass_turnoff': None})
-                        #return redirect(next(iter(tag_service[0])))
                         response = get_response_with_get_params(request)
                         return response
                 else:
@@ -3612,14 +3341,9 @@ def pass_serv(request):
                         desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
                             request.session['desc_service'] = desc_service
-                            #tag_service.insert(0, {'params_extend_service': None})
-                            print('in pass')
-                            print(tag_service_index)
-                            print(tag_service)
                             tag_service.append({'params_extend_service': None})
                     phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
                     if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
-                        #tag_service.insert(0, {'phone': ''.join(phone_in_pass)})
                         tag_service.insert(tag_service_index + 1, {'phone': ''.join(phone_in_pass)})
                         request.session['phone_in_pass'] = ' '.join(phone_in_pass)
                     if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
@@ -3635,9 +3359,6 @@ def pass_serv(request):
                             tag_service.append({'wireless': None})
                 if tag_service[-1] == {'pass_serv': None}:
                     tag_service.append({'data': None})
-                print('tag_service in pass_serv')
-                print(tag_service)
-                #return redirect(next(iter(tag_service[0])))
                 response = get_response_with_get_params(request)
                 return response
     else:
@@ -3647,8 +3368,6 @@ def pass_serv(request):
         tag_service = request.session['tag_service']
         request, prev_page, index = backward_page(request)
         passservform = PassServForm()
-        print('backlink')
-        print(next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}')
         context = {
             'passservform': passservform,
             'oattr': oattr,
@@ -3670,14 +3389,8 @@ def pass_turnoff(request):
             tag_service = request.session['tag_service']
             if tag_service[-1] == {'pass_turnoff': None}:
                 tag_service.append({'data': None})
-            # tag_service.pop(0)
-            # if len(tag_service) == 0:
-            #     tag_service.append({'data': None})
-            # request.session['tag_service'] = tag_service
-            # return redirect(next(iter(tag_service[0])))
             response = get_response_with_get_params(request)
             return response
-
     else:
         oattr = request.session['oattr']
         pps = request.session['pps']
