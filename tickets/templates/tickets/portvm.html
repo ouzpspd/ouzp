@@ -7,11 +7,10 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_vm|length}}">Услуг{{ services_vm|length|pluralize:"а,и" }}</th>
-      {% for i in services_vm%}
-        <td class="table-light" style="width: 75%">{{i}}</td>
+        <th class="table-secondary text-right" style="width: 25%">Услуга</th>
+        <td class="table-light" style="width: 75%">{{services_vm}}</td>
+
     </tr>
-  {% endfor %}
   </tbody>
 </table>
 
@@ -77,9 +76,16 @@
             </div>
         </div>
         {% endif %}
-        <div class="row mt-3">
-            <div class="col-4">
-                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                </div>
             </div>
         </div>
     </div>

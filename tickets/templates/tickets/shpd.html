@@ -28,6 +28,7 @@
     <div class="container">
 
         {% if trunk_turnoff_off %}
+        <p>Параметры не требуются</p>
         {% elif trunk_turnoff_on %}
         <div class="row">
             <div class="col-4 mb-1">
@@ -56,9 +57,17 @@
         </div>
         {% endif %}
 
-        <div class="row mt-3">
-            <div class="col-4">
-                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                </div>
             </div>
         </div>
     </div>

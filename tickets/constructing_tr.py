@@ -926,7 +926,7 @@ def exist_enviroment_passage_csw(value_vars):
     services, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, change_log_shpd)
     if service_shpd_change:
         hidden_vars['- Выделить новую адресацию с маской %указать новую маску% вместо %указать существующий ресурс%.'] = '- Выделить новую адресацию с маской %указать новую маску% вместо %указать существующий ресурс%.'
-        static_vars['указать новую маску'] = '/32' if change_log_shpd == 'Новая подсеть /32' else '/30'
+        static_vars['указать новую маску'] = '/32'
         static_vars['указать существующий ресурс'] = ' '.join(service_shpd_change)
         hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
         hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'

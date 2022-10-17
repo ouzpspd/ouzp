@@ -8,6 +8,7 @@ from .parsing import get_contract_resources
 from .parsing import get_sw_config
 
 from collections import OrderedDict
+from django.shortcuts import redirect
 
 
 def add_portconfig_to_list_swiches(list_switches, username, password):
@@ -581,3 +582,65 @@ def get_vlan_4094_and_description(switch_config, model):
     return config_ports_device
 
 
+def backward_page_service(request, service_name):
+    """Данный метод аналогичен методу backward_page, но используется для страниц сервисов. Отличие в том, что следующая
+    страница в последовательности tag_service не удаляется, т.к. список сервисов формируется только в начале и
+    удаленный сервис не попадет в итоговое ТР"""
+    index = int(request.GET.get('index'))
+    tag_service = request.session['tag_service']
+    tag_service_index = request.session['tag_service_index']
+    if request.GET.get('next_page'):
+        prev_page = next(iter(tag_service[index - 1]))
+        service = tag_service[index][service_name]
+        index -= 1
+        tag_service_index.pop()
+        request.session['tag_service_index'] = tag_service_index
+    else:
+        prev_page = request.GET.get('prev_page')
+        service = tag_service[index + 1][service_name]
+    return request, service, prev_page, index
+
+
+def backward_page(request):
+    """Данный метод возвращает значения для GET параметров(предыдущая страница и ее индекс), которые будут переданы
+    в url кнопки Вернуться. Для определения этих параметров, проверяется наличие GET параметра next_page.
+    В случае если next_page не существует в кнопку Вернуться передаются соответствующие значения из GET параметров.
+    В слугчае ссли next_page существует, это означает, что на данную страницу перешли не с предыдущей, а со следующей
+    по кнопке Вернуться. В этом случае в кнопку Вернуться передается уменьшенный индекс и из последовательности страниц
+    tag_service удаляется следующая страница"""
+    index = int(request.GET.get('index'))
+    tag_service = request.session['tag_service']
+    tag_service_index = request.session['tag_service_index']
+    if request.GET.get('next_page'):
+        prev_page = next(iter(tag_service[index - 1]))
+        index -= 1
+        tag_service_index.pop()
+        tag_service.pop()
+        request.session['tag_service_index'] = tag_service_index
+        request.session['tag_service'] = tag_service
+    else:
+        prev_page = request.GET.get('prev_page')
+    return request, prev_page, index
+
+
+def get_response_with_get_params(request):
+    """Данный метод создает индекс для отображаемой страницы и при редиректе на новую страницу добавляет в url
+     GET параметры текущей страницы и ее индекс"""
+    tag_service = request.session['tag_service']
+    tag_service_index = request.session['tag_service_index']
+    index = tag_service_index[-1] + 1
+    tag_service_index.append(index)
+    response = redirect(next(iter(tag_service[index + 1])))
+    response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+    return response
+
+
+def get_response_with_prev_get_params(request):
+    """Данный метод не создает новый индекс для отображаемой страницы и при редиректе на новую страницу добавляет в url
+    GET параметры текущей страницы и предыдущий индекс"""
+    tag_service = request.session['tag_service']
+    tag_service_index = request.session['tag_service_index']
+    index = tag_service_index[-1]
+    response = redirect(next(iter(tag_service[index + 1])))
+    response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+    return response
