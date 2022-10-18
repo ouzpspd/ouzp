@@ -1661,6 +1661,7 @@ def phone(request):
             response = get_response_with_get_params(request)
             return response
     else:
+
         if request.session.get('counter_line_phone'):
             del request.session['counter_line_phone']
         services_plus_desc = request.session['services_plus_desc']
@@ -1702,10 +1703,26 @@ def phone(request):
         tag_service = request.session['tag_service']
         service_name = 'phone'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if request.GET.get('next_page'):
+            clear_session_params(
+                request,
+                'type_phone',
+                'vgw',
+                'channel_vgw',
+                'ports_vgw',
+                'type_ip_trunk',
+                'form_exist_vgw_model',
+                'form_exist_vgw_name',
+                'form_exist_vgw_port',
+                'phone_in_pass'
+            )
         request.session['current_service'] = service
         request.session['current_index_local'] = index + 1
-        counter_line_services = request.session['counter_line_services']
-        request.session['counter_line_services_before_phone'] = counter_line_services
+        counter_line_services = request.session.get('counter_line_services')
+        if counter_line_services:
+            request.session['counter_line_services_before_phone'] = counter_line_services
+        else:
+            request.session['counter_line_services_before_phone'] = 0
         phoneform = PhoneForm(initial={
                                 'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw
                             })
@@ -3344,7 +3361,7 @@ def pass_serv(request):
                             tag_service.append({'params_extend_service': None})
                     phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
                     if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
-                        tag_service.insert(tag_service_index + 1, {'phone': ''.join(phone_in_pass)})
+                        tag_service.append({'phone': ''.join(phone_in_pass)})
                         request.session['phone_in_pass'] = ' '.join(phone_in_pass)
                     if any(tag in tag_service for tag in [{'copper': None}, {'vols': None}, {'wireless': None}]):
                         pass

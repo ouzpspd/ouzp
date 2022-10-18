@@ -644,3 +644,10 @@ def get_response_with_prev_get_params(request):
     response = redirect(next(iter(tag_service[index + 1])))
     response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
     return response
+
+
+def clear_session_params(request, *args):
+    """Данный метод удаляет из сессии полученные ключи"""
+    for param in args:
+        if request.session.get(param):
+            del request.session[param]
