@@ -523,7 +523,7 @@ def get_extra_service_port_csw(service_port, switch_config, model):
 def get_vlan_4094_and_description(switch_config, model):
     """Данный метод на основе модели КАД подставляет соответствующие regex для формирования данных по портам КАД"""
     if 'SNR' in model or 'Cisco' in model or 'Orion' in model:
-        regex_description = '\wnterface (\S+\/\S+)(.+?)!'
+        regex_description = '\wnterface (\S+\/\S+)(.+?\n)!'
         match_description = re.finditer(regex_description, switch_config, flags=re.DOTALL)
         # чтобы найти description блок интерфейса разделяется по \r\n, если не получается разделить, разделяется по \n
         config_ports_device = {}
@@ -533,14 +533,14 @@ def get_vlan_4094_and_description(switch_config, model):
                 if len(desc) == 1:
                     desc = i.group(2).split('\n')
                     if 'description' in desc[1]:
-                        desc = i.group(2).split('\n')[1].split()[1]
+                        desc = i.group(2).split('\n')[1][12:]  # 12 - длина description с пробелом
                     else:
-                        desc = i.group(2).split('\n')[2].split()[1]
+                        desc = i.group(2).split('\n')[2][12:]
                 else:
                     if 'description' in desc[1]:
-                        desc = i.group(2).split('\r\n')[1].split()[1]
+                        desc = i.group(2).split('\r\n')[1][12:]
                     else:
-                        desc = i.group(2).split('\r\n')[2].split()[1]
+                        desc = i.group(2).split('\r\n')[2][12:]
             else:
                 desc = '-'
             if 'switchport access vlan 4094' in i.group(2):

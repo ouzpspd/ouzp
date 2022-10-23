@@ -34,6 +34,7 @@ from .parsing import _counter_line_services
 from .constructing_tr import *
 from .constructing_tr import _separate_services_and_subnet_dhcp
 from .constructing_tr import _titles
+from .constructing_tr import _passage_services
 
 from .utils import *
 from .utils import _replace_wda_wds
@@ -667,7 +668,7 @@ def vols(request):
                     selected_ono = request.session['selected_ono']
                     if 'Перенос, СПД' in type_pass:
                         type_passage = request.session['type_passage']
-                        if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
+                        if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw, logic_replace_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
                             service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -',
@@ -1073,6 +1074,16 @@ def data(request):
             counter_line_services = value_vars.get('counter_exist_line')
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
+        elif value_vars.get('logic_replace_csw'):# and value_vars.get('logic_change_gi_csw'):
+            #value_vars.update(({'services_plus_desc': value_vars.get('new_job_services')}))
+            #result_services, result_services_ots, value_vars = extra_services_with_replace_csw(value_vars)
+            result_services, value_vars = exist_enviroment_replace_csw(value_vars)
+            if value_vars.get('type_passage') == 'Перевод на гигабит' and value_vars.get(
+                    'change_log') == 'Порт/КАД меняются':
+                value_vars.update({'result_services': result_services})
+                result_services, result_services_ots, value_vars = extend_service(value_vars)
+            # result_services, value_vars = _passage_services(result_services, value_vars)
+            # result_services_ots = value_vars.get('result_services_ots')
         elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
             counter_line_services = 0 # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
             value_vars.update({'counter_line_services': counter_line_services})
@@ -3384,6 +3395,13 @@ def pass_serv(request):
         head = request.session['head']
         tag_service = request.session['tag_service']
         request, prev_page, index = backward_page(request)
+        if request.GET.get('next_page'):
+            clear_session_params(
+                request,
+                'type_passage',
+                'change_log',
+                'exist_sreda',
+            )
         passservform = PassServForm()
         context = {
             'passservform': passservform,
