@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'ppr' %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{pprform.new_ppr.id_for_label}}">Новая ППР</label>
+                    {{pprform.new_ppr}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-8 mb-2">
+                <div class="form-group">
+                    <label for="{{pprform.title_ppr.id_for_label}}">Поле Кратко ППР</label>
+                    {{pprform.title_ppr}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mt-3">
+                <div class="form-group">
+                    <label for="{{pprform.exist_ppr.id_for_label}}">Cуществующая ППР</label>
+                    {{pprform.exist_ppr}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+  </div>
+</div>
+</div>
+{% endblock %}

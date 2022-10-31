@@ -412,3 +412,14 @@ class SearchTicketsForm(forms.Form):
                                     'data-target': '#datetimepicker2'
                                 })
                                 )
+
+
+class PprForm(forms.Form):
+    new_ppr = forms.BooleanField(label='Новая ППР', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    title_ppr = forms.CharField(label='Поле Кратко ППР', required=False,
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    exist_ppr = forms.CharField(label='Cуществующая ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+
+class AddResourcesPprForm(forms.Form):
+    ppr_resources = forms.CharField(label='Массовое добавление ресурсов и линков', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))

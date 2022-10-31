@@ -651,3 +651,60 @@ def clear_session_params(request, *args):
     for param in args:
         if request.session.get(param):
             del request.session[param]
+
+
+def get_services(file):
+    """Выборка ресурсов и получение из них пар(договор, реквизиты)"""
+    disable_list = file.split('\r\n')
+    services = []
+    while True:
+        if '' in disable_list:
+            disable_list.remove('')
+        else:
+            break
+    for disable_resource in disable_list:
+        if ', IP-адрес или подсеть;' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split(', IP-адрес или подсеть;')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        elif 'IP-адрес или подсеть' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split('IP-адрес или подсеть ')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        elif ', Etherline;' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split(', Etherline;')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        elif 'Etherline' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split('Etherline ')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        elif ', Порт виртуального коммутатора;' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split(', Порт виртуального коммутатора;')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        elif 'Порт виртуального коммутатора' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split('Порт виртуального коммутатора ')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        elif ', Предоставление в аренду оптического воло;' in disable_resource:
+            contract, ppr_resource = disable_resource.strip('"').split(', Предоставление в аренду оптического воло;')
+            services.append((contract, ppr_resource, disable_resource.strip('"')))
+    return services
+
+
+def get_links(file):
+    """Выборка линков и получение из них данных об одной стороне линка(коммутатор, порт)"""
+    disable_list = file.split('\n')
+    links = []
+    while True:
+        if '' in disable_list:
+            disable_list.remove('')
+        else:
+            break
+    for disable_resource in disable_list:
+        if '-->' in disable_resource:
+            sw = disable_resource.split('-->')[0].split(',')[-2].strip()
+            port = disable_resource.split('-->')[0].split(',')[-1].strip()
+            links.append((sw, port, disable_resource))
+        elif ' - ' in disable_resource:
+            parts_link = disable_resource.split(' - ')
+            if 'AR' in parts_link[0] and 'AR' in parts_link[1]:
+                sw = parts_link[0].split(',')[-2].strip()
+                port = parts_link[0].split(',')[-1].strip()
+                links.append((sw, port, disable_resource))
+    return links

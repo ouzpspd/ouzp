@@ -4,7 +4,8 @@ from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm,\
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm,\
+    PprForm, AddResourcesPprForm
 
 import logging
 from django.contrib import messages
@@ -19,8 +20,6 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
 
 
-
-import datetime
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms import formset_factory
@@ -1379,6 +1378,7 @@ def edit_tr(request, dID, ticket_spp_id, trID):
         request.session['ticket_tr_id'] = ticket_tr.id
         ortr = ticket_tr.ortrtr_set.all()[0]
         request.session['ortr_id'] = ortr.id
+        request.session['technical_solution'] = trID
         counter_str_ortr = ortr.ortr.count('\n')
         if ortr.ots:
             counter_str_ots = ortr.ots.count('\n')
@@ -1471,6 +1471,7 @@ def manually_tr(request, dID, tID, trID):
             ortr.ticket_tr = ticket_tr
             ortr.save()
             request.session['ortr_id'] = ortr.id
+            request.session['technical_solution'] = trID
             for service in ticket_tr.services:
                 if 'Телефон' in service:
                     counter_str_ots = 10
@@ -2317,6 +2318,7 @@ def add_tr(request, dID, tID, trID):
         ticket_spp_id = request.session['ticket_spp_id']
         ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
         request.session['ticket_tr_id'] = ticket_tr_id
+        request.session['technical_solution'] = trID
         return redirect('project_tr', dID, tID, trID)
 
 
@@ -2980,6 +2982,7 @@ def add_tr_exist_cl(request, dID, tID, trID):
         spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
         request.session['spplink'] = spplink
         request.session['ticket_tr_id'] = ticket_tr_id
+        request.session['technical_solution'] = trID
         return redirect('get_resources')
 
 
@@ -3009,6 +3012,7 @@ def add_tr_not_required(request, dID, tID, trID):
         request.session['oattr'] = oattr
         request.session['ticket_tr_id'] = ticket_tr_id
         request.session['not_required'] = True
+        request.session['technical_solution'] = trID
         return redirect('data')
 
 
@@ -3524,6 +3528,189 @@ def search(request):
             'searchticketsform': searchticketsform
         }
     return render(request, 'tickets/search.html', context)
+
+@cache_check
+def ppr(request):
+    """Данный метод отображает html-страничку c формой для выбора новой или сущ. ППР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        pprform = PprForm(request.POST)
+        if pprform.is_valid():
+            new_ppr = pprform.cleaned_data['new_ppr']
+            title_ppr = pprform.cleaned_data['title_ppr']
+            exist_ppr = pprform.cleaned_data['exist_ppr']
+            if new_ppr and exist_ppr:
+                messages.warning(request, 'Не может быть одновременно новой и существующей ППР')
+                return redirect('ppr')
+            elif new_ppr is False and exist_ppr == '':
+                messages.warning(request, 'Должна быть выбрана либо новая либо существующая ППР')
+                return redirect('ppr')
+            elif exist_ppr:
+                request.session['exist_ppr'] = exist_ppr
+                return redirect('add_resources_to_ppr')
+            if title_ppr == '':
+                messages.warning(request, 'Для новой ППР должно быть заполнено поле Кратко')
+                return redirect('ppr')
+            request.session['title_ppr'] = title_ppr
+            name_id_user_cis = get_name_id_user_cis(username, password, user.last_name)
+            if isinstance(name_id_user_cis, list):
+                request.session['name_id_user_cis'] = name_id_user_cis
+                return redirect('author_id_formset')
+            elif isinstance(name_id_user_cis, dict):
+                request.session['AuthorId'] = name_id_user_cis.get('id')
+                request.session['AuthorName'] = name_id_user_cis.get('value')
+                return redirect('create_ppr')
+            else:
+                if name_id_user_cis == 'Фамилия, указанная в АРМ, в Cordis не найдена':
+                    messages.warning(request, 'Фамилия, указанная в АРМ, в Cordis не найдена')
+                    return redirect('private_page')
+    else:
+        pprform = PprForm()
+        context = {'pprform': pprform,
+                   }
+        return render(request, 'tickets/ppr.html', context)
+
+
+@cache_check
+def author_id_formset(request):
+    """Данный метод отображает форму, в которой пользователь выбирает свои ФИО в Cordis"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    name_id_user_cis = request.session['name_id_user_cis']
+    ListUserCisFormSet = formset_factory(ListContractIdForm, extra=len(name_id_user_cis))
+    if request.method == 'POST':
+        formset = ListUserCisFormSet(request.POST)
+        if formset.is_valid():
+            data = formset.cleaned_data
+            selected_user_cis_id = []
+            selected = zip(name_id_user_cis, data)
+            for name_id_user_cis, data in selected:
+                if bool(data):
+                    selected_user_cis_id.append(name_id_user_cis)
+            if selected_user_cis_id:
+                if len(selected_user_cis_id) > 1:
+                    messages.warning(request, 'Было выбрано более 1 ФИО')
+                    return redirect('author_id_formset')
+                else:
+                    request.session['AuthorId'] = selected_user_cis_id[0].get('id')
+                    request.session['AuthorName'] = selected_user_cis_id[0].get('value')
+                    return redirect('create_ppr')
+            else:
+                messages.warning(request, 'ФИО не выбраны')
+                return redirect('author_id_formset')
+    else:
+        formset = ListUserCisFormSet()
+        context = {
+            'contract_id': name_id_user_cis,
+            'formset': formset,
+        }
+        return render(request, 'tickets/author_id_formset.html', context)
+
+@cache_check
+def create_ppr(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    now = datetime.datetime.now()
+    deadline = now + datetime.timedelta(days=5)
+    deadline = deadline.strftime("%d.%m.%Y %H:%M:%S")
+    authorid = request.session['AuthorId']
+    title_ppr = request.session['title_ppr']
+    authorname = request.session['AuthorName']
+    url = 'https://cis.corp.itmh.ru/mvc/demand/CreateMaintenance'
+    data = {'ExecutorName': f'{authorname}',
+            'ExecutorID': f'{authorid}',
+            'ScheduledIdlePeriod.FromDate': '01.01.2010 0:00',
+            'ScheduledIdlePeriod.TrimDate': '01.01.2010 0:01',
+            'ScheduledIdleSpan': '1м',
+            'Main': f'{title_ppr}',
+            'DemandID': '0',
+            'WorkflowID': '306',
+            'ReturnJSON': '0',
+            'Deadline': deadline,
+            'Priority': '3',
+            'CreateMaintenance': 'Создать'
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(username, password), data=data)
+    if req.status_code == 200 and title_ppr in req.content.decode('utf-8'):
+        last_ppr = search_last_created_ppr(username, password, authorname, authorid)
+        request.session['exist_ppr'] = last_ppr
+        if request.session.get('technical_solution'):
+            tr = request.session.get('technical_solution')
+            add_tr_to_last_created_ppr(username, password, authorname, authorid, title_ppr, deadline, last_ppr, tr)
+        return redirect('add_resources_to_ppr')
+    else:
+        messages.warning(request, 'Не удалось создать ППР')
+        return redirect('private_page')
+
+
+@cache_check
+def add_resources_to_ppr(request):
+    """Данный метод отображает html-страничку c формой для заполнения ППР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        addresourcespprform = AddResourcesPprForm(request.POST)
+        if addresourcespprform.is_valid():
+            ppr_resources = addresourcespprform.cleaned_data['ppr_resources']
+            services = get_services(ppr_resources)
+            links = get_links(ppr_resources)
+            ppr = int(request.session['exist_ppr'])
+            for service in services:
+                result = add_res_to_ppr(ppr, service, username, password)
+                if result[0] == 'added':
+                    messages.success(request, f'{result[1]} добавлено в ППР')
+                elif result[0] == 'error':
+                    messages.warning(request, f'{result[1]} не удалось добавить в ППР')
+                elif result[0] == 'Более одного контракта':
+                    messages.warning(request, f'Более одного контракта {result[1]}, не удалось добавить в ППР')
+
+            for link in links:
+                result = add_links_to_ppr(ppr, link, username, password)
+                if result[0] == 'added':
+                    messages.success(request, f'{result[1]} добавлено в ППР')
+                elif result[0] == 'error':
+                    messages.warning(request, f'{result[1]} не удалось добавить в ППР')
+                elif result[0] == 'не оказалось в списке коммутаторов':
+                    messages.warning(request, f'{result[1]} не оказалось в списке коммутаторов, не удалось добавить в ППР')
+            return redirect('ppr_result')
+
+    else:
+        exist_ppr = request.session.get('exist_ppr')
+        addresourcespprform = AddResourcesPprForm()
+        context = {'addresourcespprform': addresourcespprform,
+                   'exist_ppr': exist_ppr
+                   }
+        return render(request, 'tickets/ppr_resources.html', context)
+
+
+def ppr_result(request):
+    """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
+    exist_ppr = request.session['exist_ppr']
+    next_link = f'https://cis.corp.itmh.ru/index.aspx?demand={exist_ppr}'
+    context = {
+        'next_link': next_link,
+        'exist_ppr': exist_ppr
+    }
+    return render(request, 'tickets/ppr_result.html', context)
+
+
+
+
+
+
+
+
+
+
 
 
 

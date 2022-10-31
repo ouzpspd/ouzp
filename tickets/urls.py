@@ -69,4 +69,9 @@ urlpatterns = [
     path('title/', title_tr, name='title_tr'),
     path('get_title_tr/', get_title_tr, name='get_title_tr'),
     path('add_tr_not_required/<int:dID>/<int:tID>/<int:trID>/', add_tr_not_required, name='add_tr_not_required'),
+    path('ppr/', ppr, name='ppr'),
+    path('create_ppr/', create_ppr, name='create_ppr'),
+    path('ppr_resources/', add_resources_to_ppr, name='add_resources_to_ppr'),
+    path('ppr_result/', ppr_result, name='ppr_result'),
+    path('author_id_formset/', author_id_formset, name='author_id_formset'),
 ]

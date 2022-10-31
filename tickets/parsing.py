@@ -2,6 +2,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import re
 from bs4 import BeautifulSoup
+import datetime
 
 
 
@@ -50,11 +51,14 @@ def parse_tr(login, password, url):
         parsed = req.content.decode('utf-8')
         # Получение данных среды передачи с блока "ОТПМ"
         sreda = None
-        regex_env = 'Время на реализацию, дней</td>\r\n<td colspan="2">\d</td>\r\n</tr>\r\n\r\n\r\n\r\n\r\n\r\n<tr av_req="1">\r\n<td colspan="3" align="left">\r\n(.+)</td>\r\n</tr>\r\n\r\n\r\n\r\n<tr obt_req'
+        wer = []
+        wer.append(req.content.decode('utf-8'))
+        regex_env = 'Время на реализацию, дней</td>\r\n<td colspan="2">\d+</td>\r\n</tr>\r\n\r\n\r\n\r\n\r\n\r\n<tr av_req="1">\r\n<td colspan="3" align="left">\r\n(.+)</td>\r\n</tr>\r\n\r\n\r\n\r\n<tr obt_req'
         match_env = re.search(regex_env, parsed, flags=re.DOTALL)
         try:
             oattr = match_env.group(1)
             oattr = oattr.replace('<br />', '').replace('&quot;', '"').replace('&amp;', '&')
+
             if ((not 'ОК' in oattr) and ('БС ' in oattr)) or (
                     (not 'ОК' in oattr) and ('радио' in oattr)) or (
                     (not 'ОК' in oattr) and ('радиоканал' in oattr)) or ((not 'ОК' in oattr) and ('антенну' in oattr)):
@@ -698,3 +702,131 @@ def get_connection_point(dID, tID, username, password):
         point = soup.find('a', id=f"Point_{tID}")
         connection_point = point.text.strip()
         return connection_point
+
+
+def get_name_id_user_cis(login, password, last_name):
+    """Данный метод выполняет запрос в Cordis по фамилии указанной в АРМ и получает подходящие имя и id пользователя"""
+    url = f'https://cis.corp.itmh.ru/Autocomplete/Manager/?term={last_name}&only_enabled=true'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    last_name_list = req.json()
+    if len(last_name_list) > 1:
+        name_id_user_cis = last_name_list
+    elif len(last_name_list) == 0:
+        name_id_user_cis = 'Фамилия, указанная в АРМ, в Cordis не найдена'
+    else:
+        name_id_user_cis = {'id': last_name_list[0].get('id'), 'name': last_name_list[0].get('value')}
+    return name_id_user_cis
+
+
+def add_res_to_ppr(ppr, service, login, password):
+    """Добавление ресурса в ППР"""
+    contract, ppr_resource, disable_resource = service
+    url_contract = f'https://cis.corp.itmh.ru/mvc/Autocomplete/ContractByFullName?term={contract}'
+    req_contract = requests.get(url_contract, verify=False, auth=HTTPBasicAuth(login, password))
+    contract_list = req_contract.json()
+
+    if len(contract_list) == 1:
+        id_contract = (contract_list[0]['ID'])
+
+        url_id_contract = f'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceSimList?contract={id_contract}'
+        req = requests.get(url_id_contract, verify=False, auth=HTTPBasicAuth(login, password))
+        resources = req.json()
+
+        for resource in resources:
+            if resource['SimName'] == ppr_resource:
+                url = 'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceObjectAddSim'
+                data = {'contract_name': contract, 'sim': resource['Sim'], 'demand': ppr}
+                req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+                if req.status_code == 200:
+                    return ('added', disable_resource)
+                return ('error', disable_resource)
+    return ('Более одного контракта', contract_list)
+
+
+def add_links_to_ppr(ppr, link, login, password):
+    """Добавление линка в ППР"""
+    sw, ppr_port, disable_resource = link
+    url_sw = f'https://cis.corp.itmh.ru/mvc/Autocomplete/EnabledSwitchWithNodeName?term={sw}'
+    req_contract = requests.get(url_sw, verify=False, auth=HTTPBasicAuth(login, password))
+    sw_list = req_contract.json()
+    for found_sw in sw_list:
+        if found_sw['Name'] == sw:
+            id_sw = (found_sw['ID'])
+            url_id_ports = f'https://cis.corp.itmh.ru/mvc/Autocomplete/SwitchPort?device={id_sw}&has_links=true'
+            req = requests.get(url_id_ports, verify=False, auth=HTTPBasicAuth(login, password))
+            ports = req.json()
+            found_ports = []
+            for port in ports:
+                if ppr_port in port['Name']:
+                    found_ports.append(port)
+            for found_port in found_ports:
+                url = 'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceObjectAddLink'
+                data = {'device_name': sw, 'device_port': found_port['id'], 'demand': ppr}
+                req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+
+                if f'{sw} [<span class="port_name">{ppr_port}</span>]' in req.content.decode('utf-8'):
+                    return ('added', disable_resource)
+            return ('error', disable_resource)
+    return ('не оказалось в списке коммутаторов', sw)
+
+
+def search_last_created_ppr(login, password, authorname, authorid):
+    """Данный метод выполняет поиск последней созданной ППР"""
+    last_ppr = None
+    now = datetime.datetime.now()
+    now = now.strftime("%d.%m.%Y")
+    url = 'https://cis.corp.itmh.ru/mvc/demand/search'
+    data = {'AuthorName': authorname,
+            'AuthorId': authorid,
+            'TrackingFilter': 'All',
+            'FromDate': now,
+            'ShowClosed': 'false',
+            'OrderBy': 'deadline',
+            'OrderAsc': 'False',
+            'ContractMode': 'Default',
+            'OrangeIsTheNewBlack': 'False',
+            'PagerCurrent': '1',
+            'PagerPerPage': '50',
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        links = soup.find_all('a', {"target": "MainFrame"})
+        pprs = [link.text for link in links if link.text != ' ']
+        last_ppr = pprs[0]
+    return last_ppr
+
+
+def add_tr_to_last_created_ppr(login, password, authorname, authorid, title_ppr, deadline, last_ppr, tr):
+    """Данный метод выполняет поиск последней созданной ППР"""
+    url = 'https://cis.corp.itmh.ru/mvc/demand/SaveMaintenance'
+    data = {'ExecutorName': f'{authorname}',
+            'ExecutorID': f'{authorid}',
+            'ScheduledIdlePeriod.FromDate': '01.01.2010 0:00',
+            'ScheduledIdlePeriod.TrimDate': '01.01.2010 0:01',
+            'ScheduledIdleSpan': '1м',
+            'IsNotPostponement': 'false',
+            'Main': title_ppr,
+            'TechnicalSolutionNew': f'{tr}',
+            'TechnicalSolutionLink': 'Проверить и добавить',
+            'IsCarriedOutsideOrganization': 'false',
+            'IsNetworkTune': 'false',
+            'IsFvnoAffected': 'false',
+            'IsPrivateAffected': 'true',
+            'IsPrivateAffected': 'false',
+            'IsCorporateAffected': 'true',
+            'IsCorporateAffected': 'false',
+            'IsIpChanged': 'false',
+            'ServiceAndQualities.service_and_quality[0].service': '21',
+            'ServiceAndQualities.service_and_quality[1].service': '4',
+            'ServiceAndQualities.service_and_quality[2].service': '6',
+            'ServiceAndQualities.service_and_quality[3].service': '19',
+            'ServiceAndQualities.service_and_quality[4].service': '20',
+            'ServiceAndQualities.service_and_quality[0].service_quality': '1',
+            'DemandID': f'{last_ppr}',
+            'WorkflowID': '306',
+            'ReturnJSON': '0',
+            'Deadline': f'{deadline}',
+            'Priority': '3',
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
