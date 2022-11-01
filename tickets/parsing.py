@@ -532,6 +532,8 @@ def for_spp_view(login, password, dID):
                 spp_params['Технолог'] = i.find_all('td')[1].text.strip()
             elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
                 spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
+            elif 'Дата оформления' in i.find_all('td')[0].text:
+                spp_params['Оценочное ТР'] = '1' if i.find_all('td')[3].text.strip() == 'Оценка' else '0'
             elif 'Перечень' in i.find_all('td')[0].text:
                 services = i.find_all('td')[1].text
                 services = services[::-1]

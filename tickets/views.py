@@ -1132,7 +1132,12 @@ def data(request):
 
     if value_vars.get('not_required'):
         result_services = 'Решение ОУЗП СПД не требуется'
-        result_services_ots = None
+        if value_vars.get('services_plus_desc'):
+            for service in ticket_tr.services:
+                if 'Телефон' in service:
+                    result_services_ots = ['Решение ОУЗП СПД не требуется']
+        else:
+            result_services_ots = None
 
     if not value_vars.get('type_pass') and not value_vars.get('not_required'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -1231,6 +1236,15 @@ def saved_data(request):
 
             ortr_field = ortrform.cleaned_data['ortr_field']
             ots_field = ortrform.cleaned_data['ots_field']
+            print('ots_field')
+            print([ots_field])
+            regex = '\n(\d{1,2}\..+)\r\n-+\r\n'
+            match_ortr_field = re.findall(regex, ortr_field)
+            is_exist_ots = bool(ots_field)
+            match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
+            changable_titles = match_ortr_field + match_ots_field
+            print('match_href')
+            print(changable_titles)
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
             ticket_tr_id = request.session['ticket_tr_id']
