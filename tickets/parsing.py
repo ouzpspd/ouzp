@@ -714,7 +714,7 @@ def get_name_id_user_cis(login, password, last_name):
     elif len(last_name_list) == 0:
         name_id_user_cis = 'Фамилия, указанная в АРМ, в Cordis не найдена'
     else:
-        name_id_user_cis = {'id': last_name_list[0].get('id'), 'name': last_name_list[0].get('value')}
+        name_id_user_cis = {'id': last_name_list[0].get('id'), 'value': last_name_list[0].get('value')}
     return name_id_user_cis
 
 

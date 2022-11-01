@@ -3556,6 +3556,8 @@ def ppr(request):
                 return redirect('ppr')
             request.session['title_ppr'] = title_ppr
             name_id_user_cis = get_name_id_user_cis(username, password, user.last_name)
+            print('name_id_user_cis')
+            print(name_id_user_cis)
             if isinstance(name_id_user_cis, list):
                 request.session['name_id_user_cis'] = name_id_user_cis
                 return redirect('author_id_formset')
@@ -3638,7 +3640,7 @@ def create_ppr(request):
             'CreateMaintenance': 'Создать'
             }
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(username, password), data=data)
-    if req.status_code == 200 and title_ppr in req.content.decode('utf-8'):
+    if req.status_code == 200 and title_ppr.replace('"', '&quot;') in req.content.decode('utf-8'):
         last_ppr = search_last_created_ppr(username, password, authorname, authorid)
         request.session['exist_ppr'] = last_ppr
         if request.session.get('technical_solution'):
@@ -3646,8 +3648,8 @@ def create_ppr(request):
             add_tr_to_last_created_ppr(username, password, authorname, authorid, title_ppr, deadline, last_ppr, tr)
         return redirect('add_resources_to_ppr')
     else:
-        messages.warning(request, 'Не удалось создать ППР')
-        return redirect('private_page')
+        messages.warning(request, 'Не удалось создать ППР либо не удалось определить созданную ППР')
+        return redirect('ppr')
 
 
 @cache_check
