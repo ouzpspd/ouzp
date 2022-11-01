@@ -2181,67 +2181,65 @@ def add_spp(request, dID):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
+    spp_params = for_spp_view(username, password, dID)
+    print('spp_params')
+    print(spp_params)
+    if spp_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    sostav = spp_params.get('Состав Заявки ТР')
+    is_accepted_ortr = True if len([i for i in sostav if 'Техрешение' in next(iter(i))]) > 0 else False
+    if spp_params.get('ТР по упрощенной схеме') == '1' and not is_accepted_ortr:
+        messages.warning(request, 'Необходимо принять в работу упрощенное ТР в СПП')
+        return redirect('ortr')
+
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
-        spp_params = for_spp_view(username, password, dID)
-        if spp_params.get('Access denied') == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        else:
-            version = 1
-            ticket_spp = SPP()
-            ticket_spp.dID = dID
-            ticket_spp.ticket_k = spp_params['Заявка К']
-            ticket_spp.client = spp_params['Клиент']
-            ticket_spp.type_ticket = spp_params['Тип заявки']
-            ticket_spp.manager = spp_params['Менеджер']
-            ticket_spp.technolog = spp_params['Технолог']
-            ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
-            ticket_spp.des_tr = spp_params['Состав Заявки ТР']
-            ticket_spp.services = spp_params['Перечень требуемых услуг']
-            ticket_spp.comment = spp_params['Примечание']
-            ticket_spp.version = version
-            ticket_spp.process = True
-            user = User.objects.get(username=request.user.username)
-            ticket_spp.user = user
-            ticket_spp.save()
-            return redirect('spp_view_save', dID, ticket_spp.id)
+        version = 1
+        ticket_spp = SPP()
+        ticket_spp.dID = dID
+        ticket_spp.ticket_k = spp_params['Заявка К']
+        ticket_spp.client = spp_params['Клиент']
+        ticket_spp.type_ticket = spp_params['Тип заявки']
+        ticket_spp.manager = spp_params['Менеджер']
+        ticket_spp.technolog = spp_params['Технолог']
+        ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
+        ticket_spp.des_tr = spp_params['Состав Заявки ТР']
+        ticket_spp.services = spp_params['Перечень требуемых услуг']
+        ticket_spp.comment = spp_params['Примечание']
+        ticket_spp.version = version
+        ticket_spp.process = True
+        user = User.objects.get(username=request.user.username)
+        ticket_spp.user = user
+        ticket_spp.save()
+        return redirect('spp_view_save', dID, ticket_spp.id)
     else:
         if current_spp.process == True:
             messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
             return redirect('ortr')
-
-        else:
-            spp_params = for_spp_view(username, password, dID)
-            if spp_params.get('Access denied') == 'Access denied':
-                messages.warning(request, 'Нет доступа в ИС Холдинга')
-                response = redirect('login_for_service')
-                response['Location'] += '?next={}'.format(request.path)
-                return response
-            else:
-                exist_dID = len(SPP.objects.filter(dID=dID))
-                version = exist_dID + 1
-                ticket_spp = SPP()
-                ticket_spp.dID = dID
-                ticket_spp.ticket_k = spp_params['Заявка К']
-                ticket_spp.client = spp_params['Клиент']
-                ticket_spp.type_ticket = spp_params['Тип заявки']
-                ticket_spp.manager = spp_params['Менеджер']
-                ticket_spp.technolog = spp_params['Технолог']
-                ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
-                ticket_spp.des_tr = spp_params['Состав Заявки ТР']
-                ticket_spp.services = spp_params['Перечень требуемых услуг']
-                ticket_spp.comment = spp_params['Примечание']
-                ticket_spp.version = version
-                ticket_spp.process = True
-                user = User.objects.get(username=request.user.username)
-                ticket_spp.user = user
-                ticket_spp.save()
-                #request.session['ticket_spp_id'] = ticket_spp.id
-                return redirect('spp_view_save', dID, ticket_spp.id)
+        exist_dID = len(SPP.objects.filter(dID=dID))
+        version = exist_dID + 1
+        ticket_spp = SPP()
+        ticket_spp.dID = dID
+        ticket_spp.ticket_k = spp_params['Заявка К']
+        ticket_spp.client = spp_params['Клиент']
+        ticket_spp.type_ticket = spp_params['Тип заявки']
+        ticket_spp.manager = spp_params['Менеджер']
+        ticket_spp.technolog = spp_params['Технолог']
+        ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
+        ticket_spp.des_tr = spp_params['Состав Заявки ТР']
+        ticket_spp.services = spp_params['Перечень требуемых услуг']
+        ticket_spp.comment = spp_params['Примечание']
+        ticket_spp.version = version
+        ticket_spp.process = True
+        user = User.objects.get(username=request.user.username)
+        ticket_spp.user = user
+        ticket_spp.save()
+        #request.session['ticket_spp_id'] = ticket_spp.id
+        return redirect('spp_view_save', dID, ticket_spp.id)
 
 
 def remove_spp_process(request, ticket_spp_id):

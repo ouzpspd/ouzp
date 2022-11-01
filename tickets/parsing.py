@@ -532,8 +532,6 @@ def for_spp_view(login, password, dID):
                 spp_params['Технолог'] = i.find_all('td')[1].text.strip()
             elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
                 spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
-            elif 'ТР по упрощенной схеме' in i.find_all('td')[0].text:
-                spp_params['ТР по упрощенной схеме'] = i.find_all('td')[1].text
             elif 'Перечень' in i.find_all('td')[0].text:
                 services = i.find_all('td')[1].text
                 services = services[::-1]
@@ -556,6 +554,8 @@ def for_spp_view(login, password, dID):
                 spp_params['Состав Заявки ТР'] = sostav
             elif 'Примечание' in i.find_all('td')[0].text:
                 spp_params['Примечание'] = i.find_all('td')[1].text.strip()
+        simpled_tr = soup.find('input', id='is_simple_solution_required').get('checked')
+        spp_params['ТР по упрощенной схеме'] = '1' if simpled_tr else '0'
         return spp_params
     else:
         spp_params['Access denied'] = 'Access denied'
