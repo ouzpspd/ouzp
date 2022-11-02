@@ -487,6 +487,10 @@ def sppdata(request):
         'next_link': next_link,
         'turnoff': turnoff
     }
+    # тестово кнопка к заявке
+    ticket_spp_id = request.session['ticket_spp_id']
+    dID = request.session['dID']
+    context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
     return render(request, 'tickets/sppdata.html', context)
 
 
@@ -618,6 +622,11 @@ def copper(request):
             'copperform': copperform,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
+
+        # тестово кнопка к заявке
+        ticket_spp_id = request.session['ticket_spp_id']
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
         return render(request, 'tickets/env.html', context)
 
 
@@ -1264,6 +1273,7 @@ def saved_data(request):
             else:
                 counter_str_ots = 1
 
+
             context = {
                 'ticket_k': ticket_k,
                 'services_plus_desc': services_plus_desc,
@@ -1275,6 +1285,10 @@ def saved_data(request):
                 'ortrform': ortrform,
                 'not_required_tr': True,
             }
+            # тестово кнопка к заявке
+            ticket_spp_id = request.session['ticket_spp_id']
+            dID = request.session['dID']
+            context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
 
             tag_service = request.session.get('tag_service')
             if tag_service:
@@ -1334,6 +1348,10 @@ def saved_data(request):
             'ortrform': ortrform,
             'not_required_tr': True,
         }
+        # тестово кнопка к заявке
+        ticket_spp_id = request.session['ticket_spp_id']
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
 
         tag_service = request.session.get('tag_service')
         if tag_service:
@@ -2035,6 +2053,10 @@ def shpd(request):
             'trunk_turnoff_off': trunk_turnoff_off,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
+        # тестово кнопка к заявке
+        ticket_spp_id = request.session['ticket_spp_id']
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
         return render(request, 'tickets/shpd.html', context)
 
 
@@ -2291,7 +2313,13 @@ def spp_view_save(request, dID, ticket_spp_id):
     request.session['ticket_spp_id'] = ticket_spp_id
     request.session['dID'] = dID
     current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
-    return render(request, 'tickets/spp_view_save.html', {'current_ticket_spp': current_ticket_spp})
+
+    context = {'current_ticket_spp': current_ticket_spp}
+    # тестово кнопка к заявке
+    ticket_spp_id = request.session['ticket_spp_id']
+    dID = request.session['dID']
+    context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
+    return render(request, 'tickets/spp_view_save.html', context) #{'current_ticket_spp': current_ticket_spp})
 
 
 @cache_check

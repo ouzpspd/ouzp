@@ -56,6 +56,9 @@
               <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="{% url 'spp_view_save' dID ticket_spp_id %}">К заявке</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="{% url 'search' %}">Поиск</a>
             </li>
             <li class="nav-item dropdown">

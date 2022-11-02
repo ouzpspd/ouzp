@@ -534,6 +534,8 @@ def for_spp_view(login, password, dID):
                 spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
             elif 'Дата оформления' in i.find_all('td')[0].text:
                 spp_params['Оценочное ТР'] = '1' if i.find_all('td')[3].text.strip() == 'Оценка' else '0'
+            elif 'Куратор' in i.find_all('td')[0].text:
+                spp_params['uID'] = i.find_all('td')[1].find('select').find('option').get('value')
             elif 'Перечень' in i.find_all('td')[0].text:
                 services = i.find_all('td')[1].text
                 services = services[::-1]
@@ -558,6 +560,10 @@ def for_spp_view(login, password, dID):
                 spp_params['Примечание'] = i.find_all('td')[1].text.strip()
         simpled_tr = soup.find('input', id='is_simple_solution_required').get('checked')
         spp_params['ТР по упрощенной схеме'] = '1' if simpled_tr else '0'
+        dif_period = soup.find('input', id='trDifPeriod').get('value')
+        spp_params['trDifPeriod'] = dif_period
+        cur_phone = soup.find('input', id='inp_1').get('value')
+        spp_params['trCuratorPhone'] = cur_phone
         return spp_params
     else:
         spp_params['Access denied'] = 'Access denied'
