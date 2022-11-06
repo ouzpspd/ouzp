@@ -1,10 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import TR, SPP, OrtrTR
-from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm,\
-    VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
+from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
+    VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
+    SksForm, \
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm,\
+    SearchTicketsForm, AddCommentForm, TimeTrackingForm
 
 import logging
 from django.contrib import messages
@@ -12,14 +14,16 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
 
 
-
+import xlwt
+from django.db.models import F, Func, Value, CharField
+from django.utils import timezone
 import datetime
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
@@ -819,6 +823,10 @@ def vols(request):
             'volsform': volsform,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
+        # тестово кнопка к заявке
+        ticket_spp_id = request.session['ticket_spp_id']
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
         return render(request, 'tickets/env.html', context)
 
 
@@ -943,6 +951,10 @@ def wireless(request):
             'wirelessform': wirelessform,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         }
+        # тестово кнопка к заявке
+        ticket_spp_id = request.session['ticket_spp_id']
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
         return render(request, 'tickets/env.html', context)
 
 
@@ -1187,7 +1199,6 @@ def data(request):
     request.session['result_services_ots'] = result_services_ots
     request.session['counter_str_ots'] = counter_str_ots
 
-
     try:
         manlink = request.session['manlink']
     except KeyError:
@@ -1245,15 +1256,11 @@ def saved_data(request):
 
             ortr_field = ortrform.cleaned_data['ortr_field']
             ots_field = ortrform.cleaned_data['ots_field']
-            print('ots_field')
-            print([ots_field])
             regex = '\n(\d{1,2}\..+)\r\n-+\r\n'
             match_ortr_field = re.findall(regex, ortr_field)
             is_exist_ots = bool(ots_field)
             match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
-            changable_titles = match_ortr_field + match_ots_field
-            print('match_href')
-            print(changable_titles)
+            changable_titles = '\n'.join(match_ortr_field + match_ots_field)
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
             ticket_tr_id = request.session['ticket_tr_id']
@@ -1266,6 +1273,7 @@ def saved_data(request):
             ortr = OrtrTR.objects.get(id=ortr_id)
             ortr.ortr = ortr_field
             ortr.ots = ots_field
+            ortr.titles = changable_titles
             ortr.save()
             counter_str_ortr = ortr.ortr.count('\n')
             if ortr.ots:
@@ -1315,6 +1323,7 @@ def saved_data(request):
         counter_str_ortr = request.session['counter_str_ortr']
         counter_str_ots = request.session['counter_str_ots']
         result_services_ots = request.session['result_services_ots']
+        titles = request.session.get('titles')
         try:
             list_switches = request.session['list_switches']
         except KeyError:
@@ -1332,6 +1341,7 @@ def saved_data(request):
         ortr.ticket_tr = ticket_tr
         ortr.ortr = result_services
         ortr.ots = result_services_ots
+        ortr.titles = titles
         ortr.save()
         request.session['ortr_id'] = ortr.id
 
@@ -2218,8 +2228,6 @@ def add_spp(request, dID):
     username = credent['username']
     password = credent['password']
     spp_params = for_spp_view(username, password, dID)
-    print('spp_params')
-    print(spp_params)
     if spp_params.get('Access denied') == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -2248,9 +2256,15 @@ def add_spp(request, dID):
         ticket_spp.comment = spp_params['Примечание']
         ticket_spp.version = version
         ticket_spp.process = True
+        ticket_spp.uID = spp_params['uID']
+        ticket_spp.trdifperiod = spp_params['trDifPeriod']
+        ticket_spp.trcuratorphone = spp_params['trCuratorPhone']
+        ticket_spp.simplified_tr = spp_params['ТР по упрощенной схеме']
+        ticket_spp.evaluative_tr = spp_params['Оценочное ТР']
         user = User.objects.get(username=request.user.username)
         ticket_spp.user = user
         ticket_spp.save()
+        request.session['spp_params'] = spp_params
         return redirect('spp_view_save', dID, ticket_spp.id)
     else:
         if current_spp.process == True:
@@ -2271,9 +2285,15 @@ def add_spp(request, dID):
         ticket_spp.comment = spp_params['Примечание']
         ticket_spp.version = version
         ticket_spp.process = True
+        ticket_spp.uID = spp_params['uID']
+        ticket_spp.trdifperiod = spp_params['trDifPeriod']
+        ticket_spp.trcuratorphone = spp_params['trCuratorPhone']
+        ticket_spp.simplified_tr = spp_params['ТР по упрощенной схеме']
+        ticket_spp.evaluative_tr = spp_params['Оценочное ТР']
         user = User.objects.get(username=request.user.username)
         ticket_spp.user = user
         ticket_spp.save()
+        request.session['spp_params'] = spp_params
         #request.session['ticket_spp_id'] = ticket_spp.id
         return redirect('spp_view_save', dID, ticket_spp.id)
 
@@ -2302,6 +2322,7 @@ def add_spp_wait(request, ticket_spp_id):
     current_ticket_spp.wait = True
     current_ticket_spp.was_waiting = True
     current_ticket_spp.process = False
+    current_ticket_spp.projected = False
     current_ticket_spp.save()
     messages.success(request, 'Заявка {} перемещена в ожидание'.format(current_ticket_spp.ticket_k))
     return redirect('wait')
@@ -3564,6 +3585,166 @@ def search(request):
             'searchticketsform': searchticketsform
         }
     return render(request, 'tickets/search.html', context)
+
+
+def report_time_tracking(request):
+    """Данный метод отображает html-страницу с формированием отчета"""
+    if request.method == 'POST':
+        timetrackingform = TimeTrackingForm(request.POST)
+        if timetrackingform.is_valid():
+            start = timetrackingform.cleaned_data['start']
+            stop = timetrackingform.cleaned_data['stop']
+            technolog = timetrackingform.cleaned_data['technolog']
+            if start:
+                start = start.strftime('%d.%m.%Y')
+            if stop:
+                stop = stop.strftime('%d.%m.%Y')
+            request.session['report_time_tracking_start'] = start
+            request.session['report_time_tracking_stop'] = stop
+            request.session['technolog'] = technolog
+            return redirect('export_xls')
+    else:
+        timetrackingform = TimeTrackingForm()
+        context = {
+            'timetrackingform': timetrackingform
+        }
+    return render(request, 'tickets/report_time_tracking.html', context)
+
+
+@cache_check
+def add_comment_to_return_ticket(request):
+    """Данный метод отображает html-страничку c формой для заполнения комментария к возвращаемой ТР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        addcommentform = AddCommentForm(request.POST)
+        if addcommentform.is_valid():
+            comment = addcommentform.cleaned_data['comment']
+            return_to = addcommentform.cleaned_data['return_to']
+            dID = request.session['dID']
+            ticket_spp_id = request.session['ticket_spp_id']
+            ticket_spp = SPP.objects.get(id=ticket_spp_id)
+            uid = ticket_spp.uID
+            trdifperiod = ticket_spp.trdifperiod
+            trcuratorphone = ticket_spp.trcuratorphone
+            ticket_k = ticket_spp.ticket_k
+            if return_to == 'Вернуть в ОТПМ':
+                status_save_to_otpm = save_to_otpm(username, password, dID, comment, uid, trdifperiod, trcuratorphone)
+                if status_save_to_otpm == 200:
+                    status_send_to_otpm = send_to_otpm(username, password, dID, uid, trdifperiod, trcuratorphone)
+                if status_save_to_otpm != 200:
+                    messages.warning(request, f'Заявку {ticket_k} не удалось вернуть в ОТПМ. Комментарий не сохранен.')
+                    return redirect('spp_view_save', dID, ticket_spp_id)
+                elif status_save_to_otpm == 200 and status_send_to_otpm!= 200:
+                    messages.warning(request, f'Заявку {ticket_k} не удалось вернуть в ОТПМ. Комментарий сохранен.')
+                    return redirect('spp_view_save', dID, ticket_spp_id)
+                elif status_save_to_otpm == 200 and status_send_to_otpm == 200:
+                    ticket_spp.projected = False
+                    ticket_spp.process = False
+                    ticket_spp.return_otpm = True
+                    ticket_spp.save()
+                    messages.success(request, f'Заявка {ticket_k} возвращена в ОТПМ')
+                    return redirect('ortr')
+            elif return_to == 'Вернуть менеджеру':
+                status_send_to_mko = send_to_mko(username, password, dID, comment)
+                if status_send_to_mko != 200:
+                    messages.warning(request, f'Заявку {ticket_k} не удалось вернуть менеджеру.')
+                    return redirect('spp_view_save', dID, ticket_spp_id)
+                ticket_spp.projected = False
+                ticket_spp.process = False
+                ticket_spp.return_mko = True
+                ticket_spp.save()
+                messages.success(request, f'Заявка {ticket_k} возвращена менеджеру')
+                return redirect('ortr')
+    else:
+        addcommentform = AddCommentForm()
+        context = {'addcommentform': addcommentform}
+        ticket_spp_id = request.session['ticket_spp_id']
+        # тестово
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
+        return render(request, 'tickets/return_comment.html', context)
+
+
+def export_xls(request):
+    """Данный метод формирует эксел файл"""
+    wb = xlwt.Workbook(encoding='utf-8')
+    ws = wb.add_sheet('tickets')
+    row_num = 0
+    font_style = xlwt.XFStyle()
+    font_style.font.bold = True
+    columns = ['Дата', '№ Заявки', 'Клиент', 'Точка подключения', 'Время начала', 'Время окончания',
+               'Продолжительность', 'Описание']
+    for col_num in range(len(columns)):
+        ws.write(row_num, col_num, columns[col_num], font_style)
+    font_style = xlwt.XFStyle()
+    technolog = request.session['technolog']
+    query = None
+    if request.session.get('report_time_tracking_start'):
+        start = request.session.get('report_time_tracking_start')
+        start_datetime = datetime.datetime.strptime(start, "%d.%m.%Y")
+        query_start = Q(created__gte=start_datetime)
+        query = query_start if query is None else query & query_start
+    if request.session.get('report_time_tracking_stop'):
+        stop = request.session.get('report_time_tracking_stop')
+        stop_datetime = datetime.datetime.strptime(stop, "%d.%m.%Y")
+        query_stop = Q(complited__lt=stop_datetime)
+        query = query_stop if query is None else query & query_stop
+    if query is not None:
+        rows = SPP.objects.filter(user__username=technolog).filter(query).order_by('created')
+    else:
+        rows = SPP.objects.filter(user__username=technolog).order_by('created')
+    rows = rows.annotate(
+        formatted_date=Func(
+            F('created'),
+            Value('dd.MM.yyyy'), #hh:mm
+            function='to_char',
+            output_field=CharField()
+        )
+    )
+    rows = rows.annotate(
+        duration=Func(
+            F('complited') - F('created'),
+            Value('HH24:MI:SS'),
+            function='to_char',
+            output_field=CharField()
+        )
+    )
+    rows = rows.values_list('formatted_date',
+                            'ticket_k',
+                            'client',
+                            'des_tr',
+                            'created',
+                            'complited',
+                            'duration',
+                            'projected'
+                            )
+    for row in rows:
+        points_list = []
+        row = list(row)
+        row[4] = row[4].astimezone(timezone.get_current_timezone()).strftime('%H:%M:%S')
+        row[5] = row[5].astimezone(timezone.get_current_timezone()).strftime('%H:%M:%S')
+        row[7] = 'ТР спроектировано' if row[7] is True else 'ТР не спроектировано'
+        for des in row[3]:
+            points_list += [k for k, v in des.items() if 'г.' in k]
+        points = '\r\n'.join(points_list)
+        row[3] = points
+        row_num += 1
+        for col_num in range(len(row)):
+            ws.write(row_num, col_num, row[col_num], font_style)
+
+    response = HttpResponse(content_type='application/ms-excel')
+    technolog = formatted(technolog)
+    start = formatted(start)
+    stop = formatted(stop)
+    response['Content-Disposition'] = f'attachment; filename="{technolog}-{start}-{stop}.xls"'
+    wb.save(response)
+    return response
+
+
+
 
 
 

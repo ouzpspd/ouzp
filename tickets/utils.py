@@ -651,3 +651,9 @@ def clear_session_params(request, *args):
     for param in args:
         if request.session.get(param):
             del request.session[param]
+
+
+def formatted(string):
+    """Данный метод удаляет из строки пробелы и точки"""
+    string = string.replace(' ', '_').replace('.', '_')
+    return string

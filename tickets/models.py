@@ -21,6 +21,14 @@ class SPP(models.Model):
     wait = models.BooleanField(default=False, verbose_name='В ожидании')
     was_waiting = models.BooleanField(default=False, verbose_name='Была в ожидании')
     user = models.ForeignKey(User, on_delete=models.PROTECT)
+    return_otpm = models.BooleanField(default=False, verbose_name='Возвращена в ОТПМ')
+    return_mko = models.BooleanField(default=False, verbose_name='Возвращена МКО')
+    projected = models.BooleanField(default=True, verbose_name='Спроектирована')
+    simplified_tr = models.BooleanField(default=False, verbose_name='Упрощенное ТР')
+    evaluative_tr = models.BooleanField(default=False, verbose_name='Оценочное ТР')
+    uID = models.CharField(max_length=10, verbose_name='ID куратора', null=True, blank=True)
+    trdifperiod = models.CharField(max_length=10, verbose_name='Сложность в часах', null=True, blank=True)
+    trcuratorphone = models.CharField(max_length=15, verbose_name='Телефон куратора', null=True, blank=True)
 
     def __str__(self):
         return self.ticket_k
@@ -53,6 +61,7 @@ class OrtrTR(models.Model):
     ticket_tr = models.ForeignKey(TR, on_delete=models.CASCADE)
     ortr = models.TextField(verbose_name='Решение ОРТР')
     ots = models.TextField(verbose_name='Решение ОТС',  null=True, blank=True)
+    titles = models.TextField(verbose_name='Заголовки ТР', null=True, blank=True)
 
     def __str__(self):
         return self.ortr
