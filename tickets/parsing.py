@@ -536,8 +536,10 @@ def for_spp_view(login, password, dID):
                 spp_params['Технолог'] = i.find_all('td')[1].text.strip()
             elif 'Задача в ОТПМ' in i.find_all('td')[0].text:
                 spp_params['Задача в ОТПМ'] = i.find_all('td')[1].text.strip()
-            elif 'ТР по упрощенной схеме' in i.find_all('td')[0].text:
-                spp_params['ТР по упрощенной схеме'] = i.find_all('td')[1].text
+            elif 'Дата оформления' in i.find_all('td')[0].text:
+                spp_params['Оценочное ТР'] = True if i.find_all('td')[3].text.strip() == 'Оценка' else False
+            elif 'Куратор' in i.find_all('td')[0].text:
+                spp_params['uID'] = i.find_all('td')[1].find('select').find('option').get('value')
             elif 'Перечень' in i.find_all('td')[0].text:
                 services = i.find_all('td')[1].text
                 services = services[::-1]
@@ -560,6 +562,12 @@ def for_spp_view(login, password, dID):
                 spp_params['Состав Заявки ТР'] = sostav
             elif 'Примечание' in i.find_all('td')[0].text:
                 spp_params['Примечание'] = i.find_all('td')[1].text.strip()
+        simplified_tr = soup.find('input', id='is_simple_solution_required').get('checked')
+        spp_params['ТР по упрощенной схеме'] = True if simplified_tr else False
+        dif_period = soup.find('input', id='trDifPeriod').get('value')
+        spp_params['trDifPeriod'] = dif_period
+        cur_phone = soup.find('input', id='inp_1').get('value')
+        spp_params['trCuratorPhone'] = cur_phone
         return spp_params
     else:
         spp_params['Access denied'] = 'Access denied'
@@ -830,3 +838,44 @@ def add_tr_to_last_created_ppr(login, password, authorname, authorid, title_ppr,
             'Priority': '3',
             }
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+
+
+def save_to_otpm(login, password, dID, comment, uid, trdifperiod, trcuratorphone):
+    """Данный метод выполняет запрос в СПП на сохранение комментария"""
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
+    data = {'uID': uid,
+            'trCuratorPhone': trcuratorphone,
+            'trDifPeriod': trdifperiod,
+            'action': 'saveSummary',
+            'dID': dID,
+            'trAdv': comment,
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    return req.status_code
+
+
+def send_to_otpm(login, password, dID, uid, trdifperiod, trcuratorphone):
+    """Данный метод выполняет запрос в СПП на отправление заявки в ОТПМ"""
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
+    data = {'uID': uid,
+            'trCuratorPhone': trcuratorphone,
+            'trDifPeriod': trdifperiod,
+            'action': 'sendSummary',
+            'dID': dID,
+            'trStatus': '50'
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    return req.status_code
+
+
+def send_to_mko(login, password, dID, comment):
+    """Данный метод выполняет запрос в СПП на отправление заявки менеджеру"""
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
+    data = {'FailText': comment,
+            'ActionButton': 'Вернуть в ОПП B2B/ОРКБ',
+            'dID': dID,
+            'action': 'returnSummary',
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    return req.status_code
+

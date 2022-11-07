@@ -20,6 +20,11 @@
       <a class="dropdown-item" href="{% url 'ppr' %}" target ="_blank">ППР</a>
   </div>
 </li>
+{% if user.groups.all.0.name == 'Руководство ОУЗП' %}
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
+</li>
+{% endif %}
 {% endblock %}
 
 
@@ -74,6 +79,7 @@
                     });
                 });
             </script>
+
             <div class="col-4">
                 <div class="form-group">
                     <label for="{{ searchticketsform.tr.id_for_label }}">ТР:</label>

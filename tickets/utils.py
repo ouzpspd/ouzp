@@ -708,3 +708,10 @@ def get_links(file):
                 port = parts_link[0].split(',')[-1].strip()
                 links.append((sw, port, disable_resource))
     return links
+
+
+def formatted(string):
+    """Данный метод удаляет из строки пробелы и точки"""
+    string = string.replace(' ', '_').replace('.', '_')
+    return string
+

@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import TR, SPP, OrtrTR
-from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm,\
-    VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, SksForm,\
+from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
+    VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
+    SksForm, \
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm,\
-    PprForm, AddResourcesPprForm
+    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm
 
 import logging
 from django.contrib import messages
@@ -13,13 +14,18 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
 
 
+
+import xlwt
+from django.db.models import F, Func, Value, CharField
+from django.utils import timezone
+import datetime
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms import formset_factory
@@ -463,13 +469,6 @@ def project_tr(request, dID, tID, trID):
 
 def sppdata(request):
     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
-    services_plus_desc = request.session['services_plus_desc']
-    client = request.session['client']
-    manager = request.session['manager']
-    technolog = request.session['technolog']
-    task_otpm = request.session['task_otpm']
-    address = request.session['address']
-    turnoff = request.session['turnoff']
     tag_service = request.session['tag_service']
     tag_service_index = []
     index = 0
@@ -477,14 +476,16 @@ def sppdata(request):
     request.session['tag_service_index'] = tag_service_index
     next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
     context = {
-        'services_plus_desc': services_plus_desc,
-        'client': client,
-        'manager': manager,
-        'technolog': technolog,
-        'task_otpm': task_otpm,
-        'address': address,
+        'services_plus_desc': request.session.get('services_plus_desc'),
+        'client': request.session.get('client'),
+        'manager': request.session.get('manager'),
+        'technolog': request.session.get('technolog'),
+        'task_otpm': request.session.get('task_otpm'),
+        'address': request.session.get('address'),
         'next_link': next_link,
-        'turnoff': turnoff
+        'turnoff': request.session.get('turnoff'),
+        'ticket_spp_id': request.session.get('ticket_spp_id'),
+        'dID': request.session.get('dID')
     }
     return render(request, 'tickets/sppdata.html', context)
 
@@ -584,8 +585,6 @@ def copper(request):
         password = credent['password']
         pps = request.session['pps']
         services_plus_desc = request.session['services_plus_desc']
-        sreda = request.session['sreda']
-        oattr = request.session['oattr']
         tag_service = request.session['tag_service']
         request, prev_page, index = backward_page(request)
         try:
@@ -611,11 +610,13 @@ def copper(request):
         copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
         context = {
             'pps': pps,
-            'oattr': oattr,
+            'oattr': request.session.get('oattr'),
             'list_switches': list_switches,
-            'sreda': sreda,
+            'sreda': request.session.get('sreda'),
             'copperform': copperform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/env.html', context)
 
@@ -747,13 +748,10 @@ def vols(request):
         password = credent['password']
         pps = request.session['pps']
         services_plus_desc = request.session['services_plus_desc']
-        turnoff = request.session['turnoff']
         sreda = request.session['sreda']
-        oattr = request.session['oattr']
         spplink = request.session['spplink']
         regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
         match_link = re.search(regex_link, spplink)
-        dID = match_link.group(1)
         tID = match_link.group(2)
         trID = match_link.group(3)
         request, prev_page, index = backward_page(request)
@@ -799,15 +797,16 @@ def vols(request):
 
         context = {
             'pps': pps,
-            'oattr': oattr,
+            'oattr': request.session.get('oattr'),
             'list_switches': list_switches,
             'sreda': sreda,
-            'turnoff': turnoff,
-            'dID': dID,
+            'turnoff': request.session.get('turnoff'),
+            'dID': request.session.get('dID'),
             'tID': tID,
             'trID': trID,
             'volsform': volsform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id')
         }
         return render(request, 'tickets/env.html', context)
 
@@ -904,9 +903,6 @@ def wireless(request):
         username = credent['username']
         password = credent['password']
         pps = request.session['pps']
-        turnoff = request.session['turnoff']
-        sreda = request.session['sreda']
-        oattr = request.session['oattr']
         request, prev_page, index = backward_page(request)
         tag_service = request.session['tag_service']
         if request.session.get('list_switches'):
@@ -926,12 +922,14 @@ def wireless(request):
         wirelessform = WirelessForm(initial={'correct_sreda': '3', 'kad': switches_name, 'port': 'свободный'})
         context = {
             'pps': pps,
-            'oattr': oattr,
+            'oattr': request.session.get('oattr'),
             'list_switches': list_switches,
-            'sreda': sreda,
-            'turnoff': turnoff,
+            'sreda': request.session.get('sreda'),
+            'turnoff': request.session.get('turnoff'),
             'wirelessform': wirelessform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/env.html', context)
 
@@ -1027,7 +1025,9 @@ def csw(request):
             'logic_change_gi_csw': logic_change_gi_csw,
             'logic_replace_csw': logic_replace_csw,
             'logic_change_csw': logic_change_csw,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/csw.html', context)
 
@@ -1131,7 +1131,12 @@ def data(request):
 
     if value_vars.get('not_required'):
         result_services = 'Решение ОУЗП СПД не требуется'
-        result_services_ots = None
+        if value_vars.get('services_plus_desc'):
+            for service in ticket_tr.services:
+                if 'Телефон' in service:
+                    result_services_ots = ['Решение ОУЗП СПД не требуется']
+        else:
+            result_services_ots = None
 
     if not value_vars.get('type_pass') and not value_vars.get('not_required'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -1171,7 +1176,6 @@ def data(request):
     request.session['counter_str_ortr'] = counter_str_ortr
     request.session['result_services_ots'] = result_services_ots
     request.session['counter_str_ots'] = counter_str_ots
-
 
     try:
         manlink = request.session['manlink']
@@ -1230,6 +1234,11 @@ def saved_data(request):
 
             ortr_field = ortrform.cleaned_data['ortr_field']
             ots_field = ortrform.cleaned_data['ots_field']
+            regex = '\n(\d{1,2}\..+)\r\n-+\r\n'
+            match_ortr_field = re.findall(regex, ortr_field)
+            is_exist_ots = bool(ots_field)
+            match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
+            changable_titles = '\n'.join(match_ortr_field + match_ots_field)
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
             ticket_tr_id = request.session['ticket_tr_id']
@@ -1242,12 +1251,14 @@ def saved_data(request):
             ortr = OrtrTR.objects.get(id=ortr_id)
             ortr.ortr = ortr_field
             ortr.ots = ots_field
+            ortr.titles = changable_titles
             ortr.save()
             counter_str_ortr = ortr.ortr.count('\n')
             if ortr.ots:
                 counter_str_ots = ortr.ots.count('\n')
             else:
                 counter_str_ots = 1
+
 
             context = {
                 'ticket_k': ticket_k,
@@ -1259,6 +1270,8 @@ def saved_data(request):
                 'counter_str_ots': counter_str_ots,
                 'ortrform': ortrform,
                 'not_required_tr': True,
+                'ticket_spp_id': request.session.get('ticket_spp_id'),
+                'dID': request.session.get('dID')
             }
 
             tag_service = request.session.get('tag_service')
@@ -1286,6 +1299,7 @@ def saved_data(request):
         counter_str_ortr = request.session['counter_str_ortr']
         counter_str_ots = request.session['counter_str_ots']
         result_services_ots = request.session['result_services_ots']
+        titles = request.session.get('titles')
         try:
             list_switches = request.session['list_switches']
         except KeyError:
@@ -1303,6 +1317,7 @@ def saved_data(request):
         ortr.ticket_tr = ticket_tr
         ortr.ortr = result_services
         ortr.ots = result_services_ots
+        ortr.titles = titles
         ortr.save()
         request.session['ortr_id'] = ortr.id
 
@@ -1318,6 +1333,8 @@ def saved_data(request):
             'counter_str_ots': counter_str_ots,
             'ortrform': ortrform,
             'not_required_tr': True,
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
 
         tag_service = request.session.get('tag_service')
@@ -1558,7 +1575,9 @@ def hotspot(request):
             'premium_plus': premium_plus,
             'hotspotform': hotspotform,
             'service_hotspot': service,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/hotspot.html', context)
 
@@ -1736,14 +1755,19 @@ def phone(request):
         else:
             request.session['counter_line_services_before_phone'] = 0
         phoneform = PhoneForm(initial={
-                                'type_phone': 's', 'vgw': 'Не требуется', 'channel_vgw': reg_channel_vgw, 'ports_vgw': reg_ports_vgw
+                                'type_phone': 's',
+                                'vgw': 'Не требуется',
+                                'channel_vgw': reg_channel_vgw,
+                                'ports_vgw': reg_ports_vgw
                             })
         context = {
             'service_vgw': service_vgw,
             'vats': vats,
             'oattr': oattr,
             'phoneform': phoneform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/phone.html', context)
 
@@ -1804,7 +1828,9 @@ def local(request):
         context = {
             'service_lvs': service,
             'localform': localform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/local.html', context)
 
@@ -1828,7 +1854,9 @@ def sks(request):
         context = {
             'service_lvs': service,
             'sksform': sksform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/sks.html', context)
 
@@ -1852,7 +1880,9 @@ def lvs(request):
         context = {
             'service_lvs': service,
             'lvsform': lvsform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/lvs.html', context)
 
@@ -1915,7 +1945,9 @@ def itv(request):
         return render(request, 'tickets/itv.html', {
             'itvform': itvform,
             'service_itv': service,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         })
 
 
@@ -1983,7 +2015,9 @@ def cks(request):
                     'services_cks': service,
                     'trunk_turnoff_on': trunk_turnoff_on,
                     'trunk_turnoff_off': trunk_turnoff_off,
-                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                    'ticket_spp_id': request.session.get('ticket_spp_id'),
+                    'dID': request.session.get('dID')
                 })
 
 
@@ -2020,7 +2054,9 @@ def shpd(request):
             'services_shpd': service,
             'trunk_turnoff_on': trunk_turnoff_on,
             'trunk_turnoff_off': trunk_turnoff_off,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/shpd.html', context)
 
@@ -2060,7 +2096,9 @@ def portvk(request):
                    'services_vk': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
                    'trunk_turnoff_off': trunk_turnoff_off,
-                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                   'ticket_spp_id': request.session.get('ticket_spp_id'),
+                   'dID': request.session.get('dID')
                    }
         return render(request, 'tickets/portvk.html', context)
 
@@ -2098,7 +2136,9 @@ def portvm(request):
                    'services_vm': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
                    'trunk_turnoff_off': trunk_turnoff_off,
-                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                   'ticket_spp_id': request.session.get('ticket_spp_id'),
+                   'dID': request.session.get('dID')
                    }
         return render(request, 'tickets/portvm.html', context)
 
@@ -2133,7 +2173,9 @@ def video(request):
             'service_video': service,
             'videoform': videoform,
             'task_otpm': task_otpm,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/video.html', context)
 
@@ -2182,67 +2224,75 @@ def add_spp(request, dID):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
+    spp_params = for_spp_view(username, password, dID)
+    if spp_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    sostav = spp_params.get('Состав Заявки ТР')
+    is_accepted_ortr = True if len([i for i in sostav if 'Техрешение' in next(iter(i))]) > 0 else False
+    if spp_params.get('ТР по упрощенной схеме') == '1' and not is_accepted_ortr:
+        messages.warning(request, 'Необходимо принять в работу упрощенное ТР в СПП')
+        return redirect('ortr')
+
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
-        spp_params = for_spp_view(username, password, dID)
-        if spp_params.get('Access denied') == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        else:
-            version = 1
-            ticket_spp = SPP()
-            ticket_spp.dID = dID
-            ticket_spp.ticket_k = spp_params['Заявка К']
-            ticket_spp.client = spp_params['Клиент']
-            ticket_spp.type_ticket = spp_params['Тип заявки']
-            ticket_spp.manager = spp_params['Менеджер']
-            ticket_spp.technolog = spp_params['Технолог']
-            ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
-            ticket_spp.des_tr = spp_params['Состав Заявки ТР']
-            ticket_spp.services = spp_params['Перечень требуемых услуг']
-            ticket_spp.comment = spp_params['Примечание']
-            ticket_spp.version = version
-            ticket_spp.process = True
-            user = User.objects.get(username=request.user.username)
-            ticket_spp.user = user
-            ticket_spp.save()
-            return redirect('spp_view_save', dID, ticket_spp.id)
+        version = 1
+        ticket_spp = SPP()
+        ticket_spp.dID = dID
+        ticket_spp.ticket_k = spp_params['Заявка К']
+        ticket_spp.client = spp_params['Клиент']
+        ticket_spp.type_ticket = spp_params['Тип заявки']
+        ticket_spp.manager = spp_params['Менеджер']
+        ticket_spp.technolog = spp_params['Технолог']
+        ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
+        ticket_spp.des_tr = spp_params['Состав Заявки ТР']
+        ticket_spp.services = spp_params['Перечень требуемых услуг']
+        ticket_spp.comment = spp_params['Примечание']
+        ticket_spp.version = version
+        ticket_spp.process = True
+        ticket_spp.uID = spp_params['uID']
+        ticket_spp.trdifperiod = spp_params['trDifPeriod']
+        ticket_spp.trcuratorphone = spp_params['trCuratorPhone']
+        ticket_spp.simplified_tr = spp_params['ТР по упрощенной схеме']
+        ticket_spp.evaluative_tr = spp_params['Оценочное ТР']
+        user = User.objects.get(username=request.user.username)
+        ticket_spp.user = user
+        ticket_spp.save()
+        request.session['spp_params'] = spp_params
+        return redirect('spp_view_save', dID, ticket_spp.id)
     else:
         if current_spp.process == True:
             messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
             return redirect('ortr')
-
-        else:
-            spp_params = for_spp_view(username, password, dID)
-            if spp_params.get('Access denied') == 'Access denied':
-                messages.warning(request, 'Нет доступа в ИС Холдинга')
-                response = redirect('login_for_service')
-                response['Location'] += '?next={}'.format(request.path)
-                return response
-            else:
-                exist_dID = len(SPP.objects.filter(dID=dID))
-                version = exist_dID + 1
-                ticket_spp = SPP()
-                ticket_spp.dID = dID
-                ticket_spp.ticket_k = spp_params['Заявка К']
-                ticket_spp.client = spp_params['Клиент']
-                ticket_spp.type_ticket = spp_params['Тип заявки']
-                ticket_spp.manager = spp_params['Менеджер']
-                ticket_spp.technolog = spp_params['Технолог']
-                ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
-                ticket_spp.des_tr = spp_params['Состав Заявки ТР']
-                ticket_spp.services = spp_params['Перечень требуемых услуг']
-                ticket_spp.comment = spp_params['Примечание']
-                ticket_spp.version = version
-                ticket_spp.process = True
-                user = User.objects.get(username=request.user.username)
-                ticket_spp.user = user
-                ticket_spp.save()
-                #request.session['ticket_spp_id'] = ticket_spp.id
-                return redirect('spp_view_save', dID, ticket_spp.id)
+        exist_dID = len(SPP.objects.filter(dID=dID))
+        version = exist_dID + 1
+        ticket_spp = SPP()
+        ticket_spp.dID = dID
+        ticket_spp.ticket_k = spp_params['Заявка К']
+        ticket_spp.client = spp_params['Клиент']
+        ticket_spp.type_ticket = spp_params['Тип заявки']
+        ticket_spp.manager = spp_params['Менеджер']
+        ticket_spp.technolog = spp_params['Технолог']
+        ticket_spp.task_otpm = spp_params['Задача в ОТПМ']
+        ticket_spp.des_tr = spp_params['Состав Заявки ТР']
+        ticket_spp.services = spp_params['Перечень требуемых услуг']
+        ticket_spp.comment = spp_params['Примечание']
+        ticket_spp.version = version
+        ticket_spp.process = True
+        ticket_spp.uID = spp_params['uID']
+        ticket_spp.trdifperiod = spp_params['trDifPeriod']
+        ticket_spp.trcuratorphone = spp_params['trCuratorPhone']
+        ticket_spp.simplified_tr = spp_params['ТР по упрощенной схеме']
+        ticket_spp.evaluative_tr = spp_params['Оценочное ТР']
+        user = User.objects.get(username=request.user.username)
+        ticket_spp.user = user
+        ticket_spp.save()
+        request.session['spp_params'] = spp_params
+        #request.session['ticket_spp_id'] = ticket_spp.id
+        return redirect('spp_view_save', dID, ticket_spp.id)
 
 
 def remove_spp_process(request, ticket_spp_id):
@@ -2269,6 +2319,7 @@ def add_spp_wait(request, ticket_spp_id):
     current_ticket_spp.wait = True
     current_ticket_spp.was_waiting = True
     current_ticket_spp.process = False
+    current_ticket_spp.projected = False
     current_ticket_spp.save()
     messages.success(request, 'Заявка {} перемещена в ожидание'.format(current_ticket_spp.ticket_k))
     return redirect('wait')
@@ -2280,7 +2331,9 @@ def spp_view_save(request, dID, ticket_spp_id):
     request.session['ticket_spp_id'] = ticket_spp_id
     request.session['dID'] = dID
     current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
-    return render(request, 'tickets/spp_view_save.html', {'current_ticket_spp': current_ticket_spp})
+
+    context = {'current_ticket_spp': current_ticket_spp}
+    return render(request, 'tickets/spp_view_save.html', context) #{'current_ticket_spp': current_ticket_spp})
 
 
 @cache_check
@@ -2595,7 +2648,9 @@ def job_formset(request):
             'oattr': oattr,
             'pps': pps,
             'services': services,
-            'formset': formset
+            'formset': formset,
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/job_formset.html', context)
 
@@ -3196,7 +3251,9 @@ def change_serv(request):
         context = {
             'changeservform': changeservform,
             'service': service_change,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/change_serv.html', context)
 
@@ -3240,7 +3297,9 @@ def change_params_serv(request):
             'changeparamsform': changeparamsform,
             'only_mask': only_mask,
             'routed': routed,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/change_params_serv.html', context)
 
@@ -3292,7 +3351,9 @@ def change_log_shpd(request):
             'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
             'pass_job_services': services,
             'changelogshpdform': changelogshpdform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/change_log_shpd.html', context)
 
@@ -3326,7 +3387,9 @@ def params_extend_service(request):
             'desc_service': desc_service,
             'pass_job_services': pass_job_services,
             'extendserviceform': extendserviceform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/params_extend_service.html', context)
 
@@ -3412,7 +3475,9 @@ def pass_serv(request):
             'oattr': oattr,
             'pps': pps,
             'head': head,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/pass_serv.html', context)
 
@@ -3451,7 +3516,9 @@ def pass_turnoff(request):
             'dID': dID,
             'tID': tID,
             'trID': trID,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID')
         }
         return render(request, 'tickets/pass_turnoff.html', context)
 
@@ -3705,11 +3772,161 @@ def ppr_result(request):
     return render(request, 'tickets/ppr_result.html', context)
 
 
+def report_time_tracking(request):
+    """Данный метод отображает html-страницу с формированием отчета"""
+    if request.method == 'POST':
+        timetrackingform = TimeTrackingForm(request.POST)
+        if timetrackingform.is_valid():
+            start = timetrackingform.cleaned_data['start']
+            stop = timetrackingform.cleaned_data['stop']
+            technolog = timetrackingform.cleaned_data['technolog']
+            if start:
+                start = start.strftime('%d.%m.%Y')
+            if stop:
+                stop = stop.strftime('%d.%m.%Y')
+            request.session['report_time_tracking_start'] = start
+            request.session['report_time_tracking_stop'] = stop
+            request.session['technolog'] = technolog
+            return redirect('export_xls')
+    else:
+        timetrackingform = TimeTrackingForm()
+        context = {
+            'timetrackingform': timetrackingform
+        }
+    return render(request, 'tickets/report_time_tracking.html', context)
 
 
+@cache_check
+def add_comment_to_return_ticket(request):
+    """Данный метод отображает html-страничку c формой для заполнения комментария к возвращаемой ТР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    if request.method == 'POST':
+        addcommentform = AddCommentForm(request.POST)
+        if addcommentform.is_valid():
+            comment = addcommentform.cleaned_data['comment']
+            return_to = addcommentform.cleaned_data['return_to']
+            dID = request.session['dID']
+            ticket_spp_id = request.session['ticket_spp_id']
+            ticket_spp = SPP.objects.get(id=ticket_spp_id)
+            uid = ticket_spp.uID
+            trdifperiod = ticket_spp.trdifperiod
+            trcuratorphone = ticket_spp.trcuratorphone
+            ticket_k = ticket_spp.ticket_k
+            if return_to == 'Вернуть в ОТПМ':
+                status_save_to_otpm = save_to_otpm(username, password, dID, comment, uid, trdifperiod, trcuratorphone)
+                if status_save_to_otpm == 200:
+                    status_send_to_otpm = send_to_otpm(username, password, dID, uid, trdifperiod, trcuratorphone)
+                if status_save_to_otpm != 200:
+                    messages.warning(request, f'Заявку {ticket_k} не удалось вернуть в ОТПМ. Комментарий не сохранен.')
+                    return redirect('spp_view_save', dID, ticket_spp_id)
+                elif status_save_to_otpm == 200 and status_send_to_otpm!= 200:
+                    messages.warning(request, f'Заявку {ticket_k} не удалось вернуть в ОТПМ. Комментарий сохранен.')
+                    return redirect('spp_view_save', dID, ticket_spp_id)
+                elif status_save_to_otpm == 200 and status_send_to_otpm == 200:
+                    ticket_spp.projected = False
+                    ticket_spp.process = False
+                    ticket_spp.return_otpm = True
+                    ticket_spp.save()
+                    messages.success(request, f'Заявка {ticket_k} возвращена в ОТПМ')
+                    return redirect('ortr')
+            elif return_to == 'Вернуть менеджеру':
+                status_send_to_mko = send_to_mko(username, password, dID, comment)
+                if status_send_to_mko != 200:
+                    messages.warning(request, f'Заявку {ticket_k} не удалось вернуть менеджеру.')
+                    return redirect('spp_view_save', dID, ticket_spp_id)
+                ticket_spp.projected = False
+                ticket_spp.process = False
+                ticket_spp.return_mko = True
+                ticket_spp.save()
+                messages.success(request, f'Заявка {ticket_k} возвращена менеджеру')
+                return redirect('ortr')
+    else:
+        addcommentform = AddCommentForm()
+        context = {'addcommentform': addcommentform}
+        ticket_spp_id = request.session['ticket_spp_id']
+        # тестово
+        dID = request.session['dID']
+        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
+        return render(request, 'tickets/return_comment.html', context)
 
 
+def export_xls(request):
+    """Данный метод формирует эксел файл"""
+    wb = xlwt.Workbook(encoding='utf-8')
+    ws = wb.add_sheet('tickets')
+    row_num = 0
+    font_style = xlwt.XFStyle()
+    font_style.font.bold = True
+    columns = ['Дата', '№ Заявки', 'Клиент', 'Точка подключения', 'Время начала', 'Время окончания',
+               'Продолжительность', 'Описание']
+    for col_num in range(len(columns)):
+        ws.write(row_num, col_num, columns[col_num], font_style)
+    font_style = xlwt.XFStyle()
+    technolog = request.session['technolog']
+    query = None
+    if request.session.get('report_time_tracking_start'):
+        start = request.session.get('report_time_tracking_start')
+        start_datetime = datetime.datetime.strptime(start, "%d.%m.%Y")
+        query_start = Q(created__gte=start_datetime)
+        query = query_start if query is None else query & query_start
+    if request.session.get('report_time_tracking_stop'):
+        stop = request.session.get('report_time_tracking_stop')
+        stop_datetime = datetime.datetime.strptime(stop, "%d.%m.%Y")
+        query_stop = Q(complited__lt=stop_datetime)
+        query = query_stop if query is None else query & query_stop
+    if query is not None:
+        rows = SPP.objects.filter(user__username=technolog).filter(query).order_by('created')
+    else:
+        rows = SPP.objects.filter(user__username=technolog).order_by('created')
+    rows = rows.annotate(
+        formatted_date=Func(
+            F('created'),
+            Value('dd.MM.yyyy'), #hh:mm
+            function='to_char',
+            output_field=CharField()
+        )
+    )
+    rows = rows.annotate(
+        duration=Func(
+            F('complited') - F('created'),
+            Value('HH24:MI:SS'),
+            function='to_char',
+            output_field=CharField()
+        )
+    )
+    rows = rows.values_list('formatted_date',
+                            'ticket_k',
+                            'client',
+                            'des_tr',
+                            'created',
+                            'complited',
+                            'duration',
+                            'projected'
+                            )
+    for row in rows:
+        points_list = []
+        row = list(row)
+        row[4] = row[4].astimezone(timezone.get_current_timezone()).strftime('%H:%M:%S')
+        row[5] = row[5].astimezone(timezone.get_current_timezone()).strftime('%H:%M:%S')
+        row[7] = 'ТР спроектировано' if row[7] is True else 'ТР не спроектировано'
+        for des in row[3]:
+            points_list += [k for k, v in des.items() if 'г.' in k]
+        points = '\r\n'.join(points_list)
+        row[3] = points
+        row_num += 1
+        for col_num in range(len(row)):
+            ws.write(row_num, col_num, row[col_num], font_style)
 
+    response = HttpResponse(content_type='application/ms-excel')
+    technolog = formatted(technolog)
+    start = formatted(start)
+    stop = formatted(stop)
+    response['Content-Disposition'] = f'attachment; filename="{technolog}-{start}-{stop}.xls"'
+    wb.save(response)
+    return response
 
 
 

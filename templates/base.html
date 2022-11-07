@@ -67,6 +67,11 @@
                 <a class="dropdown-item" href="{% url 'ppr' %}" target ="_blank">ППР</a>
               </div>
             </li>
+            {% if user.groups.all.0.name == 'Руководство ОУЗП' %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
+            </li>
+            {% endif %}
             {% endblock %}
 
           </ul>

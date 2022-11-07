@@ -423,3 +423,35 @@ class PprForm(forms.Form):
 
 class AddResourcesPprForm(forms.Form):
     ppr_resources = forms.CharField(label='Массовое добавление ресурсов и линков', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))
+
+
+class TimeTrackingForm(forms.Form):
+
+    technologs = [(user, user.last_name) for user in User.objects.filter(groups__name__in=['Сотрудники ОУЗП'])]
+    technolog = forms.CharField(label='Технолог',
+                                widget=forms.Select(choices=technologs, attrs={'class': 'form-control'}))
+    start = forms.DateTimeField(label='Дата начала',
+                                # widget=forms.DateTimeInput(attrs={'class': 'form-control'})
+                                input_formats=['%d.%m.%Y'],
+                                                widget = forms.DateTimeInput(attrs={
+                                    'class': 'form-control datetimepicker-input',
+                                    'data-target': '#datetimepicker1'
+                                })
+                                )
+    stop = forms.DateTimeField(label='Дата окончания',
+                                input_formats=['%d.%m.%Y'],
+                                widget=forms.DateTimeInput(attrs={
+                                    'class': 'form-control datetimepicker-input',
+                                    'data-target': '#datetimepicker2'
+                                })
+                                )
+
+
+class AddCommentForm(forms.Form):
+    types_return = [
+        ('Вернуть менеджеру', 'Вернуть менеджеру'),
+        ('Вернуть в ОТПМ', 'Вернуть в ОТПМ'),
+    ]
+    return_to = forms.CharField(widget=forms.Select(choices=types_return, attrs={'class': 'form-control'}))
+    comment = forms.CharField(label='Добавить комментарий', widget=forms.Textarea(attrs={'class': 'form-control'}))
+

@@ -74,4 +74,7 @@ urlpatterns = [
     path('ppr_resources/', add_resources_to_ppr, name='add_resources_to_ppr'),
     path('ppr_result/', ppr_result, name='ppr_result'),
     path('author_id_formset/', author_id_formset, name='author_id_formset'),
+    path('add_comment', add_comment_to_return_ticket, name='add_comment_to_return_ticket'),
+    path('export_xls', export_xls, name='export_xls'),
+    path('report_time_tracking/', report_time_tracking, name='report_time_tracking'),
 ]

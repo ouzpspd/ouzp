@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% load custom_filters %}
+
+<div class="container">
+
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'report_time_tracking' %}" method="post" id="myForm">
+    {% csrf_token %}
+    <div class="container">
+
+
+        <div class="row">
+
+
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{timetrackingform.technolog.id_for_label}}">Технолог</label>
+                    {{timetrackingform.technolog}}
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ timetrackingform.start.id_for_label }}">Дата начала:</label>
+                    <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
+                        {{ timetrackingform.start}}
+                        <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
+                            <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <script>
+                $(function () {
+                    $("#datetimepicker1").datetimepicker({
+                        format: 'DD.MM.YYYY',
+                        locale: 'ru',
+                    });
+                });
+                $(function () {
+                    $("#datetimepicker2").datetimepicker({
+                        format: 'DD.MM.YYYY',
+                        locale: 'ru',
+                    });
+                });
+            </script>
+
+
+
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ timetrackingform.stop.id_for_label }}">Дата окончания:</label>
+                    <div class="input-group date" id="datetimepicker2" data-target-input="nearest">
+                        {{ timetrackingform.stop}}
+                        <div class="input-group-append" data-target="#datetimepicker2" data-toggle="datetimepicker">
+                            <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="row">
+
+
+            <div class="col-4">
+                <label for="{{ timetrackingform.client.id_for_label }}"></label>
+                <button type="submit" style="margin-top:8px" class="btn btn-secondary btn-block">Экспорт в Excel</button>
+            </div>
+        </div>
+
+    </div>
+</form>
+        </div>
+</div>
+</div>
+
+
+{% endblock %}
+
+
+
