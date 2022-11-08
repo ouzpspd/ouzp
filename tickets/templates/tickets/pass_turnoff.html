@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'tickets/nav_ticket.html' %}
 {% block content %}
 
 <div class="container">
@@ -55,10 +55,13 @@
             {{ passturnoffform.as_p }}
             </div>
         </div>
-        <div class="row mt-2">
-            <div class="col-4">
-                <!--<button type="submit" class="btn btn-primary btn-block">Продолжить</button>-->
+
+        <div class="row mb-2">
+            <div class="d-grid gap-2 col-2">
                 <a class="btn btn-info btn-block" href="{% url 'tr_view' dID tID trID %}" target ="_blank" role="button">Нагрузки</a>
+            </div>
+            <div class="d-grid gap-2 col-2">
+                <a class="btn btn-info btn-block" href="{% url 'ppr' %}" target ="_blank" role="button">Создать ППР</a>
             </div>
         </div>
         <div class="row mt-2">

@@ -1,14 +1,13 @@
+
 {% extends 'base.html' %}
 
 {% block nav_active %}
+
 <li class="nav-item">
   <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
 </li>
 <li class="nav-item">
   <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
-</li>
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'spp_view_save' dID ticket_spp_id %}">К заявке</a>
 </li>
 <li class="nav-item">
   <a class="nav-link" href="{% url 'search' %}">Поиск</a>
@@ -21,4 +20,8 @@
     <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
   </div>
 </li>
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'spp_view_save' dID ticket_spp_id %}">К заявке</a>
+</li>
+
 {% endblock %}

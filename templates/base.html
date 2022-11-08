@@ -49,6 +49,7 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav mr-auto mb-2 mb-lg-0">
             {% block nav_active %}
+            {% load custom_filters %}
             <li class="nav-item">
               <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
             </li>
@@ -67,7 +68,7 @@
                 <a class="dropdown-item" href="{% url 'ppr' %}" target ="_blank">ППР</a>
               </div>
             </li>
-            {% if user.groups.all.0.name == 'Руководство ОУЗП' %}
+            {% if request.user|has_group:"Руководство ОУЗП" %}
             <li class="nav-item">
               <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
             </li>

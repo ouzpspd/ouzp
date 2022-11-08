@@ -1073,16 +1073,12 @@ def data(request):
             counter_line_services = value_vars.get('counter_exist_line')
             value_vars.update({'counter_line_services': counter_line_services})
             result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
-        elif value_vars.get('logic_replace_csw'):# and value_vars.get('logic_change_gi_csw'):
-            #value_vars.update(({'services_plus_desc': value_vars.get('new_job_services')}))
-            #result_services, result_services_ots, value_vars = extra_services_with_replace_csw(value_vars)
+        elif value_vars.get('logic_replace_csw'):
             result_services, value_vars = exist_enviroment_replace_csw(value_vars)
             if value_vars.get('type_passage') == 'Перевод на гигабит' and value_vars.get(
                     'change_log') == 'Порт/КАД меняются':
                 value_vars.update({'result_services': result_services})
                 result_services, result_services_ots, value_vars = extend_service(value_vars)
-            # result_services, value_vars = _passage_services(result_services, value_vars)
-            # result_services_ots = value_vars.get('result_services_ots')
         elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
             counter_line_services = 0 # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
             value_vars.update({'counter_line_services': counter_line_services})
@@ -1131,12 +1127,11 @@ def data(request):
 
     if value_vars.get('not_required'):
         result_services = 'Решение ОУЗП СПД не требуется'
-        if value_vars.get('services_plus_desc'):
-            for service in ticket_tr.services:
-                if 'Телефон' in service:
-                    result_services_ots = ['Решение ОУЗП СПД не требуется']
-        else:
-            result_services_ots = None
+        for service in ticket_tr.services:
+            if 'Телефон' in service:
+                result_services_ots = ['Решение ОУЗП СПД не требуется']
+            else:
+                result_services_ots = None
 
     if not value_vars.get('type_pass') and not value_vars.get('not_required'):
         result_services, result_services_ots, value_vars = client_new(value_vars)
@@ -1223,8 +1218,6 @@ def saved_data(request):
         if ortrform.is_valid():
             services_plus_desc = request.session['services_plus_desc']
             oattr = request.session['oattr']
-            # counter_str_ortr = request.session['counter_str_ortr']
-            # counter_str_ots = request.session['counter_str_ots']
             result_services_ots = request.session['result_services_ots']
             try:
                 list_switches = request.session['list_switches']
@@ -1360,6 +1353,11 @@ def edit_tr(request, dID, ticket_spp_id, trID):
             ots_field = ortrform.cleaned_data['ots_field']
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
+            regex = '\n(\d{1,2}\..+)\r\n-+\r\n'
+            match_ortr_field = re.findall(regex, ortr_field)
+            is_exist_ots = bool(ots_field)
+            match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
+            changable_titles = '\n'.join(match_ortr_field + match_ots_field)
             ticket_tr_id = request.session['ticket_tr_id']
             ticket_tr = TR.objects.get(id=ticket_tr_id)
             ticket_tr.pps = pps
@@ -1369,6 +1367,7 @@ def edit_tr(request, dID, ticket_spp_id, trID):
             ortr = OrtrTR.objects.get(id=ortr_id)
             ortr.ortr = ortr_field
             ortr.ots = ots_field
+            ortr.titles = changable_titles
             ortr.save()
             counter_str_ortr = ortr.ortr.count('\n')
             if ortr.ots:
@@ -1427,6 +1426,11 @@ def manually_tr(request, dID, tID, trID):
             ots_field = ortrform.cleaned_data['ots_field']
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
+            regex = '\n(\d{1,2}\..+)\r\n-+\r\n'
+            match_ortr_field = re.findall(regex, ortr_field)
+            is_exist_ots = bool(ots_field)
+            match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
+            changable_titles = '\n'.join(match_ortr_field + match_ots_field)
             ticket_tr_id = request.session['ticket_tr_id']
             ticket_tr = TR.objects.get(id=ticket_tr_id)
             ticket_tr.pps = pps
@@ -1436,6 +1440,7 @@ def manually_tr(request, dID, tID, trID):
             ortr = OrtrTR.objects.get(id=ortr_id)
             ortr.ortr = ortr_field
             ortr.ots = ots_field
+            ortr.titles = changable_titles
             ortr.save()
             counter_str_ortr = ortr.ortr.count('\n')
             if ortr.ots:
@@ -2261,7 +2266,6 @@ def add_spp(request, dID):
         user = User.objects.get(username=request.user.username)
         ticket_spp.user = user
         ticket_spp.save()
-        request.session['spp_params'] = spp_params
         return redirect('spp_view_save', dID, ticket_spp.id)
     else:
         if current_spp.process == True:
@@ -2290,8 +2294,6 @@ def add_spp(request, dID):
         user = User.objects.get(username=request.user.username)
         ticket_spp.user = user
         ticket_spp.save()
-        request.session['spp_params'] = spp_params
-        #request.session['ticket_spp_id'] = ticket_spp.id
         return redirect('spp_view_save', dID, ticket_spp.id)
 
 
@@ -3623,8 +3625,6 @@ def ppr(request):
                 return redirect('ppr')
             request.session['title_ppr'] = title_ppr
             name_id_user_cis = get_name_id_user_cis(username, password, user.last_name)
-            print('name_id_user_cis')
-            print(name_id_user_cis)
             if isinstance(name_id_user_cis, list):
                 request.session['name_id_user_cis'] = name_id_user_cis
                 return redirect('author_id_formset')
@@ -3845,11 +3845,10 @@ def add_comment_to_return_ticket(request):
                 return redirect('ortr')
     else:
         addcommentform = AddCommentForm()
-        context = {'addcommentform': addcommentform}
-        ticket_spp_id = request.session['ticket_spp_id']
-        # тестово
-        dID = request.session['dID']
-        context.update({'ticket_spp_id': ticket_spp_id, 'dID': dID})
+        context = {'addcommentform': addcommentform,
+                   'ticket_spp_id': request.session.get('ticket_spp_id'),
+                   'dID': request.session.get('dID')
+                   }
         return render(request, 'tickets/return_comment.html', context)
 
 
