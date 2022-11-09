@@ -2010,7 +2010,9 @@ def cks(request):
                     'services_cks': service,
                     'trunk_turnoff_on': trunk_turnoff_on,
                     'trunk_turnoff_off': trunk_turnoff_off,
-                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                    'ticket_spp_id': request.session.get('ticket_spp_id'),
+                    'dID': request.session.get('dID')
                 })
             else:
                 cksform = CksForm()
@@ -2237,7 +2239,7 @@ def add_spp(request, dID):
         return response
     sostav = spp_params.get('Состав Заявки ТР')
     is_accepted_ortr = True if len([i for i in sostav if 'Техрешение' in next(iter(i))]) > 0 else False
-    if spp_params.get('ТР по упрощенной схеме') == '1' and not is_accepted_ortr:
+    if spp_params.get('ТР по упрощенной схеме') is True and not is_accepted_ortr:
         messages.warning(request, 'Необходимо принять в работу упрощенное ТР в СПП')
         return redirect('ortr')
 
