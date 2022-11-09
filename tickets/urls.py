@@ -77,4 +77,5 @@ urlpatterns = [
     path('add_comment', add_comment_to_return_ticket, name='add_comment_to_return_ticket'),
     path('export_xls', export_xls, name='export_xls'),
     path('report_time_tracking/', report_time_tracking, name='report_time_tracking'),
+    path('send_to_otpm_control/', send_ticket_to_otpm_control, name='send_ticket_to_otpm_control'),
 ]

@@ -1062,6 +1062,7 @@ def data(request):
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
     type_ticket = ticket_tr.ticket_k.type_ticket
+    evaluative_tr = ticket_tr.ticket_k.evaluative_tr
     value_vars.update({'type_ticket': type_ticket})
     readable_services = value_vars.get('readable_services')
 
@@ -1147,22 +1148,35 @@ def data(request):
         titles = ''.join(titles)
         request.session['titles'] = titles
         result_services = '\n\n\n'.join(result_services)
-        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
+        if evaluative_tr:
+            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + value_vars.get(
+                'head') + '\n\n' + need + '\n\n' + titles + '\n' + result_services
+        else:
+            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     elif value_vars.get('not_required'):
-        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services
+        if evaluative_tr:
+            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + result_services
+        else:
+            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services
     else:
         titles = _titles(result_services, result_services_ots)
         titles = ''.join(titles)
         request.session['titles'] = titles
         result_services = '\n\n\n'.join(result_services)
-        result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
+        if evaluative_tr:
+            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + titles + '\n' + result_services
+        else:
+            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
     counter_str_ortr = result_services.count('\n')
 
     if result_services_ots == None:
         counter_str_ots = 1
     else:
         result_services_ots = '\n\n\n'.join(result_services_ots)
-        result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
+        if evaluative_tr:
+            result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + result_services_ots
+        else:
+            result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
         counter_str_ots = result_services_ots.count('\n')
 
     request.session['kad'] = value_vars.get('kad') if value_vars.get('kad') else 'Не требуется'
@@ -1392,6 +1406,9 @@ def edit_tr(request, dID, ticket_spp_id, trID):
         ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
         ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
         request.session['ticket_tr_id'] = ticket_tr.id
+        if not ticket_tr.ortrtr_set.all():
+            messages.warning(request, 'Блока ОРТР нет')
+            return redirect('spp_view_save', dID, ticket_spp_id)
         ortr = ticket_tr.ortrtr_set.all()[0]
         request.session['ortr_id'] = ortr.id
         request.session['technical_solution'] = trID
@@ -2332,6 +2349,7 @@ def add_spp_wait(request, ticket_spp_id):
 def spp_view_save(request, dID, ticket_spp_id):
     """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
      получает из БД"""
+    request = flush_session_key(request)
     request.session['ticket_spp_id'] = ticket_spp_id
     request.session['dID'] = dID
     current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
@@ -3852,6 +3870,30 @@ def add_comment_to_return_ticket(request):
                    'dID': request.session.get('dID')
                    }
         return render(request, 'tickets/return_comment.html', context)
+
+
+@cache_check
+def send_ticket_to_otpm_control(request):
+    """Данный метод завершает работу над заявкой отправленной в ОТПМ Контроль и выпуск"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    dID = request.session['dID']
+    ticket_spp_id = request.session['ticket_spp_id']
+    ticket_spp = SPP.objects.get(id=ticket_spp_id)
+    uid = ticket_spp.uID
+    trdifperiod = ticket_spp.trdifperiod
+    trcuratorphone = ticket_spp.trcuratorphone
+    ticket_k = ticket_spp.ticket_k
+    status_send_to_otpm_control = send_to_otpm_control(username, password, dID, uid, trdifperiod, trcuratorphone)
+    if status_send_to_otpm_control != 200:
+        messages.warning(request, f'Заявку {ticket_k} не удалось отправить на ОТПМ Контроль и выпуск.')
+        return redirect('spp_view_save', dID, ticket_spp_id)
+    ticket_spp.process = False
+    ticket_spp.save()
+    messages.success(request, f'Заявка {ticket_k} выполнена и отправлена в ОТПМ Контроль и выпуск.')
+    return redirect('ortr')
 
 
 def export_xls(request):

@@ -46,11 +46,32 @@
         <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
         <td class="table-light" style="width: 75%">{{value}}</td>
     </tr>
-    {% else %}
+    {% elif 'Тип заявки' in key %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
         <td class="table-light" style="width: 75%">{{value}}</td>
     </tr>
+    {% elif 'Клиент' in key %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value}}</td>
+    </tr>
+    {% elif 'Менеджер' in key %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value}}</td>
+    </tr>
+    {% elif 'Технолог' in key %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value}}</td>
+    </tr>
+    {% elif 'Задача в ОТПМ' in key %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
+        <td class="table-light" style="width: 75%">{{value|linebreaksbr}}</td>
+    </tr>
+
     {% endif %}
     {% endfor %}
 
