@@ -1241,7 +1241,7 @@ def saved_data(request):
 
             ortr_field = ortrform.cleaned_data['ortr_field']
             ots_field = ortrform.cleaned_data['ots_field']
-            regex = '\n(\d{1,2}\..+)\r\n-+\r\n'
+            regex = '\n(.+)\r\n-{5,}\r\n'
             match_ortr_field = re.findall(regex, ortr_field)
             is_exist_ots = bool(ots_field)
             match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
@@ -2320,6 +2320,7 @@ def remove_spp_process(request, ticket_spp_id):
     """Данный метод удаляет заявку из обрабатываемых заявок"""
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.process = False
+    current_ticket_spp.projected = False
     current_ticket_spp.save()
     messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
     return redirect('ortr')
@@ -3886,10 +3887,16 @@ def send_ticket_to_otpm_control(request):
     trdifperiod = ticket_spp.trdifperiod
     trcuratorphone = ticket_spp.trcuratorphone
     ticket_k = ticket_spp.ticket_k
-    status_send_to_otpm_control = send_to_otpm_control(username, password, dID, uid, trdifperiod, trcuratorphone)
-    if status_send_to_otpm_control != 200:
-        messages.warning(request, f'Заявку {ticket_k} не удалось отправить на ОТПМ Контроль и выпуск.')
-        return redirect('spp_view_save', dID, ticket_spp_id)
+    if ticket_spp.simplified_tr is True:
+        status_send_to_accept = send_to_accept(username, password, dID, uid, trdifperiod, trcuratorphone)
+        if status_send_to_accept != 200:
+            messages.warning(request, f'Заявку {ticket_k} не удалось отправить на Принятие ТР.')
+            return redirect('spp_view_save', dID, ticket_spp_id)
+    else:
+        status_send_to_otpm_control = send_to_otpm_control(username, password, dID, uid, trdifperiod, trcuratorphone)
+        if status_send_to_otpm_control != 200:
+            messages.warning(request, f'Заявку {ticket_k} не удалось отправить на ОТПМ Контроль и выпуск.')
+            return redirect('spp_view_save', dID, ticket_spp_id)
     ticket_spp.process = False
     ticket_spp.save()
     messages.success(request, f'Заявка {ticket_k} выполнена и отправлена в ОТПМ Контроль и выпуск.')

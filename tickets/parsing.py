@@ -882,6 +882,20 @@ def send_to_otpm_control(login, password, dID, uid, trdifperiod, trcuratorphone)
     return req.status_code
 
 
+def send_to_accept(login, password, dID, uid, trdifperiod, trcuratorphone):
+    """Данный метод выполняет запрос в СПП на отправление упрощенной заявки на принятие"""
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
+    data = {'uID': uid,
+            'trCuratorPhone': trcuratorphone,
+            'trDifPeriod': trdifperiod,
+            'action': 'sendSummary',
+            'dID': dID,
+            'trStatus': '100'
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    return req.status_code
+
+
 def send_to_mko(login, password, dID, comment):
     """Данный метод выполняет запрос в СПП на отправление заявки менеджеру"""
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
