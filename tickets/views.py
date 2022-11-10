@@ -3892,6 +3892,11 @@ def send_ticket_to_otpm_control(request):
         if status_send_to_accept != 200:
             messages.warning(request, f'Заявку {ticket_k} не удалось отправить на Принятие ТР.')
             return redirect('spp_view_save', dID, ticket_spp_id)
+    elif ticket_spp.type_ticket == 'ПТО':
+        status_send_to_pto = send_to_pto(username, password, dID, uid, trdifperiod, trcuratorphone)
+        if status_send_to_pto != 200:
+            messages.warning(request, f'Заявку {ticket_k} не удалось отправить на ПТО.')
+            return redirect('spp_view_save', dID, ticket_spp_id)
     else:
         status_send_to_otpm_control = send_to_otpm_control(username, password, dID, uid, trdifperiod, trcuratorphone)
         if status_send_to_otpm_control != 200:

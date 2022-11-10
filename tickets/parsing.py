@@ -514,6 +514,7 @@ def for_spp_view(login, password, dID):
     sostav = []
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php?dID={}'.format(dID)
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    print(req.content.decode('utf-8'))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
         search = soup.find_all('tr')
@@ -877,6 +878,20 @@ def send_to_otpm_control(login, password, dID, uid, trdifperiod, trcuratorphone)
             'action': 'sendSummary',
             'dID': dID,
             'trStatus': '83'
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    return req.status_code
+
+
+def send_to_pto(login, password, dID, uid, trdifperiod, trcuratorphone):
+    """Данный метод выполняет запрос в СПП на отправление заявки в ПТО"""
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
+    data = {'uID': uid,
+            'trCuratorPhone': trcuratorphone,
+            'trDifPeriod': trdifperiod,
+            'action': 'sendSummary',
+            'dID': dID,
+            'trStatus': '82'
             }
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     return req.status_code
