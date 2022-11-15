@@ -598,7 +598,7 @@ def for_tr_view(login, password, dID, tID, trID):
                     service = service[:-1]
                     total_services.append(service)
                 spp_params['Перечень требуемых услуг'] = total_services
-            elif 'Информация для' in i.find_all('td')[0].text:
+            elif 'Информация дляразработки ТР' in i.find_all('td')[0].text:
                 spp_params['Информация для разработки ТР'] = i.find_all('td')[1].text
             elif 'Узел подключения клиента' in i.find_all('td')[0].text:
                 node = re.search(r'\t(.+)\s+Статус', i.find_all('td')[1].text)
@@ -606,7 +606,7 @@ def for_tr_view(login, password, dID, tID, trID):
                     spp_params['Узел подключения клиента'] = node.group(1)
                 else:
                     spp_params['Узел подключения клиента'] = url
-            elif 'Отключение' in i.find_all('td')[0].text and len(i.find_all('td')) > 1:
+            elif 'Отключение' in i.find_all('td')[0].text and len(i.find_all('td')) > 1 and i.find_all('td')[1].find('input'):
                 try:
                     checked = i.find_all('td')[1].find('input')['checked']
                 except KeyError:
