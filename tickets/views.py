@@ -3921,52 +3921,49 @@ def export_xls(request):
         ws.write(row_num, col_num, columns[col_num], font_style)
     font_style = xlwt.XFStyle()
     technolog = request.session['technolog']
-    query = None
-    if request.session.get('report_time_tracking_start'):
-        start = request.session.get('report_time_tracking_start')
-        start_datetime = datetime.datetime.strptime(start, "%d.%m.%Y")
-        query_start = Q(created__gte=start_datetime)
-        query = query_start if query is None else query & query_start
-    if request.session.get('report_time_tracking_stop'):
-        stop = request.session.get('report_time_tracking_stop')
-        stop_datetime = datetime.datetime.strptime(stop, "%d.%m.%Y")
-        query_stop = Q(complited__lt=stop_datetime)
-        query = query_stop if query is None else query & query_stop
-    if query is not None:
-        rows = SPP.objects.filter(user__username=technolog).filter(query).order_by('created')
-    else:
-        rows = SPP.objects.filter(user__username=technolog).order_by('created')
-    rows = rows.annotate(
-        formatted_date=Func(
-            F('created'),
-            Value('dd.MM.yyyy'), #hh:mm
-            function='to_char',
-            output_field=CharField()
-        )
-    )
-    rows = rows.annotate(
-        duration=Func(
-            F('complited') - F('created'),
-            Value('HH24:MI:SS'),
-            function='to_char',
-            output_field=CharField()
-        )
-    )
+    start = request.session.get('report_time_tracking_start')
+    start_datetime = datetime.datetime.strptime(start, "%d.%m.%Y")
+    stop = request.session.get('report_time_tracking_stop')
+    stop_datetime = datetime.datetime.strptime(stop, "%d.%m.%Y")
+    query_start = Q(complited__gte=start_datetime)
+    query_stop = Q(complited__lte=stop_datetime)
+    query = query_start & query_stop
+    rows = SPP.objects.filter(user__username=technolog).filter(query).order_by('created')
+    rows = rows.annotate(formatted_date=F('created'))
     rows = rows.values_list('formatted_date',
                             'ticket_k',
                             'client',
                             'des_tr',
                             'created',
                             'complited',
-                            'duration',
-                            'projected'
+                            'wait',
+                            'projected',
+                            'was_waiting'
                             )
     for row in rows:
         points_list = []
         row = list(row)
+        row[0] = row[0].astimezone(timezone.get_current_timezone()).strftime('%d.%m.%Y')
+
+        if row[6] is True:
+            now = datetime.datetime.now(timezone.utc)
+            print(datetime.datetime.now())
+            row[6] = now - row[4]
+        else:
+            row[6] = row[5] - row[4]
+        days = row[6].days
+        hours, remainder = divmod(row[6].seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        row[6] = f'{hours+days*24:02}:{minutes:02}:{seconds:02}'
+
         row[4] = row[4].astimezone(timezone.get_current_timezone()).strftime('%H:%M:%S')
         row[5] = row[5].astimezone(timezone.get_current_timezone()).strftime('%H:%M:%S')
-        row[7] = 'ТР спроектировано' if row[7] is True else 'ТР не спроектировано'
+
+        if row[8] is True:
+            row[7] = 'Ожидание'
+        else:
+            row[7] = 'ТР спроектировано' if row[7] is True else 'ТР не спроектировано'
+        row.pop()
         for des in row[3]:
             points_list += [k for k, v in des.items() if 'г.' in k]
         points = '\r\n'.join(points_list)
