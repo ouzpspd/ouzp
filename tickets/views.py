@@ -3927,7 +3927,8 @@ def export_xls(request):
     stop_datetime = datetime.datetime.strptime(stop, "%d.%m.%Y")
     query_start = Q(complited__gte=start_datetime)
     query_stop = Q(complited__lte=stop_datetime)
-    query = query_start & query_stop
+    query_wait = Q(wait=False)
+    query = query_start & query_stop & query_wait
     rows = SPP.objects.filter(user__username=technolog).filter(query).order_by('created')
     rows = rows.annotate(formatted_date=F('created'))
     rows = rows.values_list('formatted_date',
@@ -3944,13 +3945,7 @@ def export_xls(request):
         points_list = []
         row = list(row)
         row[0] = row[0].astimezone(timezone.get_current_timezone()).strftime('%d.%m.%Y')
-
-        if row[6] is True:
-            now = datetime.datetime.now(timezone.utc)
-            print(datetime.datetime.now())
-            row[6] = now - row[4]
-        else:
-            row[6] = row[5] - row[4]
+        row[6] = row[5] - row[4]
         days = row[6].days
         hours, remainder = divmod(row[6].seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
