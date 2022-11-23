@@ -23,6 +23,7 @@
 <form action="{% url 'cks' %}" method="post">
     {% csrf_token %}
     <div class="container">
+        <p style="color: red">Внимание! Не забывать про subinterface AR03-25.ekb и AR13-23.ekb</p>
         <div class="row">
             <div class="col-4">
                 {% if list_strok%}
@@ -79,6 +80,7 @@
             </div>
         </div>
         {% endif %}
+
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
