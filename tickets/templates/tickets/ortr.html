@@ -218,8 +218,11 @@
       {% for ticket in spp_wait %}{%comment%} Только для случая когда нужны абсолютно все заявки {%endcomment%}
         <tr>
             <th scope="row">{{search|length|add:forloop.counter}}</th>
-
+            {% if ticket.type_ticket == 'ПТО' %}
+            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}} {{ticket.type_ticket}}</a></td>
+            {% else %}
             <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}}</a></td>
+            {% endif %}
 
             <td>{{ticket.client}}</td>
             <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
