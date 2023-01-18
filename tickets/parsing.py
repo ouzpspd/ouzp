@@ -350,7 +350,14 @@ def _parsing_vgws_by_node_name(login, password, **kwargs):
         types_node_vgw = ['Узел связи', 'Помещение клиента']
         for row_tr in rows_tr:
             vgw_inner = dict()
-            for row_td in row_tr.find_all('td'):
+            #rows_td = row_tr.find_all('td')
+            index_row = 0                           # Поля состояние и описание - текстовые, найти их как остальные
+            for row_td in row_tr.find_all('td'):    # не получится и т.к. row_td - элемент класса bs4 нет возможности
+                index_row += 1                      # обратится  к полям по позиции, поэтому считаем вручную
+                if index_row == 8:                  # 8 - позиция состояния в таблице шлюзов
+                    vgw_inner.update({'state': row_td.text})
+                if index_row == 12:                 # 12 - позиция описания в таблице шлюзов
+                    vgw_inner.update({'description': row_td.text})
                 if row_td.find('a'):
                     if row_td.find('a', {'class': "voipgateway-name"}):
                         vgw_inner.update({'name': row_td.find('a').text})
@@ -514,7 +521,6 @@ def for_spp_view(login, password, dID):
     sostav = []
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php?dID={}'.format(dID)
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    print(req.content.decode('utf-8'))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
         search = soup.find_all('tr')

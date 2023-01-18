@@ -21,7 +21,9 @@
             <th scope="col">Модель</th>
             <th scope="col">Uplink</th>
             <th scope="col">Порты</th>
-            <th scope="col">Место установки</th>
+            <th scope="col">Статус</th>
+            <th scope="col">Место</th>
+            <th scope="col">Описание</th>
 
         </tr>
       </thead>
@@ -30,18 +32,20 @@
 
         <tr>
             {% for key, value in vgw.items %}
-            {% if key == 'ports' %}
-            <td><a href="https://cis.corp.itmh.ru/{{value}}" target ="_blank">Порты</a></td>
-            {% elif key == 'ip' %}
-            <td><a href="http://{{value}}" target ="_blank">{{value}}</a></td>
-            {% else %}
-            <td>{{value}}</td>
-            {% endif %}
+                {% if key == 'ports' %}
+                    <td><a href="https://cis.corp.itmh.ru/{{value}}" target ="_blank">Порты</a></td>
+                {% elif key == 'ip' %}
+                    <td><a href="http://{{value}}" target ="_blank">{{value}}</a></td>
+                {% elif key == 'state' %}
+                    {% if value == 'ВКЛ' %}
+                        <td style="color:green;font-weight:bold">{{value}}</td>
+                    {% else %}
+                        <td style="color:red;font-weight:bold">{{value}}</td>
+                    {% endif %}
+                {% else %}
+                <td>{{value}}</td>
+                {% endif %}
             {% endfor %}
-
-            {%comment%}<td><a href="{{value.3}}" target ="_blank">Порты</a></td>{%endcomment%}
-
-
         </tr>
 
       {% endfor %}
