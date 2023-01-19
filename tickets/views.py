@@ -3558,6 +3558,7 @@ def search(request):
         client = searchticketsform.cleaned_data['client']
         start = searchticketsform.cleaned_data['start']
         stop = searchticketsform.cleaned_data['stop']
+        titles = searchticketsform.cleaned_data['titles']
         initial_params = {}
         if spp:
             initial_params.update({'spp': spp})
@@ -3575,6 +3576,8 @@ def search(request):
             initial_params.update({'start': start})
         if stop:
             initial_params.update({'stop': stop})
+        if titles:
+            initial_params.update({'titles': titles})
 
         searchticketsform = SearchTicketsForm(initial=initial_params)
         context = {
@@ -3606,6 +3609,9 @@ def search(request):
             if request.GET.get('stop'):
                 query_stop = Q(ticket_k__complited__lt=stop)
                 query = query_stop if query is None else query & query_stop
+            if request.GET.get('titles'):
+                query_titles = Q(ortrtr__titles__icontains=titles)
+                query = query_titles if query is None else query & query_titles
             if query is not None:
                 results = TR.objects.filter(query).order_by('-ticket_k__created')
                 paginator = Paginator(results, 50)

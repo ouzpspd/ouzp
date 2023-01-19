@@ -122,13 +122,21 @@
                     {{searchticketsform.client}}
                 </div>
             </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ searchticketsform.titles.id_for_label }}">Заголовки:</label>
+                    {{searchticketsform.titles}}
+                </div>
+            </div>
 
+
+        </div>
+        <div class="row">
             <div class="col-4">
                 <label for="{{ searchticketsform.client.id_for_label }}"></label>
                 <button type="submit" style="margin-top:8px" class="btn btn-primary btn-block">Поиск</button>
             </div>
         </div>
-
     </div>
 </form>
         </div>
@@ -173,6 +181,7 @@
           <th scope="col">№ Заявки</th>
             <th scope="col">ТР</th>
           <th scope="col">Клиент</th>
+            <th scope="col">Заголовки</th>
             <th scope="col">Точка подключения</th>
             <th scope="col">Время начала</th>
             <th scope="col">Время окончания</th>
@@ -195,6 +204,7 @@
             <td><a href="{% url 'spp_view_save' tr.ticket_k.dID tr.ticket_k.id %}">{{tr.ticket_k}}</a></td>
             <td><a href="{% url 'tr_view_save' tr.ticket_k.dID tr.ticket_k.id tr.ticket_tr %}">{{tr.ticket_tr}}</a></td>
             <td>{{tr.ticket_k.client}}</td>
+            <td style="font-size:75%;">{{tr.ortrtr_set.all.0.titles|linebreaks}}</td>
             <td> {{tr.connection_point}}</td>
             <td>{{tr.ticket_k.created|time:"H:i"}}</td>
             <td>{{tr.ticket_k.complited|time:"H:i"}}</td>

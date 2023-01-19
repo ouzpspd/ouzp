@@ -412,6 +412,8 @@ class SearchTicketsForm(forms.Form):
                                     'data-target': '#datetimepicker2'
                                 })
                                 )
+    titles = forms.CharField(label='Заголовки', required=False,
+                           widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 
 class PprForm(forms.Form):
