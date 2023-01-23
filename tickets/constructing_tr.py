@@ -953,8 +953,6 @@ def exist_enviroment_replace_csw(value_vars):
                         hidden_vars['и тел. шлюз %указать название тел шлюза%'] = 'и тел. шлюзы %указать название тел шлюза%'
                         static_vars['указать название тел шлюза'] = ', '.join(vgws)
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    #value_vars.update({'pps': readable_pps})
-    #value_vars.update({'kad': kad})
     return result_services, value_vars
 
 
@@ -1397,6 +1395,18 @@ def _passage_services(result_services, value_vars):
                     hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
                     hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
                     static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
+                if 'ЦКС' in ', '.join(services):
+                    hidden_vars[
+                        '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ ЦКС %полисером Subinterface/портом подключения%.'
+                    static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+                if 'ВЛС' in ', '.join(services):
+                    hidden_vars[
+                        '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВЛС %полисером Subinterface/портом подключения%.'
+                    static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+                if 'ВМ' in ', '.join(services):
+                    hidden_vars[
+                        '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
+                    static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
             else:
                 services = []
                 for key, value in readable_services.items():
@@ -1444,6 +1454,14 @@ def _passage_services(result_services, value_vars):
                     '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'] = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %указать существующий КАД% после переезда клиента.'
                 static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
 
+                if 'ЦКС' in static_vars['указать название сервиса'] or 'ВЛС' in static_vars['указать название сервиса']:
+                    hidden_vars[
+                        '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'
+                    static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+                if 'ВМ' in static_vars['указать название сервиса']:
+                    hidden_vars[
+                        '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'
+                    static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
                 if services[0].startswith('"ШПД в интернет"'):
                     if value_vars.get('change_log_shpd') != 'существующая адресация':
                         hidden_vars[', необходимость смены реквизитов'] = ', необходимость смены реквизитов'
@@ -1472,7 +1490,7 @@ def _passage_services(result_services, value_vars):
             hidden_vars['МКО:'] = 'МКО:'
             hidden_vars['- Проинформировать клиента о простое сервиса на время проведения работ.'] = '- Проинформировать клиента о простое сервиса на время проведения работ.'
             hidden_vars['- Согласовать время проведение работ.'] = '- Согласовать время проведение работ.'
-            hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для изменения логического подключения сервиса %указать сервис% клиента.'] = '- Создать заявку в Cordis на ОНИТС СПД для изменения логического подключения сервиса %указать сервис% клиента.'
+            hidden_vars['- Создать заявку в Cordis на ОНИТС СПД для изменения логического подключения ^сервиса^ %указать сервис% клиента.'] = '- Создать заявку в Cordis на ОНИТС СПД для изменения логического подключения ^сервиса^ %указать сервис% клиента.'
         services = []
         service_shpd_change = []
         for key, value in readable_services.items():
@@ -1495,6 +1513,18 @@ def _passage_services(result_services, value_vars):
                             services.append(key + ''.join(value))
                 else:
                     services.append(key + ''.join(value))
+        if 'ЦКС' in ', '.join(services):
+            hidden_vars[
+                '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ ЦКС %полисером Subinterface/портом подключения%.'
+            static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+        if 'ВЛС' in ', '.join(services):
+            hidden_vars[
+                '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВЛС %полисером Subinterface/портом подключения%.'
+            static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+        if 'ВМ' in ', '.join(services):
+            hidden_vars[
+                '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
+            static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
         if service_shpd_change and value_vars.get('change_log_shpd') == 'Новая подсеть /32':
             if value_vars.get('type_ticket') != 'ПТО':
                 hidden_vars['- Согласовать необходимость смены реквизитов.'] = '- Согласовать необходимость смены реквизитов.'
@@ -1506,7 +1536,9 @@ def _passage_services(result_services, value_vars):
         static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
         static_vars['указать узел связи'] = _readable_node(value_vars.get('pps'))
         static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
-        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+        counter_plur = len(services)
+        result_services.append(pluralizer_vars(stroka, counter_plur))
     elif value_vars.get('type_passage') == 'Перевод на гигабит':
         stroka = templates.get("Расширение полосы сервиса %указать название сервиса%")
         desc_service, name_passage_service = get_selected_readable_service(readable_services, value_vars.get('selected_ono'))
@@ -1838,6 +1870,18 @@ def _passage_services_on_csw(result_services, value_vars):
                             services.append(key + ' ' + value)
                         elif type(value) == list:
                             services.append(key + ''.join(value))
+            if 'ЦКС' in ', '.join(services):
+                hidden_vars[
+                    '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ ЦКС %полисером Subinterface/портом подключения%.'
+                static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+            if 'ВЛС' in ', '.join(services):
+                hidden_vars[
+                    '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВЛС %полисером Subinterface/портом подключения%.'
+                static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+            if 'ВМ' in ', '.join(services):
+                hidden_vars[
+                    '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
+                static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
             static_vars['указать сервис'] = ', '.join(services)
             static_vars['указать название сервиса'] = ', '.join([x for x in readable_services.keys() if x != '"Телефония"'])
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
@@ -2109,8 +2153,6 @@ def extra_services_with_install_csw(value_vars):
     result_services = _passage_services_on_csw(result_services, value_vars)
     if value_vars.get('phone_in_pass'):
         result_services, result_services_ots, value_vars = _passage_phone_service(result_services, value_vars)
-    # else:
-    #     result_services_ots = None
     return result_services, result_services_ots, value_vars
 
 

@@ -147,7 +147,7 @@ def login_for_service(request):
                 credent = dict()
                 credent.update({'username': username})
                 credent.update({'password': password})
-                cache.set(user, credent, timeout=28800)
+                cache.set(user, credent, timeout=32400)
 
                 if 'next' in request.GET:
                     return redirect(request.GET['next'])
@@ -2356,7 +2356,7 @@ def spp_view_save(request, dID, ticket_spp_id):
     current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
 
     context = {'current_ticket_spp': current_ticket_spp}
-    return render(request, 'tickets/spp_view_save.html', context) #{'current_ticket_spp': current_ticket_spp})
+    return render(request, 'tickets/spp_view_save.html', context)
 
 
 @cache_check
@@ -3402,12 +3402,14 @@ def params_extend_service(request):
 
     else:
         desc_service = request.session.get('desc_service')
+        type_passage = request.session.get('type_passage')
         extendserviceform = ExtendServiceForm()
         pass_job_services = request.session.get('pass_job_services')
         tag_service = request.session['tag_service']
         request, prev_page, index = backward_page(request)
         context = {
             'desc_service': desc_service,
+            'type_passage': type_passage,
             'pass_job_services': pass_job_services,
             'extendserviceform': extendserviceform,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
@@ -3455,11 +3457,10 @@ def pass_serv(request):
                         response = get_response_with_get_params(request)
                         return response
                 else:
-                    if type_passage == 'Перевод на гигабит':
-                        desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
-                        if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
-                            request.session['desc_service'] = desc_service
-                            tag_service.append({'params_extend_service': None})
+                    desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
+                    if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
+                        request.session['desc_service'] = desc_service
+                        tag_service.append({'params_extend_service': None})
                     phone_in_pass = [x for x in pass_job_services if x.startswith('Телефон')]
                     if phone_in_pass and 'CSW' not in request.session.get('selected_ono')[0][-2]:
                         tag_service.append({'phone': ''.join(phone_in_pass)})

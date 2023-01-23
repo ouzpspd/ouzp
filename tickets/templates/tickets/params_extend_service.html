@@ -24,6 +24,7 @@
 <form action="{% url 'params_extend_service' %}" method="post">
     {% csrf_token %}
     <div class="container">
+        {% if type_passage == 'Перевод на гигабит' %}
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
@@ -32,6 +33,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
         {% if desc_service == 'ЦКС' or desc_service == 'Порт ВЛС' %}
         <div class="row">
             <div class="col-4">

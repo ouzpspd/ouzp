@@ -222,7 +222,7 @@ class ExtendServiceForm(forms.Form):
         ('100 Мбит/с', '100 Мбит/с'),
         ('1 Гбит/с', '1 Гбит/с'),
     ]
-    extend_speed = forms.CharField(label='Новая полоса',
+    extend_speed = forms.CharField(label='Новая полоса', required=False,
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     extend_policer_cks_vk = forms.CharField(label='Ограничение', required=False, widget=forms.Select(choices=type_police_cks_vk, attrs={'class': 'form-control'}))
     extend_policer_vm = forms.CharField(label='Ограничение', required=False,
