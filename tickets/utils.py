@@ -506,15 +506,21 @@ def get_extra_service_port_csw(service_port, switch_config, model):
                 if match:
                     if match.group(1) not in ['1', '4094']:
                         vlan = match.group(1)
+                    else:
+                        vlan = '(на оборудовании не настроен)'
                 else:
                     vlan = 'no vlan'
         extra_ports = []
-        for interface in switch_config.split('!'):
-            if f'switchport access vlan {vlan}' in interface and port not in interface:
-                regex_port = "nterface (.+)['\n'|'\r\n']"
-                match = re.search(regex_port, interface)
-                extra_port = match.group(1).split('/')[-1].strip()
-                extra_ports.append(extra_port)
+
+        if vlan == '(на оборудовании не настроен)':
+            extra_ports.append('(на оборудовании не настроен)')
+        elif vlan != 'no vlan':
+            for interface in switch_config.split('!'):
+                if f'switchport access vlan {vlan}' in interface and port not in interface:
+                    regex_port = "nterface (.+)['\n'|'\r\n']"
+                    match = re.search(regex_port, interface)
+                    extra_port = match.group(1).split('/')[-1].strip()
+                    extra_ports.append(extra_port)
         if extra_ports:
             service_port = service_port + ',' + ','.join(extra_ports)
     return service_port
