@@ -526,7 +526,7 @@ def copper(request):
                         type_passage = request.session['type_passage']
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '55 -', '57 -', '60 -', '62 -', '64 -', '68 -', '67 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
+                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -', '57 -', '60 -', '62 -', '64 -', '68 -', '67 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
                                 tag_service.append({'change_log_shpd': None})
                                 request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
@@ -671,7 +671,7 @@ def vols(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw, logic_replace_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '55 -',
+                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
                                             '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
                                             '125 -', '131 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
@@ -851,7 +851,7 @@ def wireless(request):
                         if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
                             selected_ono = request.session['selected_ono']
                             selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '55 -',
+                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
                                             '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
                                             '125 -', '131 -', '107 -', '109 -', '483 -']
                             if any(serv in selected_service for serv in service_shpd):
@@ -2857,7 +2857,7 @@ def head(request):
         request.session['old_model_csw'] = old_model_csw
         request.session['node_csw'] = node_csw
 
-    service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '54 -', '55 -', '57 -', '60 -', '62 -',
+    service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -', '57 -', '60 -', '62 -',
                     '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
     service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
