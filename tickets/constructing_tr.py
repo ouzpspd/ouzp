@@ -1873,15 +1873,15 @@ def _passage_services_on_csw(result_services, value_vars):
             if 'ЦКС' in ', '.join(services):
                 hidden_vars[
                     '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ ЦКС %полисером Subinterface/портом подключения%.'
-                static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+                static_vars['полисером Subinterface/портом подключения'] = 'как ранее'
             if 'ВЛС' in ', '.join(services):
                 hidden_vars[
                     '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВЛС %полисером Subinterface/портом подключения%.'
-                static_vars['полисером Subinterface/портом подключения'] = value_vars.get('extend_policer_cks_vk')
+                static_vars['полисером Subinterface/портом подключения'] = 'как ранее'
             if 'ВМ' in ', '.join(services):
                 hidden_vars[
                     '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
-                static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
+                static_vars['полисером на SVI/портом подключения'] = 'как ранее'
             static_vars['указать сервис'] = ', '.join(services)
             static_vars['указать название сервиса'] = ', '.join([x for x in readable_services.keys() if x != '"Телефония"'])
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
