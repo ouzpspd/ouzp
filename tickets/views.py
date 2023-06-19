@@ -1,12 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import TR, SPP, OrtrTR
+from django.views import View
+
+from .models import TR, SPP, OrtrTR, HoldPosition
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
     SksForm, \
     UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
-    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm,\
-    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm
+    TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
+    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, OtpmPoolForm
 
 import logging
 from django.contrib import messages
@@ -170,6 +172,22 @@ def cache_check(func):
             response['Location'] += '?next={}'.format(request.path)
             return response
         return func(request, *args, **kwargs)
+    return wrapper
+
+
+def cache_check_view(func):
+    """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
+     если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
+    def wrapper(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login/?next=%s' % (request.path))
+        user = User.objects.get(username=request.user.username)
+        credent = cache.get(user)
+        if credent == None:
+            response = redirect('login_for_service')
+            response['Location'] += '?next={}'.format(request.path)
+            return response
+        return func(self, request, *args, **kwargs)
     return wrapper
 
 
@@ -3983,7 +4001,91 @@ def export_xls(request):
     return response
 
 
+def filter_otpm_search(search, technologs, group):
+    """Данный метод фильтрует пул заявок по технологу, группе"""
+    result_search = []
+    query_technolog = True
+    query_spp_ticket_group = True
+    for x in search:
+        if technologs:
+            query_technolog = x[4] in technologs
+        if group:
+            query_spp_ticket_group = group in x[-1]
+        query = query_technolog and query_spp_ticket_group
+        if query:
+            result_search.append(x)
+    return result_search
 
+
+class CredentialMixin:
+    def get_credential(self, *args, **kwargs):
+        user = User.objects.get(username=self.request.user.username)
+        credent = cache.get(user)
+        username = credent['username']
+        password = credent['password']
+        return username, password
+
+    def redirect_to_login_for_service(self, *args, **kwargs):
+        messages.warning(self.request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(self.request.path)
+        return response
+
+class OtpmPoolView(CredentialMixin, View):
+    """Пул задач ОТПМ"""
+    @cache_check_view
+    def get(self, request):
+        username, password = super().get_credential(self)
+        request = flush_session_key(request)
+        queryset_user_group = User.objects.filter(
+            userholdposition__hold_position=request.user.userholdposition.hold_position
+        )
+        if request.GET:
+            form = OtpmPoolForm(request.GET)
+            form.fields['technolog'].queryset = queryset_user_group
+            if form.is_valid():
+                technolog = None if form.cleaned_data['technolog'] is None else form.cleaned_data['technolog'].last_name
+                group = None if form.cleaned_data['group'] == 'Все' else form.cleaned_data['group']
+                status = None if form.cleaned_data['status'] == 'Все' else form.cleaned_data['status']
+                initial_params = {}
+                if technolog:
+                    initial_params.update({'technolog': technolog})
+                if group:
+                    initial_params.update({'spp_ticket_group': group})
+                if status:
+                    initial_params.update({'status': status})
+                context = {
+                    'otpmpoolform': form,
+                }
+                search = in_work_otpm(username, password)
+                if search[0] == 'Access denied':
+                    return super().redirect_to_login_for_service(self)
+                # list_search = []
+                # if type(search[0]) != str:
+                #     for i in search:
+                #         list_search.append(i[0])
+
+                elif search[0] == 'Empty list tickets':
+                    output_search = None
+                else:
+                    list_search_rem = []
+                    search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+                    if technolog is None:
+                        technologs = [user.last_name for user in queryset_user_group]
+                    else:
+                        technologs = list()
+                        technologs.append(technolog)
+                    output_search = filter_otpm_search(search, technologs, group)
+                context.update({'search': output_search})  # 'results': results
+                return render(request, 'tickets/otpm.html', context)
+        else:
+            initial_params = dict({'technolog': request.user.last_name})
+            form = OtpmPoolForm(initial=initial_params)
+            form.fields['technolog'].queryset = queryset_user_group
+            context = {
+                'otpmpoolform': form
+            }
+            return render(request, 'tickets/otpm.html', context)
 
 
 

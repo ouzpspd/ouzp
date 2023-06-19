@@ -2,6 +2,7 @@
 
 {% block nav_active %}
 {% load custom_filters %}
+{% if request.user|has_group:"Сотрудники ОУЗП" %}
 <li class="nav-item">
   <a class="nav-link active" aria-current="page" href="{% url 'private_page' %}">Личное пространство</a>
 </li>
@@ -23,6 +24,15 @@
 {% if user|has_group:"Руководство ОУЗП" %}
 <li class="nav-item">
   <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
+</li>
+{% endif %}
+
+{% elif request.user|has_group:"Сотрудники ОАТТР" %}
+<li class="nav-item">
+  <a class="nav-link active" aria-current="page" href="{% url 'private_page' %}">Личное пространство</a>
+</li>
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'otpm' %}">Пул задач</a>
 </li>
 {% endif %}
 {% endblock %}

@@ -44,12 +44,14 @@
   <body>
     <nav class="navbar sticky-top navbar-expand-lg navbar-light bg-light">
       <div class="container-fluid">
-        <a class="navbar-brand Disabled">АРМ ОУЗП СПД</a>
+        <a class="navbar-brand Disabled">АРМ</a>
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          {% load custom_filters %}
+
           <ul class="navbar-nav mr-auto mb-2 mb-lg-0">
             {% block nav_active %}
-            {% load custom_filters %}
+            {% if request.user|has_group:"Сотрудники ОУЗП" %}
             <li class="nav-item">
               <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
             </li>
@@ -73,9 +75,18 @@
               <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
             </li>
             {% endif %}
-            {% endblock %}
+            {% elif request.user|has_group:"Сотрудники ОАТТР" %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'otpm' %}">Пул задач</a>
+            </li>
+            {% endif %}
 
+            {% endblock %}
           </ul>
+
           {% if request.user.is_authenticated %}
           <ul class="navbar-nav " >
             <li  class="nav-item">

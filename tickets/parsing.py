@@ -694,7 +694,77 @@ def in_work_ortr(login, password):
             lines.append('Empty list tickets')
     else:
         lines.append('Access denied')
+    print('lines')
+    print(lines)
     return lines
+
+
+def in_work_otpm(login, password):
+    """Данный метод парсит страницу с пулом ОТПМ в СПП и отфильтровывает заявки с кураторами DIR 2.4.1"""
+    lines = []
+    url = 'https://sss.corp.itmh.ru/dem_tr/demands.php?tech_uID=0&trStatus=inWorkOTPM' +\
+          '&curator=any&vName=&dSearch=&bID=1&searchType=param'
+    t1 = datetime.datetime.now()
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    t2 = datetime.datetime.now()
+    print('time')
+    print(t2 - t1)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        num = 0
+        search = soup.find_all('tr')
+        for tr in search:
+            if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
+                continue
+            elif tr.find('td', id="cur_stat"):
+                num = int(tr.find('td', class_='demand_num').text)
+            elif not tr.find('td', id="cur_stat"):
+                break
+
+        search_demand_num2 = soup.find_all('td', class_='demand_num2')[num:]
+        search_demand_cust = soup.find_all('td', class_='demand_cust')[num:]
+        search_demand_point = soup.find_all('td', class_='demand_point')[num:]
+        search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
+        search_demand_cur = soup.find_all('td', class_='demand_cur')
+        search_demand_stat = soup.find_all('td', class_='demand_stat')
+        search_demand_sl = soup.find_all('td', class_='demand_sl')
+
+
+        for index in range(len(search_demand_num2)-1):
+            unwanted = ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Чернов А. С.']
+            if search_demand_cur[index].text not in unwanted:
+                if lines and lines[-1][0] == search_demand_num2[index].text:
+                    lines[-1][3] = lines[-1][3] + ' ' + search_demand_point[index].text
+                else:
+                    lines.append([search_demand_num2[index].text,
+                                  search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):],
+                                  search_demand_cust[index].text,
+                                  search_demand_point[index].text,
+                                  lost_whitespace(search_demand_tech[index].text),
+
+                                  #search_demand_stat[index].text,
+                                  search_demand_sl[index].text,])
+                                  #search_demand_cur[index].text]
+
+        for index in range(len(lines)):
+            lines[index].append('Не взята в работу')
+            if 'ПТО' in lines[index][0]:
+                lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]
+                lines[index].append('ПТО')
+            else:
+                lines[index].append('Коммерческая')
+            for symbol_index in range(1, len(lines[index][3])):
+                if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
+                    lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
+                    break
+        if lines == []:
+            lines.append('Empty list tickets')
+
+    else:
+        lines.append('Access denied')
+    return lines
+
+
 
 
 def get_sw_config(sw, login, password):
@@ -931,3 +1001,9 @@ def send_to_mko(login, password, dID, comment):
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     return req.status_code
 
+
+def lost_whitespace(text):
+    """Данный метод добавляет пропущенный переход строки в формате А.А или аА -> А. А или а А"""
+    text = re.sub('(.+\w)\.([А-Я]\w.+)', lambda m: m.group(1) + '.\n' + m.group(2), text)
+    text = re.sub('(.+[а-я])([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
+    return text

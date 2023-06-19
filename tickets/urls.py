@@ -78,4 +78,5 @@ urlpatterns = [
     path('export_xls', export_xls, name='export_xls'),
     path('report_time_tracking/', report_time_tracking, name='report_time_tracking'),
     path('send_to_otpm_control/', send_ticket_to_otpm_control, name='send_ticket_to_otpm_control'),
+    path('otpm', OtpmPoolView.as_view(), name='otpm'),
 ]
