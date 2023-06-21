@@ -73,7 +73,8 @@
           <th scope="col">Клиент</th>
             <th scope="col">Точка подключения</th>
             <th scope="col">Технолог</th>
-            <th scope="col">Сложность</th>
+            <th scope="col">Стадия</th>
+            <th scope="col">Слож</th>
             <th scope="col">Статус</th>
             <th scope="col">Действие</th>
         </tr>
@@ -85,15 +86,17 @@
 
         <tr>
             <th scope="row">{{forloop.counter}}</th>
-            <td>{{ticket.7}}</td>
+            <td>{{ticket.8}}</td>
             <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.1}}">{{ticket.0}}</a></td>
             <td>{{ticket.2}}</td>
             <td>{{ticket.3}}</td>
             <td>{{ticket.4}}</td>
             <td>{{ticket.5}}</td>
             <td>{{ticket.6}}</td>
+            <td>{{ticket.7}}</td>
             <td>
-                <a class="btn btn-outline-danger custom" href="{% url 'add_spp' ticket.1 %}?next={{ request.path }}" role="button">Обработать заявку</a>
+                <a class="btn btn-outline-danger custom" href="{% url 'create_spp' ticket.1 %}?next={{ request.path }}&stage={{ticket.5}}"
+                   role="button">Обработать заявку</a>
             </td>
 
         </tr>
@@ -105,11 +108,9 @@
       {% for ticket in spp_process %}
         <tr>
             <th scope="row">{{search|length|add:forloop.counter}}</th>
-            {% if ticket.type_ticket == 'ПТО' %}
-            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}} {{ticket.type_ticket}}</a></td>
-            {% else %}
+            <td>{{ticket.type_ticket}}</td>
             <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}}</a></td>
-            {% endif %}
+
             <td>{{ticket.client}}</td>
             <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
             {% for it in ticket.des_tr %}
@@ -124,9 +125,19 @@
 
             </td>
             <td>{{ticket.technolog}}</td>
-            <td>{{ticket.manager}}</td>
-
-
+            <td>{{ticket.stage}}</td>
+            <td>{{ticket.trdifperiod}}</td>
+            {% if ticket.process %}
+            <td>В работе</td>
+            {% elif ticket.wait %}
+            <td>Отслеживается</td>
+            {% endif %}
+            <td>
+            {% if ticket.user.username == user.username%}
+                <a class="btn btn-outline-success custom" href="{% url 'spp_view_oattr' ticket.dID %}" {%comment%}ticket.id{%endcomment%}
+                   role="button">Открыть заявку</a>
+            {% endif %}
+            </td>
         </tr>
         {% endfor %}
       </tbody>

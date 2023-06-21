@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
+from django.views.generic import DetailView
 
-from .models import TR, SPP, OrtrTR, HoldPosition
+from .models import TR, SPP, OrtrTR, HoldPosition, OtpmSpp
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
     SksForm, \
@@ -21,7 +22,7 @@ from django.http import Http404, HttpResponse
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
-
+from django.utils import timezone
 
 
 import xlwt
@@ -4008,7 +4009,7 @@ def filter_otpm_search(search, technologs, group):
     query_spp_ticket_group = True
     for x in search:
         if technologs:
-            query_technolog = x[4] in technologs
+            query_technolog = [technolog for technolog in technologs if technolog in x[4]]
         if group:
             query_spp_ticket_group = group in x[-1]
         query = query_technolog and query_spp_ticket_group
@@ -4030,6 +4031,7 @@ class CredentialMixin:
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(self.request.path)
         return response
+
 
 class OtpmPoolView(CredentialMixin, View):
     """Пул задач ОТПМ"""
@@ -4060,13 +4062,9 @@ class OtpmPoolView(CredentialMixin, View):
                 search = in_work_otpm(username, password)
                 if search[0] == 'Access denied':
                     return super().redirect_to_login_for_service(self)
-                # list_search = []
-                # if type(search[0]) != str:
-                #     for i in search:
-                #         list_search.append(i[0])
-
                 elif search[0] == 'Empty list tickets':
                     output_search = None
+                    spp_proc_wait = None
                 else:
                     list_search_rem = []
                     search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
@@ -4075,8 +4073,11 @@ class OtpmPoolView(CredentialMixin, View):
                     else:
                         technologs = list()
                         technologs.append(technolog)
-                    output_search = filter_otpm_search(search, technologs, group)
-                context.update({'search': output_search})  # 'results': results
+                    filtered_search = filter_otpm_search(search, technologs, group)
+                    spp_proc_wait = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True))
+                    tickets_spp_proc_wait = [i.ticket_k for i in spp_proc_wait]
+                    output_search = [i for i in filtered_search if i[0] not in tickets_spp_proc_wait]
+                context.update({'search': output_search, 'spp_process': spp_proc_wait})  # 'results': results
                 return render(request, 'tickets/otpm.html', context)
         else:
             initial_params = dict({'technolog': request.user.last_name})
@@ -4086,6 +4087,145 @@ class OtpmPoolView(CredentialMixin, View):
                 'otpmpoolform': form
             }
             return render(request, 'tickets/otpm.html', context)
+
+
+
+
+
+
+class CreateSppView(CredentialMixin, View):
+    """Заявка СПП"""
+    def create_or_update(self, spp_params, current_spp=None):
+        if current_spp:
+            current_spp.created = timezone.now()
+            current_spp.process = True
+            current_spp.save()
+        else:
+            current_spp = OtpmSpp()
+            current_spp.dID = self.kwargs['dID']
+            current_spp.ticket_k = spp_params['Заявка К']
+            current_spp.client = spp_params['Клиент']
+            current_spp.type_ticket = spp_params['Тип заявки']
+            current_spp.manager = spp_params['Менеджер']
+            current_spp.technolog = spp_params['Технолог']
+            current_spp.task_otpm = spp_params['Задача в ОТПМ']
+            current_spp.des_tr = spp_params['Состав Заявки ТР']
+            current_spp.services = spp_params['Перечень требуемых услуг']
+            current_spp.comment = spp_params['Примечание']
+            current_spp.created = timezone.now()
+            current_spp.waited = timezone.now()
+            current_spp.process = True
+            current_spp.uID = spp_params['uID']
+            current_spp.trdifperiod = spp_params['trDifPeriod']
+            current_spp.trcuratorphone = spp_params['trCuratorPhone']
+            current_spp.evaluative_tr = spp_params['Оценочное ТР']
+            user = User.objects.get(username=self.request.user.username)
+            current_spp.user = user
+            current_spp.duration_process = datetime.timedelta(0)
+            current_spp.duration_wait = datetime.timedelta(0)
+            current_spp.stage = self.request.GET.get('stage')
+            current_spp.save()
+        return current_spp
+
+    @cache_check_view
+    def get(self, request, dID):
+        try:
+            current_spp = OtpmSpp.objects.get(dID=dID)
+            if current_spp.process == True:
+                messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
+                return redirect('otpm')
+        except ObjectDoesNotExist:
+            username, password = super().get_credential(self)
+            spp_params = for_spp_view(username, password, dID)
+            if spp_params.get('Access denied') == 'Access denied':
+                return super().redirect_to_login_for_service(self)
+            current_spp = None
+        ticket_spp = self.create_or_update(spp_params, current_spp)
+        return redirect('spp_view_oattr', dID, ticket_spp.id)
+
+
+class SppView(DetailView):
+    model = OtpmSpp
+    slug_field = 'dID'
+    context_object_name = 'current_ticket_spp'
+    template_name = 'tickets/spp_view_oattr.html'
+    def get_object(self):
+        current_ticket_spp = get_object_or_404(OtpmSpp, dID=self.kwargs['dID'])
+        if self.request.GET.get('action') == 'wait' and current_ticket_spp.process:
+            current_ticket_spp.wait = True
+            current_ticket_spp.process = False
+            current_ticket_spp.waited = timezone.now()
+            current_ticket_spp.save()
+        elif self.request.GET.get('action') == 'notwait' and current_ticket_spp.wait:
+            current_ticket_spp.wait = False
+            current_ticket_spp.process = True
+            current_ticket_spp.duration_wait += timezone.now() - current_ticket_spp.waited
+            current_ticket_spp.save()
+        elif self.request.GET.get('action') == 'finish' and current_ticket_spp.process:
+            current_ticket_spp.process = False
+            current_ticket_spp.projected = True
+            current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
+            current_ticket_spp.save()
+        return current_ticket_spp
+
+    # def get(self, request, dID):
+    #     #request = flush_session_key(request)
+    #     # request.session['ticket_spp_id'] = ticket_spp_id
+    #     # request.session['dID'] = dID
+    #     current_ticket_spp = get_object_or_404(OtpmSpp, dID=dID) # id=ticket_spp_id
+    #
+    #     context = {'current_ticket_spp': current_ticket_spp}
+    #     return render(request, 'tickets/spp_view_oattr.html', context)
+
+# def spp_view_oattr(request, dID, ticket_spp_id):
+#     """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
+#      получает из БД"""
+#     request = flush_session_key(request)
+#     request.session['ticket_spp_id'] = ticket_spp_id
+#     request.session['dID'] = dID
+#     current_ticket_spp = get_object_or_404(OtpmSpp, dID=dID, id=ticket_spp_id)
+#
+#     context = {'current_ticket_spp': current_ticket_spp}
+#     return render(request, 'tickets/spp_view_oattr.html', context)
+#
+#
+# def remove_spp_process_oattr(request, ticket_spp_id):
+#     """Данный метод удаляет заявку из обрабатываемых заявок"""
+#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
+#     if current_ticket_spp.wait == True:
+#         messages.warning(request, f'Заявка {current_ticket_spp.ticket_k} находится в ожидании')
+#         return redirect('spp_view_oattr', current_ticket_spp.dID, current_ticket_spp.id)
+#     current_ticket_spp.process = False
+#     current_ticket_spp.projected = True
+#     current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
+#     current_ticket_spp.save()
+#     messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
+#     return redirect('otpm')
+#
+#
+# def remove_spp_wait_oattr(request, ticket_spp_id):
+#     """Данный метод удаляет заявку из заявок в ожидании"""
+#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
+#     current_ticket_spp.wait = False
+#     current_ticket_spp.process = True
+#     current_ticket_spp.duration_wait += timezone.now() - current_ticket_spp.waited
+#     current_ticket_spp.save()
+#     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
+#
+#
+#
+#
+# def add_spp_wait_oattr(request, ticket_spp_id):
+#     """Данный метод добавляет заявку в заявки в ожидании"""
+#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
+#     current_ticket_spp.wait = True
+#     current_ticket_spp.process = False
+#     current_ticket_spp.waited = timezone.now()
+#     current_ticket_spp.save()
+#     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
+
+
+
 
 
 

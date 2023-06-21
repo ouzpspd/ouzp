@@ -731,20 +731,24 @@ def in_work_otpm(login, password):
 
 
         for index in range(len(search_demand_num2)-1):
-            unwanted = ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Чернов А. С.']
-            if search_demand_cur[index].text not in unwanted:
-                if lines and lines[-1][0] == search_demand_num2[index].text:
-                    lines[-1][3] = lines[-1][3] + ' ' + search_demand_point[index].text
-                else:
-                    lines.append([search_demand_num2[index].text,
-                                  search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):],
-                                  search_demand_cust[index].text,
-                                  search_demand_point[index].text,
-                                  lost_whitespace(search_demand_tech[index].text),
+            #unwanted = ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Чернов А. С.']
+            wanted_stat = ['В работе ОТПМ', 'Контроль и выпуск ТР', 'В работе ПТО']
+            #if search_demand_cur[index].text not in unwanted:
+            if search_demand_stat[index].text not in wanted_stat:
+                continue
+            if lines and lines[-1][0] == search_demand_num2[index].text:
+                lines[-1][3] = lines[-1][3] + ' ' + search_demand_point[index].text
+                continue
+            #else:
+            lines.append([search_demand_num2[index].text,
+                          search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):],
+                          search_demand_cust[index].text,
+                          search_demand_point[index].text,
+                          lost_whitespace(search_demand_tech[index].text),
 
-                                  #search_demand_stat[index].text,
-                                  search_demand_sl[index].text,])
-                                  #search_demand_cur[index].text]
+                          search_demand_stat[index].text,
+                          search_demand_sl[index].text,])
+                          #search_demand_cur[index].text]
 
         for index in range(len(lines)):
             lines[index].append('Не взята в работу')
