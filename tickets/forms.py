@@ -492,6 +492,12 @@ class OtpmPoolForm(forms.Form):
         ('Коммерческая', 'Коммерческая'),
         ('ПТО', 'ПТО'),
     ]
+    statuses = [
+        ('Все', 'Все'),
+        ('В работе', 'В работе'),
+        ('Не взята в работу', 'Не взята в работу'),
+        ('Отслеживается', 'Отслеживается'),
+    ]
     # technologs = [
     #     ('Все', 'Все'),
     # ]
@@ -505,6 +511,9 @@ class OtpmPoolForm(forms.Form):
     # technolog = forms.CharField(label='Технолог', required=False,
     #                            widget=forms.Select(choices=technologs, attrs={'class': 'form-control'}))
     group = forms.CharField(label='Группа', required=False,
-                               widget=forms.Select(choices=groups, attrs={'class': 'form-control'}))
+                            widget=forms.Select(choices=groups, attrs={'class': 'form-control'}),
+                            )
     status = forms.CharField(label='Статус', required=False,
-                               widget=forms.TextInput(attrs={'class': 'form-control'}))
+                             widget=forms.Select(choices=statuses, attrs={'class': 'form-control'}),
+                             )
+                               #widget=forms.TextInput(attrs={'class': 'form-control'}))

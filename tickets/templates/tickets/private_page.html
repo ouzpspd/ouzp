@@ -27,7 +27,7 @@
 </li>
 {% endif %}
 
-{% elif request.user|has_group:"Сотрудники ОАТТР" %}
+{% elif user|has_group:"Сотрудники ОАТТР" %}
 <li class="nav-item">
   <a class="nav-link active" aria-current="page" href="{% url 'private_page' %}">Личное пространство</a>
 </li>

@@ -1,3 +1,5 @@
+import json
+
 import requests
 from requests.auth import HTTPBasicAuth
 import re
@@ -704,11 +706,7 @@ def in_work_otpm(login, password):
     lines = []
     url = 'https://sss.corp.itmh.ru/dem_tr/demands.php?tech_uID=0&trStatus=inWorkOTPM' +\
           '&curator=any&vName=&dSearch=&bID=1&searchType=param'
-    t1 = datetime.datetime.now()
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    t2 = datetime.datetime.now()
-    print('time')
-    print(t2 - t1)
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
         num = 0
@@ -762,7 +760,7 @@ def in_work_otpm(login, password):
                     lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
                     break
         if lines == []:
-            lines.append('Empty list tickets')
+            lines.append(['Empty list tickets'])
 
     else:
         lines.append('Access denied')
@@ -1010,4 +1008,64 @@ def lost_whitespace(text):
     """Данный метод добавляет пропущенный переход строки в формате А.А или аА -> А. А или а А"""
     text = re.sub('(.+\w)\.([А-Я]\w.+)', lambda m: m.group(1) + '.\n' + m.group(2), text)
     text = re.sub('(.+[а-я])([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
+    #text = re.sub('(.+\d)([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
     return text
+
+def spec_with_cookie(cookie, x_session_id):
+    """Данный метод выполняет запрос к api arm"""
+
+    # Авторизация не требуется
+    #url = 'https://arm.itmh.ru/v3/api'
+    #data = {'app': "ARM", 'alias': "production", 'service': "ArmOopm", 'method': "TaskIdByProjectGet", 'args': {'project_id': 37859}}
+    #data = {'app': "ARM", 'alias': "production", 'service': "Common", 'method': "UserInfoByUserId", 'args': {'user_id': 469}}
+    #req = requests.post(url, verify=False, json=data)
+    #spec_j = req.json()
+
+    # Авторизация требуется
+    # ответ на неавторизованный запрос
+    # {'name': 'Unauthorized',
+    # 'message': 'Вы не авторизованы',
+    # 'code': 0,
+    # 'status': 401,
+    # 'type': 'yii\\web\\UnauthorizedHttpException'}
+    # req.status_code = 401
+    # в авторизованном запросе должны быть в headers Cookie и X-Session-Id
+    headers = {
+        'Cookie': cookie,
+        'X-Session-Id': x_session_id
+    }
+    url = 'https://arm.itmh.ru/v3/backend/manager/user-info/'
+    req = requests.get(url, verify=False, headers=headers)
+    spec_j = req.json()
+    print(spec_j, req.status_code, req.url)
+    return req.status_code
+
+def spec(username, password):
+    """Данный метод выполняет авторизацию sts"""
+    data_sts = {'UserName': f'CORP\\{username}', 'Password': f'{password}', 'AuthMethod': 'FormsAuthentication'}
+    url = """https://arm.itmh.ru/v3/backend/manager/login/"""
+    req = requests.get(url)
+    #if req.headers.get('X-Frame-Options') == 'DENY':
+    sts_url = req.url
+    req = requests.post(sts_url, data=data_sts)
+    response = req.content.decode('utf-8')
+    regex_wresult = """name="wresult" value="(.+TokenResponse>)"""
+    result = re.search(regex_wresult, response, flags=re.DOTALL)
+    wwresult = result.group(1)
+    wresult = wwresult.replace('&lt;', '<').replace('&quot;', '"')
+    soup = BeautifulSoup(response, "html.parser")
+    wa = soup.find('input', {"name": "wa"}).get('value')
+    wctx = soup.find('input', {"name":"wctx"}).get('value')
+    data_arm = {'wa': wa, 'wresult': wresult, 'wctx': wctx}
+    req = requests.post(url, data=data_arm)
+    cookie = req.request.headers.get('Cookie')
+    x_session_id = cookie.split(';')[0].strip('PHPSESSID=')
+    # if req.history:
+    #     for resp in req.history:
+    #         print(resp.request.headers)
+    #         print(resp.status_code, resp.headers, resp.url)
+    #         print('!!end respon!!!')
+    print(cookie)
+    return cookie, x_session_id
+
+

@@ -4002,20 +4002,57 @@ def export_xls(request):
     return response
 
 
-def filter_otpm_search(search, technologs, group):
+def filter_otpm_search(search, technologs, group, status):
     """Данный метод фильтрует пул заявок по технологу, группе"""
-    result_search = []
-    query_technolog = True
-    query_spp_ticket_group = True
-    for x in search:
-        if technologs:
+    if status == 'В работе':
+        if group is not None:
+            spp_search = OtpmSpp.objects.filter(process=True, user__last_name__in=technologs, type_ticket=group)
+        else:
+            spp_search = OtpmSpp.objects.filter(process=True, user__last_name__in=technologs)
+        result_search = None
+    elif status == 'Отслеживается':
+        if group is not None:
+            spp_search = OtpmSpp.objects.filter(wait=True, user__last_name__in=technologs, type_ticket=group)
+        else:
+            spp_search = OtpmSpp.objects.filter(wait=True, user__last_name__in=technologs)
+        result_search = None
+    else:
+        if group is not None:
+            spp_search = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True)).filter(user__last_name__in=technologs,
+                                                                                          type_ticket=group)
+        else:
+            spp_search = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True)).filter(user__last_name__in=technologs)
+        tickets_spp_search = [i.ticket_k for i in spp_search]
+        search = [i for i in search if i[0] not in tickets_spp_search]
+        result_search = []
+        query_technolog = True
+        query_spp_ticket_group = True
+        for x in search:
             query_technolog = [technolog for technolog in technologs if technolog in x[4]]
-        if group:
-            query_spp_ticket_group = group in x[-1]
-        query = query_technolog and query_spp_ticket_group
-        if query:
-            result_search.append(x)
-    return result_search
+            if group:
+                query_spp_ticket_group = group in x[-1]
+            query = query_technolog and query_spp_ticket_group
+            if query:
+                result_search.append(x)
+        if status == 'Не взята в работу':
+            spp_search = None
+    return result_search, spp_search
+
+
+
+    # search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+    # if technolog is None:
+    #     technologs = [user.last_name for user in queryset_user_group]
+    # else:
+    #     technologs = list()
+    #     technologs.append(technolog)
+    # filtered_search = filter_otpm_search(search, technologs, group, status)
+    # spp_proc_wait = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True))
+    # tickets_spp_proc_wait = [i.ticket_k for i in spp_proc_wait]
+    # output_search = [i for i in filtered_search if i[0] not in tickets_spp_proc_wait]
+    #
+    #
+    # return result_search
 
 
 class CredentialMixin:
@@ -4056,28 +4093,13 @@ class OtpmPoolView(CredentialMixin, View):
                     initial_params.update({'spp_ticket_group': group})
                 if status:
                     initial_params.update({'status': status})
-                context = {
-                    'otpmpoolform': form,
-                }
+                context = {'otpmpoolform': form}
                 search = in_work_otpm(username, password)
                 if search[0] == 'Access denied':
                     return super().redirect_to_login_for_service(self)
-                elif search[0] == 'Empty list tickets':
-                    output_search = None
-                    spp_proc_wait = None
-                else:
-                    list_search_rem = []
-                    search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-                    if technolog is None:
-                        technologs = [user.last_name for user in queryset_user_group]
-                    else:
-                        technologs = list()
-                        technologs.append(technolog)
-                    filtered_search = filter_otpm_search(search, technologs, group)
-                    spp_proc_wait = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True))
-                    tickets_spp_proc_wait = [i.ticket_k for i in spp_proc_wait]
-                    output_search = [i for i in filtered_search if i[0] not in tickets_spp_proc_wait]
-                context.update({'search': output_search, 'spp_process': spp_proc_wait})  # 'results': results
+                technologs = [user.last_name for user in queryset_user_group] if technolog is None else [technolog]
+                output_search, spp_process = filter_otpm_search(search, technologs, group, status)
+                context.update({'search': output_search, 'spp_process': spp_process})  # 'results': results
                 return render(request, 'tickets/otpm.html', context)
         else:
             initial_params = dict({'technolog': request.user.last_name})
@@ -4095,7 +4117,7 @@ class OtpmPoolView(CredentialMixin, View):
 
 class CreateSppView(CredentialMixin, View):
     """Заявка СПП"""
-    def create_or_update(self, spp_params, current_spp=None):
+    def create_or_update(self, spp_params, current_spp):
         if current_spp:
             current_spp.created = timezone.now()
             current_spp.process = True
@@ -4130,6 +4152,7 @@ class CreateSppView(CredentialMixin, View):
     @cache_check_view
     def get(self, request, dID):
         try:
+            spp_params = None
             current_spp = OtpmSpp.objects.get(dID=dID)
             if current_spp.process == True:
                 messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
@@ -4141,7 +4164,7 @@ class CreateSppView(CredentialMixin, View):
                 return super().redirect_to_login_for_service(self)
             current_spp = None
         ticket_spp = self.create_or_update(spp_params, current_spp)
-        return redirect('spp_view_oattr', dID, ticket_spp.id)
+        return redirect('spp_view_oattr', dID) #, ticket_spp.id)
 
 
 class SppView(DetailView):
