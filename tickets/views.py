@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView
 
-from .models import TR, SPP, OrtrTR, HoldPosition, OtpmSpp
+from .models import TR, SPP, OrtrTR, HoldPosition
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
     SksForm, \
@@ -10,6 +10,9 @@ from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
     PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, OtpmPoolForm
+
+from oattr.models import OtpmSpp
+
 
 import logging
 from django.contrib import messages

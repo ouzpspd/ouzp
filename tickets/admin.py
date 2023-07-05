@@ -9,7 +9,7 @@ admin.site.register(SPP)
 admin.site.register(ServicesTR)
 admin.site.register(OrtrTR)
 admin.site.register(HoldPosition)
-admin.site.register(OtpmSpp)
+
 
 class HoldPositionInline(admin.TabularInline):
     model = UserHoldPosition

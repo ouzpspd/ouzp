@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block nav_active %}
+{% load custom_filters %}
+
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
+</li>
+<li class="nav-item">
+  <a class="nav-link active" aria-current="page" href="{% url 'otpm' %}">Пул задач</a>
+</li>
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <form id="copper_form" action="{% url 'otpm_copper' %}" method="post">
+        {% csrf_token %}
+        <div class="card mb-2">
+            <h5 class="card-header">Общие параметры</h5>
+              <div class="card-body">
+                  <div class="container">
+                  <div class="form-row">
+                      <label for="{{copper_form.no_exit.label}}" class="col-form-label">ТР написано без выезда:</label>
+                      {{copper_form.no_exit}}
+                  </div>
+                  </div>
+              </div>
+        </div>
+        <div class="card mb-2">
+            <h5 class="card-header">Параметры монтажа линии</h5>
+          <div class="card-body">
+              <ul class="list-group list-group-flush">
+                <div id="forms">
+
+                    <li class="list-group-item">
+                    {% comment %}{{ form.as_p }}{% endcomment %}
+                    <div class="row">
+                        <div class="col-2">
+                            <label class="col-form-label">Монтаж линии от:</label>
+                        </div>
+                        <div class="col-10">
+                            <div class="form-group">
+                                {{copper_form.from_0}}
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
+                            <label class="col-form-label">Монтаж линии до:</label>
+                        </div>
+                        <div class="col-10">
+                            <div class="form-group">
+                                {{copper_form.to_0}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
+                            <label class="col-form-label">Тип кабеля:</label>
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                {{copper_form.cable_0}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
+                            <label class="col-form-label">Способ монтажа:</label>
+                        </div>
+                        <div class="col-10">
+                            <div class="form-group">
+                                {{copper_form.mounting_0}}
+                                {% comment %}<input type="text" name="mounting_0" class="mounting form-control" id="mounting_0">{% endcomment %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
+                            <label class="col-form-label">Способ крепежа:</label>
+                        </div>
+                        <div class="col-10">
+                            <div class="form-group">
+                                {{copper_form.fastening_0}}
+                                {% comment %}<input type="text" name="fastening_0" class="form-control fastening" id="fastening_0">{% endcomment %}
+                            </div>
+                        </div>
+                    </div>
+
+                </li>
+                    </div>
+                </ul>
+              <div class="container">
+                  <div class="row mt-3">
+                        <div class="col-2">
+                            <button class="btn btn-success btn-block add_item_btn">Добавить</button>
+                        </div>
+                    </div>
+              </div>
+                    <div class="container">
+                    <div class="container">
+                    <div class="row mt-3">
+                            <div class="form-row">
+                                <label for="{{copper_form.tech_reserve.label}}" class="col-form-label">Тех запас:</label>
+                                {{copper_form.tech_reserve}}
+                            </div>
+                    </div>
+                    </div>
+                    </div>
+                    <div class="container">
+                        <div class="container">
+                            <div class="row">
+                                <div class="form-row">
+                                    <label for="{{copper_form.tech_reserve.label}}" class="col-form-label">Тест линии:</label>
+                                    {{copper_form.line_test}}
+                                </div>
+                            </div>
+                        </div>
+                </div>
+
+                </div>
+          </div>
+
+        <div class="card mb-2">
+            <h5 class="card-header">Доступ</h5>
+              <div class="card-body">
+                  {{copper_form.access}}
+              </div>
+        </div>
+        <div class="card mb-2">
+            <h5 class="card-header">Согласование</h5>
+              <div class="card-body">
+                  {{copper_form.agreement}}
+              </div>
+        </div>
+        <div class="card mb-2">
+              <div class="card-body">
+                  <div class="container">
+                    <div class="row mt-3 justify-content-md-center">
+                        <div class="col-3">
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+              </div>
+        </div>
+    </form>
+</div>
+
+
+<script>
+    var counter=0
+    $(document).ready(function() {
+
+      $(".add_item_btn").click(function(e){
+          e.preventDefault();
+          counter+=1;
+          $("#forms").append(`<li class="list-group-item">
+          <div class="row">
+            <div class="col-2">
+                <label class="col-form-label">Монтаж линии от:</label>
+            </div>
+            <div class="col-10">
+                <div class="form-group">
+                    <input type="text" name="from_${counter}" class="form-control" required="True">
+                </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-2">
+                <label class="col-form-label">Монтаж линии до:</label>
+            </div>
+            <div class="col-10">
+                <div class="form-group">
+                    <input type="text" name="to_${counter}" class="form-control" required="True">
+                </div>
+            </div>
+          </div>
+                <div class="row">
+                    <div class="col-2">
+                            <label class="col-form-label">Тип кабеля:</label>
+                        </div>
+                    <div class="col-3">
+                        <div class="form-group">
+                            <select name="cable_${counter}" class="form-control" id="id_cable_${counter}">
+                              <option value="UTP-2е пары">UTP-2е пары</option>
+                              <option value="UTP-4е пары">UTP-4е пары</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-2">
+                        <div class="form-group">
+                            <button class="btn btn-danger btn-block remove_item_btn">Удалить</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-2">
+                      <label class="col-form-label">Способ монтажа:</label>
+                    </div>
+                    <div class="col-10">
+                        <div class="form-group">
+                            <input type="text" name="mounting_${counter}" class="mounting form-control" required="True">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-2">
+                        <label class="col-form-label">Способ крепежа:</label>
+                    </div>
+                    <div class="col-10">
+                        <div class="form-group">
+                            <input type="text" name="fastening_${counter}" class="fastening form-control" required="True">
+                        </div>
+                    </div>
+                </div>
+                </div>
+          </li>`);
+
+      });
+
+      $(document).on("click",".remove_item_btn",function(e){
+          e.preventDefault();
+          let row_item = $(this).parent().parent().parent().parent();
+          $(row_item).remove();
+      });
+    });
+
+
+    $(function(){
+      var mounts = ["Монтаж выполнить по существующей кабельной трассе",
+             "Монтаж выполнить в наших КС, вдоль существующих линий",
+             "Монтаж выполнить согласно схеме"];
+      var mounting = 'input.mounting';
+        $(document).on('keydown.autocomplete', mounting, function() {
+            $(this).autocomplete({
+          source: mounts
+            });
+        });
+      var fastens = ["Закрепить скобами",
+             "Закрепить скобами и на стяжки"];
+      var fastening = 'input.fastening';
+      $(document).on('keydown.autocomplete', fastening, function() {
+            $(this).autocomplete({
+                source: fastens
+            });
+        });
+    });
+
+
+</script>
+
+{% endblock %}
