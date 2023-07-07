@@ -745,15 +745,14 @@ def add_res_to_ppr(ppr, service, login, password):
 
     if len(contract_list) == 1:
         id_contract = (contract_list[0]['ID'])
-
         url_id_contract = f'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceSimList?contract={id_contract}'
         req = requests.get(url_id_contract, verify=False, auth=HTTPBasicAuth(login, password))
         resources = req.json()
 
         for resource in resources:
-            if resource['SimName'] == ppr_resource:
+            if resource['Name'] == ppr_resource:
                 url = 'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceObjectAddSim'
-                data = {'contract_name': contract, 'sim': resource['Sim'], 'demand': ppr}
+                data = {'demand': ppr, 'sim': resource['SimId']}
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
                 if req.status_code == 200:
                     return ('added', disable_resource)
