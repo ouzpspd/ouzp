@@ -10,11 +10,13 @@ from django.views import View
 from django.core.exceptions import ObjectDoesNotExist
 from django.views.generic import DetailView
 
+from tickets.views import cache_check
 from .models import OtpmSpp
 from tickets.parsing import in_work_otpm, for_spp_view
 from tickets.utils import flush_session_key
 
 from .forms import OtpmPoolForm, CopperForm
+from .parsing import ckb_parse
 
 
 def filter_otpm_search(search, technologs, group, status):
@@ -261,20 +263,119 @@ class SppView(DetailView):
 #     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
 
 
+def construct_tr(value_vars, template):
+    result = []
+    static_vars = {}
+    hidden_vars = {}
+    repr_string = {}
+    repr_string['mounting_line'] = '- Смонтировать кабель %Тип кабеля% от %Точка от% до %Точка до%. ' +\
+                                   '%Способ монтажа линии связи%. %Способ крепежа линии связи%.'
+    multi_vars = {repr_string['mounting_line']:[]}
+    count_lines = len([key for key in value_vars.keys() if key.startswith('from_')])
+    for i in (range(count_lines)):
+        static_vars[f'Тип кабеля {i}'] = value_vars.get(f'cable_{i}')
+        static_vars[f'Точка от {i}'] = value_vars.get(f'from_{i}')
+        static_vars[f'Точка до {i}'] = value_vars.get(f'to_{i}')
+        static_vars[f'Способ монтажа линии связи {i}'] = value_vars.get(f'mounting_{i}')
+        static_vars[f'Способ крепежа линии связи {i}'] = value_vars.get(f'fastening_{i}')
+        multi_vars[repr_string['mounting_line']].append(f'- Смонтировать кабель %Тип кабеля {i}% от %Точка от {i}%' +
+        f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
+
+    hidden_vars['- Оставить тех. запас.'] = '- Оставить тех. запас.'
+    hidden_vars['- Протестировать линию связи.'] = '- Протестировать линию связи.'
+    static_vars['Доступ']= value_vars.get('access')
+    static_vars['Согласование'] = value_vars.get('agreement')
+    result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
+    return result
+
+
+@cache_check
 def copper_view(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
     if request.method == 'POST':
         form = CopperForm(request.POST) #, extra=request.POST.get('ext_field_count'))
-        print('errors')
-        print(form.errors)
+        #print(form.errors)
         if form.is_valid():
-            print("valid!")
-            print(form.cleaned_data)
+            value_vars = dict(**form.cleaned_data)
+            templates = ckb_parse(username, password)
+            template = templates.get('Присоединение к СПД по медной линии связи.')
+            construct = construct_tr(value_vars, template)
+            print('construct')
+            print(''.join(construct))
 
     else:
-        if request.GET:
-            print('request')
-            print(request)
         form = CopperForm()
-        print('get')
     return render(request, "oattr/copper.html", { 'copper_form': form })
 
+import re
+
+def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars):
+    """Данный метод принимает строковую переменную, содержащую шаблон услуги со страницы
+    Типовые блоки технического решения. Ищет в шаблоне блоки <> и сравнивает с аналогичными переменными из СПП.
+    По средством доп. словаря формирует итоговый словарь содержащий блоки из СПП, которые
+    есть в блоках шаблона(чтобы не выводить неактуальный блок) и блоки шаблона, которых не было в блоках
+    из СПП(чтобы не пропустить неучтенный блок)
+    Передаем переменные, т.к. переменные из глобал видятся, а из другой функции нет."""
+    #    блок для определения необходимости частных строк <>
+    list_var_lines = []
+    list_var_lines_in = []
+    regex_var_lines = '<(.+?)>'
+    match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
+    for i in match_var_lines:
+        list_var_lines.append(i.group(1))
+    for i in list_var_lines:
+        if hidden_vars.get(i):
+            stroka = stroka.replace('<{}>'.format(i), hidden_vars[i])
+        else:
+            stroka = stroka.replace('<{}>'.format(i), '  ')
+    regex_var_lines_in = '\[(.+?)\]'
+    match_var_lines_in = re.finditer(regex_var_lines_in, stroka, flags=re.DOTALL)
+    for i in match_var_lines_in:
+        list_var_lines_in.append(i.group(1))
+    for i in list_var_lines_in:
+        if hidden_vars.get(i):
+            stroka = stroka.replace('[{}]'.format(i), i)
+        else:
+            stroka = stroka.replace('[{}]'.format(i), '  ')
+    if len(list_var_lines) > 0:
+        stroka = stroka.split('  \n')
+        stroka = ''.join(stroka)
+        stroka = stroka.replace('    ', ' ')
+        if '\n\n\n' in stroka:
+            stroka = stroka.replace('\n\n\n', '\n')
+        elif '\n \n \n \n' in stroka:
+            stroka = stroka.replace('\n \n \n \n', '\n\n')
+
+    # блок заполнения повторяющихсся &&
+    regex_var_lines = '&(.+?)&'
+    match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
+    list_var_lines = [i.group(1) for i in match_var_lines]
+    for i in list_var_lines:
+        if multi_vars.get(i):
+            stroka = stroka.replace(f'&{i}&', '\n'.join(multi_vars[i]))
+        else:
+            stroka = stroka.replace(f'&{i}&', '  ')
+
+
+    # блок для заполнения %%
+    ckb_vars = {}
+    dynamic_vars = {}
+    regex = '%([\s\S]+?)%'
+    match = re.finditer(regex, stroka, flags=re.DOTALL)  #
+    for i in match:
+        ckb_vars[i.group(1)] = '%'+i.group(1)+'%'
+    for key in static_vars.keys():
+        if key in ckb_vars:
+            del ckb_vars[key]
+            dynamic_vars[key] = static_vars[key]
+    dynamic_vars.update(ckb_vars)
+    for key in dynamic_vars.keys():
+        stroka = stroka.replace('%{}%'.format(key), dynamic_vars[key])
+        stroka = stroka.replace(' .', '.')
+    stroka = ''.join([stroka[i] for i in range(len(stroka)) if i != len(stroka)-1 and not (stroka[i] == ' ' and stroka[i + 1] == ' ')])
+    for i in [';', ',', ':', '.']:
+        stroka = stroka.replace(' ' + i, i)
+    return stroka
