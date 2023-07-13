@@ -51,6 +51,7 @@
                 <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
 
                     {% if current_ticket_spp.process == True %}
+                    <a class="btn btn-outline-danger" href="{% url 'add_tr_oattr' current_ticket_spp.dID v.0 v.1 %}" role="button">Проектировать</a>
                     <a class="btn btn-outline-danger" href="{% url 'spp_view_oattr' current_ticket_spp.dID %}?action=wait" role="button">Перевести в ожидание</a>
                     {%comment%}<a class="btn btn-outline-danger" href="{% url 'add_spp_wait_oattr' current_ticket_spp.id %}" role="button">Перевести в ожидание</a>{%endcomment%}
                     <a class="btn btn-outline-danger" href="{% url 'spp_view_oattr' current_ticket_spp.dID %}?action=finish" role="button">Завершить</a>

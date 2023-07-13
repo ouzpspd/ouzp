@@ -1,22 +1,27 @@
 import datetime
+import re
 
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
 from django.utils import timezone
 from django.views import View
 from django.core.exceptions import ObjectDoesNotExist
-from django.views.generic import DetailView
+from django.views.generic import DetailView, FormView
+
 
 from tickets.views import cache_check
-from .models import OtpmSpp
-from tickets.parsing import in_work_otpm, for_spp_view
+from .models import OtpmSpp, OtpmTR
+from tickets.parsing import in_work_otpm
 from tickets.utils import flush_session_key
 
-from .forms import OtpmPoolForm, CopperForm
-from .parsing import ckb_parse
+from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm
+from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
+    send_spp_check
 
 
 def filter_otpm_search(search, technologs, group, status):
@@ -60,13 +65,16 @@ def cache_check_view(func):
     """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
      если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
     def wrapper(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect(f'login/?next={request.path}')
-        user = User.objects.get(username=request.user.username)
+        # Для CopperFormView пришлось переписать request на self.request, потому что в форме в объекте request
+        # находится форма CopperForm и соответственно никакого user там нет. Вообще проверка авторизации в форме
+        # наверно и ненужна пока там временно составляется шаблон.
+        if not self.request.user.is_authenticated:
+            return redirect(f'login/?next={self.request.path}')
+        user = User.objects.get(username=self.request.user.username)
         credent = cache.get(user)
         if credent is None:
             response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
+            response['Location'] += '?next={}'.format(self.request.path)
             return response
         return func(self, request, *args, **kwargs)
     return wrapper
@@ -135,58 +143,81 @@ class CreateSppView(CredentialMixin, View):
     def create_or_update(self, spp_params, current_spp):
         if current_spp:
             current_spp.created = timezone.now()
-            current_spp.process = True
+            #current_spp.process = True
+            current_spp.projected = False
             current_spp.save()
         else:
             current_spp = OtpmSpp()
             current_spp.dID = self.kwargs['dID']
             current_spp.ticket_k = spp_params['Заявка К']
-            current_spp.client = spp_params['Клиент']
             current_spp.type_ticket = spp_params['Тип заявки']
-            current_spp.manager = spp_params['Менеджер']
-            current_spp.technolog = spp_params['Технолог']
-            current_spp.task_otpm = spp_params['Задача в ОТПМ']
-            current_spp.des_tr = spp_params['Состав Заявки ТР']
-            current_spp.services = spp_params['Перечень требуемых услуг']
-            current_spp.comment = spp_params['Примечание']
-            current_spp.created = timezone.now()
             current_spp.waited = timezone.now()
-            current_spp.process = True
-            current_spp.uID = spp_params['uID']
-            current_spp.trdifperiod = spp_params['trDifPeriod']
-            current_spp.trcuratorphone = spp_params['trCuratorPhone']
-            current_spp.evaluative_tr = spp_params['Оценочное ТР']
-            user = User.objects.get(username=self.request.user.username)
-            current_spp.user = user
             current_spp.duration_process = datetime.timedelta(0)
             current_spp.duration_wait = datetime.timedelta(0)
-            current_spp.stage = self.request.GET.get('stage')
-            current_spp.save()
+        # current_spp.dID = self.kwargs['dID']
+        # current_spp.ticket_k = spp_params['Заявка К']
+        current_spp.client = spp_params['Клиент']
+        # current_spp.type_ticket = spp_params['Тип заявки']
+        current_spp.manager = spp_params['Менеджер']
+        current_spp.technolog = spp_params['Технолог']
+        current_spp.task_otpm = spp_params['Задача в ОТПМ']
+        current_spp.des_tr = spp_params['Состав Заявки ТР']
+        current_spp.services = spp_params['Перечень требуемых услуг']
+        current_spp.comment = spp_params['Примечание']
+        current_spp.created = timezone.now()
+        # current_spp.waited = timezone.now()
+        current_spp.process = True
+        current_spp.uID = spp_params['uID']
+        current_spp.trdifperiod = spp_params['trDifPeriod']
+        current_spp.trcuratorphone = spp_params['trCuratorPhone']
+        current_spp.evaluative_tr = spp_params['Оценочное ТР']
+        user = User.objects.get(username=self.request.user.username)
+        current_spp.user = user
+        # current_spp.duration_process = datetime.timedelta(0)
+        # current_spp.duration_wait = datetime.timedelta(0)
+        current_spp.stage = self.request.GET.get('stage')
+        current_spp.save()
         return current_spp
 
     @cache_check_view
     def get(self, request, dID):
         try:
-            spp_params = None
             current_spp = OtpmSpp.objects.get(dID=dID)
-            if current_spp.process:
-                messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
-                return redirect('otpm')
         except ObjectDoesNotExist:
-            username, password = super().get_credential(self)
-            spp_params = for_spp_view(username, password, dID)
-            if spp_params.get('Access denied') == 'Access denied':
-                return super().redirect_to_login_for_service(self)
             current_spp = None
-        ticket_spp = self.create_or_update(spp_params, current_spp)
-        return redirect('spp_view_oattr', dID) #, ticket_spp.id)
+
+        if current_spp and current_spp.process:
+            messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
+            return redirect('otpm')
+        username, password = super().get_credential(self)
+        spp_params = for_spp_view(username, password, dID)
+
+        if spp_params.get('Access denied'):
+            return super().redirect_to_login_for_service(self)
+        self.create_or_update(spp_params, current_spp)
+        return redirect('spp_view_oattr', dID)
+
+        # try:
+        #     spp_params = None
+        #     current_spp = OtpmSpp.objects.get(dID=dID)
+        #     if current_spp.process:
+        #         messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
+        #         return redirect('otpm')
+        # except ObjectDoesNotExist:
+        #     username, password = super().get_credential(self)
+        #     spp_params = for_spp_view(username, password, dID)
+        #     if spp_params.get('Access denied') == 'Access denied':
+        #         return super().redirect_to_login_for_service(self)
+        #     current_spp = None
+        # ticket_spp = self.create_or_update(spp_params, current_spp)
+        # return redirect('spp_view_oattr', dID) #, ticket_spp.id)
 
 
 class SppView(DetailView):
     model = OtpmSpp
     slug_field = 'dID'
     context_object_name = 'current_ticket_spp'
-    template_name = 'tickets/spp_view_oattr.html'
+    template_name = 'oattr/spp_view_oattr.html'
     def get_object(self):
         current_ticket_spp = get_object_or_404(OtpmSpp, dID=self.kwargs['dID'])
         if self.request.GET.get('action') == 'wait' and current_ticket_spp.process:
@@ -271,8 +302,8 @@ def construct_tr(value_vars, template):
     repr_string['mounting_line'] = '- Смонтировать кабель %Тип кабеля% от %Точка от% до %Точка до%. ' +\
                                    '%Способ монтажа линии связи%. %Способ крепежа линии связи%.'
     multi_vars = {repr_string['mounting_line']:[]}
-    count_lines = len([key for key in value_vars.keys() if key.startswith('from_')])
-    for i in (range(count_lines)):
+    count_lines = [key.strip('from_') for key in value_vars.keys() if key.startswith('from_')]
+    for i in count_lines:
         static_vars[f'Тип кабеля {i}'] = value_vars.get(f'cable_{i}')
         static_vars[f'Точка от {i}'] = value_vars.get(f'from_{i}')
         static_vars[f'Точка до {i}'] = value_vars.get(f'to_{i}')
@@ -281,8 +312,12 @@ def construct_tr(value_vars, template):
         multi_vars[repr_string['mounting_line']].append(f'- Смонтировать кабель %Тип кабеля {i}% от %Точка от {i}%' +
         f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
 
-    hidden_vars['- Оставить тех. запас.'] = '- Оставить тех. запас.'
-    hidden_vars['- Протестировать линию связи.'] = '- Протестировать линию связи.'
+    if value_vars.get('no_exit'):
+        hidden_vars['Внимание! ТР написано без выезда технолога.'] = 'Внимание! ТР написано без выезда технолога.'
+    if value_vars.get('tech_reserve'):
+        hidden_vars['- Оставить тех. запас.'] = '- Оставить тех. запас.'
+    if value_vars.get('line_test'):
+        hidden_vars['- Протестировать линию связи.'] = '- Протестировать линию связи.'
     static_vars['Доступ']= value_vars.get('access')
     static_vars['Согласование'] = value_vars.get('agreement')
     result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
@@ -290,27 +325,240 @@ def construct_tr(value_vars, template):
 
 
 @cache_check
-def copper_view(request):
+def create_project_otu(request, trID):
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    if request.method == 'POST':
-        form = CopperForm(request.POST) #, extra=request.POST.get('ext_field_count'))
-        #print(form.errors)
-        if form.is_valid():
-            value_vars = dict(**form.cleaned_data)
-            templates = ckb_parse(username, password)
-            template = templates.get('Присоединение к СПД по медной линии связи.')
-            construct = construct_tr(value_vars, template)
-            print('construct')
-            print(''.join(construct))
+    id_otu = dispatch(username, password, trID)
+    return redirect(f'https://tas.corp.itmh.ru/OtuProject/Edit/{id_otu}')
 
+
+class CopperFormView(CredentialMixin, FormView):
+    template_name = "oattr/copper.html"
+    form_class = CopperForm
+    success_url = "/otpm/data/"
+
+    @cache_check_view
+    def form_valid(self, form):
+        username, password = super().get_credential(self)
+        value_vars = dict(**form.cleaned_data)
+        self.request.session['value_vars'] = value_vars
+        return super().form_valid(form)
+
+@cache_check
+def data(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    templates = ckb_parse(username, password)
+    template = templates.get('Присоединение к СПД по медной линии связи.')
+    value_vars = request.session.get('value_vars')
+    construct = construct_tr(value_vars, template)
+    result_otpm = ''.join(construct)
+    extra_line = 2
+    counter_str_oattr = result_otpm.count('\n') + extra_line
+    request.session['result_otpm'] = result_otpm
+    request.session['counter_str_oattr'] = counter_str_oattr
+    return redirect('saved_data_oattr')
+
+
+# @cache_check
+# def copper_view(request):
+#     user = User.objects.get(username=request.user.username)
+#     credent = cache.get(user)
+#     username = credent['username']
+#     password = credent['password']
+#     if request.method == 'POST':
+#         form = CopperForm(request.POST)
+#         #print(form.errors)
+#
+#         if form.is_valid():
+#             value_vars = dict(**form.cleaned_data)
+#             print('cleaned_data')
+#             print(form.cleaned_data)
+#             templates = ckb_parse(username, password)
+#             template = templates.get('Присоединение к СПД по медной линии связи.')
+#             construct = construct_tr(value_vars, template)
+#             print('construct')
+#             print(''.join(construct))
+#
+#     else:
+#         form = CopperForm()
+#     return render(request, "oattr/copper.html", { 'form': form })
+
+
+def add_tr_oattr(request, dID, tID, trID):
+    """Данный метод получает данные о ТР из СПП и добавляет ТР новой точки подключения в АРМ"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
     else:
-        form = CopperForm()
-    return render(request, "oattr/copper.html", { 'copper_form': form })
+        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params)
+        request.session['ticket_tr_id'] = ticket_tr_id
+        context = dict(**tr_params)
+        if request.GET.get('action') == 'add':
+            context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
+        else:
+            context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'edit'})
+        return render(request, 'oattr/sppdata.html', context)
 
-import re
+
+def add_tr_to_db(dID, tID, trID, tr_params):
+    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки в АРМ.
+    создает ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
+    ticket_spp = OtpmSpp.objects.get(dID=dID)
+    if ticket_spp.children.filter(ticket_tr=trID):
+        ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
+    else:
+        ticket_tr = OtpmTR()
+        ticket_tr.ticket_k = ticket_spp#OtpmSpp.objects.get(dID=dID)
+        ticket_tr.ticket_tr = trID
+        ticket_tr.ticket_cp = tID
+        ticket_tr.vID = tr_params['vID']
+    ticket_tr.pps = tr_params['node']
+    ticket_tr.info_tr = tr_params['info_tr']
+    ticket_tr.services = tr_params['services_plus_desc']
+    ticket_tr.address_cp = tr_params['address']
+    ticket_tr.place_cp = tr_params['place_connection_point']
+    ticket_tr.save()
+    ticket_tr_id = ticket_tr.id
+    return ticket_tr_id
+
+
+class SendSppFormView(CredentialMixin, FormView):
+    template_name = "oattr/send_spp.html"
+    form_class = SendSPPForm
+    success_url = "/"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        form = context['form']
+        ticket_spp = get_object_or_404(OtpmSpp, dID=self.kwargs['dID'])
+        common_types = [('Вернуть менеджеру', 'Вернуть менеджеру'), ('60', 'В работе ОС'), ('70', 'В работе ОРТР')]
+        if ticket_spp.type_ticket == "ПТО":
+            common_types.append(('84', 'Нормоконтроль и выпуск ТР'))
+        else:
+            common_types.append(('90', 'Утверждение ТР'))
+        form.fields['send_to'].widget.choices = common_types
+        context['form'] = form
+        return context
+
+    @cache_check_view
+    def form_valid(self, form):
+        ticket_spp = get_object_or_404(OtpmSpp, dID=self.kwargs['dID'])
+        if ticket_spp.projected:
+            messages.warning(self.request, f'Заявка {ticket_spp.ticket_k} уже спроектирована')
+            return redirect('/')
+        if ticket_spp.wait:
+            messages.warning(self.request, f'Прежде чем отправлять заявку, необходимо ее вернуть из ожидания.')
+            return redirect('send_spp', self.kwargs['dID'])
+        username, password = super().get_credential(self)
+        send_to = form.cleaned_data['send_to']
+        comment = form.cleaned_data['comment']
+        if send_to == 'Вернуть менеджеру':
+            if comment:
+                send_to_mko(username, password, ticket_spp, comment=comment)
+                return redirect('/')
+            else:
+                messages.warning(self.request, f'Для возвращения в ОПП нужен комментарий')
+                return redirect('send_spp', self.kwargs['dID'])
+        if comment:
+            status_code = save_comment(username, password, comment, ticket_spp)
+            if status_code != 200:
+                messages.warning(self.request, 'Не удалось добавить комментарий в СПП')
+                return redirect('spp_view_oattr', self.kwargs['dID'])
+        status_code = spp_send_to(username, password, ticket_spp, send_to)
+        if status_code != 200:
+            messages.warning(self.request, 'Не удалось отправить запрос в СПП')
+            return redirect('spp_view_oattr', self.kwargs['dID'])
+        ticket_spp.process = False
+        ticket_spp.projected = True
+        ticket_spp.duration_process += timezone.now() - ticket_spp.created
+        ticket_spp.save()
+        return super().form_valid(form)
+
+
+def saved_data_oattr(request):
+    """Данный метод отображает редактируемую html-страничку готового ТР"""
+    if request.method == 'POST':
+        oattrform = OattrForm(request.POST)
+        if oattrform.is_valid():
+            oattr_field = oattrform.cleaned_data['oattr_field']
+            regex = '\n(.+)\r\n-{5,}\r\n'
+            match_oattr_field = re.findall(regex, oattr_field)
+            changable_titles = '\n'.join(match_oattr_field)
+            ticket_tr_id = request.session['ticket_tr_id']
+            ticket_tr = OtpmTR.objects.get(id=ticket_tr_id)
+            ticket_tr.oattr = oattr_field
+            ticket_tr.titles = changable_titles
+            ticket_tr.save()
+            extra_line = 2
+            counter_str_oattr = ticket_tr.oattr.count('\n') + extra_line
+
+            context = {
+                'services_plus_desc': ticket_tr.services,
+                'counter_str_oattr': counter_str_oattr,
+                'oattrform': oattrform,
+                'dID': ticket_tr.ticket_k.dID
+            }
+            return render(request, 'oattr/saved_data_oattr.html', context)
+    else:
+        ticket_tr_id = request.session.get('ticket_tr_id')
+        ticket_tr = OtpmTR.objects.get(id=ticket_tr_id)
+        if request.session.get('result_otpm'):
+            counter_str_oattr = request.session['counter_str_oattr']
+            result_otpm = request.session.get('result_otpm')
+            ticket_tr.oattr = result_otpm
+            ticket_tr.save()
+            oattrform = OattrForm(initial={'oattr_field': ticket_tr.oattr})
+        elif ticket_tr.oattr:
+            oattrform = OattrForm(initial={'oattr_field': ticket_tr.oattr})
+            extra_line = 2
+            counter_str_oattr = ticket_tr.oattr.count('\n') + extra_line
+        else:
+            counter_str_oattr = 10
+            oattrform = OattrForm()
+        context = {
+            'services_plus_desc': ticket_tr.services,
+            'counter_str_oattr': counter_str_oattr,
+            'oattrform': oattrform,
+            'dID': ticket_tr.ticket_k.dID
+        }
+        return render(request, 'oattr/saved_data_oattr.html', context)
+
+
+@cache_check
+def save_spp(request):
+    """Данный метод заполняет поля блока ОРТР в СПП готовым ТР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    ticket_tr_id = request.session.get('ticket_tr_id')
+    ticket_tr = OtpmTR.objects.get(id=ticket_tr_id)
+    dID = ticket_tr.ticket_k.dID
+    tID = ticket_tr.ticket_cp
+    trID = ticket_tr.ticket_tr
+    req_check = send_spp_check(username, password, dID, tID, trID)
+    if req_check.status_code == 200:
+        send_spp(username, password, dID, tID, trID, ticket_tr)
+        return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={dID}&tID={tID}&trID={trID}')
+    else:
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+
 
 def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars):
     """Данный метод принимает строковую переменную, содержащую шаблон услуги со страницы

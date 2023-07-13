@@ -29,5 +29,38 @@ class OtpmSpp(models.Model):
     def __str__(self):
         return self.ticket_k
 
-    # def evaluate_duration(self):
-    #     return self.complited - self.created
+    def evaluate_completed(self):
+        return self.duration_process + self.created
+
+class OtpmTR(models.Model):
+    ticket_k = models.ForeignKey('OtpmSpp', on_delete=models.CASCADE, related_name='children')
+    ticket_tr = models.CharField(max_length=100, verbose_name='ТР')
+    pps = models.CharField(max_length=200, verbose_name='ППС')
+    info_tr = models.TextField(verbose_name='Инфо для разработки', blank=True, null=True)
+    services = models.JSONField(verbose_name='Перечень требуемых услуг')
+    address_cp = models.CharField(max_length=400, verbose_name='Адрес точки подключения')
+    place_cp = models.CharField(max_length=400, verbose_name='Место точки подключения', blank=True, null=True)
+    vID = models.IntegerField()
+    ticket_cp = models.CharField(max_length=10, verbose_name='Точка подключения')
+    oattr = models.TextField(verbose_name='Решение ОТПМ')
+    titles = models.TextField(verbose_name='Заголовки ТР', null=True, blank=True)
+
+    def __str__(self):
+        return self.ticket_tr
+
+
+class HoldPosition(models.Model):
+    """Должность сотрудника"""
+    name = models.CharField(max_length=200, verbose_name='Название должности')
+
+    def __str__(self):
+        return self.name
+
+class UserHoldPosition(models.Model):
+    """Модель добавляющая пользователю поле должность"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    hold_position = models.ForeignKey(HoldPosition, on_delete=models.CASCADE, verbose_name='Должность')
+
+    def __str__(self):
+        return self.hold_position.name
+

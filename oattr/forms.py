@@ -1,5 +1,59 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
+
+from django.db import transaction
+
+from .models import HoldPosition, UserHoldPosition, OtpmSpp
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.models import User, Group
+
+class UserLoginForm(AuthenticationForm):
+    username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+
+class UserRegistrationForm(UserCreationForm):
+    alphanumeric = RegexValidator(r'^[0-9a-zA-Z.]*$', 'Не использовать русские символы.')
+    username = forms.CharField(label='Логин',
+                               widget=forms.TextInput(attrs={'class': 'form-control'}),
+                               validators=[alphanumeric])
+    last_name = forms.CharField(label='ФИО',
+                                widget=forms.TextInput(attrs={'class': 'form-control'}),
+                                help_text='Строго с пробелами как в СПП'
+                                )
+    hold_position = forms.ModelChoiceField(
+        label='Должность',
+        queryset=HoldPosition.objects.all(),
+        required=True,
+        to_field_name='name',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    password1 = forms.CharField(label='Пароль',
+                                widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+                                )
+    password2 = forms.CharField(label='Подтверждение пароля',
+                                widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+                                )
+
+    class Meta:
+        model = User
+        fields = ('username', 'last_name', 'hold_position', 'password1', 'password2')
+
+    @transaction.atomic
+    def save(self):
+        user = super().save(commit=False)
+        user.save()
+        UserHoldPosition.objects.create(user=user, hold_position=self.cleaned_data.get('hold_position'))
+        if 'Техник-технолог ОАТТР' in str(self.cleaned_data.get('hold_position')):
+            oattr_group = Group.objects.get(name='Сотрудники ОАТТР')
+            oattr_group.user_set.add(user)
+        user.save()
+        return user
+
+
+class AuthForServiceForm(forms.Form):
+    username = forms.CharField(label='Имя пользователя', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
 
 class TechnologModelChoiceField(forms.ModelChoiceField):
@@ -68,9 +122,25 @@ class CopperForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super(CopperForm, self).__init__(*args, **kwargs)
-        if args:
-            new_fields = set(args[0].keys()) - set(self.fields.keys())
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
             new_fields.remove('csrfmiddlewaretoken')
 
             for field in new_fields:
                 self.fields[f'{field}'] = forms.CharField()
+
+
+class OattrForm(forms.Form):
+    oattr_field = forms.CharField(label='Решение ОРТР', widget=forms.Textarea(attrs={'class': 'form-control'}))
+    # pps = forms.CharField(label='ППС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # kad = forms.CharField(label='КАД', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # ots_field = forms.CharField(label='Решение ОТС', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))
+
+
+class SendSPPForm(forms.Form):
+    send_to = forms.CharField(widget=forms.Select(attrs={'class': 'form-control'}))
+    comment = forms.CharField(label='Добавить комментарий', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))
+
+
+

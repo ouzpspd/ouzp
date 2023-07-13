@@ -14,15 +14,15 @@
 
 {% block content %}
 <div class="container">
-    <form id="copper_form" action="{% url 'otpm_copper' %}" method="post">
+    <form id="form" action="{% url 'otpm_copper' %}" method="post">
         {% csrf_token %}
         <div class="card mb-2">
             <h5 class="card-header">Общие параметры</h5>
               <div class="card-body">
                   <div class="container">
                   <div class="form-row">
-                      <label for="{{copper_form.no_exit.label}}" class="col-form-label">ТР написано без выезда:</label>
-                      {{copper_form.no_exit}}
+                      <label for="{{form.no_exit.label}}" class="col-form-label">ТР написано без выезда:</label>
+                      {{form.no_exit}}
                   </div>
                   </div>
               </div>
@@ -41,7 +41,7 @@
                         </div>
                         <div class="col-10">
                             <div class="form-group">
-                                {{copper_form.from_0}}
+                                {{form.from_0}}
                             </div>
                         </div>
 
@@ -52,7 +52,7 @@
                         </div>
                         <div class="col-10">
                             <div class="form-group">
-                                {{copper_form.to_0}}
+                                {{form.to_0}}
                             </div>
                         </div>
                     </div>
@@ -62,7 +62,7 @@
                         </div>
                         <div class="col-3">
                             <div class="form-group">
-                                {{copper_form.cable_0}}
+                                {{form.cable_0}}
                             </div>
                         </div>
                     </div>
@@ -72,7 +72,7 @@
                         </div>
                         <div class="col-10">
                             <div class="form-group">
-                                {{copper_form.mounting_0}}
+                                {{form.mounting_0}}
                                 {% comment %}<input type="text" name="mounting_0" class="mounting form-control" id="mounting_0">{% endcomment %}
                             </div>
                         </div>
@@ -83,7 +83,7 @@
                         </div>
                         <div class="col-10">
                             <div class="form-group">
-                                {{copper_form.fastening_0}}
+                                {{form.fastening_0}}
                                 {% comment %}<input type="text" name="fastening_0" class="form-control fastening" id="fastening_0">{% endcomment %}
                             </div>
                         </div>
@@ -103,8 +103,8 @@
                     <div class="container">
                     <div class="row mt-3">
                             <div class="form-row">
-                                <label for="{{copper_form.tech_reserve.label}}" class="col-form-label">Тех запас:</label>
-                                {{copper_form.tech_reserve}}
+                                <label for="{{form.tech_reserve.label}}" class="col-form-label">Тех запас:</label>
+                                {{form.tech_reserve}}
                             </div>
                     </div>
                     </div>
@@ -113,8 +113,8 @@
                         <div class="container">
                             <div class="row">
                                 <div class="form-row">
-                                    <label for="{{copper_form.tech_reserve.label}}" class="col-form-label">Тест линии:</label>
-                                    {{copper_form.line_test}}
+                                    <label for="{{form.tech_reserve.label}}" class="col-form-label">Тест линии:</label>
+                                    {{form.line_test}}
                                 </div>
                             </div>
                         </div>
@@ -126,13 +126,13 @@
         <div class="card mb-2">
             <h5 class="card-header">Доступ</h5>
               <div class="card-body">
-                  {{copper_form.access}}
+                  {{form.access}}
               </div>
         </div>
         <div class="card mb-2">
             <h5 class="card-header">Согласование</h5>
               <div class="card-body">
-                  {{copper_form.agreement}}
+                  {{form.agreement}}
               </div>
         </div>
         <div class="card mb-2">

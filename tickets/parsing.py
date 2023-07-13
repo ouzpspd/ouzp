@@ -696,8 +696,6 @@ def in_work_ortr(login, password):
             lines.append('Empty list tickets')
     else:
         lines.append('Access denied')
-    print('lines')
-    print(lines)
     return lines
 
 

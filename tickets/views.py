@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView
 
-from .models import TR, SPP, OrtrTR, HoldPosition
+from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
+from .models import TR, SPP, OrtrTR #, HoldPosition
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
     SksForm, \
-    UserRegistrationForm, UserLoginForm, OrtrForm, AuthForServiceForm, ContractForm, ListResourcesForm, \
+    OrtrForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
     PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, OtpmPoolForm
@@ -74,7 +75,7 @@ def registration(request):
             user = form.save()
             login(request, user)
             messages.success(request, 'Вы успешно зарегистрировались')
-            return redirect('ortr')
+            return redirect('/')
         else:
             messages.error(request, 'Ошибка регистрации')
     else:
@@ -93,7 +94,7 @@ def user_login(request):
             login(request, user)
             next = request.GET.get('next', '/')
             if next == '/':
-                return redirect('private_page')
+                return redirect('/')
             else:
                 return redirect(request.GET['next'])
     else:
@@ -129,7 +130,10 @@ def change_password(request):
 def private_page(request):
     """Данный метод в Личном пространстве пользователя отображает все задачи этого пользователя"""
     request = flush_session_key(request)
-    spp_success = SPP.objects.filter(user=request.user).order_by('-created')
+    if request.user.groups.filter(name='Сотрудники ОАТТР').exists():
+        spp_success = OtpmSpp.objects.filter(user=request.user).order_by('-created')
+    else:
+        spp_success = SPP.objects.filter(user=request.user).order_by('-created')
     paginator = Paginator(spp_success, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -157,7 +161,7 @@ def login_for_service(request):
 
                 if 'next' in request.GET:
                     return redirect(request.GET['next'])
-                return redirect('ortr')
+                return redirect('/')
     else:
         authform = AuthForServiceForm()
     return render(request, 'tickets/login_is.html', {'form': authform})
@@ -2396,7 +2400,7 @@ def spp_view(request, dID):
         response['Location'] += '?next={}'.format(request.path)
         return response
     else:
-        return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
+        return render(request, 'tickets/spp_view_oattr.html', {'spp_params': spp_params})
 
 
 @cache_check

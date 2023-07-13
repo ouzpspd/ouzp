@@ -65,21 +65,3 @@ class OrtrTR(models.Model):
 
     def __str__(self):
         return self.ortr
-
-
-class HoldPosition(models.Model):
-    """Должность сотрудника"""
-    name = models.CharField(max_length=200, verbose_name='Название должности')
-
-    def __str__(self):
-        return self.name
-
-class UserHoldPosition(models.Model):
-    """Модель добавляющая пользователю поле должность"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    hold_position = models.ForeignKey(HoldPosition, on_delete=models.CASCADE, verbose_name='Должность')
-
-    def __str__(self):
-        return self.hold_position.name
-
-

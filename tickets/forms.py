@@ -1,47 +1,12 @@
 from django.db import transaction
 from django import forms
-from .models import TR, SPP, ServicesTR, HoldPosition, UserHoldPosition
+
+from .models import TR, SPP, ServicesTR #, HoldPosition, UserHoldPosition
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.forms import ModelChoiceField
 
-class UserLoginForm(AuthenticationForm):
-    username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
-
-class UserRegistrationForm(UserCreationForm):
-    username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(label='ФИО',
-                                widget=forms.TextInput(attrs={'class': 'form-control'}),
-                                help_text='Строго с пробелами как в СПП'
-                                )
-    hold_position = forms.ModelChoiceField(
-        label='Должность',
-        queryset=HoldPosition.objects.all(),
-        required=True,
-        to_field_name='name',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    password1 = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
-    password2 = forms.CharField(label='Подтверждение пароля', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
-
-    class Meta:
-        model = User
-        fields = ('username', 'last_name', 'hold_position', 'password1', 'password2')
-
-    @transaction.atomic
-    def save(self):
-        user = super().save(commit=False)
-        user.save()
-        UserHoldPosition.objects.create(user=user, hold_position=self.cleaned_data.get('hold_position'))
-        user.save()
-        return user
-
-
-class AuthForServiceForm(forms.Form):
-    username = forms.CharField(label='Имя пользователя', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
 
 class OrtrForm(forms.Form):
