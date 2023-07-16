@@ -1,28 +1,12 @@
+from django.db import transaction
 from django import forms
-from .models import TR, SPP, ServicesTR
+
+from .models import TR, SPP, ServicesTR #, HoldPosition, UserHoldPosition
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+from django.forms import ModelChoiceField
 
 
-class UserLoginForm(AuthenticationForm):
-    username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
-
-
-class UserRegistrationForm(UserCreationForm):
-    username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(label='Фамилия', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    password1 = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
-    password2 = forms.CharField(label='Подтверждение пароля', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
-
-    class Meta:
-        model = User
-        fields = ('username', 'last_name', 'password1', 'password2')
-
-
-class AuthForServiceForm(forms.Form):
-    username = forms.CharField(label='Имя пользователя', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
 
 class OrtrForm(forms.Form):
@@ -457,3 +441,44 @@ class AddCommentForm(forms.Form):
     return_to = forms.CharField(widget=forms.Select(choices=types_return, attrs={'class': 'form-control'}))
     comment = forms.CharField(label='Добавить комментарий', widget=forms.Textarea(attrs={'class': 'form-control'}))
 
+
+
+
+class TechnologModelChoiceField(ModelChoiceField):
+    """По умолчанию в ModelChoiceField используется поле, которое возвращает метод __str__, поэтому меняем
+     на нужное поле"""
+    def label_from_instance(self, obj):
+        return obj.last_name
+
+
+class OtpmPoolForm(forms.Form):
+    groups = [
+        ('Все', 'Все'),
+        ('Коммерческая', 'Коммерческая'),
+        ('ПТО', 'ПТО'),
+    ]
+    statuses = [
+        ('Все', 'Все'),
+        ('В работе', 'В работе'),
+        ('Не взята в работу', 'Не взята в работу'),
+        ('Отслеживается', 'Отслеживается'),
+    ]
+    # technologs = [
+    #     ('Все', 'Все'),
+    # ]
+    technolog = TechnologModelChoiceField(
+        queryset=User.objects.all(),
+        empty_label='Все',
+        required=False,
+        to_field_name='last_name',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    # technolog = forms.CharField(label='Технолог', required=False,
+    #                            widget=forms.Select(choices=technologs, attrs={'class': 'form-control'}))
+    group = forms.CharField(label='Группа', required=False,
+                            widget=forms.Select(choices=groups, attrs={'class': 'form-control'}),
+                            )
+    status = forms.CharField(label='Статус', required=False,
+                             widget=forms.Select(choices=statuses, attrs={'class': 'form-control'}),
+                             )
+                               #widget=forms.TextInput(attrs={'class': 'form-control'}))

@@ -720,4 +720,3 @@ def formatted(string):
     """Данный метод удаляет из строки пробелы и точки"""
     string = string.replace(' ', '_').replace('.', '_')
     return string
-

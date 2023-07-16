@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+
+<div class="container">
+    <div class="row justify-content-md-center">
+        <div class="col-10">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item active" aria-current="page">Общая информация заявки СПП</li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+<div class="container">
+  <div class="row">
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Тип заявки</th>
+        <td class="table-light" style="width: 75%">{{current_ticket_spp.type_ticket}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Клиент</th>
+        <td class="table-light" style="width: 75%">{{current_ticket_spp.client}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Заявка К</th>
+        <td class="table-light" style="width: 75%"><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{current_ticket_spp.dID}}">{{current_ticket_spp.ticket_k}}</a></td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Менеджер</th>
+        <td class="table-light" style="width: 75%">{{current_ticket_spp.manager}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Технолог</th>
+        <td class="table-light" style="width: 75%">{{current_ticket_spp.technolog}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Задача в ОТПМ</th>
+        <td class="table-light" style="width: 75%">{{current_ticket_spp.task_otpm|linebreaksbr}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{current_ticket_spp.services|length}}">Перечень требуемых услуг</th>
+        {% for k in current_ticket_spp.services %}
+        <td class="table-light" style="width: 75%">{{k}}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+
+        <th class="table-secondary text-right" style="width: 25%">Состав Заявки ТР</th>
+
+        <td class="table-light" style="width: 75%">
+
+            {% for i in current_ticket_spp.des_tr %}
+            {% for k, v in i.items %}
+            {% if 'Техрешение' in k or 'Тех Решение' in k %}
+            <ul>
+                <div>
+                {{k}} {% comment %}<a href="{% url 'tr_view_save' current_ticket_spp.dID current_ticket_spp.id v.1 %}">{{k}}</a><br >{% endcomment %}
+                </div>
+
+
+                {% if current_ticket_spp.user.username == user.username %}
+                {% if current_ticket_spp.process == True %}
+                <div class="row">
+                <div class="col-3">
+            <a class="btn btn-danger btn-block" href="{% url 'add_tr_oattr' current_ticket_spp.dID v.0 v.1 %}?action=add" role="button">Проектировать</a>
+                </div>
+                    <div class="col-3">
+            <a class="btn btn-danger btn-block" href="{% url 'add_tr_oattr' current_ticket_spp.dID v.0 v.1 %}?action=edit" role="button">Редактировать</a>
+                </div>
+            </div>
+                {% endif %}
+                {% endif %}
+            </ul>
+            {% else %}
+            {{k}}
+
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Изменить статус заявки</th>
+        <td class="table-light" style="width: 75%">
+            {% if current_ticket_spp.user.username == user.username %}
+            {% if current_ticket_spp.process == True %}
+            <div class="row">
+                <div class="col-4">
+            <a class="btn btn-warning btn-block" href="{% url 'spp_view_oattr' current_ticket_spp.dID %}?action=wait" role="button">Перевести в ожидание</a>
+                </div>
+            </div>
+            {% elif current_ticket_spp.wait == True %}
+            <div class="row">
+                <div class="col-4">
+            <a class="btn btn-warning btn-block" href="{% url 'spp_view_oattr' current_ticket_spp.dID %}?action=notwait" role="button">Вернуть из ожидания</a>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </td>
+
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Отправить заявку СПП в отдел</th>
+        <td class="table-light" style="width: 75%">
+            {% if current_ticket_spp.user.username == user.username %}
+            {% if current_ticket_spp.process == True %}
+            <div class="row">
+                <div class="col-4">
+            <a class="btn btn-primary btn-block" href="{% url 'send_spp' current_ticket_spp.dID %}" role="button">Отправить</a>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </td>
+
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Примечание</th>
+        <td class="table-light" style="width: 75%">{{current_ticket_spp.comment|linebreaksbr}}</td>
+    </tr>
+
+
+  </tbody>
+</table>
+  </div>
+
+</div>
+
+
+
+
+{% endblock %}

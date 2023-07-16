@@ -1,9 +1,7 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 
-# Create your models here.
-
-class SPP(models.Model):
+class OtpmSpp(models.Model):
     dID = models.CharField(max_length=10)
     ticket_k = models.CharField(max_length=15, verbose_name='Заявка К')
     client = models.CharField(max_length=200, verbose_name='Клиент')
@@ -14,54 +12,55 @@ class SPP(models.Model):
     services = models.JSONField(verbose_name='Перечень требуемых услуг')
     des_tr = models.JSONField(verbose_name='Состав Заявки ТР')
     comment = models.TextField(verbose_name='Примечание')
-    version = models.IntegerField(verbose_name='Версия')
-    created = models.DateTimeField(auto_now_add=True)
-    complited = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField()#auto_now=True) # auto_now_add=True
+    waited = models.DateTimeField()
+    duration_process = models.DurationField()
+    duration_wait = models.DurationField()
     process = models.BooleanField(default=False, verbose_name='В работе')
     wait = models.BooleanField(default=False, verbose_name='В ожидании')
-    was_waiting = models.BooleanField(default=False, verbose_name='Была в ожидании')
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    return_otpm = models.BooleanField(default=False, verbose_name='Возвращена в ОТПМ')
-    return_mko = models.BooleanField(default=False, verbose_name='Возвращена МКО')
-    projected = models.BooleanField(default=True, verbose_name='Спроектирована')
-    simplified_tr = models.BooleanField(default=False, verbose_name='Упрощенное ТР')
+    projected = models.BooleanField(default=False, verbose_name='Спроектирована')
     evaluative_tr = models.BooleanField(default=False, verbose_name='Оценочное ТР')
     uID = models.CharField(max_length=10, verbose_name='ID куратора', null=True, blank=True)
     trdifperiod = models.CharField(max_length=10, verbose_name='Сложность в часах', null=True, blank=True)
     trcuratorphone = models.CharField(max_length=15, verbose_name='Телефон куратора', null=True, blank=True)
+    stage = models.CharField(max_length=100, verbose_name='Cтатус заявки СПП')
 
     def __str__(self):
         return self.ticket_k
 
+    def evaluate_completed(self):
+        return self.duration_process + self.created
 
-class TR(models.Model):
-    ticket_k = models.ForeignKey(SPP, on_delete=models.CASCADE, related_name='children')
+class OtpmTR(models.Model):
+    ticket_k = models.ForeignKey('OtpmSpp', on_delete=models.CASCADE, related_name='children')
     ticket_tr = models.CharField(max_length=100, verbose_name='ТР')
     pps = models.CharField(max_length=200, verbose_name='ППС')
-    turnoff = models.BooleanField(default=False, verbose_name='Отключение')
     info_tr = models.TextField(verbose_name='Инфо для разработки', blank=True, null=True)
-    oattr = models.TextField(verbose_name='Решение ОТПМ', blank=True, null=True)
     services = models.JSONField(verbose_name='Перечень требуемых услуг')
-    connection_point = models.CharField(default='Неизвестно', max_length=400, verbose_name='Точка подключения')
-    kad = models.CharField(max_length=400, verbose_name='КАД')
+    address_cp = models.CharField(max_length=400, verbose_name='Адрес точки подключения')
+    place_cp = models.CharField(max_length=400, verbose_name='Место точки подключения', blank=True, null=True)
     vID = models.IntegerField()
+    ticket_cp = models.CharField(max_length=10, verbose_name='Точка подключения')
+    oattr = models.TextField(verbose_name='Решение ОТПМ')
+    titles = models.TextField(verbose_name='Заголовки ТР', null=True, blank=True)
 
     def __str__(self):
         return self.ticket_tr
 
 
-class ServicesTR(models.Model):
-    ticket_tr = models.ForeignKey(TR, on_delete=models.CASCADE)
-    service = models.CharField(max_length=200, verbose_name='Услуга')
+class HoldPosition(models.Model):
+    """Должность сотрудника"""
+    name = models.CharField(max_length=200, verbose_name='Название должности')
 
     def __str__(self):
-        return self.service
+        return self.name
 
-class OrtrTR(models.Model):
-    ticket_tr = models.ForeignKey(TR, on_delete=models.CASCADE)
-    ortr = models.TextField(verbose_name='Решение ОРТР')
-    ots = models.TextField(verbose_name='Решение ОТС',  null=True, blank=True)
-    titles = models.TextField(verbose_name='Заголовки ТР', null=True, blank=True)
+class UserHoldPosition(models.Model):
+    """Модель добавляющая пользователю поле должность"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    hold_position = models.ForeignKey(HoldPosition, on_delete=models.CASCADE, verbose_name='Должность')
 
     def __str__(self):
-        return self.ortr
+        return self.hold_position.name
+

@@ -6,3 +6,11 @@ $(document).ready(function() {
    $(".spinner-border").removeClass("d-none");
   });
 });
+
+$( ".form-control" ).focus(function() {
+        $(".btn-primary").removeClass("d-none");
+        $(".spinner-border").addClass("d-none");
+    });
+
+
+
