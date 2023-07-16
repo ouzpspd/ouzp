@@ -207,8 +207,14 @@ def send_spp_check(login, password, dID, tID, trID):
 def send_spp(login, password, dID, tID, trID, ticket_tr):
     url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
     vID = ticket_tr.vID
-    trOTO_Resolution = ticket_tr.oattr
-    data = {'trOTO_Resolution': trOTO_Resolution, 'action': 'saveVariant',
-             'vID': vID}
+    # trTurnOff = None  # для отключения
+    # trTurnOffInput = None
+    # data = {'FileLink': 'файл', 'action': 'saveVariant',
+    #         'vID': vID, 'trID': trID}
+    # headers
+    # 'Content-Type': multipart/form-data; boundary
+    trOTPM_Resolution = ticket_tr.oattr
+    data = {'trOTPM_Resolution': trOTPM_Resolution, 'action': 'saveVariant',
+            'vID': vID}
     requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
