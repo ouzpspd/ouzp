@@ -20,7 +20,7 @@ class OtpmSpp(models.Model):
     wait = models.BooleanField(default=False, verbose_name='В ожидании')
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     projected = models.BooleanField(default=False, verbose_name='Спроектирована')
-    evaluative_tr = models.BooleanField(default=False, verbose_name='Оценочное ТР')
+    difficulty = models.CharField(max_length=10, verbose_name='Сложность')
     uID = models.CharField(max_length=10, verbose_name='ID куратора', null=True, blank=True)
     trdifperiod = models.CharField(max_length=10, verbose_name='Сложность в часах', null=True, blank=True)
     trcuratorphone = models.CharField(max_length=15, verbose_name='Телефон куратора', null=True, blank=True)
