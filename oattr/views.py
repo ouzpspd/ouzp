@@ -16,12 +16,11 @@ from django.views.generic import DetailView, FormView
 
 from tickets.views import cache_check
 from .models import OtpmSpp, OtpmTR
-from tickets.parsing import in_work_otpm
 from tickets.utils import flush_session_key
 
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
-    send_spp_check
+    send_spp_check, in_work_otpm
 
 
 def filter_otpm_search(search, technologs, group, status):
@@ -120,13 +119,14 @@ class OtpmPoolView(CredentialMixin, View):
                 if status:
                     initial_params.update({'status': status})
                 context = {'otpmpoolform': form}
+
                 search = in_work_otpm(username, password)
                 if search[0] == 'Access denied':
                     return super().redirect_to_login_for_service(self)
                 technologs = [user.last_name for user in queryset_user_group] if technolog is None else [technolog]
                 output_search, spp_process = filter_otpm_search(search, technologs, group, status)
                 context.update({'search': output_search, 'spp_process': spp_process})  # 'results': results
-                return render(request, 'tickets/otpm.html', context)
+                return render(request, 'oattr/pool_oattr.html', context)
         else:
             initial_params = dict({'technolog': request.user.last_name})
             form = OtpmPoolForm(initial=initial_params)
@@ -134,7 +134,7 @@ class OtpmPoolView(CredentialMixin, View):
             context = {
                 'otpmpoolform': form
             }
-            return render(request, 'tickets/otpm.html', context)
+            return render(request, 'oattr/pool_oattr.html', context)
 
 
 
@@ -170,7 +170,7 @@ class CreateSppView(CredentialMixin, View):
         current_spp.uID = spp_params['uID']
         current_spp.trdifperiod = spp_params['trDifPeriod']
         current_spp.trcuratorphone = spp_params['trCuratorPhone']
-        current_spp.evaluative_tr = spp_params['Оценочное ТР']
+        current_spp.difficulty = spp_params['Сложность']
         user = User.objects.get(username=self.request.user.username)
         current_spp.user = user
         # current_spp.duration_process = datetime.timedelta(0)
@@ -318,8 +318,11 @@ def construct_tr(value_vars, template):
         hidden_vars['- Оставить тех. запас.'] = '- Оставить тех. запас.'
     if value_vars.get('line_test'):
         hidden_vars['- Протестировать линию связи.'] = '- Протестировать линию связи.'
-    static_vars['Доступ']= value_vars.get('access')
-    static_vars['Согласование'] = value_vars.get('agreement')
+    if value_vars.get('agreement'):
+        hidden_vars['Согласование:'] = 'Согласование:'
+        hidden_vars['%Согласование%'] = '%Согласование%'
+        static_vars['Согласование'] = value_vars.get('agreement')
+    static_vars['Доступ'] = value_vars.get('access')
     result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
     return result
 

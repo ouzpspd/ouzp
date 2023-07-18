@@ -699,74 +699,6 @@ def in_work_ortr(login, password):
     return lines
 
 
-def in_work_otpm(login, password):
-    """Данный метод парсит страницу с пулом ОТПМ в СПП и отфильтровывает заявки с кураторами DIR 2.4.1"""
-    lines = []
-    url = 'https://sss.corp.itmh.ru/dem_tr/demands.php?tech_uID=0&trStatus=inWorkOTPM' +\
-          '&curator=any&vName=&dSearch=&bID=1&searchType=param'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    if req.status_code == 200:
-        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        num = 0
-        search = soup.find_all('tr')
-        for tr in search:
-            if 'Заявки, ожидающие Вашей обработки' == tr.find('td').text:
-                continue
-            elif tr.find('td', id="cur_stat"):
-                num = int(tr.find('td', class_='demand_num').text)
-            elif not tr.find('td', id="cur_stat"):
-                break
-
-        search_demand_num2 = soup.find_all('td', class_='demand_num2')[num:]
-        search_demand_cust = soup.find_all('td', class_='demand_cust')[num:]
-        search_demand_point = soup.find_all('td', class_='demand_point')[num:]
-        search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
-        search_demand_cur = soup.find_all('td', class_='demand_cur')
-        search_demand_stat = soup.find_all('td', class_='demand_stat')
-        search_demand_sl = soup.find_all('td', class_='demand_sl')
-
-
-        for index in range(len(search_demand_num2)-1):
-            #unwanted = ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Чернов А. С.']
-            wanted_stat = ['В работе ОТПМ', 'Контроль и выпуск ТР', 'В работе ПТО']
-            #if search_demand_cur[index].text not in unwanted:
-            if search_demand_stat[index].text not in wanted_stat:
-                continue
-            if lines and lines[-1][0] == search_demand_num2[index].text:
-                lines[-1][3] = lines[-1][3] + ' ' + search_demand_point[index].text
-                continue
-            #else:
-            lines.append([search_demand_num2[index].text,
-                          search_demand_num2[index].find('a').get('href')[(search_demand_num2[index].find('a').get('href').index('=')+1):],
-                          search_demand_cust[index].text,
-                          search_demand_point[index].text,
-                          lost_whitespace(search_demand_tech[index].text),
-
-                          search_demand_stat[index].text,
-                          search_demand_sl[index].text,])
-                          #search_demand_cur[index].text]
-
-        for index in range(len(lines)):
-            lines[index].append('Не взята в работу')
-            if 'ПТО' in lines[index][0]:
-                lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]
-                lines[index].append('ПТО')
-            else:
-                lines[index].append('Коммерческая')
-            for symbol_index in range(1, len(lines[index][3])):
-                if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
-                    lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
-                    break
-        if lines == []:
-            lines.append(['Empty list tickets'])
-
-    else:
-        lines.append('Access denied')
-    return lines
-
-
-
-
 def get_sw_config(sw, login, password):
     """Данный метод парсит конфиг коммутатора со stash"""
     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
@@ -1003,10 +935,10 @@ def send_to_mko(login, password, dID, comment):
 
 
 def lost_whitespace(text):
-    """Данный метод добавляет пропущенный переход строки в формате А.А или аА -> А. А или а А"""
+    """Данный метод добавляет пропущенный переход строки в формате А.А или аА или 1А -> А. А или а А или 1 А"""
     text = re.sub('(.+\w)\.([А-Я]\w.+)', lambda m: m.group(1) + '.\n' + m.group(2), text)
     text = re.sub('(.+[а-я])([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
-    #text = re.sub('(.+\d)([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
+    text = re.sub('(.+\d)([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
     return text
 
 def spec_with_cookie(cookie, x_session_id):

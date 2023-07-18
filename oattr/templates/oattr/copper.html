@@ -37,6 +37,16 @@
                     {% comment %}{{ form.as_p }}{% endcomment %}
                     <div class="row">
                         <div class="col-2">
+                            <label class="col-form-label">Тип кабеля:</label>
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                {{form.cable_0}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
                             <label class="col-form-label">Монтаж линии от:</label>
                         </div>
                         <div class="col-10">
@@ -53,16 +63,6 @@
                         <div class="col-10">
                             <div class="form-group">
                                 {{form.to_0}}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-2">
-                            <label class="col-form-label">Тип кабеля:</label>
-                        </div>
-                        <div class="col-3">
-                            <div class="form-group">
-                                {{form.cable_0}}
                             </div>
                         </div>
                     </div>
@@ -163,6 +163,28 @@
           $("#forms").append(`<li class="list-group-item">
           <div class="row">
             <div class="col-2">
+                    <label class="col-form-label">Тип кабеля:</label>
+                </div>
+            <div class="col-3">
+                <div class="form-group">
+                    <select name="cable_${counter}" class="form-control" id="id_cable_${counter}">
+                      <option value="UTP-2е пары">UTP-2е пары</option>
+                      <option value="UTP-4е пары">UTP-4е пары</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-5">
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button class="btn btn-danger btn-block remove_item_btn">Удалить</button>
+                </div>
+            </div>
+          </div>
+
+
+          <div class="row">
+            <div class="col-2">
                 <label class="col-form-label">Монтаж линии от:</label>
             </div>
             <div class="col-10">
@@ -181,24 +203,7 @@
                 </div>
             </div>
           </div>
-                <div class="row">
-                    <div class="col-2">
-                            <label class="col-form-label">Тип кабеля:</label>
-                        </div>
-                    <div class="col-3">
-                        <div class="form-group">
-                            <select name="cable_${counter}" class="form-control" id="id_cable_${counter}">
-                              <option value="UTP-2е пары">UTP-2е пары</option>
-                              <option value="UTP-4е пары">UTP-4е пары</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-2">
-                        <div class="form-group">
-                            <button class="btn btn-danger btn-block remove_item_btn">Удалить</button>
-                        </div>
-                    </div>
-                </div>
+
                 <div class="row">
                     <div class="col-2">
                       <label class="col-form-label">Способ монтажа:</label>

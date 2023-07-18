@@ -34,6 +34,11 @@
                     <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
                 </div>
             </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-danger btn-block" href="{% url 'spp_view_oattr' view.kwargs.dID %}" role="button">Отмена</a>
+                </div>
+            </div>
         </div>
     </div>
 </form>

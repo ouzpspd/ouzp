@@ -117,8 +117,8 @@ class CopperForm(forms.Form):
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     access = forms.CharField(label='Доступ', widget=forms.Textarea(attrs={'class': 'form-control',
                                                                           'rows':3}))
-    agreement = forms.CharField(label='Согласование', widget=forms.Textarea(attrs={'class': 'form-control',
-                                                                                   'rows':3}))
+    agreement = forms.CharField(label='Согласование', required=False,
+                                widget=forms.Textarea(attrs={'class': 'form-control', 'rows':3}))
 
     def __init__(self, *args, **kwargs):
         super(CopperForm, self).__init__(*args, **kwargs)
