@@ -45,6 +45,29 @@ def _counter_line_services(services_plus_desc):
     return counter_line_services, hotspot_points, services_plus_desc
 
 
+def get_rtk_initial(line_data):
+    rtk_initial = {}
+    line_data = '' if not line_data else line_data
+    match_rtk_ip_port = re.search("\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]-(\d{1,2})", line_data)
+    if match_rtk_ip_port:
+        rtk_ip = match_rtk_ip_port.group(1)
+        rtk_port = match_rtk_ip_port.group(2)
+        rtk_initial.update({'rtk_ip': rtk_ip, 'rtk_port': rtk_port})
+    else:
+        match_rtk_gpon = re.search("pon-port (\d{1,2}/\d{1,2})\)-(\d{1,2})TS", line_data)
+        if match_rtk_gpon:
+            rtk_port_1 = match_rtk_gpon.group(1)
+            rtk_port_2 = match_rtk_gpon.group(2)
+            rtk_port = rtk_port_1 + '/' + rtk_port_2.lstrip('0')
+            rtk_initial.update({'rtk_port': rtk_port})
+            match_rtk_ip = re.search("\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]", line_data)
+            if match_rtk_ip:
+                rtk_ip = match_rtk_ip.group(1)
+                rtk_initial.update({'rtk_ip': rtk_ip})
+    return rtk_initial
+
+
+
 def parse_tr(login, password, url):
     """Данный метод парсит ТР в СПП и возвращает полученные данные о ТР"""
     url = url.replace('dem_begin', 'dem_point')
@@ -331,6 +354,16 @@ def ckb_parse(login, password):
         title = match.group(1)
         templates[title] = item.text
     return templates
+
+
+def ckb_parse_msan_exist(login, password, ip):
+    """Данный метод парсит страницу КБЗ с Типовыми блоками ТР"""
+    templates = {}
+    url = 'https://ckb.itmh.ru/pages/viewpage.action?pageId=578595591'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if ip in req.content.decode('utf-8'):
+        return True
+    return False
 
 
 def _parsing_vgws_by_node_name(login, password, **kwargs):
@@ -999,3 +1032,60 @@ def spec(username, password):
     return cookie, x_session_id
 
 
+def get_sauron(username, password):
+    url = 'https://sauron.itmh.ru/portal/report/0.0.%20%D0%AD%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D1%82%D0%B8%D0%B7%D0%B0%20%D0%BE%D1%82%D1%87%D0%B5%D1%82%D0%BE%D0%B2/FVNO/%D0%98%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D1%8F%20%D0%BE%20%D0%BD%D0%B0%D1%80%D1%8F%D0%B4%D0%B5'
+
+    req = requests.get(url)
+
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    sts_url = soup.find('form', id="options").get('action')
+    data_sts = {'UserName': f'CORP\\{username}', 'Password': f'{password}', 'AuthMethod': 'FormsAuthentication'}
+    req = requests.post(sts_url, data=data_sts)
+    # if req.history:
+    #     for resp in req.history:
+    #         print('!!')
+    #         print('resp.request.url')
+    #         print(resp.request.url)
+    #         print('request')
+    #         print(resp.request.headers)
+    #         print('headers')
+    #         print(resp.headers)
+    #         print('content')
+    #         print(resp.content.decode())
+
+    edge_access_cookie = req.headers.get('Set-Cookie').split(';')[0]
+    req_headers = req.headers
+
+    # print('req_request')
+    # print(req.request.headers)
+    # print('req_headers')
+    # print(req_headers)
+    # print(req.content.decode())
+
+
+
+    #url_sau = 'https://sauron.itmh.ru/reports/Pages/ReportViewer.aspx?%2f0.0.+%u042d%u043a%u0441%u043f%u0435%u0440%u0442%u0438%u0437%u0430+%u043e%u0442%u0447%u0435%u0442%u043e%u0432%2fFVNO%2f%u0418%u043d%u0444%u043e%u0440%u043c%u0430%u0446%u0438%u044f+%u043e+%u043d%u0430%u0440%u044f%u0434%u0435&rc%3ashowbackbutton=true'
+
+    url_sau = 'https://sauron.itmh.ru/reports/Pages/ReportViewer.aspx?%2F0.0.%20%D0%AD%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D1%82%D0%B8%D0%B7%D0%B0%20%D0%BE%D1%82%D1%87%D0%B5%D1%82%D0%BE%D0%B2%2FFVNO%2F%D0%98%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D1%8F%20%D0%BE%20%D0%BD%D0%B0%D1%80%D1%8F%D0%B4%D0%B5&rc:showbackbutton=true'
+    headers = {'Cookie': edge_access_cookie,
+               #'X-Microsoftajax': 'Delta=true'
+               'User-Agent':
+                   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+               }
+    data = {
+        #'AjaxScriptManager': 'AjaxScriptManager|ReportViewerControl$ctl09$Reserved_AsyncLoadTarget',
+        'ReportViewerControl$ctl04$ctl03$txtValue': '245338758'
+    }
+    #data = json.dump(data)
+    req = requests.post(url_sau, data=data, headers=headers)
+    #req = requests.get(url_sau, headers=headers)
+    req_headers = req.headers
+    # print('req_headers')
+    # print(req.request.headers)
+    # print('req_body')
+    # print(req.request.body)
+    # print('req_headers')
+    # print(req_headers)
+    content = req.content.decode()
+    print('content')
+    print(content)

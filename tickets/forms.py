@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django import forms
 
@@ -440,6 +441,52 @@ class AddCommentForm(forms.Form):
     ]
     return_to = forms.CharField(widget=forms.Select(choices=types_return, attrs={'class': 'form-control'}))
     comment = forms.CharField(label='Добавить комментарий', widget=forms.Textarea(attrs={'class': 'form-control'}))
+
+
+class SppDataForm(forms.Form):
+    types_spd = [
+        ('Комтехцентр', 'Комтехцентр'),
+        ('РТК', 'РТК'),
+    ]
+    spd = forms.CharField(widget=forms.Select(choices=types_spd, attrs={'class': 'form-control'}))
+
+
+class RtkForm(forms.Form):
+    types_pm = [
+        ('ПМ', 'ПМ'),
+        ('FVNO Медь', 'FVNO Медь'),
+        ('FVNO FTTH', 'FVNO FTTH'),
+        ('FVNO GPON', 'FVNO GPON'),
+    ]
+    vlan = forms.CharField(label='Vlan',
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    type_pm = forms.CharField(widget=forms.Select(choices=types_pm, attrs={'class': 'form-control'}))
+    switch_ip = forms.CharField(label='IP коммутатора', required=False,
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    switch_port = forms.CharField(label='Порт коммутатора', required=False,
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    optic_socket = forms.CharField(label='Опт. розетка', required=False,
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    ploam = forms.CharField(label='PLOAM-пароль', required=False,
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+    # def clean(self):
+    #     cleaned_data = super().clean()
+    #     type_pm = cleaned_data.get("type_pm")
+    #     switch_ip = cleaned_data.get("switch_ip")
+    #     switch_port = cleaned_data.get("switch_port")
+    #     print(type_pm)
+    #
+    #
+    #     if type_pm == 'FVNO Медь' and not all([switch_ip, switch_port]):
+    #         # Only do something if both fields are valid so far.
+    #         self.add_error(
+    #                 "switch_ip", "required"
+    #             )
+
+
+
+
 
 
 

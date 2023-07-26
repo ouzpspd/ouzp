@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.views import View
-from django.views.generic import DetailView
+from django.views.generic import DetailView, FormView
 
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from .models import TR, SPP, OrtrTR #, HoldPosition
@@ -10,7 +11,7 @@ from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     OrtrForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
-    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, OtpmPoolForm
+    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, OtpmPoolForm, RtkForm, SppDataForm
 
 from oattr.models import OtpmSpp
 
@@ -493,27 +494,27 @@ def project_tr(request, dID, tID, trID):
 
 
 
-def sppdata(request):
-    """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
-    tag_service = request.session['tag_service']
-    tag_service_index = []
-    index = 0
-    tag_service_index.append(index)
-    request.session['tag_service_index'] = tag_service_index
-    next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-    context = {
-        'services_plus_desc': request.session.get('services_plus_desc'),
-        'client': request.session.get('client'),
-        'manager': request.session.get('manager'),
-        'technolog': request.session.get('technolog'),
-        'task_otpm': request.session.get('task_otpm'),
-        'address': request.session.get('address'),
-        'next_link': next_link,
-        'turnoff': request.session.get('turnoff'),
-        'ticket_spp_id': request.session.get('ticket_spp_id'),
-        'dID': request.session.get('dID')
-    }
-    return render(request, 'tickets/sppdata.html', context)
+# def sppdata(request):
+#     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
+#     tag_service = request.session['tag_service']
+#     tag_service_index = []
+#     index = 0
+#     tag_service_index.append(index)
+#     request.session['tag_service_index'] = tag_service_index
+#     next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+#     context = {
+#         'services_plus_desc': request.session.get('services_plus_desc'),
+#         'client': request.session.get('client'),
+#         'manager': request.session.get('manager'),
+#         'technolog': request.session.get('technolog'),
+#         'task_otpm': request.session.get('task_otpm'),
+#         'address': request.session.get('address'),
+#         'next_link': next_link,
+#         'turnoff': request.session.get('turnoff'),
+#         'ticket_spp_id': request.session.get('ticket_spp_id'),
+#         'dID': request.session.get('dID')
+#     }
+#     return render(request, 'tickets/sppdata.html', context)
 
 
 @cache_check
@@ -612,7 +613,7 @@ def copper(request):
         pps = request.session['pps']
         services_plus_desc = request.session['services_plus_desc']
         tag_service = request.session['tag_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         try:
             type_pass = request.session['type_pass']
         except KeyError:
@@ -780,7 +781,7 @@ def vols(request):
         match_link = re.search(regex_link, spplink)
         tID = match_link.group(2)
         trID = match_link.group(3)
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         tag_service = request.session['tag_service']
 
         try:
@@ -929,7 +930,7 @@ def wireless(request):
         username = credent['username']
         password = credent['password']
         pps = request.session['pps']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         tag_service = request.session['tag_service']
         if request.session.get('list_switches'):
             list_switches = request.session.get('list_switches')
@@ -1038,7 +1039,7 @@ def csw(request):
                 logic_replace_csw = False
 
         tag_service = request.session['tag_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         if sreda == '2' or sreda == '4':
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '6'})
         else:
@@ -1068,6 +1069,9 @@ def data(request):
     password = credent['password']
     spp_link = request.session['spplink']
     templates = ckb_parse(username, password)
+    if request.session.get('rtk_form', {}).get('type_pm') == 'FVNO FTTH':
+        msan_exist = ckb_parse_msan_exist(username, password, request.session.get('rtk_form').get('switch_ip'))
+        request.session['msan_exist'] = msan_exist
     request.session['templates'] = templates
     if request.session.get('counter_line_services_initial'):
         counter_line_services = request.session['counter_line_services_initial']
@@ -1088,8 +1092,9 @@ def data(request):
     ticket_tr_id = request.session['ticket_tr_id']
     ticket_tr = TR.objects.get(id=ticket_tr_id)
     type_ticket = ticket_tr.ticket_k.type_ticket
+    ticket_k = ticket_tr.ticket_k.ticket_k
     evaluative_tr = ticket_tr.ticket_k.evaluative_tr
-    value_vars.update({'type_ticket': type_ticket})
+    value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k})
     readable_services = value_vars.get('readable_services')
 
 
@@ -2096,7 +2101,14 @@ def shpd(request):
         tag_service = request.session['tag_service']
         service_name = 'shpd'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        dID = request.session['dID']
+        ticket_spp_id = request.session['ticket_spp_id']
+        spd = request.session['spd']
         request.session['current_service'] = service
+        if 'Интернет, DHCP' in service and spd == 'РТК':
+            messages.warning(request, 'Интернет, DHCP через РТК не предоставляется.')
+            return redirect('spp_view_save', dID, ticket_spp_id)
+
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
         context = {
@@ -3327,7 +3339,7 @@ def change_params_serv(request):
         head = request.session['head']
         tag_service = request.session['tag_service']
         types_change_service = request.session['types_change_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         only_mask = False
         routed = False
         for i in range(len(types_change_service)):
@@ -3393,7 +3405,7 @@ def change_log_shpd(request):
         else:
             services = None
         tag_service = request.session['tag_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         context = {
             'head': head,
             'kad': kad,
@@ -3432,7 +3444,7 @@ def params_extend_service(request):
         extendserviceform = ExtendServiceForm()
         pass_job_services = request.session.get('pass_job_services')
         tag_service = request.session['tag_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         context = {
             'desc_service': desc_service,
             'type_passage': type_passage,
@@ -3511,7 +3523,7 @@ def pass_serv(request):
         pps = request.session['pps']
         head = request.session['head']
         tag_service = request.session['tag_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         if request.GET.get('next_page'):
             clear_session_params(
                 request,
@@ -3550,7 +3562,7 @@ def pass_turnoff(request):
         pps = request.session['pps']
         head = request.session['head']
         tag_service = request.session['tag_service']
-        request, prev_page, index = backward_page(request)
+        prev_page, index = backward_page(request) # request,
         spplink = request.session['spplink']
         regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
         match_link = re.search(regex_link, spplink)
@@ -4007,6 +4019,114 @@ def export_xls(request):
     response['Content-Disposition'] = f'attachment; filename="{technolog}-{start}-{stop}.xls"'
     wb.save(response)
     return response
+
+
+
+# def rkt(request):
+#     if request.method == 'POST':
+#         rtkform = RtkForm(request.POST)
+#         if rtkform.is_valid():
+#             new_ppr = rtkform.cleaned_data['type_pm']
+#             title_ppr = rtkform.cleaned_data['switch_ip']
+#     else:
+#         rtkform = RtkForm()
+#         context = {'form': rtkform,
+#                    }
+#         return render(request, 'tickets/rtk.html', context)
+
+
+class RtkFormView(FormView):
+    template_name = "tickets/rtk.html"
+    form_class = RtkForm
+    #success_url = '/data?prev_page=rtk&index=4'
+
+    def form_valid(self, form):
+        rtk_form = dict(**form.cleaned_data)
+        self.request.session['rtk_form'] = rtk_form
+        return super().form_valid(form)
+
+    def get_initial(self, *args, **kwargs):
+        initial = super().get_initial()
+        rtk_initial = get_rtk_initial(self.request.session.get('oattr'))
+        initial['switch_ip'] = rtk_initial.get('rtk_ip')
+        initial['switch_port'] = rtk_initial.get('rtk_port')
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        prev_page, index = backward_page(self.request)
+        tag_service = self.request.session['tag_service']
+        oattr = self.request.session['oattr']
+        context['back_link'] = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
+        context['oattr'] = oattr
+        return context
+
+    def get_success_url(self, **kwargs):
+        tag_service = self.request.session['tag_service']
+        tag_service.append({'data': None})
+        tag_service_index = self.request.session['tag_service_index']
+        index = tag_service_index[-1] + 1
+        tag_service_index.append(index)
+        return f'{next(iter(tag_service[index + 1]))}?prev_page={next(iter(tag_service[index]))}&index={index}'
+
+
+
+
+def sppdata(request):
+    """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
+    if request.method == 'POST':
+        form = SppDataForm(request.POST)
+        if form.is_valid():
+            tag_service = request.session['tag_service']
+            tag_service_index = []
+            index = 0
+            tag_service_index.append(index)
+            request.session['tag_service_index'] = tag_service_index
+            spd = form.cleaned_data['spd']
+            request.session['spd'] = spd
+            if spd == 'РТК' and tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
+                tag_service.pop()
+                tag_service.append({'rtk': None})
+            if spd == 'Комтехцентр' and tag_service[-1] == {'rtk': None}:
+                tag_service.pop()
+                sreda = request.session['sreda']
+                if sreda == '1':
+                    tag_service.append({'copper': None})
+                elif sreda == '2' or sreda == '4':
+                    tag_service.append({'vols': None})
+                elif sreda == '3':
+                    tag_service.append({'wireless': None})
+            response = get_response_with_prev_get_params(request)
+            return response
+    else:
+        form = SppDataForm()
+        tag_service = request.session['tag_service']
+        visible = True if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
+        context = {
+            'services_plus_desc': request.session.get('services_plus_desc'),
+            'client': request.session.get('client'),
+            'manager': request.session.get('manager'),
+            'technolog': request.session.get('technolog'),
+            'task_otpm': request.session.get('task_otpm'),
+            'address': request.session.get('address'),
+            'turnoff': request.session.get('turnoff'),
+            'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'dID': request.session.get('dID'),
+            'form': form,
+            'visible': visible
+        }
+        return render(request, 'tickets/sppdata.html', context)
+
+
+@cache_check
+def sauron(request):
+    """Данный метод отображает html-страничку c формой для заполнения комментария к возвращаемой ТР"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    get_sauron(username, password)
+
 
 
 # def filter_otpm_search(search, technologs, group, status):

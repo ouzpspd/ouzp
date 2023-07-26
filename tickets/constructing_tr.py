@@ -4,6 +4,31 @@ from .utils import _readable_node
 from .utils import _separate_services_and_subnet_dhcp
 
 
+def _get_rtk_vars(value_vars):
+    add_hidden_vars = {}
+    add_static_vars = {}
+    if value_vars.get('spd') == 'РТК':
+        add_hidden_vars['- Зарезервирован тег vlan %vlan%.'] = '- Зарезервирован тег vlan %vlan%.'
+        add_hidden_vars[
+            '- Способ выдачи тега vlan в порт подключения клиента в access.'] = \
+            '- Способ выдачи тега vlan в порт подключения клиента в access.'
+        add_hidden_vars[
+            """- В стык ПАО "Ростелеком" выдать vlan %vlan% tag'ом."""] = \
+            """- В стык ПАО "Ростелеком" выдать vlan %vlan% tag'ом."""
+        if value_vars.get('rtk_form').get('type_pm') == 'ПМ':
+            add_hidden_vars[
+                '- Добавить на ресурсе в Cordis информацию: "Последняя миля через ПАО "Ростелеком". %Заявка СПП%".'] = \
+                '- Добавить на ресурсе в Cordis информацию: "Последняя миля через ПАО "Ростелеком". %Заявка СПП%".'
+        else:
+            add_hidden_vars[
+                '- Добавить на ресурсе в Cordis информацию: "B2B FVNO. Заявка СПП: %Заявка СПП%".'] = \
+                '- Добавить на ресурсе в Cordis информацию: "B2B FVNO. Заявка СПП: %Заявка СПП%".'
+        add_static_vars['vlan'] = value_vars.get('rtk_form').get('vlan')
+        add_static_vars['Заявка СПП'] = value_vars.get('ticket_k')
+    else:
+        add_hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+    return add_hidden_vars, add_static_vars
+
 def _new_services(result_services, value_vars):
     """Данный метод формирует блоки ТТР организации новых сервисов"""
     result_services_ots = value_vars.get('result_services_ots')
@@ -23,6 +48,7 @@ def _new_services(result_services, value_vars):
             hidden_vars = {}
             stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
             static_vars['указать маску'] = '/32'
+            hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
             if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['router_shpd']:
@@ -36,8 +62,6 @@ def _new_services(result_services, value_vars):
             name_new_service.add('ШПД в Интернет')
             if logic_csw == True:
                 result_services.append(enviroment_csw(value_vars))
-            else:
-                pass
             static_vars = {}
             hidden_vars = {}
             if ('29' in service) or (' 8' in service):
@@ -48,6 +72,9 @@ def _new_services(result_services, value_vars):
                 static_vars['указать маску'] = '/30'
             all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
             if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'access':
+                add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                static_vars.update(add_static_vars)
+                hidden_vars.update(add_hidden_vars)
                 stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             elif all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'trunk':
@@ -112,6 +139,9 @@ def _new_services(result_services, value_vars):
                 static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
                 static_vars['указать полосу'] = _get_policer(service)
                 if all_cks_in_tr.get(service)['type_cks'] == 'access':
+                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                    static_vars.update(add_static_vars)
+                    hidden_vars.update(add_hidden_vars)
                     stroka = templates.get("Организация услуги ЦКС Etherline access'ом.")
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif all_cks_in_tr.get(service)['type_cks'] == 'trunk':
@@ -174,12 +204,19 @@ def _new_services(result_services, value_vars):
             name_new_service.add('Хот-спот')
             static_vars = {}
             hidden_vars = {}
-            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +']
+            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс']
             if any(type in service.lower() for type in types_premium_plus):
                 if logic_csw == True:
                     result_services.append(enviroment_csw(value_vars))
                 static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
                 static_vars["access'ом (native vlan) / trunk"] = "access'ом"
+                if value_vars.get('spd') == 'РТК':
+                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                    static_vars.update(add_static_vars)
+                    hidden_vars.update(add_hidden_vars)
+                else:
+                    hidden_vars["""- Настроить порт подключения клиента для предоставления сервиса. Vlan для услуги "Хот-спот Премиум +" выдать в порт подключения %access'ом (native vlan) / trunk%."""] = \
+                    """- Настроить порт подключения клиента для предоставления сервиса. Vlan для услуги "Хот-спот Премиум +" выдать в порт подключения %access'ом (native vlan) / trunk%."""
                 if value_vars.get('exist_hotspot_client') == True:
                     stroka = templates.get("Организация услуги Хот-спот Премиум + для существующего клиента.")
                 else:
@@ -209,6 +246,16 @@ def _new_services(result_services, value_vars):
                 static_vars['указать количество станций'] = value_vars.get('hotspot_points')
                 static_vars['ОАТТР/ОТИИ'] = 'ОАТТР'
                 static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
+
+                if value_vars.get('spd') == 'РТК':
+                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                    static_vars.update(add_static_vars)
+                    hidden_vars.update(add_hidden_vars)
+                    hidden_vars['СПД'] = 'СПД ПАО "Ростелеком"'
+                    hidden_vars['от %указать название коммутатора%'] = 'через последнюю милю стороннего оператора'
+                else:
+                    hidden_vars['СПД'] = 'СПД'
+                    hidden_vars['от %указать название коммутатора%'] = 'от %указать название коммутатора%'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 regex_counter = 'беспроводных станций: (\d+)'
                 match_counter = re.search(regex_counter, stroka)
@@ -554,6 +601,53 @@ def enviroment_csw(value_vars):
         static_vars['ОИПМ/ОИПД'] = 'ОИПД'
     return analyzer_vars(stroka, static_vars, hidden_vars)
 
+def rtk_enviroment(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    templates = value_vars.get('templates')
+    static_vars = {}
+    hidden_vars = {}
+    if value_vars.get('rtk_form').get('type_pm') == 'ПМ':
+        stroka = templates.get("Присоединение к СПД через последнюю милю стороннего оператора.")
+    elif value_vars.get('rtk_form').get('type_pm') == 'FVNO Медь':
+        static_vars['IP коммутатора'] = value_vars.get('rtk_form').get('switch_ip')
+        static_vars['Порт коммутатора'] = value_vars.get('rtk_form').get('switch_port')
+        stroka = templates.get("Присоединение к СПД по схеме FVNO.Медь")
+    elif value_vars.get('rtk_form').get('type_pm') == 'FVNO GPON':
+        static_vars['IP коммутатора'] = value_vars.get('rtk_form').get('switch_ip')
+        static_vars['Порт коммутатора'] = value_vars.get('rtk_form').get('switch_port')
+        static_vars['PLOAM-пароль'] = value_vars.get('rtk_form').get('ploam')
+        stroka = templates.get("Присоединение к СПД по схеме FVNO.GPON")
+    elif value_vars.get('rtk_form').get('type_pm') == 'FVNO FTTH':
+        static_vars['IP коммутатора'] = value_vars.get('rtk_form').get('switch_ip')
+        static_vars['Порт коммутатора'] = value_vars.get('rtk_form').get('switch_port')
+        if value_vars.get('rtk_form').get('optic_socket'):
+            hidden_vars['кросса Ростелеком, ОР %Номер ОР%'] = 'кросса Ростелеком, ОР %Номер ОР%'
+            static_vars['Номер ОР'] = value_vars.get('rtk_form').get('optic_socket')
+        else:
+            hidden_vars['коммутатора Ростелеком %IP коммутатора%, порт %Порт коммутатора%'] = \
+                'коммутатора Ростелеком %IP коммутатора%, порт %Порт коммутатора%'
+        if value_vars.get('msan_exist'):
+            hidden_vars['ОИПМ подготовиться к работам:'] = 'ОИПМ подготовиться к работам:'
+            hidden_vars['- Для проведения работ на стороне клиента подготовить комплект оборудования:'] = \
+                '- Для проведения работ на стороне клиента подготовить комплект оборудования:'
+            hidden_vars['-- Конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1310 нм;'] = \
+                '-- Конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1310 нм;'
+            hidden_vars['-- Конвертер "A" 100 Мбит/с, дальность до 20км (14dB), 1310 нм.'] = \
+                '-- Конвертер "A" 100 Мбит/с, дальность до 20км (14dB), 1310 нм.'
+            hidden_vars['- Установить на стороне клиента конвертер "A" 100 Мбит/с, дальность до 20км (14dB), 1310 нм, выставить на конвертере режим работы Auto.'] = \
+            '- Установить на стороне клиента конвертер "A" 100 Мбит/с, дальность до 20км (14dB), 1310 нм, выставить на конвертере режим работы Auto.'
+            hidden_vars['Внимание! В случае если линк не поднялся использовать конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1310 нм.'] = \
+            'Внимание! В случае если линк не поднялся использовать конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1310 нм.'
+        else:
+            hidden_vars['- Установить на стороне клиента конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1550 нм;'] = \
+            '- Установить на стороне клиента конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1550 нм;'
+        stroka = templates.get("Присоединение к СПД по схеме FVNO.FTTH")
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    value_vars.update({'kad': 'AR113-37.ekb', 'pps': 'РУА ЕКБ Автоматики переулок 1 стр.В3 П1 Э2 (аппаратная)'})
+    return result_services, value_vars
 
 def _new_enviroment(value_vars):
     """Данный метод проверяет необходимость установки КК для новой точки подключения, если такая необходимость есть,
@@ -2130,7 +2224,10 @@ def _change_services(value_vars):
 
 def client_new(value_vars):
     """Данный метод формирует готовое ТР для нового присоединения и новых услуг"""
-    result_services, value_vars = _new_enviroment(value_vars)
+    if value_vars.get('spd') == 'РТК':
+        result_services, value_vars = rtk_enviroment(value_vars)
+    else:
+        result_services, value_vars = _new_enviroment(value_vars)
     result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
     return result_services, result_services_ots, value_vars
 
