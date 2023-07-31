@@ -4039,7 +4039,7 @@ class RtkFormView(FormView, CredentialMixin):
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         ticket_k = ticket_tr.ticket_k
         oattr = self.request.session['oattr']
-        if "_Кабинет" in oattr:
+        if oattr and "_Кабинет" in oattr:
             form = context['form']
             rtk_models = get_gottlieb(form['switch_ip'].initial)
             context['rtk_models'] = rtk_models

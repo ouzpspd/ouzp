@@ -16,7 +16,9 @@
     <div class="card mb-2">
       <h5 class="card-header">Решение ОТПМ</h5>
       <div class="card-body">
+          {% if oattr %}
         <p class="card-text">{{oattr|linebreaksbr}}</p>
+          {% endif %}
       </div>
     </div>
     <form id="form" action="{% url 'rtk' %}" method="post">
