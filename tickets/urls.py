@@ -78,6 +78,8 @@ urlpatterns = [
     path('export_xls', export_xls, name='export_xls'),
     path('report_time_tracking/', report_time_tracking, name='report_time_tracking'),
     path('send_to_otpm_control/', send_ticket_to_otpm_control, name='send_ticket_to_otpm_control'),
+    path('rtk', RtkFormView.as_view(), name='rtk'),
+
     # path('otpm/', OtpmPoolView.as_view(), name='otpm'),
     # #path('otpm/create_spp/<int:dID>/', create_spp, name='create_spp'),
     # path('otpm/create_spp/<int:dID>/', CreateSppView.as_view(), name='create_spp'),

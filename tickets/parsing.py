@@ -6,6 +6,17 @@ import re
 from bs4 import BeautifulSoup
 import datetime
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+dotenv_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path)
+GOTTLIEB_USER = os.getenv('GOTTLIEB_USER')
+GOTTLIEB_PASSWORD = os.getenv('GOTTLIEB_PASSWORD')
+
 
 
 def _counter_line_services(services_plus_desc):
@@ -43,6 +54,34 @@ def _counter_line_services(services_plus_desc):
             counter_line_services += 1
             i = i[:-1]
     return counter_line_services, hotspot_points, services_plus_desc
+
+
+def get_rtk_initial(username, password, line_data):
+    rtk_initial = {}
+    line_data = '' if not line_data else line_data
+    match_rtk_ip_port = re.search("\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]-(\d{1,2})", line_data)
+    if match_rtk_ip_port:
+        rtk_ip = match_rtk_ip_port.group(1)
+        rtk_port = match_rtk_ip_port.group(2)
+        rtk_initial.update({'rtk_ip': rtk_ip, 'rtk_port': rtk_port})
+    else:
+        match_rtk_gpon = re.search("pon-port (\d{1,2}/\d{1,2})\)-(\d{1,2})TS", line_data)
+        if match_rtk_gpon:
+            rtk_port_1 = match_rtk_gpon.group(1)
+            rtk_port_2 = match_rtk_gpon.group(2)
+            rtk_port = rtk_port_1 + '/' + rtk_port_2.lstrip('0')
+            rtk_initial.update({'rtk_port': rtk_port})
+            match_rtk_ip = re.search("\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]", line_data)
+            if match_rtk_ip:
+                rtk_ip = match_rtk_ip.group(1)
+                rtk_initial.update({'rtk_ip': rtk_ip})
+            match_rtk_order = re.search("(?:Лиры: |Н А Р Я Д\s*:\s*|наряд:\s*)(\d{9})", line_data)
+            if match_rtk_order:
+                rtk_order = match_rtk_order.group(1)
+                ploam = get_ploam(username, password, rtk_order)
+                rtk_initial.update({'rtk_ploam': ploam})
+    return rtk_initial
+
 
 
 def parse_tr(login, password, url):
@@ -331,6 +370,16 @@ def ckb_parse(login, password):
         title = match.group(1)
         templates[title] = item.text
     return templates
+
+
+def ckb_parse_msan_exist(login, password, ip):
+    """Данный метод парсит страницу КБЗ с Типовыми блоками ТР"""
+    templates = {}
+    url = 'https://ckb.itmh.ru/pages/viewpage.action?pageId=578595591'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if ip in req.content.decode('utf-8'):
+        return True
+    return False
 
 
 def _parsing_vgws_by_node_name(login, password, **kwargs):
@@ -998,3 +1047,103 @@ def spec(username, password):
     return cookie, x_session_id
 
 
+def get_ploam(username, password, rtk_order):
+    url = 'https://sauron.itmh.ru/portal/report/0.0.%20%D0%AD%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D1%82%D0%B8%D0%B7%D0%B0%20%D0%BE%D1%82%D1%87%D0%B5%D1%82%D0%BE%D0%B2/FVNO/%D0%98%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D1%8F%20%D0%BE%20%D0%BD%D0%B0%D1%80%D1%8F%D0%B4%D0%B5'
+    client = requests.session()
+    req = client.get(url)
+
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    sts_url = soup.find('form', id="options").get('action')
+    data_sts = {'UserName': f'CORP\\{username}', 'Password': f'{password}', 'AuthMethod': 'FormsAuthentication'}
+    req = client.post(sts_url, data=data_sts)
+
+    edge_access_cookie = req.headers.get('Set-Cookie').split(';')[0]
+    headers = {'Cookie': edge_access_cookie,
+        'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+               }
+    url = 'https://sauron.itmh.ru/reports/Pages/ReportViewer.aspx?%2F0.0.%20%D0%AD%D0%BA%D1%81%D0%BF%D0%B5%D1%80%D1%82%D0%B8%D0%B7%D0%B0%20%D0%BE%D1%82%D1%87%D0%B5%D1%82%D0%BE%D0%B2%2FFVNO%2F%D0%98%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D1%8F%20%D0%BE%20%D0%BD%D0%B0%D1%80%D1%8F%D0%B4%D0%B5'
+    req = client.get(url, headers=headers)
+
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    view_state = soup.find(id="__VIEWSTATE").get('value')
+    data = {
+        'AjaxScriptManager': 'AjaxScriptManager|ReportViewerControl$ctl04$ctl00',
+        'ReportViewerControl$ctl04$ctl03$txtValue': rtk_order,
+        '__VIEWSTATEGENERATOR': '32461442',
+        '__VIEWSTATE': view_state,
+        'ReportViewerControl$ctl04$ctl00': 'Просмотр отчета',
+        'ReportViewerControl$ctl11': 'standards',
+        'ReportViewerControl$AsyncWait$HiddenCancelField': 'False',
+        'ReportViewerControl$ToggleParam$collapse': 'false',
+        'ReportViewerControl$ctl07$collapse': 'false',
+        'ReportViewerControl$ctl09$VisibilityState$ctl00': 'None',
+        'ReportViewerControl$ctl09$ReportControl$ctl04': '100',
+        '__ASYNCPOST': 'true'
+
+    }
+    req = client.post(url, data=data, headers=headers)
+
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    navigation_corrector_new_view_state = soup.find(id="NavigationCorrector_NewViewState").get('value')
+    regex = '__VIEWSTATE\|(/.+)\|8\|hiddenField\|'
+    match = re.search(regex, req.content.decode('utf-8'))
+    new_view_state = match.group(1)
+    data = {
+        'AjaxScriptManager': 'AjaxScriptManager|ReportViewerControl$ctl09$Reserved_AsyncLoadTarget',
+        'NavigationCorrector$NewViewState': navigation_corrector_new_view_state,
+        'ReportViewerControl$ctl10': 'ltr',
+        'ReportViewerControl$ctl11': 'standards',
+        'ReportViewerControl$AsyncWait$HiddenCancelField': 'False',
+        'ReportViewerControl$ctl04$ctl03$txtValue': rtk_order,
+        'ReportViewerControl$ToggleParam$collapse': 'false',
+        'null': '100',
+        'ReportViewerControl$ctl07$collapse': 'false',
+        'ReportViewerControl$ctl09$VisibilityState$ctl00': 'None',
+        'ReportViewerControl$ctl09$ReportControl$ctl04': '100',
+        '__EVENTTARGET': 'ReportViewerControl$ctl09$Reserved_AsyncLoadTarget',
+        '__VIEWSTATEGENERATOR': '32461442',
+        '__VIEWSTATE': new_view_state,
+        '__ASYNCPOST': 'true'
+    }
+    req = client.post(url, data=data, headers=headers)
+
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    ploam = soup.find_all('div', {"class": "canGrowTextBoxInTablix"})[11].text[2:]
+    return ploam
+
+
+def get_gottlieb(rtk_ip):
+    rtk_models = {}
+    url = 'https://gl-ural.rt-edge.itss.mirasystem.net/login/?path=%2Fsubs%2F%3F'
+    client = requests.session()
+    token_resp = client.get(url, verify=False)
+    soup = BeautifulSoup(token_resp.content.decode('utf-8'), "html.parser")
+    token = soup.find(id="csrf_token").get('value')
+    data = {'login': GOTTLIEB_USER, 'password': GOTTLIEB_PASSWORD,
+            'csrf_token': token}
+    client.post(url, verify=False, data=data)
+
+    ajax_url = 'https://gl-ural.rt-edge.itss.mirasystem.net/equipment/ajax/'
+    data = {'address': rtk_ip}
+    r = client.post(ajax_url, verify=False, data=data)
+    suggestions = r.json().get('suggestions')
+    tree = ''.join([sug.get('data') for sug in suggestions if sug.get('value').startswith(f'{rtk_ip},')])
+    tree_url = f'https://gl-ural.rt-edge.itss.mirasystem.net/api/equipment/tree/{tree}/'
+    r = client.get(tree_url, verify=False)
+    data = r.json()
+    children = True
+    while children == True:
+        data = data[0].get('children')
+        if data[0].get('children'):
+            children = True
+            parent = data
+        else:
+            children = False
+    node = data[0].get('html')
+    node_soup = BeautifulSoup(node, "html.parser")
+    rtk_models.update({'Модель коммутатора': node_soup.text.split(',')[-2]})
+    parent_node = parent[0].get('html')
+    parent_node_soup = BeautifulSoup(parent_node, "html.parser")
+    rtk_models.update({'Модель вышестоящего коммутатора': parent_node_soup.text.split(',')[-2]})
+    return rtk_models

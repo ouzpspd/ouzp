@@ -1,10 +1,8 @@
 import datetime
 import re
 
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
@@ -143,7 +141,6 @@ class CreateSppView(CredentialMixin, View):
     def create_or_update(self, spp_params, current_spp):
         if current_spp:
             current_spp.created = timezone.now()
-            #current_spp.process = True
             current_spp.projected = False
             current_spp.save()
         else:
@@ -154,10 +151,7 @@ class CreateSppView(CredentialMixin, View):
             current_spp.waited = timezone.now()
             current_spp.duration_process = datetime.timedelta(0)
             current_spp.duration_wait = datetime.timedelta(0)
-        # current_spp.dID = self.kwargs['dID']
-        # current_spp.ticket_k = spp_params['Заявка К']
         current_spp.client = spp_params['Клиент']
-        # current_spp.type_ticket = spp_params['Тип заявки']
         current_spp.manager = spp_params['Менеджер']
         current_spp.technolog = spp_params['Технолог']
         current_spp.task_otpm = spp_params['Задача в ОТПМ']
@@ -165,7 +159,6 @@ class CreateSppView(CredentialMixin, View):
         current_spp.services = spp_params['Перечень требуемых услуг']
         current_spp.comment = spp_params['Примечание']
         current_spp.created = timezone.now()
-        # current_spp.waited = timezone.now()
         current_spp.process = True
         current_spp.uID = spp_params['uID']
         current_spp.trdifperiod = spp_params['trDifPeriod']
@@ -173,8 +166,6 @@ class CreateSppView(CredentialMixin, View):
         current_spp.difficulty = spp_params['Сложность']
         user = User.objects.get(username=self.request.user.username)
         current_spp.user = user
-        # current_spp.duration_process = datetime.timedelta(0)
-        # current_spp.duration_wait = datetime.timedelta(0)
         current_spp.stage = self.request.GET.get('stage')
         current_spp.save()
         return current_spp
@@ -196,21 +187,6 @@ class CreateSppView(CredentialMixin, View):
             return super().redirect_to_login_for_service(self)
         self.create_or_update(spp_params, current_spp)
         return redirect('spp_view_oattr', dID)
-
-        # try:
-        #     spp_params = None
-        #     current_spp = OtpmSpp.objects.get(dID=dID)
-        #     if current_spp.process:
-        #         messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
-        #         return redirect('otpm')
-        # except ObjectDoesNotExist:
-        #     username, password = super().get_credential(self)
-        #     spp_params = for_spp_view(username, password, dID)
-        #     if spp_params.get('Access denied') == 'Access denied':
-        #         return super().redirect_to_login_for_service(self)
-        #     current_spp = None
-        # ticket_spp = self.create_or_update(spp_params, current_spp)
-        # return redirect('spp_view_oattr', dID) #, ticket_spp.id)
 
 
 class SppView(DetailView):
@@ -236,62 +212,6 @@ class SppView(DetailView):
             current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
             current_ticket_spp.save()
         return current_ticket_spp
-
-    # def get(self, request, dID):
-    #     #request = flush_session_key(request)
-    #     # request.session['ticket_spp_id'] = ticket_spp_id
-    #     # request.session['dID'] = dID
-    #     current_ticket_spp = get_object_or_404(OtpmSpp, dID=dID) # id=ticket_spp_id
-    #
-    #     context = {'current_ticket_spp': current_ticket_spp}
-    #     return render(request, 'tickets/spp_view_oattr.html', context)
-
-# def spp_view_oattr(request, dID, ticket_spp_id):
-#     """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
-#      получает из БД"""
-#     request = flush_session_key(request)
-#     request.session['ticket_spp_id'] = ticket_spp_id
-#     request.session['dID'] = dID
-#     current_ticket_spp = get_object_or_404(OtpmSpp, dID=dID, id=ticket_spp_id)
-#
-#     context = {'current_ticket_spp': current_ticket_spp}
-#     return render(request, 'tickets/spp_view_oattr.html', context)
-#
-#
-# def remove_spp_process_oattr(request, ticket_spp_id):
-#     """Данный метод удаляет заявку из обрабатываемых заявок"""
-#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
-#     if current_ticket_spp.wait == True:
-#         messages.warning(request, f'Заявка {current_ticket_spp.ticket_k} находится в ожидании')
-#         return redirect('spp_view_oattr', current_ticket_spp.dID, current_ticket_spp.id)
-#     current_ticket_spp.process = False
-#     current_ticket_spp.projected = True
-#     current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
-#     current_ticket_spp.save()
-#     messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
-#     return redirect('otpm')
-#
-#
-# def remove_spp_wait_oattr(request, ticket_spp_id):
-#     """Данный метод удаляет заявку из заявок в ожидании"""
-#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
-#     current_ticket_spp.wait = False
-#     current_ticket_spp.process = True
-#     current_ticket_spp.duration_wait += timezone.now() - current_ticket_spp.waited
-#     current_ticket_spp.save()
-#     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
-#
-#
-#
-#
-# def add_spp_wait_oattr(request, ticket_spp_id):
-#     """Данный метод добавляет заявку в заявки в ожидании"""
-#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
-#     current_ticket_spp.wait = True
-#     current_ticket_spp.process = False
-#     current_ticket_spp.waited = timezone.now()
-#     current_ticket_spp.save()
-#     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
 
 
 def construct_tr(value_vars, template):
@@ -327,14 +247,12 @@ def construct_tr(value_vars, template):
     return result
 
 
-@cache_check
-def create_project_otu(request, trID):
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    id_otu = dispatch(username, password, trID)
-    return redirect(f'https://tas.corp.itmh.ru/OtuProject/Edit/{id_otu}')
+class CreateProjectOtuView(CredentialMixin, View):
+    @cache_check_view
+    def get(self, request, trID):
+        username, password = super().get_credential(self)
+        id_otu = dispatch(username, password, trID)
+        return redirect(f'https://tas.corp.itmh.ru/OtuProject/Edit/{id_otu}')
 
 
 class CopperFormView(CredentialMixin, FormView):
@@ -367,75 +285,42 @@ def data(request):
     return redirect('saved_data_oattr')
 
 
-# @cache_check
-# def copper_view(request):
-#     user = User.objects.get(username=request.user.username)
-#     credent = cache.get(user)
-#     username = credent['username']
-#     password = credent['password']
-#     if request.method == 'POST':
-#         form = CopperForm(request.POST)
-#         #print(form.errors)
-#
-#         if form.is_valid():
-#             value_vars = dict(**form.cleaned_data)
-#             print('cleaned_data')
-#             print(form.cleaned_data)
-#             templates = ckb_parse(username, password)
-#             template = templates.get('Присоединение к СПД по медной линии связи.')
-#             construct = construct_tr(value_vars, template)
-#             print('construct')
-#             print(''.join(construct))
-#
-#     else:
-#         form = CopperForm()
-#     return render(request, "oattr/copper.html", { 'form': form })
+class CreateTrView(CredentialMixin, View):
+    """Заявка СПП"""
+    def create_or_update(self, dID, tID, trID, tr_params):
+        ticket_spp = OtpmSpp.objects.get(dID=dID)
+        if ticket_spp.children.filter(ticket_tr=trID):
+            ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
+        else:
+            ticket_tr = OtpmTR()
+            ticket_tr.ticket_k = ticket_spp  # OtpmSpp.objects.get(dID=dID)
+            ticket_tr.ticket_tr = trID
+            ticket_tr.ticket_cp = tID
+            ticket_tr.vID = tr_params['vID']
+        ticket_tr.pps = tr_params['node']
+        ticket_tr.info_tr = tr_params['info_tr']
+        ticket_tr.services = tr_params['services_plus_desc']
+        ticket_tr.address_cp = tr_params['address']
+        ticket_tr.place_cp = tr_params['place_connection_point']
+        ticket_tr.save()
+        ticket_tr_id = ticket_tr.id
+        return ticket_tr_id
 
+    @cache_check_view
+    def get(self, request, dID, tID, trID):
+        username, password = super().get_credential(self)
+        tr_params = for_tr_view(username, password, dID, tID, trID)
+        if tr_params.get('Access denied'):
+            return super().redirect_to_login_for_service(self)
 
-def add_tr_oattr(request, dID, tID, trID):
-    """Данный метод получает данные о ТР из СПП и добавляет ТР новой точки подключения в АРМ"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    tr_params = for_tr_view(username, password, dID, tID, trID)
-
-    if tr_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params)
+        ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params)
         request.session['ticket_tr_id'] = ticket_tr_id
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
-        else:
+        elif request.GET.get('action') == 'edit':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'edit'})
         return render(request, 'oattr/sppdata.html', context)
-
-
-def add_tr_to_db(dID, tID, trID, tr_params):
-    """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки в АРМ.
-    создает ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
-    ticket_spp = OtpmSpp.objects.get(dID=dID)
-    if ticket_spp.children.filter(ticket_tr=trID):
-        ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
-    else:
-        ticket_tr = OtpmTR()
-        ticket_tr.ticket_k = ticket_spp#OtpmSpp.objects.get(dID=dID)
-        ticket_tr.ticket_tr = trID
-        ticket_tr.ticket_cp = tID
-        ticket_tr.vID = tr_params['vID']
-    ticket_tr.pps = tr_params['node']
-    ticket_tr.info_tr = tr_params['info_tr']
-    ticket_tr.services = tr_params['services_plus_desc']
-    ticket_tr.address_cp = tr_params['address']
-    ticket_tr.place_cp = tr_params['place_connection_point']
-    ticket_tr.save()
-    ticket_tr_id = ticket_tr.id
-    return ticket_tr_id
 
 
 class SendSppFormView(CredentialMixin, FormView):

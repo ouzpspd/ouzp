@@ -626,7 +626,7 @@ def backward_page(request):
         request.session['tag_service'] = tag_service
     else:
         prev_page = request.GET.get('prev_page')
-    return request, prev_page, index
+    return prev_page, index # request,
 
 
 def get_response_with_get_params(request):
