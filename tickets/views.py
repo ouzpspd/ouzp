@@ -4,7 +4,7 @@ from django.views import View
 from django.views.generic import DetailView, FormView
 
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
-from .models import TR, SPP, OrtrTR #, HoldPosition
+from .models import TR, SPP, OrtrTR
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
     SksForm, \
@@ -138,7 +138,7 @@ def private_page(request):
     paginator = Paginator(spp_success, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    return render(request, 'tickets/private_page.html', {'page_obj': page_obj}) # 'spp_success': spp_success,
+    return render(request, 'tickets/private_page.html', {'page_obj': page_obj})
 
 
 def login_for_service(request):
@@ -188,13 +188,13 @@ def cache_check_view(func):
     """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
      если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
     def wrapper(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login/?next=%s' % (request.path))
-        user = User.objects.get(username=request.user.username)
+        if not self.request.user.is_authenticated:
+            return redirect('login/?next=%s' % (self.request.path))
+        user = User.objects.get(username=self.request.user.username)
         credent = cache.get(user)
         if credent == None:
             response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
+            response['Location'] += '?next={}'.format(self.request.path)
             return response
         return func(self, request, *args, **kwargs)
     return wrapper
@@ -493,30 +493,6 @@ def project_tr(request, dID, tID, trID):
         return redirect(next(iter(tag_service[0])))
 
 
-
-# def sppdata(request):
-#     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
-#     tag_service = request.session['tag_service']
-#     tag_service_index = []
-#     index = 0
-#     tag_service_index.append(index)
-#     request.session['tag_service_index'] = tag_service_index
-#     next_link = next(iter(tag_service[1])) + f'?prev_page={next(iter(tag_service[index]))}&index={index}'
-#     context = {
-#         'services_plus_desc': request.session.get('services_plus_desc'),
-#         'client': request.session.get('client'),
-#         'manager': request.session.get('manager'),
-#         'technolog': request.session.get('technolog'),
-#         'task_otpm': request.session.get('task_otpm'),
-#         'address': request.session.get('address'),
-#         'next_link': next_link,
-#         'turnoff': request.session.get('turnoff'),
-#         'ticket_spp_id': request.session.get('ticket_spp_id'),
-#         'dID': request.session.get('dID')
-#     }
-#     return render(request, 'tickets/sppdata.html', context)
-
-
 @cache_check
 def copper(request):
     """Данный метод отображает html-страничку с параметрами для медной линии связи"""
@@ -613,7 +589,7 @@ def copper(request):
         pps = request.session['pps']
         services_plus_desc = request.session['services_plus_desc']
         tag_service = request.session['tag_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         try:
             type_pass = request.session['type_pass']
         except KeyError:
@@ -781,7 +757,7 @@ def vols(request):
         match_link = re.search(regex_link, spplink)
         tID = match_link.group(2)
         trID = match_link.group(3)
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         tag_service = request.session['tag_service']
 
         try:
@@ -930,7 +906,7 @@ def wireless(request):
         username = credent['username']
         password = credent['password']
         pps = request.session['pps']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         tag_service = request.session['tag_service']
         if request.session.get('list_switches'):
             list_switches = request.session.get('list_switches')
@@ -1039,7 +1015,7 @@ def csw(request):
                 logic_replace_csw = False
 
         tag_service = request.session['tag_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         if sreda == '2' or sreda == '4':
             cswform = CswForm(initial={'model_csw': 'D-Link DGS-1100-06/ME', 'port_csw': '6'})
         else:
@@ -3339,7 +3315,7 @@ def change_params_serv(request):
         head = request.session['head']
         tag_service = request.session['tag_service']
         types_change_service = request.session['types_change_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         only_mask = False
         routed = False
         for i in range(len(types_change_service)):
@@ -3405,7 +3381,7 @@ def change_log_shpd(request):
         else:
             services = None
         tag_service = request.session['tag_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         context = {
             'head': head,
             'kad': kad,
@@ -3444,7 +3420,7 @@ def params_extend_service(request):
         extendserviceform = ExtendServiceForm()
         pass_job_services = request.session.get('pass_job_services')
         tag_service = request.session['tag_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         context = {
             'desc_service': desc_service,
             'type_passage': type_passage,
@@ -3523,7 +3499,7 @@ def pass_serv(request):
         pps = request.session['pps']
         head = request.session['head']
         tag_service = request.session['tag_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         if request.GET.get('next_page'):
             clear_session_params(
                 request,
@@ -3562,7 +3538,7 @@ def pass_turnoff(request):
         pps = request.session['pps']
         head = request.session['head']
         tag_service = request.session['tag_service']
-        prev_page, index = backward_page(request) # request,
+        prev_page, index = backward_page(request)
         spplink = request.session['spplink']
         regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
         match_link = re.search(regex_link, spplink)
@@ -3656,7 +3632,7 @@ def search(request):
                 paginator = Paginator(results, 50)
                 page_number = request.GET.get('page')
                 page_obj = paginator.get_page(page_number)
-                context.update({'page_obj': page_obj}) # 'results': results
+                context.update({'page_obj': page_obj})
 
     else:
         context = {
@@ -4021,24 +3997,25 @@ def export_xls(request):
     return response
 
 
+class CredentialMixin:
+    def get_credential(self, *args, **kwargs):
+        user = User.objects.get(username=self.request.user.username)
+        credent = cache.get(user)
+        username = credent['username']
+        password = credent['password']
+        return username, password
 
-# def rkt(request):
-#     if request.method == 'POST':
-#         rtkform = RtkForm(request.POST)
-#         if rtkform.is_valid():
-#             new_ppr = rtkform.cleaned_data['type_pm']
-#             title_ppr = rtkform.cleaned_data['switch_ip']
-#     else:
-#         rtkform = RtkForm()
-#         context = {'form': rtkform,
-#                    }
-#         return render(request, 'tickets/rtk.html', context)
+    def redirect_to_login_for_service(self, request, *args, **kwargs):
+        messages.warning(self.request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(self.request.path)
+        return response
 
 
-class RtkFormView(FormView):
+
+class RtkFormView(FormView, CredentialMixin):
     template_name = "tickets/rtk.html"
     form_class = RtkForm
-    #success_url = '/data?prev_page=rtk&index=4'
 
     def form_valid(self, form):
         rtk_form = dict(**form.cleaned_data)
@@ -4047,18 +4024,28 @@ class RtkFormView(FormView):
 
     def get_initial(self, *args, **kwargs):
         initial = super().get_initial()
-        rtk_initial = get_rtk_initial(self.request.session.get('oattr'))
+        username, password = super().get_credential(self)
+        rtk_initial = get_rtk_initial(username, password, self.request.session.get('oattr'))
         initial['switch_ip'] = rtk_initial.get('rtk_ip')
         initial['switch_port'] = rtk_initial.get('rtk_port')
+        initial['ploam'] = rtk_initial.get('rtk_ploam')
         return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         prev_page, index = backward_page(self.request)
         tag_service = self.request.session['tag_service']
+        ticket_tr_id = self.request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        ticket_k = ticket_tr.ticket_k
         oattr = self.request.session['oattr']
+        if "_Кабинет" in oattr:
+            form = context['form']
+            rtk_models = get_gottlieb(form['switch_ip'].initial)
+            context['rtk_models'] = rtk_models
         context['back_link'] = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         context['oattr'] = oattr
+        context['ticket_k'] = ticket_k
         return context
 
     def get_success_url(self, **kwargs):
@@ -4068,8 +4055,6 @@ class RtkFormView(FormView):
         index = tag_service_index[-1] + 1
         tag_service_index.append(index)
         return f'{next(iter(tag_service[index + 1]))}?prev_page={next(iter(tag_service[index]))}&index={index}'
-
-
 
 
 def sppdata(request):
@@ -4116,265 +4101,6 @@ def sppdata(request):
             'visible': visible
         }
         return render(request, 'tickets/sppdata.html', context)
-
-
-@cache_check
-def sauron(request):
-    """Данный метод отображает html-страничку c формой для заполнения комментария к возвращаемой ТР"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
-    get_sauron(username, password)
-
-
-
-# def filter_otpm_search(search, technologs, group, status):
-#     """Данный метод фильтрует пул заявок по технологу, группе"""
-#     if status == 'В работе':
-#         if group is not None:
-#             spp_search = OtpmSpp.objects.filter(process=True, user__last_name__in=technologs, type_ticket=group)
-#         else:
-#             spp_search = OtpmSpp.objects.filter(process=True, user__last_name__in=technologs)
-#         result_search = None
-#     elif status == 'Отслеживается':
-#         if group is not None:
-#             spp_search = OtpmSpp.objects.filter(wait=True, user__last_name__in=technologs, type_ticket=group)
-#         else:
-#             spp_search = OtpmSpp.objects.filter(wait=True, user__last_name__in=technologs)
-#         result_search = None
-#     else:
-#         if group is not None:
-#             spp_search = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True)).filter(user__last_name__in=technologs,
-#                                                                                           type_ticket=group)
-#         else:
-#             spp_search = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True)).filter(user__last_name__in=technologs)
-#         tickets_spp_search = [i.ticket_k for i in spp_search]
-#         search = [i for i in search if i[0] not in tickets_spp_search]
-#         result_search = []
-#         query_technolog = True
-#         query_spp_ticket_group = True
-#         for x in search:
-#             query_technolog = [technolog for technolog in technologs if technolog in x[4]]
-#             if group:
-#                 query_spp_ticket_group = group in x[-1]
-#             query = query_technolog and query_spp_ticket_group
-#             if query:
-#                 result_search.append(x)
-#         if status == 'Не взята в работу':
-#             spp_search = None
-#     return result_search, spp_search
-
-
-
-    # search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-    # if technolog is None:
-    #     technologs = [user.last_name for user in queryset_user_group]
-    # else:
-    #     technologs = list()
-    #     technologs.append(technolog)
-    # filtered_search = filter_otpm_search(search, technologs, group, status)
-    # spp_proc_wait = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True))
-    # tickets_spp_proc_wait = [i.ticket_k for i in spp_proc_wait]
-    # output_search = [i for i in filtered_search if i[0] not in tickets_spp_proc_wait]
-    #
-    #
-    # return result_search
-
-
-# class CredentialMixin:
-#     def get_credential(self, *args, **kwargs):
-#         user = User.objects.get(username=self.request.user.username)
-#         credent = cache.get(user)
-#         username = credent['username']
-#         password = credent['password']
-#         return username, password
-#
-#     def redirect_to_login_for_service(self, *args, **kwargs):
-#         messages.warning(self.request, 'Нет доступа в ИС Холдинга')
-#         response = redirect('login_for_service')
-#         response['Location'] += '?next={}'.format(self.request.path)
-#         return response
-#
-#
-# class OtpmPoolView(CredentialMixin, View):
-#     """Пул задач ОТПМ"""
-#     @cache_check_view
-#     def get(self, request):
-#         username, password = super().get_credential(self)
-#         request = flush_session_key(request)
-#         queryset_user_group = User.objects.filter(
-#             userholdposition__hold_position=request.user.userholdposition.hold_position
-#         )
-#         if request.GET:
-#             form = OtpmPoolForm(request.GET)
-#             form.fields['technolog'].queryset = queryset_user_group
-#             if form.is_valid():
-#                 technolog = None if form.cleaned_data['technolog'] is None else form.cleaned_data['technolog'].last_name
-#                 group = None if form.cleaned_data['group'] == 'Все' else form.cleaned_data['group']
-#                 status = None if form.cleaned_data['status'] == 'Все' else form.cleaned_data['status']
-#                 initial_params = {}
-#                 if technolog:
-#                     initial_params.update({'technolog': technolog})
-#                 if group:
-#                     initial_params.update({'spp_ticket_group': group})
-#                 if status:
-#                     initial_params.update({'status': status})
-#                 context = {'otpmpoolform': form}
-#                 search = in_work_otpm(username, password)
-#                 if search[0] == 'Access denied':
-#                     return super().redirect_to_login_for_service(self)
-#                 technologs = [user.last_name for user in queryset_user_group] if technolog is None else [technolog]
-#                 output_search, spp_process = filter_otpm_search(search, technologs, group, status)
-#                 context.update({'search': output_search, 'spp_process': spp_process})  # 'results': results
-#                 return render(request, 'tickets/otpm.html', context)
-#         else:
-#             initial_params = dict({'technolog': request.user.last_name})
-#             form = OtpmPoolForm(initial=initial_params)
-#             form.fields['technolog'].queryset = queryset_user_group
-#             context = {
-#                 'otpmpoolform': form
-#             }
-#             return render(request, 'tickets/otpm.html', context)
-#
-#
-#
-#
-#
-#
-# class CreateSppView(CredentialMixin, View):
-#     """Заявка СПП"""
-#     def create_or_update(self, spp_params, current_spp):
-#         if current_spp:
-#             current_spp.created = timezone.now()
-#             current_spp.process = True
-#             current_spp.save()
-#         else:
-#             current_spp = OtpmSpp()
-#             current_spp.dID = self.kwargs['dID']
-#             current_spp.ticket_k = spp_params['Заявка К']
-#             current_spp.client = spp_params['Клиент']
-#             current_spp.type_ticket = spp_params['Тип заявки']
-#             current_spp.manager = spp_params['Менеджер']
-#             current_spp.technolog = spp_params['Технолог']
-#             current_spp.task_otpm = spp_params['Задача в ОТПМ']
-#             current_spp.des_tr = spp_params['Состав Заявки ТР']
-#             current_spp.services = spp_params['Перечень требуемых услуг']
-#             current_spp.comment = spp_params['Примечание']
-#             current_spp.created = timezone.now()
-#             current_spp.waited = timezone.now()
-#             current_spp.process = True
-#             current_spp.uID = spp_params['uID']
-#             current_spp.trdifperiod = spp_params['trDifPeriod']
-#             current_spp.trcuratorphone = spp_params['trCuratorPhone']
-#             current_spp.evaluative_tr = spp_params['Оценочное ТР']
-#             user = User.objects.get(username=self.request.user.username)
-#             current_spp.user = user
-#             current_spp.duration_process = datetime.timedelta(0)
-#             current_spp.duration_wait = datetime.timedelta(0)
-#             current_spp.stage = self.request.GET.get('stage')
-#             current_spp.save()
-#         return current_spp
-#
-#     @cache_check_view
-#     def get(self, request, dID):
-#         try:
-#             spp_params = None
-#             current_spp = OtpmSpp.objects.get(dID=dID)
-#             if current_spp.process == True:
-#                 messages.warning(request, f'{current_spp.user.last_name} уже взял в работу')
-#                 return redirect('otpm')
-#         except ObjectDoesNotExist:
-#             username, password = super().get_credential(self)
-#             spp_params = for_spp_view(username, password, dID)
-#             if spp_params.get('Access denied') == 'Access denied':
-#                 return super().redirect_to_login_for_service(self)
-#             current_spp = None
-#         ticket_spp = self.create_or_update(spp_params, current_spp)
-#         return redirect('spp_view_oattr', dID) #, ticket_spp.id)
-#
-#
-# class SppView(DetailView):
-#     model = OtpmSpp
-#     slug_field = 'dID'
-#     context_object_name = 'current_ticket_spp'
-#     template_name = 'tickets/spp_view_oattr.html'
-#     def get_object(self):
-#         current_ticket_spp = get_object_or_404(OtpmSpp, dID=self.kwargs['dID'])
-#         if self.request.GET.get('action') == 'wait' and current_ticket_spp.process:
-#             current_ticket_spp.wait = True
-#             current_ticket_spp.process = False
-#             current_ticket_spp.waited = timezone.now()
-#             current_ticket_spp.save()
-#         elif self.request.GET.get('action') == 'notwait' and current_ticket_spp.wait:
-#             current_ticket_spp.wait = False
-#             current_ticket_spp.process = True
-#             current_ticket_spp.duration_wait += timezone.now() - current_ticket_spp.waited
-#             current_ticket_spp.save()
-#         elif self.request.GET.get('action') == 'finish' and current_ticket_spp.process:
-#             current_ticket_spp.process = False
-#             current_ticket_spp.projected = True
-#             current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
-#             current_ticket_spp.save()
-#         return current_ticket_spp
-
-    # def get(self, request, dID):
-    #     #request = flush_session_key(request)
-    #     # request.session['ticket_spp_id'] = ticket_spp_id
-    #     # request.session['dID'] = dID
-    #     current_ticket_spp = get_object_or_404(OtpmSpp, dID=dID) # id=ticket_spp_id
-    #
-    #     context = {'current_ticket_spp': current_ticket_spp}
-    #     return render(request, 'tickets/spp_view_oattr.html', context)
-
-# def spp_view_oattr(request, dID, ticket_spp_id):
-#     """Данный метод отображает html-страничку с данными заявки взятой в работу или обработанной. Данные о заявке
-#      получает из БД"""
-#     request = flush_session_key(request)
-#     request.session['ticket_spp_id'] = ticket_spp_id
-#     request.session['dID'] = dID
-#     current_ticket_spp = get_object_or_404(OtpmSpp, dID=dID, id=ticket_spp_id)
-#
-#     context = {'current_ticket_spp': current_ticket_spp}
-#     return render(request, 'tickets/spp_view_oattr.html', context)
-#
-#
-# def remove_spp_process_oattr(request, ticket_spp_id):
-#     """Данный метод удаляет заявку из обрабатываемых заявок"""
-#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
-#     if current_ticket_spp.wait == True:
-#         messages.warning(request, f'Заявка {current_ticket_spp.ticket_k} находится в ожидании')
-#         return redirect('spp_view_oattr', current_ticket_spp.dID, current_ticket_spp.id)
-#     current_ticket_spp.process = False
-#     current_ticket_spp.projected = True
-#     current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
-#     current_ticket_spp.save()
-#     messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
-#     return redirect('otpm')
-#
-#
-# def remove_spp_wait_oattr(request, ticket_spp_id):
-#     """Данный метод удаляет заявку из заявок в ожидании"""
-#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
-#     current_ticket_spp.wait = False
-#     current_ticket_spp.process = True
-#     current_ticket_spp.duration_wait += timezone.now() - current_ticket_spp.waited
-#     current_ticket_spp.save()
-#     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
-#
-#
-#
-#
-# def add_spp_wait_oattr(request, ticket_spp_id):
-#     """Данный метод добавляет заявку в заявки в ожидании"""
-#     current_ticket_spp = OtpmSpp.objects.get(id=ticket_spp_id)
-#     current_ticket_spp.wait = True
-#     current_ticket_spp.process = False
-#     current_ticket_spp.waited = timezone.now()
-#     current_ticket_spp.save()
-#     return redirect('spp_view_oattr', current_ticket_spp.dID) #, current_ticket_spp.id)
-
-
 
 
 
