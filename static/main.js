@@ -7,10 +7,16 @@ $(document).ready(function() {
   });
 });
 
-$( ".form-control" ).focus(function() {
+$(".form-control").focus(function() {
         $(".btn-primary").removeClass("d-none");
         $(".spinner-border").addClass("d-none");
-    });
+});
+
+
+$(window).bind('beforeunload', function(){
+  $(".btn-primary").removeClass("d-none");
+    $(".spinner-border").addClass("d-none");
+});
 
 
 

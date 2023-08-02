@@ -13,8 +13,8 @@ from oattr.models import HoldPosition, UserHoldPosition, OtpmSpp, OtpmTR
 BASE_DIR = Path(__file__).resolve().parent.parent
 dotenv_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path)
-CORDIS_USER = os.getenv('CORDIS_USER')
-CORDIS_PASSWORD = os.getenv('CORDIS_PASSWORD')
+TEST_CORDIS_USER = os.getenv('TEST_CORDIS_USER')
+TEST_CORDIS_PASSWORD = os.getenv('TEST_CORDIS_PASSWORD')
 
 
 class ViewsTestCase(TestCase):
@@ -30,8 +30,11 @@ class ViewsTestCase(TestCase):
                                           waited=timezone.now(), duration_process=datetime.timedelta(0),
                                           duration_wait=datetime.timedelta(0), ticket_k='2023_00000', process = True
                                           )
+        self.otpm_tr = OtpmTR.objects.create(ticket_k=self.otpm_spp, ticket_tr=self.TRID, services={}, vID=1
+                                               )
         self.client.login(username='temporary', password='temporary')
-        response = self.client.post('/login_for_service/', data={'username': CORDIS_USER, 'password': CORDIS_PASSWORD})
+        response = self.client.post('/login_for_service/',
+                                    data={'username': TEST_CORDIS_USER, 'password': TEST_CORDIS_PASSWORD})
         self.assertRedirects(response, '/')
 
     def test_call_view_login(self):
@@ -70,7 +73,7 @@ class ViewsTestCase(TestCase):
         self.assertTemplateUsed(response, 'oattr/pool_oattr.html')
 
     def test_call_view_copper(self):
-        response = self.client.get(reverse('otpm_copper'))
+        response = self.client.get(reverse('otpm_copper', kwargs={'trID': self.TRID}))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'oattr/copper.html')
 

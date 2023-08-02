@@ -4,21 +4,45 @@
 {% load widget_tweaks %}
 
 <div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">ТР №{{trID}} {{ticket_tr.address_cp}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
 
 <table class="table table-bordered">
   <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Место размещения</th>
+        <td class="table-light" style="width: 75%">{{ticket_tr.place_cp}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Информация для разработки ТР</th>
+        <td class="table-light" style="width: 75%">{{ticket_tr.info_tr}}</td>
+    </tr>
     <tr>
         <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_plus_desc|length}}">Услуг{{ services_plus_desc|length|pluralize:"а,и" }}</th>
       {% for i in services_plus_desc%}
         <td class="table-light" style="width: 75%">{{i}}</td>
     </tr>
   {% endfor %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Узел подключения клиента</th>
+        <td class="table-light" style="width: 75%">{{ticket_tr.pps}}</td>
+    </tr>
   </tbody>
 </table>
 
 </div>
 <div class="container">
-          <form action="{% url 'saved_data_oattr' %}" method="post">
+          <form action="{% url 'saved_data_oattr' trID %}" method="post">
             {% csrf_token %}
               <div class="card mb-2">
       <h5 class="card-header">Решение ОТПМ</h5>

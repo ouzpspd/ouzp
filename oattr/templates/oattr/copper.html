@@ -13,8 +13,47 @@
 
 
 {% block content %}
+
 <div class="container">
-    <form id="form" action="{% url 'otpm_copper' %}" method="post">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <table class="table table-bordered">
+  <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Место размещения</th>
+        <td class="table-light" style="width: 75%">{{ticket_tr.place_cp}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Информация для разработки ТР</th>
+        <td class="table-light" style="width: 75%">{{ticket_tr.info_tr}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{ticket_tr.services|length}}">Услуг{{ticket_tr.services|length|pluralize:"а,и" }}</th>
+      {% for i in ticket_tr.services%}
+        <td class="table-light" style="width: 75%">{{i}}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%">Узел подключения клиента</th>
+        <td class="table-light" style="width: 75%">{{ticket_tr.pps}}</td>
+    </tr>
+  </tbody>
+    </table>
+</div>
+
+
+<div class="container">
+    <form id="form" action="{% url 'otpm_copper' view.kwargs.trID %}" method="post">
         {% csrf_token %}
         <div class="card mb-2">
             <h5 class="card-header">Общие параметры</h5>
@@ -189,7 +228,7 @@
             </div>
             <div class="col-10">
                 <div class="form-group">
-                    <input type="text" name="from_${counter}" class="form-control" required="True">
+                    <textarea rows="2" name="from_${counter}" class="form-control" required="True"></textarea>
                 </div>
             </div>
           </div>
@@ -199,7 +238,7 @@
             </div>
             <div class="col-10">
                 <div class="form-group">
-                    <input type="text" name="to_${counter}" class="form-control" required="True">
+                    <textarea rows="2" name="to_${counter}" class="form-control" required="True"></textarea>
                 </div>
             </div>
           </div>
@@ -210,7 +249,7 @@
                     </div>
                     <div class="col-10">
                         <div class="form-group">
-                            <input type="text" name="mounting_${counter}" class="mounting form-control" required="True">
+                            <textarea rows="2" name="mounting_${counter}" class="mounting form-control" required="True"></textarea>
                         </div>
                     </div>
                 </div>
@@ -220,11 +259,11 @@
                     </div>
                     <div class="col-10">
                         <div class="form-group">
-                            <input type="text" name="fastening_${counter}" class="fastening form-control" required="True">
+                            <textarea rows="2" name="fastening_${counter}" class="fastening form-control" required="True"></textarea>
                         </div>
                     </div>
                 </div>
-                </div>
+
           </li>`);
 
       });
@@ -241,7 +280,7 @@
       var mounts = ["Монтаж выполнить по существующей кабельной трассе",
              "Монтаж выполнить в наших КС, вдоль существующих линий",
              "Монтаж выполнить согласно схеме"];
-      var mounting = 'input.mounting';
+      var mounting = 'textarea.mounting';
         $(document).on('keydown.autocomplete', mounting, function() {
             $(this).autocomplete({
           source: mounts
@@ -249,7 +288,7 @@
         });
       var fastens = ["Закрепить скобами",
              "Закрепить скобами и на стяжки"];
-      var fastening = 'input.fastening';
+      var fastening = 'textarea.fastening';
       $(document).on('keydown.autocomplete', fastening, function() {
             $(this).autocomplete({
                 source: fastens

@@ -102,7 +102,7 @@
       {% endif %}
       </tbody>
         <tbody>
-      {% for ticket in spp_process %}
+      {% for ticket in missing %}
         <tr>
             <th scope="row">{{search|length|add:forloop.counter}}</th>
             <td>{{ticket.type_ticket}}</td>
@@ -119,6 +119,39 @@
                 {%endfor%}
                 {%endfor%}
 
+            </td>
+            <td>{{ticket.technolog}}</td>
+            <td style="color: red">Нет в пуле</td>
+            <td>{{ticket.difficulty}}</td>
+            {% if ticket.process %}
+            <td>В работе</td>
+            {% elif ticket.wait %}
+            <td>Отслеживается</td>
+            {% endif %}
+            <td>
+            {% if ticket.user.username == user.username%}
+                <a class="btn btn-outline-success custom" href="{% url 'spp_view_oattr' ticket.dID %}" {%comment%}ticket.id{%endcomment%}
+                   role="button">Открыть заявку</a>
+            {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        {% for ticket in spp_process %}
+        <tr>
+            <th scope="row">{{search|length|add:forloop.counter}}</th>
+            <td>{{ticket.type_ticket}}</td>
+            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}}</a></td>
+
+            <td>{{ticket.client}}</td>
+            <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
+            {% for it in ticket.des_tr %}
+                {% for k, v in it.items %}
+                {%comment%}{% if forloop.counter == 1 %}{%endcomment%}
+                {% if 'г.' in k and forloop.counter == 1 or forloop.counter == 2 %}
+                {{k}}
+                {% endif %}
+                {%endfor%}
+                {%endfor%}
 
             </td>
             <td>{{ticket.technolog}}</td>
@@ -137,6 +170,7 @@
             </td>
         </tr>
         {% endfor %}
+
       </tbody>
 
     </table>

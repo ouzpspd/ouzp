@@ -101,11 +101,15 @@ class CopperForm(forms.Form):
         ('UTP-2е пары', 'UTP-2е пары'),
         ('UTP-4е пары', 'UTP-4е пары'),
     ]
-    from_0 = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
-    to_0 = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    from_0 = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control',
+                                                                          'rows':2}))
+    to_0 = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control',
+                                                                          'rows':2}))
     cable_0 = forms.CharField(widget=forms.Select(choices=types_cable, attrs={'class': 'form-control'}))
-    mounting_0 = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control mounting'}))
-    fastening_0 = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control fastening'}))
+    mounting_0 = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control mounting',
+                                                                          'rows':2}))
+    fastening_0 = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control fastening',
+                                                                          'rows':2}))
     no_exit = forms.BooleanField(label='ТР написано без выезда',
                                  required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

@@ -75,7 +75,8 @@ def get_rtk_initial(username, password, line_data):
             if match_rtk_ip:
                 rtk_ip = match_rtk_ip.group(1)
                 rtk_initial.update({'rtk_ip': rtk_ip})
-            match_rtk_order = re.search("(?:Лиры: |Н А Р Я Д\s*:\s*|наряд:\s*)(\d{9})", line_data)
+            regex_rtk_order = "(?:[Лл][Ии][Рр][ЫыАа]\s*:\s*|[Нн]\s*[Аа]\s*[Рр]\s*[Яя]\s*[Дд]\s*:\s*)(\d{9})"
+            match_rtk_order = re.search(regex_rtk_order, line_data)
             if match_rtk_order:
                 rtk_order = match_rtk_order.group(1)
                 ploam = get_ploam(username, password, rtk_order)

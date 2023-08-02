@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.core.exceptions import ObjectDoesNotExist
@@ -18,7 +19,7 @@ from tickets.utils import flush_session_key
 
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
-    send_spp_check, in_work_otpm
+    send_spp_check, in_work_otpm, get_spp_stage
 
 
 def filter_otpm_search(search, technologs, group, status):
@@ -28,22 +29,27 @@ def filter_otpm_search(search, technologs, group, status):
             spp_search = OtpmSpp.objects.filter(process=True, user__last_name__in=technologs, type_ticket=group)
         else:
             spp_search = OtpmSpp.objects.filter(process=True, user__last_name__in=technologs)
-        result_search = None
     elif status == 'Отслеживается':
         if group is not None:
             spp_search = OtpmSpp.objects.filter(wait=True, user__last_name__in=technologs, type_ticket=group)
         else:
             spp_search = OtpmSpp.objects.filter(wait=True, user__last_name__in=technologs)
-        result_search = None
     else:
         if group is not None:
             spp_search = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True)).filter(user__last_name__in=technologs,
                                                                                           type_ticket=group)
         else:
             spp_search = OtpmSpp.objects.filter(Q(process=True) | Q(wait=True)).filter(user__last_name__in=technologs)
-        tickets_spp_search = [i.ticket_k for i in spp_search]
-        search = [i for i in search if i[0] not in tickets_spp_search]
-        result_search = []
+    tickets_spp_db = [i.ticket_k for i in spp_search]
+    tickets_in_search = [i[0] for i in search]
+
+    search = [i for i in search if i[0] not in tickets_spp_db]
+
+    tickets_missing = [i for i in tickets_spp_db if i not in tickets_in_search]
+    missing = [i for i in spp_search if i.ticket_k in tickets_missing]
+    spp_search = [i for i in spp_search if i not in missing]
+    result_search = []
+    if status not in ['В работе', 'Отслеживается']:
         query_technolog = True
         query_spp_ticket_group = True
         for x in search:
@@ -53,9 +59,10 @@ def filter_otpm_search(search, technologs, group, status):
             query = query_technolog and query_spp_ticket_group
             if query:
                 result_search.append(x)
-        if status == 'Не взята в работу':
-            spp_search = None
-    return result_search, spp_search
+    if status == 'Не взята в работу':
+        spp_search = None
+        missing = None
+    return result_search, spp_search, missing
 
 
 def cache_check_view(func):
@@ -98,7 +105,6 @@ class OtpmPoolView(CredentialMixin, View):
     @cache_check_view
     def get(self, request):
         username, password = super().get_credential(self)
-        request = flush_session_key(request)
         queryset_user_group = User.objects.filter(
             userholdposition__hold_position=request.user.userholdposition.hold_position
         )
@@ -122,8 +128,10 @@ class OtpmPoolView(CredentialMixin, View):
                 if search[0] == 'Access denied':
                     return super().redirect_to_login_for_service(self)
                 technologs = [user.last_name for user in queryset_user_group] if technolog is None else [technolog]
-                output_search, spp_process = filter_otpm_search(search, technologs, group, status)
-                context.update({'search': output_search, 'spp_process': spp_process})  # 'results': results
+                output_search, spp_process, missing = filter_otpm_search(search, technologs, group, status)
+                context.update({'search': output_search,
+                                'spp_process': spp_process,
+                                'missing': missing})
                 return render(request, 'oattr/pool_oattr.html', context)
         else:
             initial_params = dict({'technolog': request.user.last_name})
@@ -133,7 +141,6 @@ class OtpmPoolView(CredentialMixin, View):
                 'otpmpoolform': form
             }
             return render(request, 'oattr/pool_oattr.html', context)
-
 
 
 class CreateSppView(CredentialMixin, View):
@@ -190,6 +197,7 @@ class CreateSppView(CredentialMixin, View):
 
 
 class SppView(DetailView):
+    """Информация заявки СПП гггг_ннннн"""
     model = OtpmSpp
     slug_field = 'dID'
     context_object_name = 'current_ticket_spp'
@@ -211,6 +219,10 @@ class SppView(DetailView):
             current_ticket_spp.projected = True
             current_ticket_spp.duration_process += timezone.now() - current_ticket_spp.created
             current_ticket_spp.save()
+            tickets_tr = current_ticket_spp.children.all()
+            for ticket_tr in tickets_tr:
+                if self.request.session.get(ticket_tr.ticket_tr):
+                    del self.request.session[ticket_tr.ticket_tr]
         return current_ticket_spp
 
 
@@ -258,42 +270,58 @@ class CreateProjectOtuView(CredentialMixin, View):
 class CopperFormView(CredentialMixin, FormView):
     template_name = "oattr/copper.html"
     form_class = CopperForm
-    success_url = "/otpm/data/"
+
+    @cache_check_view
+    def dispatch(self, *args, **kwargs):
+        """Используется для проверки credential"""
+        return super().dispatch(*args, **kwargs)
 
     @cache_check_view
     def form_valid(self, form):
         username, password = super().get_credential(self)
         value_vars = dict(**form.cleaned_data)
-        self.request.session['value_vars'] = value_vars
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        session_tr_id.update({'value_vars': value_vars})
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
         return super().form_valid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        ticket_tr = get_object_or_404(OtpmTR, ticket_tr=self.kwargs['trID'])
+        context['ticket_tr'] = ticket_tr
+        return context
+
+    def get_success_url(self, **kwargs):
+        return reverse('otpm_data', kwargs={'trID': self.kwargs['trID']})
+
 @cache_check
-def data(request):
+def data(request, trID):
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
     templates = ckb_parse(username, password)
     template = templates.get('Присоединение к СПД по медной линии связи.')
-    value_vars = request.session.get('value_vars')
+    session_tr_id = request.session.get(str(trID), {})
+    value_vars = session_tr_id.get('value_vars')
     construct = construct_tr(value_vars, template)
     result_otpm = ''.join(construct)
     extra_line = 2
     counter_str_oattr = result_otpm.count('\n') + extra_line
-    request.session['result_otpm'] = result_otpm
-    request.session['counter_str_oattr'] = counter_str_oattr
-    return redirect('saved_data_oattr')
+    session_tr_id.update({'result_otpm': result_otpm, 'counter_str_oattr': counter_str_oattr})
+    request.session[str(trID)] = session_tr_id
+    return redirect('saved_data_oattr', trID)
 
 
 class CreateTrView(CredentialMixin, View):
-    """Заявка СПП"""
+    """Информация ТР XXXXX"""
     def create_or_update(self, dID, tID, trID, tr_params):
         ticket_spp = OtpmSpp.objects.get(dID=dID)
         if ticket_spp.children.filter(ticket_tr=trID):
             ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
         else:
             ticket_tr = OtpmTR()
-            ticket_tr.ticket_k = ticket_spp  # OtpmSpp.objects.get(dID=dID)
+            ticket_tr.ticket_k = ticket_spp
             ticket_tr.ticket_tr = trID
             ticket_tr.ticket_cp = tID
             ticket_tr.vID = tr_params['vID']
@@ -303,8 +331,6 @@ class CreateTrView(CredentialMixin, View):
         ticket_tr.address_cp = tr_params['address']
         ticket_tr.place_cp = tr_params['place_connection_point']
         ticket_tr.save()
-        ticket_tr_id = ticket_tr.id
-        return ticket_tr_id
 
     @cache_check_view
     def get(self, request, dID, tID, trID):
@@ -313,8 +339,8 @@ class CreateTrView(CredentialMixin, View):
         if tr_params.get('Access denied'):
             return super().redirect_to_login_for_service(self)
 
-        ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params)
-        request.session['ticket_tr_id'] = ticket_tr_id
+        self.create_or_update(dID, tID, trID, tr_params)
+        request.session[self.kwargs['trID']] = {}
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
@@ -328,6 +354,12 @@ class SendSppFormView(CredentialMixin, FormView):
     form_class = SendSPPForm
     success_url = "/"
 
+    @cache_check_view
+    def dispatch(self, *args, **kwargs):
+        """Используется для проверки credential"""
+        return super().dispatch(*args, **kwargs)
+
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         form = context['form']
@@ -339,6 +371,9 @@ class SendSppFormView(CredentialMixin, FormView):
             common_types.append(('90', 'Утверждение ТР'))
         form.fields['send_to'].widget.choices = common_types
         context['form'] = form
+        username, password = super().get_credential(self)
+        spp_stage = get_spp_stage(username, password, self.kwargs['dID'])
+        context['spp_stage'] = spp_stage
         return context
 
     @cache_check_view
@@ -373,10 +408,14 @@ class SendSppFormView(CredentialMixin, FormView):
         ticket_spp.projected = True
         ticket_spp.duration_process += timezone.now() - ticket_spp.created
         ticket_spp.save()
+        tickets_tr = ticket_spp.children.all()
+        for ticket_tr in tickets_tr:
+            if self.request.session.get(ticket_tr.ticket_tr):
+                del self.request.session[ticket_tr.ticket_tr]
         return super().form_valid(form)
 
 
-def saved_data_oattr(request):
+def saved_data_oattr(request, trID):
     """Данный метод отображает редактируемую html-страничку готового ТР"""
     if request.method == 'POST':
         oattrform = OattrForm(request.POST)
@@ -385,8 +424,7 @@ def saved_data_oattr(request):
             regex = '\n(.+)\r\n-{5,}\r\n'
             match_oattr_field = re.findall(regex, oattr_field)
             changable_titles = '\n'.join(match_oattr_field)
-            ticket_tr_id = request.session['ticket_tr_id']
-            ticket_tr = OtpmTR.objects.get(id=ticket_tr_id)
+            ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
             ticket_tr.oattr = oattr_field
             ticket_tr.titles = changable_titles
             ticket_tr.save()
@@ -397,15 +435,16 @@ def saved_data_oattr(request):
                 'services_plus_desc': ticket_tr.services,
                 'counter_str_oattr': counter_str_oattr,
                 'oattrform': oattrform,
-                'dID': ticket_tr.ticket_k.dID
+                'dID': ticket_tr.ticket_k.dID,
+                'trID': trID
             }
             return render(request, 'oattr/saved_data_oattr.html', context)
     else:
-        ticket_tr_id = request.session.get('ticket_tr_id')
-        ticket_tr = OtpmTR.objects.get(id=ticket_tr_id)
-        if request.session.get('result_otpm'):
-            counter_str_oattr = request.session['counter_str_oattr']
-            result_otpm = request.session.get('result_otpm')
+        session_tr_id = request.session.get(str(trID))
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        if session_tr_id.get('result_otpm'):
+            counter_str_oattr = session_tr_id.get('counter_str_oattr')
+            result_otpm = session_tr_id.get('result_otpm')
             ticket_tr.oattr = result_otpm
             ticket_tr.save()
             oattrform = OattrForm(initial={'oattr_field': ticket_tr.oattr})
@@ -420,7 +459,9 @@ def saved_data_oattr(request):
             'services_plus_desc': ticket_tr.services,
             'counter_str_oattr': counter_str_oattr,
             'oattrform': oattrform,
-            'dID': ticket_tr.ticket_k.dID
+            'dID': ticket_tr.ticket_k.dID,
+            'trID': trID,
+            'ticket_tr': ticket_tr
         }
         return render(request, 'oattr/saved_data_oattr.html', context)
 
@@ -500,7 +541,7 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars):
     ckb_vars = {}
     dynamic_vars = {}
     regex = '%([\s\S]+?)%'
-    match = re.finditer(regex, stroka, flags=re.DOTALL)  #
+    match = re.finditer(regex, stroka, flags=re.DOTALL)
     for i in match:
         ckb_vars[i.group(1)] = '%'+i.group(1)+'%'
     for key in static_vars.keys():

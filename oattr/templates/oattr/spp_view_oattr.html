@@ -5,18 +5,18 @@
 
 
 <div class="container">
-    <div class="row justify-content-md-center">
-        <div class="col-10">
+    <div class="row">
+        <div class="col-12">
             <nav aria-label="breadcrumb">
-              <ol class="breadcrumb">
-                <li class="breadcrumb-item active" aria-current="page">Общая информация заявки СПП</li>
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">Информация заявки СПП {{current_ticket_spp.ticket_k}}</h6></li>
               </ol>
             </nav>
         </div>
     </div>
 </div>
 <div class="container">
-  <div class="row">
+
 <table class="table table-bordered">
   <tbody>
     <tr>
@@ -113,7 +113,7 @@
             {% if current_ticket_spp.process == True %}
             <div class="row">
                 <div class="col-4">
-            <a class="btn btn-primary btn-block" href="{% url 'send_spp' current_ticket_spp.dID %}" role="button">Отправить</a>
+            <a class="btn btn-primary btn-block" href="{% url 'send_spp' current_ticket_spp.dID %}" role="button">Отправить/Завершить</a>
                 </div>
             </div>
             {% endif %}
@@ -129,7 +129,7 @@
 
   </tbody>
 </table>
-  </div>
+
 
 </div>
 

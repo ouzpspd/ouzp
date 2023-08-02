@@ -11,7 +11,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def ckb_parse(login, password):
     """Данный метод парсит страницу КБЗ с Типовыми блоками ТР"""
     templates = {}
-    #url = 'https://ckb.itmh.ru/login.action?os_destination=%2Fpages%2Fviewpage.action%3FpageId%3D323312207&permissionViolation=true'
     url = 'https://ckb.itmh.ru/pages/viewpage.action?pageId=729843023'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
@@ -26,8 +25,6 @@ def ckb_parse(login, password):
 
 def dispatch(login, password, trID):
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_ajax.php'
-    # data = {'action': 'CreateOtu', 'trID': '84367'}
-    # req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     data = {'action': 'GetOtu', 'trID': f'{trID}'}
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     if not req.json().get('id'):
@@ -35,8 +32,6 @@ def dispatch(login, password, trID):
         requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
         data = {'action': 'GetOtu', 'trID': f'{trID}'}
         req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
-    print('req.json()')
-    print(req.json())
     id_otu = req.json().get('id')
     return id_otu
 
@@ -69,9 +64,7 @@ def in_work_otpm(login, password):
 
 
         for index in range(len(search_demand_num2)-1):
-            #unwanted = ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Чернов А. С.']
             wanted_stat = ['В работе ОТПМ', 'Контроль и выпуск ТР', 'В работе ПТО']
-            #if search_demand_cur[index].text not in unwanted:
             if search_demand_stat[index].text not in wanted_stat:
                 continue
             if lines and lines[-1][0] == search_demand_num2[index].text:
@@ -114,6 +107,15 @@ def in_work_otpm(login, password):
         lines.append('Access denied')
     return lines
 
+
+def get_spp_stage(login, password, dID):
+    stage = None
+    url = f'https://sss.corp.itmh.ru/dem_tr/dem_adv_control.php?dID={dID}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        stage = soup.find('input', id='ip_1').get('value')
+    return stage
 
 
 def for_spp_view(login, password, dID):
