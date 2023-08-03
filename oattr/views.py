@@ -17,7 +17,7 @@ from tickets.views import cache_check
 from .models import OtpmSpp, OtpmTR
 from tickets.utils import flush_session_key
 
-from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm
+from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
     send_spp_check, in_work_otpm, get_spp_stage
 
@@ -226,11 +226,13 @@ class SppView(DetailView):
         return current_ticket_spp
 
 
-def construct_tr(value_vars, template):
+def construct_tr(value_vars, service_vars, templates):
+    template = templates.get('Присоединение к СПД по медной линии связи.')
     result = []
     static_vars = {}
     hidden_vars = {}
     repr_string = {}
+
     repr_string['mounting_line'] = '- Смонтировать кабель %Тип кабеля% от %Точка от% до %Точка до%. ' +\
                                    '%Способ монтажа линии связи%. %Способ крепежа линии связи%.'
     multi_vars = {repr_string['mounting_line']:[]}
@@ -255,6 +257,25 @@ def construct_tr(value_vars, template):
         hidden_vars['%Согласование%'] = '%Согласование%'
         static_vars['Согласование'] = value_vars.get('agreement')
     static_vars['Доступ'] = value_vars.get('access')
+    result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
+
+    template = templates.get('Организация СКС')
+    static_vars = {}
+    hidden_vars = {}
+    repr_string = {}
+    repr_string['mounting_line_service'] = \
+        '- Смонтировать %Количество линий связи% линии %Тип кабеля% от %Точка от% до %Точка до%. %Способ монтажа линии связи%. %Способ крепежа линии связи%.'
+    multi_vars = {repr_string['mounting_line_service']: []}
+    count_lines = [key.strip('lvs_from_') for key in service_vars.keys() if key.startswith('lvs_from_')]
+    for i in count_lines:
+        static_vars[f'Количество линий связи {i}'] = service_vars.get(f'lvs_count_line_{i}')
+        static_vars[f'Тип кабеля {i}'] = service_vars.get(f'lvs_cable_{i}')
+        static_vars[f'Точка от {i}'] = service_vars.get(f'lvs_from_{i}')
+        static_vars[f'Точка до {i}'] = service_vars.get(f'lvs_to_{i}')
+        static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'lvs_mounting_{i}')
+        static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'lvs_fastening_{i}')
+        multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
+                                                        f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
     result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
     return result
 
@@ -292,7 +313,49 @@ class CopperFormView(CredentialMixin, FormView):
         return context
 
     def get_success_url(self, **kwargs):
+        #return reverse('otpm_data', kwargs={'trID': self.kwargs['trID']})
+        return reverse('otpm_service', kwargs={'trID': self.kwargs['trID']})
+
+
+
+class ServiceFormView(CredentialMixin, FormView):
+    template_name = "oattr/services.html"
+    form_class = ServiceForm
+
+    @cache_check_view
+    def dispatch(self, *args, **kwargs):
+        """Используется для проверки credential"""
+        return super().dispatch(*args, **kwargs)
+
+    @cache_check_view
+    def form_valid(self, form):
+        service_vars = dict(**form.cleaned_data)
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        session_tr_id.update({'service_vars': service_vars})
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        ticket_tr = get_object_or_404(OtpmTR, ticket_tr=self.kwargs['trID'])
+        #services = [service for service in ticket_tr.services if ('Интернет' or 'Хот-спот') not in service]
+        services = {}
+        for service in ticket_tr.services:
+            if service.startswith('Телефон'):
+                services.update({'phone': service})
+            elif service.startswith('Видеонаблюдение'):
+                services.update({'video': service})
+            elif service.startswith('ЛВС'):
+                services.update({'lvs': service})
+        context['ticket_tr'] = ticket_tr
+        context['services'] = services
+        return context
+
+    def get_success_url(self, **kwargs):
         return reverse('otpm_data', kwargs={'trID': self.kwargs['trID']})
+
+
+
 
 @cache_check
 def data(request, trID):
@@ -301,11 +364,13 @@ def data(request, trID):
     username = credent['username']
     password = credent['password']
     templates = ckb_parse(username, password)
-    template = templates.get('Присоединение к СПД по медной линии связи.')
+
     session_tr_id = request.session.get(str(trID), {})
     value_vars = session_tr_id.get('value_vars')
-    construct = construct_tr(value_vars, template)
-    result_otpm = ''.join(construct)
+    service_vars = session_tr_id.get('service_vars')
+
+    construct = construct_tr(value_vars, service_vars, templates)
+    result_otpm = '\n\n'.join(construct)
     extra_line = 2
     counter_str_oattr = result_otpm.count('\n') + extra_line
     session_tr_id.update({'result_otpm': result_otpm, 'counter_str_oattr': counter_str_oattr})

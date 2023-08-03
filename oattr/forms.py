@@ -135,6 +135,19 @@ class CopperForm(forms.Form):
                 self.fields[f'{field}'] = forms.CharField()
 
 
+class ServiceForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = kwargs['data'].keys()
+            new_fields.remove('csrfmiddlewaretoken')
+
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.CharField()
+
+
+
 class OattrForm(forms.Form):
     oattr_field = forms.CharField(label='Решение ОРТР', widget=forms.Textarea(attrs={'class': 'form-control'}))
     # pps = forms.CharField(label='ППС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))

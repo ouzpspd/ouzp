@@ -13,5 +13,5 @@ urlpatterns = [
     path('data/<int:trID>/', views.data, name='otpm_data'),
     path('save_spp/', views.save_spp, name='save_spp'),
     path('saved_data/<int:trID>/', views.saved_data_oattr, name='saved_data_oattr'),
-
+    path('service/<int:trID>/', views.ServiceFormView.as_view(), name='otpm_service'),
 ]
