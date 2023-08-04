@@ -19,7 +19,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb align-items-center justify-content-center">
-                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}}</h6></li>
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Услуги ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}}</h6></li>
               </ol>
             </nav>
         </div>
@@ -33,14 +33,16 @@
         <th class="table-secondary text-right" style="width: 25%">Место размещения</th>
         <td class="table-light" style="width: 75%">{{ticket_tr.place_cp}}</td>
     </tr>
+    {% if ticket_tr.info_tr %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Информация для разработки ТР</th>
         <td class="table-light" style="width: 75%">{{ticket_tr.info_tr}}</td>
     </tr>
+    {% endif %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%" rowspan="{{services|length}}">Услуг{{services|length|pluralize:"а,и" }}</th>
       {% for k,v in services.items%}
-        <td class="table-light" style="width: 75%">{{k}}</td>
+        <td class="table-light" style="width: 75%">{{v}}</td>
     </tr>
     {% endfor %}
     <tr>
@@ -55,101 +57,67 @@
 <div class="container">
     <form id="form" action="{% url 'otpm_service' view.kwargs.trID %}" method="post">
         {% csrf_token %}
-        <div class="card mb-2">
-            <h5 class="card-header">Общие параметры</h5>
-              <div class="card-body">
-                  <div class="container">
-                  <div class="form-row">
-                      <label for="{{form.no_exit.label}}" class="col-form-label">ТР написано без выезда:</label>
-                      {{form.no_exit}}
-                  </div>
-                  </div>
-              </div>
-        </div>
+
         {% for tag_service, service in services.items %}
         <div class="card mb-2">
-            <h5 class="card-header">Параметры {{service}}</h5>
+            <h6 class="card-header">Параметры услуги: {{service}}</h6>
             <div class="card-body">
               <ul class="list-group list-group-flush">
-                <div id="forms">
+                <div id="{{tag_service}}_forms" class="{{tag_service}}_forms">
+                    <div class="container">
 
-                    <li class="list-group-item">
-                    {% comment %}{{ form.as_p }}{% endcomment %}
-                    <div class="row">
-                        <div class="col-2">
-                            <label class="col-form-label">Тип кабеля:</label>
-                        </div>
-                        <div class="col-3">
-                            <div class="form-group">
-                                {{form.cable_0}}
+                            {% if tag_service == 'lvs' %}
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="form-row">
+                                            <label class="col-form-label">Установка коммутатора: </label>
+                                            <input type="checkbox" name="lvs_switch" id="id_lvs_switch">
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif tag_service == 'phone' %}
+                                <div class="row">
+                                    <div class="col-3">
+                                        <div class="form-group">
+                                            <label class="col-form-label">Установка голосового шлюза:</label>
+                                            <select name="phone_vgw_place" class="form-control" id="id_phone_vgw_place">
+                                              <option value="не требуется">Не требуется</option>
+                                              <option value="на ППС">На ППС</option>
+                                                <option value="у клиента">У клиента</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif tag_service == 'video' %}
+                            <div class="container">
+                            <div class="row">
+                                <div class="form-row">
+                                    <label class="col-form-label">Установка POE-коммутатора: </label>
+                                    <input type="checkbox" name="video_switch" id="id_video_switch">
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-2">
-                            <label class="col-form-label">Монтаж линии от:</label>
-                        </div>
-                        <div class="col-10">
-                            <div class="form-group">
-                                {{form.from_0}}
                             </div>
-                        </div>
-
-                    </div>
-                    <div class="row">
-                        <div class="col-2">
-                            <label class="col-form-label">Монтаж линии до:</label>
-                        </div>
-                        <div class="col-10">
-                            <div class="form-group">
-                                {{form.to_0}}
+                            <div class="row">
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Количество камер:</label>
+                                        <input type="text" name="video_count_camera" class="form-control" id="id_video_count_camera" required="True">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-2">
-                            <label class="col-form-label">Способ монтажа:</label>
-                        </div>
-                        <div class="col-10">
-                            <div class="form-group">
-                                {{form.mounting_0}}
-                                {% comment %}<input type="text" name="mounting_0" class="mounting form-control" id="mounting_0">{% endcomment %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-2">
-                            <label class="col-form-label">Способ крепежа:</label>
-                        </div>
-                        <div class="col-10">
-                            <div class="form-group">
-                                {{form.fastening_0}}
-                                {% comment %}<input type="text" name="fastening_0" class="form-control fastening" id="fastening_0">{% endcomment %}
-                            </div>
-                        </div>
+                            {% endif %}
                     </div>
 
-                </li>
-                    </div>
+                </div>
                 </ul>
               <div class="container">
                   <div class="row mt-3">
-                        <div class="col-2">
+                        <div class="col-3">
                             <button class="btn btn-success btn-block add_item_btn" id="{{tag_service}}">Добавить</button>
                         </div>
                     </div>
               </div>
 
-                <div class="container">
-                    <div class="container">
-                        <div class="row">
-                            <div class="form-row">
-                                <label for="{{form.tech_reserve.label}}" class="col-form-label">Тест линии:</label>
-                                {{form.line_test}}
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
             </div>
         </div>
@@ -187,7 +155,7 @@
 
           e.preventDefault();
           counter+=1;
-          $("#forms").append(`<li class="list-group-item">
+          $("." +button+ "_forms").append(`<li class="list-group-item">
           <div class="row">
             <div class="col-2">
                     <label class="col-form-label">Тип кабеля:</label>

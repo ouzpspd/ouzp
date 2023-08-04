@@ -140,7 +140,7 @@ class ServiceForm(forms.Form):
         super().__init__(*args, **kwargs)
         if kwargs.get('data'):
             # for view func-based fields locate in args
-            new_fields = kwargs['data'].keys()
+            new_fields = set(kwargs['data'].keys())
             new_fields.remove('csrfmiddlewaretoken')
 
             for field in new_fields:

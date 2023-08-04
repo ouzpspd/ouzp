@@ -19,7 +19,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb align-items-center justify-content-center">
-                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}}</h6></li>
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Присоединение к СПД ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}}</h6></li>
               </ol>
             </nav>
         </div>
@@ -33,10 +33,12 @@
         <th class="table-secondary text-right" style="width: 25%">Место размещения</th>
         <td class="table-light" style="width: 75%">{{ticket_tr.place_cp}}</td>
     </tr>
+    {% if ticket_tr.info_tr %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Информация для разработки ТР</th>
         <td class="table-light" style="width: 75%">{{ticket_tr.info_tr}}</td>
     </tr>
+    {% endif %}
     <tr>
         <th class="table-secondary text-right" style="width: 25%" rowspan="{{ticket_tr.services|length}}">Услуг{{ticket_tr.services|length|pluralize:"а,и" }}</th>
       {% for i in ticket_tr.services%}
