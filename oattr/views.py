@@ -234,17 +234,18 @@ def construct_tr(value_vars, service_vars, templates, ticket_tr):
     hidden_vars = {}
     repr_string = {}
 
-    repr_string['mounting_line'] = '- Смонтировать кабель %Тип кабеля% от %Точка от% до %Точка до%. ' +\
+    repr_string['mounting_line'] = '- Смонтировать %Количество линий связи% линии %Тип кабеля% от %Точка от% до %Точка до%. ' +\
                                    '%Способ монтажа линии связи%. %Способ крепежа линии связи%.'
     multi_vars = {repr_string['mounting_line']:[]}
     count_lines = [key.strip('from_') for key in value_vars.keys() if key.startswith('from_')]
     for i in count_lines:
+        static_vars[f'Количество линий связи {i}'] = value_vars.get(f'count_{i}')
         static_vars[f'Тип кабеля {i}'] = value_vars.get(f'cable_{i}')
         static_vars[f'Точка от {i}'] = value_vars.get(f'from_{i}')
         static_vars[f'Точка до {i}'] = value_vars.get(f'to_{i}')
         static_vars[f'Способ монтажа линии связи {i}'] = value_vars.get(f'mounting_{i}')
         static_vars[f'Способ крепежа линии связи {i}'] = value_vars.get(f'fastening_{i}')
-        multi_vars[repr_string['mounting_line']].append(f'- Смонтировать кабель %Тип кабеля {i}% от %Точка от {i}%' +
+        multi_vars[repr_string['mounting_line']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
         f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
 
     if value_vars.get('no_exit'):

@@ -88,6 +88,17 @@
                     </div>
                     <div class="row">
                         <div class="col-2">
+                            <label class="col-form-label">Количество линий:</label>
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                {{form.count_0}}
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
                             <label class="col-form-label">Монтаж линии от:</label>
                         </div>
                         <div class="col-10">
@@ -223,7 +234,16 @@
             </div>
           </div>
 
-
+        <div class="row">
+            <div class="col-2">
+                <label class="col-form-label">Количество линий:</label>
+            </div>
+            <div class="col-3">
+                <div class="form-group">
+                    <input type="text" name="count_${counter}" class="form-control" required="True">
+                </div>
+            </div>
+          </div>
           <div class="row">
             <div class="col-2">
                 <label class="col-form-label">Монтаж линии от:</label>

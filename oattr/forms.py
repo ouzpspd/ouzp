@@ -101,6 +101,7 @@ class CopperForm(forms.Form):
         ('UTP-2е пары', 'UTP-2е пары'),
         ('UTP-4е пары', 'UTP-4е пары'),
     ]
+    count_0 = forms.CharField(label='Количество линий', widget=forms.TextInput(attrs={'class': 'form-control'}))
     from_0 = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control',
                                                                           'rows':2}))
     to_0 = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control',
