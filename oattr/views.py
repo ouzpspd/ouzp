@@ -455,6 +455,8 @@ class CreateTrView(CredentialMixin, View):
         ticket_tr.address_cp = tr_params['address']
         ticket_tr.place_cp = tr_params['place_connection_point']
         ticket_tr.save()
+        ticket_tr_id = ticket_tr.id     # Временно вернул пока в view.data не переделана на использование tr_id в url
+        return ticket_tr_id     # Временно вернул пока в view.data не переделана на использование tr_id в url
 
     @cache_check_view
     def get(self, request, dID, tID, trID):
@@ -463,7 +465,8 @@ class CreateTrView(CredentialMixin, View):
         if tr_params.get('Access denied'):
             return super().redirect_to_login_for_service(self)
 
-        self.create_or_update(dID, tID, trID, tr_params)
+        ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params) # Временно вернул пока в view.data не переделана на использование tr_id в url
+        request.session['ticket_tr_id'] = ticket_tr_id # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session[self.kwargs['trID']] = {}
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
