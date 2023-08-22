@@ -3138,6 +3138,7 @@ def project_tr_exist_cl(request):
     request.session['services_plus_desc'] = services_plus_desc
     request.session['task_otpm'] = task_otpm
     request.session['pps'] = pps
+    request.session['spd'] = 'Комтехцентр'  # Временно, пока нет выбора для переноса/организац. доп. услуг РКТ/Комтехцентр
     if oattr:
         request.session['oattr'] = oattr
         wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
