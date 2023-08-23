@@ -19,8 +19,12 @@ from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
 
+
+from oattr.views import AddressView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('addresses/', AddressView.as_view(), name='addresses'),
     path('otpm/', include('oattr.urls')),
     path('', include('tickets.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

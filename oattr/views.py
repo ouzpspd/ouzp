@@ -17,9 +17,9 @@ from tickets.views import cache_check
 from .models import OtpmSpp, OtpmTR
 from tickets.utils import flush_session_key
 
-from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm
+from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
-    send_spp_check, in_work_otpm, get_spp_stage
+    send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses
 from .utils import add_tag_for_services
 
 
@@ -614,6 +614,37 @@ def save_spp(request):
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
+
+
+class AddressView(CredentialMixin, View):
+    """Пул задач ОТПМ"""
+    @cache_check_view
+    def get(self, request):
+        username, password = super().get_credential(self)
+        # queryset_user_group = User.objects.filter(
+        #     userholdposition__hold_position=request.user.userholdposition.hold_position
+        # )
+        if request.GET:
+            form = AddressForm(request.GET)
+            #form.fields['technolog'].queryset = queryset_user_group
+            if form.is_valid():
+                # technolog = None if form.cleaned_data['technolog'] is None else form.cleaned_data['technolog'].last_name
+                street = None if not form.cleaned_data['street'] else form.cleaned_data['street']
+                house = None if not form.cleaned_data['house'] else form.cleaned_data['house']
+
+                context = {'addressform': form}
+                search = get_spp_addresses(username, password, street, house)
+                context.update({'search': search})
+                return render(request, 'oattr/addresses.html', context)
+        else:
+            #initial_params = dict({'technolog': request.user.last_name})
+            form = AddressForm() #initial=initial_params)
+            #form.fields['technolog'].queryset = queryset_user_group
+            context = {
+                'addressform': form
+            }
+            return render(request, 'oattr/addresses.html', context)
+
 
 
 def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars):

@@ -108,6 +108,53 @@ def in_work_otpm(login, password):
     return lines
 
 
+def get_spp_addresses(login, password, street, house):
+    """Данный метод парсит страницу с адресами в СПП"""
+    lines = []
+    data = {
+        'distr_adm': 'any',
+        'distr_mark': 'any',
+        'distr_pto': 'any',
+        'hideWithOutSPD': 0,
+        'aCity': 0,
+        'aStreet': street,
+        'aHouse': house,
+        'aTP': 'any',
+        'vStatus': 'any',
+        'showAll': 0,
+        'activeSeach': 1,
+        'mode': 'selectAV',
+        'parent': 0,
+    }
+    url = 'https://sss.corp.itmh.ru/building/address.php'
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        entries = []
+        search = soup.find_all('tr')
+        # popo = soup.find_all(attrs={"tag": "str"})
+        # print(popo)
+        for tr in search:
+            #print('!')
+            aid = tr.find(attrs='aid')
+            #tr.find('td', id="cur_stat")
+            с3 = tr.find_all('td', class_="C3")
+            output_city = с3[0].text
+            output_street = lost_whitespace(с3[1].text)
+            с11 = tr.find('td', class_="C11")
+            output_house = '\n'.join(с11.find_all(text=True)) # recursive=False
+            с9 = tr.find('td', class_="C9")
+            output_spd = ''.join(с9.find_all(text=True))
+            aid = tr['aid']
+            entries.append([output_city, output_street, output_house, output_spd, aid])
+        return entries
+
+
+
+
+
+
+
 def get_spp_stage(login, password, dID):
     stage = None
     url = f'https://sss.corp.itmh.ru/dem_tr/dem_adv_control.php?dID={dID}'

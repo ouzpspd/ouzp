@@ -162,3 +162,14 @@ class SendSPPForm(forms.Form):
 
 
 
+class AddressForm(forms.Form):
+    cities = [
+        ('Все', 'Все'),
+        ('Екатеринбург', 'Екатеринбург'),
+        ('Нижний Тагил', 'Нижний Тагил'),
+        ('Каменск-Уральский', 'Каменск-Уральский'),
+    ]
+    city = forms.CharField(label='Город', widget=forms.Select(choices=cities, attrs={'class': 'form-control'}))
+    street = forms.CharField(label='Улица', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    house = forms.CharField(label='Дом', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
