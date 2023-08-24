@@ -18,7 +18,7 @@
 <div class="card mb-2">
     <h5 class="card-header">Параметры поиска</h5>
   <div class="card-body">
-<form action="{% url 'address' %}" method="get" id="otpmForm">
+<form action="{% url 'addresses' trID %}" method="get" id="otpmForm">
     <div class="container">
         <div class="row">
             <div class="col-4">
@@ -83,7 +83,7 @@
             <td>{{address.3}}</td>
             <td>
             {% if address.3 %}
-                <a class="btn btn-outline-success custom" href="https://sss.corp.itmh.ru/building/address_spd.php?aID={{address.4}}&mode=selectAV&parent=0"
+                <a class="btn btn-outline-success custom" href="{% url 'select_node' trID  address.4 %}"
                    role="button">Выбрать</a>
             {% endif %}
             </td>

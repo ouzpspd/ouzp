@@ -4,6 +4,7 @@ import re
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
+from django.http import QueryDict
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
 from django.urls import reverse
@@ -19,7 +20,8 @@ from tickets.utils import flush_session_key
 
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
-    send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses
+    send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses, get_nodes_by_address, \
+    send_node_to_spp
 from .utils import add_tag_for_services
 
 
@@ -468,11 +470,20 @@ class CreateTrView(CredentialMixin, View):
         ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params) # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session['ticket_tr_id'] = ticket_tr_id # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session[self.kwargs['trID']] = {}
+
+        session_tr_id = request.session[(self.kwargs['trID'])]
+        session_tr_id.update({'action': request.GET.get('action')})
+        request.session[(self.kwargs['trID'])] = session_tr_id
+
+
+
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
+            #request.session[str(self.kwargs['trID'])].update({'action': request.GET.get('action')})
         elif request.GET.get('action') == 'edit':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'edit'})
+            #request.session[str(self.kwargs['trID'])].update({'action': request.GET.get('action')})
         return render(request, 'oattr/sppdata.html', context)
 
 
@@ -617,9 +628,9 @@ def save_spp(request):
 
 
 class AddressView(CredentialMixin, View):
-    """Пул задач ОТПМ"""
+    """Поиск адресов в СПП"""
     @cache_check_view
-    def get(self, request):
+    def get(self, request, trID):
         username, password = super().get_credential(self)
         # queryset_user_group = User.objects.filter(
         #     userholdposition__hold_position=request.user.userholdposition.hold_position
@@ -632,18 +643,59 @@ class AddressView(CredentialMixin, View):
                 street = None if not form.cleaned_data['street'] else form.cleaned_data['street']
                 house = None if not form.cleaned_data['house'] else form.cleaned_data['house']
 
-                context = {'addressform': form}
+                context = {'addressform': form, 'trID': trID}
                 search = get_spp_addresses(username, password, street, house)
                 context.update({'search': search})
+
+                get_nodes_by_address(username, password, 154)
+
                 return render(request, 'oattr/addresses.html', context)
         else:
             #initial_params = dict({'technolog': request.user.last_name})
             form = AddressForm() #initial=initial_params)
             #form.fields['technolog'].queryset = queryset_user_group
             context = {
-                'addressform': form
+                'addressform': form,
+                'trID': trID
             }
             return render(request, 'oattr/addresses.html', context)
+
+
+class SelectNodeView(CredentialMixin, View):
+    """Выбор узла на адресе для добавления в ТР"""
+    @cache_check_view
+    def get(self, request, trID, aid):
+        username, password = super().get_credential(self)
+        search = get_nodes_by_address(username, password, aid)
+
+        context = {
+            'search': search,
+            'trID': trID
+        }
+        return render(request, 'oattr/select_node.html', context)
+
+
+class UpdateNodeView(CredentialMixin, View):
+    """Выбор узла на адресе для добавления в ТР"""
+    @cache_check_view
+    def get(self, request, trID, vid):
+        username, password = super().get_credential(self)
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        ticket_tr.vID = vid
+        ticket_tr.save()
+        send_node_to_spp(username, password, ticket_tr)
+        action = request.session.get(str(self.kwargs['trID'])).get('action')
+        # session_tr_id.update({'action': request.GET.get('action')})
+        # request.session[(self.kwargs['trID'])] = session_tr_id
+
+        query_dictionary = QueryDict('', mutable=True)
+        query_dictionary.update(
+            {
+                'action': action
+            })
+        url = f"{reverse('add_tr_oattr', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}?{query_dictionary.urlencode()}"
+        return redirect(url)
+
 
 
 

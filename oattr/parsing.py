@@ -150,7 +150,44 @@ def get_spp_addresses(login, password, street, house):
         return entries
 
 
+def get_nodes_by_address(login, password, aid):
+    url = f'https://sss.corp.itmh.ru/building/address_spd.php?aID={aid}&mode=selectAV&parent=0'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        table_nodes = soup.find_all('table', class_="nice")[1]
+        trs = table_nodes.find_all('tr')[1:]
+        entries = []
+        for tr in trs:
+            node_vid = tr['vid']
+            tds = tr.find_all('td')
+            node_type = tds[1].text
+            node_name = tds[3].text
+            node_parent_id = tds[4].text
+            node_id = tds[5].text
+            node_status = tds[6].text
+            entries.append((node_vid, node_type, node_name, node_parent_id, node_id, node_status))
+        return entries
 
+
+def send_node_to_spp(login, password, ticket_tr):
+    vID = ticket_tr.vID
+    dID = ticket_tr.ticket_k.dID
+    tID = ticket_tr.ticket_cp
+    trID = ticket_tr.ticket_tr
+    print('sns')
+    print(vID)
+    url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
+    # trTurnOff = None  # для отключения
+    # trTurnOffInput = None
+    # data = {'FileLink': 'файл', 'action': 'saveVariant',
+    #         'vID': vID, 'trID': trID}
+    # headers
+    # 'Content-Type': multipart/form-data; boundary
+    trOTPM_Resolution = ticket_tr.oattr
+    data = {'trOTPM_Resolution': trOTPM_Resolution, 'action': 'saveVariant',
+            'vID': vID}
+    requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
 
 
@@ -239,6 +276,31 @@ def for_tr_view(login, password, dID, tID, trID):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        aid_link = soup.find('a', class_='nodec')['href']
+        match = re.search(r'php\?aID=(\d+)', aid_link)
+        aid = match.group(1) if match else None
+
+        tr_without_os = soup.find('input', {"name": "trWithoutOS"}).get('checked')
+        tr_complex_access = soup.find('input', {"name": "trComplexAccess"}).get('checked')
+        if tr_complex_access:
+            tr_complex_access_input = soup.find('textarea', {"name": "trComplexAccessInput"}).text.strip()
+            print(tr_complex_access_input)
+        tr_turn_off = soup.find('input', {"name": "trTurnOff"}).get('checked')
+        if tr_turn_off:
+            tr_turn_off_input = soup.find('textarea', {"name": "trTurnOffInput"}).text.strip()
+            print(tr_turn_off_input)
+        tr_complex_equip = soup.find('input', {"name": "trComplexEquip"}).get('checked')
+        if tr_complex_equip:
+            tr_complex_equip_input = soup.find('textarea', {"name": "trComplexEquipInput"}).text.strip()
+            print(tr_complex_equip_input)
+        print(aid)
+        print(tr_without_os)
+        print(tr_complex_access)
+        print(tr_complex_equip)
+        print(tr_turn_off)
+
+
+
         search = soup.find_all('tr')
         for index, i in enumerate(search):
             if 'Перечень' in i.find_all('td')[0].text:
