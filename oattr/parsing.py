@@ -108,7 +108,21 @@ def in_work_otpm(login, password):
     return lines
 
 
-def get_spp_addresses(login, password, street, house):
+def construct_table_nodes(search):
+    entries = []
+    for tr in search:
+        c3 = tr.find_all('td', class_="C3")
+        output_city = c3[0].text
+        output_street = lost_whitespace(c3[1].text)
+        c11 = tr.find('td', class_="C11")
+        output_house = '\n'.join(c11.find_all(text=True))  # recursive=False
+        c9 = tr.find('td', class_="C9")
+        output_spd = ''.join(c9.find_all(text=True))
+        aid = tr['aid']
+        entries.append([output_city, output_street, output_house, output_spd, aid])
+    return entries
+
+def get_spp_addresses(login, password, city, street, house):
     """Данный метод парсит страницу с адресами в СПП"""
     lines = []
     data = {
@@ -116,7 +130,7 @@ def get_spp_addresses(login, password, street, house):
         'distr_mark': 'any',
         'distr_pto': 'any',
         'hideWithOutSPD': 0,
-        'aCity': 0,
+        'aCity': city,
         'aStreet': street,
         'aHouse': house,
         'aTP': 'any',
@@ -130,24 +144,9 @@ def get_spp_addresses(login, password, street, house):
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        entries = []
         search = soup.find_all('tr')
-        # popo = soup.find_all(attrs={"tag": "str"})
-        # print(popo)
-        for tr in search:
-            #print('!')
-            aid = tr.find(attrs='aid')
-            #tr.find('td', id="cur_stat")
-            с3 = tr.find_all('td', class_="C3")
-            output_city = с3[0].text
-            output_street = lost_whitespace(с3[1].text)
-            с11 = tr.find('td', class_="C11")
-            output_house = '\n'.join(с11.find_all(text=True)) # recursive=False
-            с9 = tr.find('td', class_="C9")
-            output_spd = ''.join(с9.find_all(text=True))
-            aid = tr['aid']
-            entries.append([output_city, output_street, output_house, output_spd, aid])
-        return entries
+        node_entries = construct_table_nodes(search)
+        return node_entries
 
 
 def get_nodes_by_address(login, password, aid):
@@ -170,25 +169,14 @@ def get_nodes_by_address(login, password, aid):
         return entries
 
 
-def send_node_to_spp(login, password, ticket_tr):
-    vID = ticket_tr.vID
-    dID = ticket_tr.ticket_k.dID
-    tID = ticket_tr.ticket_cp
-    trID = ticket_tr.ticket_tr
-    print('sns')
-    print(vID)
-    url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
-    # trTurnOff = None  # для отключения
-    # trTurnOffInput = None
-    # data = {'FileLink': 'файл', 'action': 'saveVariant',
-    #         'vID': vID, 'trID': trID}
-    # headers
-    # 'Content-Type': multipart/form-data; boundary
-    trOTPM_Resolution = ticket_tr.oattr
-    data = {'trOTPM_Resolution': trOTPM_Resolution, 'action': 'saveVariant',
-            'vID': vID}
-    requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
-
+def get_initial_node(login, password, ticket_tr):
+    url = f'https://sss.corp.itmh.ru/building/address.php?mode=selectAV&aID={ticket_tr.aid}&parent=0'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('tr')
+        node_entries = construct_table_nodes(search)
+        return node_entries
 
 
 
@@ -279,27 +267,27 @@ def for_tr_view(login, password, dID, tID, trID):
         aid_link = soup.find('a', class_='nodec')['href']
         match = re.search(r'php\?aID=(\d+)', aid_link)
         aid = match.group(1) if match else None
-
+        spp_params['aid'] = aid
         tr_without_os = soup.find('input', {"name": "trWithoutOS"}).get('checked')
+        spp_params['tr_without_os'] = True if tr_without_os else False
+
         tr_complex_access = soup.find('input', {"name": "trComplexAccess"}).get('checked')
+        spp_params['tr_complex_access'] = True if tr_complex_access else False
         if tr_complex_access:
             tr_complex_access_input = soup.find('textarea', {"name": "trComplexAccessInput"}).text.strip()
-            print(tr_complex_access_input)
+            spp_params['tr_complex_access_input'] = tr_complex_access_input
+
         tr_turn_off = soup.find('input', {"name": "trTurnOff"}).get('checked')
+        spp_params['tr_turn_off'] = True if tr_turn_off else False
         if tr_turn_off:
             tr_turn_off_input = soup.find('textarea', {"name": "trTurnOffInput"}).text.strip()
-            print(tr_turn_off_input)
+            spp_params['tr_turn_off_input'] = tr_turn_off_input
+
         tr_complex_equip = soup.find('input', {"name": "trComplexEquip"}).get('checked')
+        spp_params['tr_complex_equip'] = True if tr_complex_equip else False
         if tr_complex_equip:
             tr_complex_equip_input = soup.find('textarea', {"name": "trComplexEquipInput"}).text.strip()
-            print(tr_complex_equip_input)
-        print(aid)
-        print(tr_without_os)
-        print(tr_complex_access)
-        print(tr_complex_equip)
-        print(tr_turn_off)
-
-
+            spp_params['tr_complex_equip_input'] = tr_complex_equip_input
 
         search = soup.find_all('tr')
         for index, i in enumerate(search):
@@ -390,17 +378,48 @@ def send_spp_check(login, password, dID, tID, trID):
     req_check = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     return req_check
 
-def send_spp(login, password, dID, tID, trID, ticket_tr):
+def send_spp(login, password, ticket_tr):
+    dID = ticket_tr.ticket_k.dID
+    tID = ticket_tr.ticket_cp
+    trID = ticket_tr.ticket_tr
     url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
+    print('dID')
+    print(dID)
+    print('tID')
+    print(tID)
+    print('trID')
+    print(trID)
     vID = ticket_tr.vID
+    print('vID')
+    print(vID)
     # trTurnOff = None  # для отключения
     # trTurnOffInput = None
     # data = {'FileLink': 'файл', 'action': 'saveVariant',
     #         'vID': vID, 'trID': trID}
     # headers
     # 'Content-Type': multipart/form-data; boundary
+    tr_without_os = 1 if ticket_tr.tr_without_os else 0
+    tr_complex_access = 1 if ticket_tr.tr_complex_access else 0
+    tr_complex_equip = 1 if ticket_tr.tr_complex_equip else 0
+    tr_turn_off = 1 if ticket_tr.tr_turn_off else 0
+    tr_complex_access_input = ticket_tr.tr_complex_access_input
+    tr_complex_equip_input = ticket_tr.tr_complex_equip_input
+    tr_turn_off_input = ticket_tr.tr_turn_off_input
     trOTPM_Resolution = ticket_tr.oattr
-    data = {'trOTPM_Resolution': trOTPM_Resolution, 'action': 'saveVariant',
+    print('tr_complex_access')
+    print(tr_complex_access)
+    print('tr_complex_access_input')
+    print(tr_complex_access_input)
+    data = {'trOTPM_Resolution': trOTPM_Resolution,
+            'trWithoutOS': tr_without_os,
+            'trComplexAccess': tr_complex_access,
+            'trComplexEquip': tr_complex_equip,
+            'trTurnOff': tr_turn_off,
+            'trComplexAccessInput': tr_complex_access_input,
+            'trComplexEquipInput': tr_complex_equip_input,
+            'trTurnOffInput': tr_turn_off_input,
+
+            'action': 'saveVariant',
             'vID': vID}
     requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 

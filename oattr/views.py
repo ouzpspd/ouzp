@@ -21,7 +21,7 @@ from tickets.utils import flush_session_key
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
     send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses, get_nodes_by_address, \
-    send_node_to_spp
+    get_initial_node
 from .utils import add_tag_for_services
 
 
@@ -450,12 +450,21 @@ class CreateTrView(CredentialMixin, View):
             ticket_tr.ticket_k = ticket_spp
             ticket_tr.ticket_tr = trID
             ticket_tr.ticket_cp = tID
-            ticket_tr.vID = tr_params['vID']
+        ticket_tr.vID = tr_params['vID']
         ticket_tr.pps = tr_params['node']
         ticket_tr.info_tr = tr_params['info_tr']
         ticket_tr.services = tr_params['services_plus_desc']
         ticket_tr.address_cp = tr_params['address']
         ticket_tr.place_cp = tr_params['place_connection_point']
+        ticket_tr.aid = tr_params['aid']
+        ticket_tr.tr_without_os = tr_params['tr_without_os']
+        ticket_tr.tr_complex_access = tr_params['tr_complex_access']
+        ticket_tr.tr_complex_equip = tr_params['tr_complex_equip']
+        ticket_tr.tr_turn_off = tr_params['tr_turn_off']
+        ticket_tr.tr_complex_access_input = tr_params.get('tr_complex_access_input')
+        ticket_tr.tr_complex_equip_input = tr_params.get('tr_complex_equip_input')
+        ticket_tr.tr_turn_off_input = tr_params.get('tr_turn_off_input')
+
         ticket_tr.save()
         ticket_tr_id = ticket_tr.id     # Временно вернул пока в view.data не переделана на использование tr_id в url
         return ticket_tr_id     # Временно вернул пока в view.data не переделана на использование tr_id в url
@@ -618,7 +627,7 @@ def save_spp(request):
     trID = ticket_tr.ticket_tr
     req_check = send_spp_check(username, password, dID, tID, trID)
     if req_check.status_code == 200:
-        send_spp(username, password, dID, tID, trID, ticket_tr)
+        send_spp(username, password, ticket_tr)
         return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={dID}&tID={tID}&trID={trID}')
     else:
         messages.warning(request, 'Нет доступа в ИС Холдинга')
@@ -632,32 +641,24 @@ class AddressView(CredentialMixin, View):
     @cache_check_view
     def get(self, request, trID):
         username, password = super().get_credential(self)
-        # queryset_user_group = User.objects.filter(
-        #     userholdposition__hold_position=request.user.userholdposition.hold_position
-        # )
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
         if request.GET:
             form = AddressForm(request.GET)
-            #form.fields['technolog'].queryset = queryset_user_group
             if form.is_valid():
-                # technolog = None if form.cleaned_data['technolog'] is None else form.cleaned_data['technolog'].last_name
+                city = form.cleaned_data['city']
                 street = None if not form.cleaned_data['street'] else form.cleaned_data['street']
                 house = None if not form.cleaned_data['house'] else form.cleaned_data['house']
 
-                context = {'addressform': form, 'trID': trID}
-                search = get_spp_addresses(username, password, street, house)
-                context.update({'search': search})
-
-                get_nodes_by_address(username, password, 154)
+                search = get_spp_addresses(username, password, city, street, house)
+                context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search}
+                #get_nodes_by_address(username, password, 154)
 
                 return render(request, 'oattr/addresses.html', context)
         else:
-            #initial_params = dict({'technolog': request.user.last_name})
-            form = AddressForm() #initial=initial_params)
-            #form.fields['technolog'].queryset = queryset_user_group
-            context = {
-                'addressform': form,
-                'trID': trID
-            }
+            form = AddressForm()
+
+            search = get_initial_node(username, password, ticket_tr)
+            context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search}
             return render(request, 'oattr/addresses.html', context)
 
 
@@ -666,11 +667,12 @@ class SelectNodeView(CredentialMixin, View):
     @cache_check_view
     def get(self, request, trID, aid):
         username, password = super().get_credential(self)
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
         search = get_nodes_by_address(username, password, aid)
 
         context = {
             'search': search,
-            'trID': trID
+            'ticket_tr': ticket_tr
         }
         return render(request, 'oattr/select_node.html', context)
 
@@ -683,7 +685,8 @@ class UpdateNodeView(CredentialMixin, View):
         ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
         ticket_tr.vID = vid
         ticket_tr.save()
-        send_node_to_spp(username, password, ticket_tr)
+        #send_node_to_spp(username, password, ticket_tr)
+        send_spp(username, password, ticket_tr)
         action = request.session.get(str(self.kwargs['trID'])).get('action')
         # session_tr_id.update({'action': request.GET.get('action')})
         # request.session[(self.kwargs['trID'])] = session_tr_id

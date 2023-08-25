@@ -44,6 +44,14 @@ class OtpmTR(models.Model):
     ticket_cp = models.CharField(max_length=10, verbose_name='Точка подключения')
     oattr = models.TextField(verbose_name='Решение ОТПМ')
     titles = models.TextField(verbose_name='Заголовки ТР', null=True, blank=True)
+    aid = models.CharField(max_length=10, verbose_name='ID адреса точки подключения')
+    tr_without_os = models.BooleanField(default=False, verbose_name='Участие ОС не требуется')
+    tr_complex_access = models.BooleanField(default=False, verbose_name='Сложный доступ')
+    tr_complex_equip = models.BooleanField(default=False, verbose_name='Нестандартное оборудование')
+    tr_turn_off = models.BooleanField(default=False, verbose_name='Отключение')
+    tr_complex_access_input = models.TextField(verbose_name='Сложный доступ текст', blank=True, null=True)
+    tr_complex_equip_input = models.TextField(verbose_name='Нестандартное оборудование текст', blank=True, null=True)
+    tr_turn_off_input = models.TextField(verbose_name='Отключение текст', blank=True, null=True)
 
     def __str__(self):
         return self.ticket_tr

@@ -120,6 +120,8 @@ class CopperForm(forms.Form):
     line_test = forms.BooleanField(label='Теcт линии связи',
                                  required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    equipment = forms.CharField(label='Монтаж оборудования', required=False,
+                                widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
     access = forms.CharField(label='Доступ', widget=forms.Textarea(attrs={'class': 'form-control',
                                                                           'rows':3}))
     agreement = forms.CharField(label='Согласование', required=False,
@@ -164,7 +166,7 @@ class SendSPPForm(forms.Form):
 
 class AddressForm(forms.Form):
     cities = [
-        ('Все', 'Все'),
+        ('0', 'Все'),
         ('Екатеринбург', 'Екатеринбург'),
         ('Нижний Тагил', 'Нижний Тагил'),
         ('Каменск-Уральский', 'Каменск-Уральский'),
