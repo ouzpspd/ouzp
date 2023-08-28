@@ -14,8 +14,19 @@
 {% block content %}
 
 <div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Выбор Узла Связи ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.address_cp}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
 
 
+<div class="container">
 
 
     <table class="table table-striped table-bordered">
@@ -42,7 +53,7 @@
             <td>{{node.4}}</td>
             <td>{{node.5}}</td>
             <td>
-                <a class="btn btn-outline-success custom" href="{% url 'update_node' trID node.0 %}"
+                <a class="btn btn-outline-success custom" href="{% url 'update_node' ticket_tr.ticket_tr node.0 %}"
                    role="button">Выбрать</a>
             </td>
 
