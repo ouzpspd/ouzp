@@ -423,3 +423,161 @@ def send_spp(login, password, ticket_tr):
             'vID': vID}
     requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
+
+import json
+
+def get_tentura(login, password):
+    url = 'https://tentura.corp.itmh.ru/?mode=project_objects&project_id=39203&active_project_id=39203'
+    client = requests.session()
+    req = client.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+
+    url = 'https://tentura.corp.itmh.ru/ajax2/'
+
+    # data = #{"method":"url_sss_get","params":[], "id":'14107'}  # первый пример запроса
+
+
+    data_project_objects_get = {"id":'32750',"method":"project_objects_get","params":["39203"]}     # Объекты добавленные в проект
+
+    # {"id":11477,"method":"project_context_get","params":["39203"]} возвращает 55284, которое потом может пригодиться
+
+    data_get_matched_addresses = {"id":38722,"method":"get_matched_addresses","params":["Куйбышева, 10", True]} # ищется соответствующий адрес в поиске
+
+
+
+    # при выборе одного из id выполняется запрос {"id": 21984, "method": "get_construction_center", "params": [2170]}
+    # {"id": 21984, "result": "{\"lon\":60.5925425,\"lat\":56.82529985}"}
+
+    # потом выполняются методы get_buildings и get_gis_objects с координатами вокруг объекта, на основе них открывается нужное место
+    # на карте и объекты попадающие в эту область, они будут не нужны, заполняем коорединаты вручную по 0.0015 в каждую сторону
+    # 60,5910425     60.5940425     56.82379985     56.82679985
+
+    data_set_ioc_filter = {"id": 32202, "method": "set_ioc_filter", "params": [55284, [258, 281, 330, 331, 332, 333], 79]} # применение фильтра только по КК, АВ, УА, РУА
+
+    data_get_gis_objects = {"id": 59360, "method": "get_gis_objects", "params": [55284,
+                                                                 {"left": 60.5910425, "right": 60.5940425,
+                                                                  "bottom": 56.82379985,
+                                                                  "top": 56.82679985}]}
+
+    # затем проходиться по всем объектам и вызывать
+
+    data_get_binded_objects = {"id": 14081, "method": "get_binded_objects", "params": [70252, 55284]}
+
+    # получение названия узла через data_get_binded_objects
+    # result = req.json().get('result')
+    # kk = json.loads(result)
+    # node = kk[0]['name_with_name_attribute']
+    # 2.2.2.АВ (#5075) ЕКБ Куйбышева 10 П2 (тех.этаж), АВ
+    # по ключу id можно получить сам айдишник
+
+
+    # добавление узла в проект
+    project = 39203
+    # identificator = 70013
+    # node = 2273
+    # data = {"id": 14081, "method": "get_binded_objects", "params": [identificator, 55284]}
+    #
+    # req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=json.dumps(data))
+    #
+    # result = req.json().get('result')
+    # binded_objects = json.loads(result)[0]
+    # project_registers = binded_objects.get('projectRegisters')
+    # plan_registers = binded_objects.get('planRegisters')
+    # status_registers = binded_objects.get('statusRegisters')
+    #
+    # query_status = []
+    # for status_register in status_registers:
+    #     if status_register.get('RegisterRecord'):
+    #         record = status_register.get('RegisterRecord')
+    #         query_status.append({
+    #             "IsActual": True,
+    #             "RegisterId": record.get('RegisterId'),
+    #             "RegisterRecord": {"Id": record.get('Id'), "IsActual": True, "ProjectId": record.get('ProjectId')}
+    #         })
+    #     else:
+    #         query_status.append({"IsActual": False, "RegisterId": status_register.get('RegisterId'), "RegisterRecord": None})
+    #
+    # query = []
+    # for registers in (project_registers, plan_registers):
+    #     subquery = []
+    #     for project_register in registers:
+    #         if project_register.get('RegisterRecords'):
+    #             records = project_register.get('RegisterRecords')
+    #             query_record = []
+    #             for record in records:
+    #                 query_record.append(
+    #                     {"Id": record.get('Id'), "IsActual": True, "ProjectId": record.get('ProjectId')}
+    #                 )
+    #             query_record.append({"Id": None, "IsActual": True,"ProjectId": project})
+    #             subquery.append({"IsActual": True, "RegisterId": project_register.get('RegisterId'), "RegisterRecords": query_record})
+    #         elif project_register.get('RegisterName') == 'Проектируемые к реконструкции':
+    #             subquery.append({"IsActual": True, "RegisterId": project_register.get('RegisterId'),
+    #                              "RegisterRecords": [{"Id": None, "IsActual": True,"ProjectId": project}]})
+    #         else:
+    #             subquery.append(
+    #                 {"IsActual": False, "RegisterId": project_register.get('RegisterId'), "RegisterRecords": None})
+    #     query.append(subquery)
+    #
+    # query_project = query[0]
+    # query_plan = query[1]
+    # result_query = {"id":5555, "method":"update_io_registers", "params":[node, query_status, query_plan, query_project]}
+    #
+    # req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=json.dumps(result_query))
+
+    # Добавление ЦСП в проект
+    # по адресу ищутся все подходящие объекты
+    data_get_matched_addresses = {"id": 5555, "method": "get_matched_addresses", "params": ["Малышева, 28", True]}
+
+    # нужен вывод полученного списка и выбор одного из id, далее выполняется запрос по id
+    data_get_construction_center = {"id": 5555, "method": "get_construction_center", "params": [2459]}
+    # {"id":42015,"result":"{\"lon\":60.593568271428573,\"lat\":56.833121157142855}"}
+    req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=json.dumps(data_get_construction_center))
+    print('!!')
+    result = req.json().get('result')
+    result = json.loads(result)
+    lon = result.get('lon')
+    lat = result.get('lat')
+    horizontal_offset = 0.0001
+    vertical_offset = 0.0001
+    lon += horizontal_offset
+    lat += vertical_offset
+    print(lon)
+    print(lat)
+    address = 'Малышева28'
+
+    data_create_csp = {
+        "id":5555, "method":"create_object", "params": [{
+            "inventory_objects_class":1138,
+            "attributes": [
+                {"id":2448,"name":"Помещение","value": address,"isDirty":True,"isNullable":False},
+                {"id":2443,"name":"Адрес","value": address,"isDirty":True,"isNullable":False},
+                {"id":59,"name":"Дата постройки","value":"30.08.2023","isDirty":True,"isNullable":False},
+                {"id":178,"name":"Основание размещения","value":"","isDirty":False,"isNullable":True},
+                {"id":31,"name":"Наименование","value":"","isDirty":False,"isNullable":True},
+                {"id":34,"name":"Фотографии","value":"","isDirty":False,"isNullable":True},
+                {"id":79,"name":"Владелец","value":"ООО «Комтехцентр»","isDirty":True,"isNullable":False},
+                {"id":80,"name":"Примечание","value":"","isDirty":False,"isNullable":True},
+                {"id":2447,"name":"ГИС: точка привязки","value":f"POINT({lon} {lat})","isDirty":True,"isNullable":True}
+            ],
+            "project": {
+                "id":project,"_checked":True,
+                "registers": [
+                    {"r2pt":2,"_checked":False},
+                    {"r2pt":3,"_checked":False},
+                    {"r2pt":4,"_checked":False},
+                    {"r2pt":5,"_checked":False},
+                    {"r2pt":6,"_checked":False},
+                    {"r2pt":7,"_checked":False},
+                    {"r2pt":8,"_checked":False},
+                    {"r2pt":12,"_checked":True},
+                    {"r2pt":13,"_checked":False},
+                    {"r2pt":14,"_checked":False}
+                ],
+                "checked_register":12
+            },
+            "includes":[]
+        }]
+    }
+
+    req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password),
+                      data=json.dumps(data_create_csp))
+    print(req.json())

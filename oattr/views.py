@@ -21,7 +21,7 @@ from tickets.utils import flush_session_key
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
     send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses, get_nodes_by_address, \
-    get_initial_node
+    get_initial_node, get_tentura
 from .utils import add_tag_for_services
 
 
@@ -442,6 +442,15 @@ def data(request, trID):
     session_tr_id.update({'result_otpm': result_otpm, 'counter_str_oattr': counter_str_oattr})
     request.session[str(trID)] = session_tr_id
     return redirect('saved_data_oattr', trID)
+
+
+def tentura(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    get_tentura(username, password)
+
 
 
 class CreateTrView(CredentialMixin, View):
