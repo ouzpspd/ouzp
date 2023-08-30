@@ -45,6 +45,7 @@
          href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{dID}}&tID={{tID}}&trID={{trID}}"
          target ="_blank"
          role="button">Открыть ТР в СПП</a>
+      <a class="btn btn-outline-info" href="{% url 'addresses' trID %}" role="button">Добавить/Изменить Узел</a>
       {% if action == 'add' %}
           <a class="btn btn-primary" href="{% url 'otpm_copper' trID %}" role="button">Проектировать ТР</a>
       {% elif action == 'edit'%}

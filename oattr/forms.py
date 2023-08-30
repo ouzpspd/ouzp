@@ -120,6 +120,8 @@ class CopperForm(forms.Form):
     line_test = forms.BooleanField(label='Теcт линии связи',
                                  required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    equipment = forms.CharField(label='Монтаж оборудования', required=False,
+                                widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
     access = forms.CharField(label='Доступ', widget=forms.Textarea(attrs={'class': 'form-control',
                                                                           'rows':3}))
     agreement = forms.CharField(label='Согласование', required=False,
@@ -161,4 +163,15 @@ class SendSPPForm(forms.Form):
     comment = forms.CharField(label='Добавить комментарий', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))
 
 
+
+class AddressForm(forms.Form):
+    cities = [
+        ('0', 'Все'),
+        ('Екатеринбург', 'Екатеринбург'),
+        ('Нижний Тагил', 'Нижний Тагил'),
+        ('Каменск-Уральский', 'Каменск-Уральский'),
+    ]
+    city = forms.CharField(label='Город', widget=forms.Select(choices=cities, attrs={'class': 'form-control'}))
+    street = forms.CharField(label='Улица', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    house = forms.CharField(label='Дом', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
 

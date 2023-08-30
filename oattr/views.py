@@ -4,6 +4,7 @@ import re
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
+from django.http import QueryDict
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
 from django.urls import reverse
@@ -17,9 +18,10 @@ from tickets.views import cache_check
 from .models import OtpmSpp, OtpmTR
 from tickets.utils import flush_session_key
 
-from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm
+from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
-    send_spp_check, in_work_otpm, get_spp_stage
+    send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses, get_nodes_by_address, \
+    get_initial_node, get_tentura
 from .utils import add_tag_for_services
 
 
@@ -258,79 +260,84 @@ def construct_tr(value_vars, service_vars, templates, ticket_tr):
         hidden_vars['Согласование:'] = 'Согласование:'
         hidden_vars['%Согласование%'] = '%Согласование%'
         static_vars['Согласование'] = value_vars.get('agreement')
+    if value_vars.get('equipment'):
+        hidden_vars['Монтаж оборудования:'] = 'Монтаж оборудования:'
+        hidden_vars['%Монтаж оборудования%'] = '%Монтаж оборудования%'
+        static_vars['Монтаж оборудования'] = value_vars.get('equipment')
     static_vars['Доступ'] = value_vars.get('access')
+
     result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
 
-    services = add_tag_for_services(ticket_tr)
-    repr_string['mounting_line_service'] = '- Смонтировать %Количество линий связи% линии %Тип кабеля% от %Точка от% до %Точка до%. %Способ монтажа линии связи%. %Способ крепежа линии связи%.'
-    for tag_service in services.keys():
-        line_exist = bool([True for key in service_vars.keys() if key.startswith(f'{tag_service}_from_')])
-
-        if tag_service.startswith('lvs') and line_exist:
-            if service_vars.get('lvs_switch'):
-                template = templates.get('Организация ЛВС')
-            else:
-                template = templates.get('Организация СКС')
-            static_vars = {}
-            hidden_vars = {}
-            #repr_string = {}
-
-            multi_vars = {repr_string['mounting_line_service']: []}
-            count_lines = [key.strip('lvs_from_') for key in service_vars.keys() if key.startswith('lvs_from_')]
-            for i in count_lines:
-                static_vars[f'Количество линий связи {i}'] = service_vars.get(f'lvs_count_line_{i}')
-                static_vars[f'Тип кабеля {i}'] = service_vars.get(f'lvs_cable_{i}')
-                static_vars[f'Точка от {i}'] = service_vars.get(f'lvs_from_{i}')
-                static_vars[f'Точка до {i}'] = service_vars.get(f'lvs_to_{i}')
-                static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'lvs_mounting_{i}')
-                static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'lvs_fastening_{i}')
-                multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
-                                                                f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
-            result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
-
-        elif tag_service.startswith('phone'):
-            template = templates.get('Организация Телефонии')
-            static_vars = {}
-            hidden_vars = {}
-            #repr_string = {}
-            multi_vars = {repr_string['mounting_line_service']: []}
-            count_lines = [key.strip('phone_from_') for key in service_vars.keys() if key.startswith('phone_from_')]
-            for i in count_lines:
-                static_vars[f'Количество линий связи {i}'] = service_vars.get(f'phone_count_line_{i}')
-                static_vars[f'Тип кабеля {i}'] = service_vars.get(f'phone_cable_{i}')
-                static_vars[f'Точка от {i}'] = service_vars.get(f'phone_from_{i}')
-                static_vars[f'Точка до {i}'] = service_vars.get(f'phone_to_{i}')
-                static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'phone_mounting_{i}')
-                static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'phone_fastening_{i}')
-                multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
-                                                                f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
-            if service_vars.get('phone_vgw_place') != 'не требуется':
-                hidden_vars['Установка оборудования:'] = 'Установка оборудования:'
-                hidden_vars['- Установить тел. шлюз %Место голос. шлюза%.'] = '- Установить тел. шлюз %Место голос. шлюза%.'
-                static_vars['Место голос. шлюза'] = service_vars.get('phone_vgw_place')
-            result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
-
-        elif tag_service.startswith('video'):
-            template = templates.get('Организация СВН')
-            static_vars = {}
-            hidden_vars = {}
-            #repr_string = {}
-            multi_vars = {repr_string['mounting_line_service']: []}
-            count_lines = [key.strip('video_from_') for key in service_vars.keys() if key.startswith('video_from_')]
-            for i in count_lines:
-                static_vars[f'Количество линий связи {i}'] = service_vars.get(f'video_count_line_{i}')
-                static_vars[f'Тип кабеля {i}'] = service_vars.get(f'video_cable_{i}')
-                static_vars[f'Точка от {i}'] = service_vars.get(f'video_from_{i}')
-                static_vars[f'Точка до {i}'] = service_vars.get(f'video_to_{i}')
-                static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'video_mounting_{i}')
-                static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'video_fastening_{i}')
-                multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
-                                                                f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
-            if service_vars.get('video_switch'):
-                hidden_vars['- По согласованию с клиентом установить POE-коммутатор в помещении клиента.'] = \
-                    '- По согласованию с клиентом установить POE-коммутатор в помещении клиента.'
-            static_vars['Количество камер'] = service_vars.get('video_count_camera')
-            result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
+    # services = add_tag_for_services(ticket_tr)
+    # repr_string['mounting_line_service'] = '- Смонтировать %Количество линий связи% линии %Тип кабеля% от %Точка от% до %Точка до%. %Способ монтажа линии связи%. %Способ крепежа линии связи%.'
+    # for tag_service in services.keys():
+    #     line_exist = bool([True for key in service_vars.keys() if key.startswith(f'{tag_service}_from_')])
+    #
+    #     if tag_service.startswith('lvs') and line_exist:
+    #         if service_vars.get('lvs_switch'):
+    #             template = templates.get('Организация ЛВС')
+    #         else:
+    #             template = templates.get('Организация СКС')
+    #         static_vars = {}
+    #         hidden_vars = {}
+    #         #repr_string = {}
+    #
+    #         multi_vars = {repr_string['mounting_line_service']: []}
+    #         count_lines = [key.strip('lvs_from_') for key in service_vars.keys() if key.startswith('lvs_from_')]
+    #         for i in count_lines:
+    #             static_vars[f'Количество линий связи {i}'] = service_vars.get(f'lvs_count_line_{i}')
+    #             static_vars[f'Тип кабеля {i}'] = service_vars.get(f'lvs_cable_{i}')
+    #             static_vars[f'Точка от {i}'] = service_vars.get(f'lvs_from_{i}')
+    #             static_vars[f'Точка до {i}'] = service_vars.get(f'lvs_to_{i}')
+    #             static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'lvs_mounting_{i}')
+    #             static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'lvs_fastening_{i}')
+    #             multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
+    #                                                             f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
+    #         result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
+    #
+    #     elif tag_service.startswith('phone'):
+    #         template = templates.get('Организация Телефонии')
+    #         static_vars = {}
+    #         hidden_vars = {}
+    #         #repr_string = {}
+    #         multi_vars = {repr_string['mounting_line_service']: []}
+    #         count_lines = [key.strip('phone_from_') for key in service_vars.keys() if key.startswith('phone_from_')]
+    #         for i in count_lines:
+    #             static_vars[f'Количество линий связи {i}'] = service_vars.get(f'phone_count_line_{i}')
+    #             static_vars[f'Тип кабеля {i}'] = service_vars.get(f'phone_cable_{i}')
+    #             static_vars[f'Точка от {i}'] = service_vars.get(f'phone_from_{i}')
+    #             static_vars[f'Точка до {i}'] = service_vars.get(f'phone_to_{i}')
+    #             static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'phone_mounting_{i}')
+    #             static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'phone_fastening_{i}')
+    #             multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
+    #                                                             f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
+    #         if service_vars.get('phone_vgw_place') != 'не требуется':
+    #             hidden_vars['Установка оборудования:'] = 'Установка оборудования:'
+    #             hidden_vars['- Установить тел. шлюз %Место голос. шлюза%.'] = '- Установить тел. шлюз %Место голос. шлюза%.'
+    #             static_vars['Место голос. шлюза'] = service_vars.get('phone_vgw_place')
+    #         result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
+    #
+    #     elif tag_service.startswith('video'):
+    #         template = templates.get('Организация СВН')
+    #         static_vars = {}
+    #         hidden_vars = {}
+    #         #repr_string = {}
+    #         multi_vars = {repr_string['mounting_line_service']: []}
+    #         count_lines = [key.strip('video_from_') for key in service_vars.keys() if key.startswith('video_from_')]
+    #         for i in count_lines:
+    #             static_vars[f'Количество линий связи {i}'] = service_vars.get(f'video_count_line_{i}')
+    #             static_vars[f'Тип кабеля {i}'] = service_vars.get(f'video_cable_{i}')
+    #             static_vars[f'Точка от {i}'] = service_vars.get(f'video_from_{i}')
+    #             static_vars[f'Точка до {i}'] = service_vars.get(f'video_to_{i}')
+    #             static_vars[f'Способ монтажа линии связи {i}'] = service_vars.get(f'video_mounting_{i}')
+    #             static_vars[f'Способ крепежа линии связи {i}'] = service_vars.get(f'video_fastening_{i}')
+    #             multi_vars[repr_string['mounting_line_service']].append(f'- Смонтировать %Количество линий связи {i}% линии %Тип кабеля {i}% от %Точка от {i}%' +
+    #                                                             f' до %Точка до {i}%. %Способ монтажа линии связи {i}%. %Способ крепежа линии связи {i}%.')
+    #         if service_vars.get('video_switch'):
+    #             hidden_vars['- По согласованию с клиентом установить POE-коммутатор в помещении клиента.'] = \
+    #                 '- По согласованию с клиентом установить POE-коммутатор в помещении клиента.'
+    #         static_vars['Количество камер'] = service_vars.get('video_count_camera')
+    #         result.append(analyzer_vars(template, static_vars, hidden_vars, multi_vars))
 
     return result
 
@@ -368,50 +375,50 @@ class CopperFormView(CredentialMixin, FormView):
         return context
 
     def get_success_url(self, **kwargs):
-        #return reverse('otpm_data', kwargs={'trID': self.kwargs['trID']})
-        return reverse('otpm_service', kwargs={'trID': self.kwargs['trID']})
-
-
-
-class ServiceFormView(CredentialMixin, FormView):
-    template_name = "oattr/services.html"
-    form_class = ServiceForm
-
-    @cache_check_view
-    def dispatch(self, *args, **kwargs):
-        """Используется для проверки credential"""
-        return super().dispatch(*args, **kwargs)
-
-    @cache_check_view
-    def form_valid(self, form):
-        service_vars = dict(**form.cleaned_data)
-        session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        session_tr_id.update({'service_vars': service_vars})
-        self.request.session[str(self.kwargs['trID'])] = session_tr_id
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        ticket_tr = get_object_or_404(OtpmTR, ticket_tr=self.kwargs['trID'])
-        #services = [service for service in ticket_tr.services if ('Интернет' or 'Хот-спот') not in service]
-        services = {}
-
-
-        tags_services = {'phone': 'Телефон', 'video': 'Видеонаблюдение', 'lvs': 'ЛВС', 'hotspot': 'Хот-спот'}
-        for key, value in tags_services.items():
-            for service in ticket_tr.services:
-                if service.startswith(value):
-                    if services.get(key):
-                        services[key] = services.get(key) + ', ' + service[len(value):].capitalize()
-                    else:
-                        services.update({key: service})
-
-        context['ticket_tr'] = ticket_tr
-        context['services'] = services
-        return context
-
-    def get_success_url(self, **kwargs):
         return reverse('otpm_data', kwargs={'trID': self.kwargs['trID']})
+        #return reverse('otpm_service', kwargs={'trID': self.kwargs['trID']})
+
+
+
+# class ServiceFormView(CredentialMixin, FormView):
+#     template_name = "oattr/services.html"
+#     form_class = ServiceForm
+#
+#     @cache_check_view
+#     def dispatch(self, *args, **kwargs):
+#         """Используется для проверки credential"""
+#         return super().dispatch(*args, **kwargs)
+#
+#     @cache_check_view
+#     def form_valid(self, form):
+#         service_vars = dict(**form.cleaned_data)
+#         session_tr_id = self.request.session[str(self.kwargs['trID'])]
+#         session_tr_id.update({'service_vars': service_vars})
+#         self.request.session[str(self.kwargs['trID'])] = session_tr_id
+#         return super().form_valid(form)
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         ticket_tr = get_object_or_404(OtpmTR, ticket_tr=self.kwargs['trID'])
+#         #services = [service for service in ticket_tr.services if ('Интернет' or 'Хот-спот') not in service]
+#         services = {}
+#
+#
+#         tags_services = {'phone': 'Телефон', 'video': 'Видеонаблюдение', 'lvs': 'ЛВС', 'hotspot': 'Хот-спот'}
+#         for key, value in tags_services.items():
+#             for service in ticket_tr.services:
+#                 if service.startswith(value):
+#                     if services.get(key):
+#                         services[key] = services.get(key) + ', ' + service[len(value):].capitalize()
+#                     else:
+#                         services.update({key: service})
+#
+#         context['ticket_tr'] = ticket_tr
+#         context['services'] = services
+#         return context
+#
+#     def get_success_url(self, **kwargs):
+#         return reverse('otpm_data', kwargs={'trID': self.kwargs['trID']})
 
 
 
@@ -437,6 +444,15 @@ def data(request, trID):
     return redirect('saved_data_oattr', trID)
 
 
+def tentura(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    get_tentura(username, password)
+
+
+
 class CreateTrView(CredentialMixin, View):
     """Информация ТР XXXXX"""
     def create_or_update(self, dID, tID, trID, tr_params):
@@ -448,13 +464,24 @@ class CreateTrView(CredentialMixin, View):
             ticket_tr.ticket_k = ticket_spp
             ticket_tr.ticket_tr = trID
             ticket_tr.ticket_cp = tID
-            ticket_tr.vID = tr_params['vID']
+        ticket_tr.vID = tr_params['vID']
         ticket_tr.pps = tr_params['node']
         ticket_tr.info_tr = tr_params['info_tr']
         ticket_tr.services = tr_params['services_plus_desc']
         ticket_tr.address_cp = tr_params['address']
         ticket_tr.place_cp = tr_params['place_connection_point']
+        ticket_tr.aid = tr_params['aid']
+        ticket_tr.tr_without_os = tr_params['tr_without_os']
+        ticket_tr.tr_complex_access = tr_params['tr_complex_access']
+        ticket_tr.tr_complex_equip = tr_params['tr_complex_equip']
+        ticket_tr.tr_turn_off = tr_params['tr_turn_off']
+        ticket_tr.tr_complex_access_input = tr_params.get('tr_complex_access_input')
+        ticket_tr.tr_complex_equip_input = tr_params.get('tr_complex_equip_input')
+        ticket_tr.tr_turn_off_input = tr_params.get('tr_turn_off_input')
+
         ticket_tr.save()
+        ticket_tr_id = ticket_tr.id     # Временно вернул пока в view.data не переделана на использование tr_id в url
+        return ticket_tr_id     # Временно вернул пока в view.data не переделана на использование tr_id в url
 
     @cache_check_view
     def get(self, request, dID, tID, trID):
@@ -463,13 +490,23 @@ class CreateTrView(CredentialMixin, View):
         if tr_params.get('Access denied'):
             return super().redirect_to_login_for_service(self)
 
-        self.create_or_update(dID, tID, trID, tr_params)
+        ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params) # Временно вернул пока в view.data не переделана на использование tr_id в url
+        request.session['ticket_tr_id'] = ticket_tr_id # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session[self.kwargs['trID']] = {}
+
+        session_tr_id = request.session[(self.kwargs['trID'])]
+        session_tr_id.update({'action': request.GET.get('action')})
+        request.session[(self.kwargs['trID'])] = session_tr_id
+
+
+
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
+            #request.session[str(self.kwargs['trID'])].update({'action': request.GET.get('action')})
         elif request.GET.get('action') == 'edit':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'edit'})
+            #request.session[str(self.kwargs['trID'])].update({'action': request.GET.get('action')})
         return render(request, 'oattr/sppdata.html', context)
 
 
@@ -604,13 +641,79 @@ def save_spp(request):
     trID = ticket_tr.ticket_tr
     req_check = send_spp_check(username, password, dID, tID, trID)
     if req_check.status_code == 200:
-        send_spp(username, password, dID, tID, trID, ticket_tr)
+        send_spp(username, password, ticket_tr)
         return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={dID}&tID={tID}&trID={trID}')
     else:
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
+
+
+class AddressView(CredentialMixin, View):
+    """Поиск адресов в СПП"""
+    @cache_check_view
+    def get(self, request, trID):
+        username, password = super().get_credential(self)
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        if request.GET:
+            form = AddressForm(request.GET)
+            if form.is_valid():
+                city = form.cleaned_data['city']
+                street = None if not form.cleaned_data['street'] else form.cleaned_data['street']
+                house = None if not form.cleaned_data['house'] else form.cleaned_data['house']
+
+                search = get_spp_addresses(username, password, city, street, house)
+                context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search}
+                #get_nodes_by_address(username, password, 154)
+
+                return render(request, 'oattr/addresses.html', context)
+        else:
+            form = AddressForm()
+
+            search = get_initial_node(username, password, ticket_tr)
+            context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search}
+            return render(request, 'oattr/addresses.html', context)
+
+
+class SelectNodeView(CredentialMixin, View):
+    """Выбор узла на адресе для добавления в ТР"""
+    @cache_check_view
+    def get(self, request, trID, aid):
+        username, password = super().get_credential(self)
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        search = get_nodes_by_address(username, password, aid)
+
+        context = {
+            'search': search,
+            'ticket_tr': ticket_tr
+        }
+        return render(request, 'oattr/select_node.html', context)
+
+
+class UpdateNodeView(CredentialMixin, View):
+    """Выбор узла на адресе для добавления в ТР"""
+    @cache_check_view
+    def get(self, request, trID, vid):
+        username, password = super().get_credential(self)
+        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        ticket_tr.vID = vid
+        ticket_tr.save()
+        #send_node_to_spp(username, password, ticket_tr)
+        send_spp(username, password, ticket_tr)
+        action = request.session.get(str(self.kwargs['trID'])).get('action')
+        # session_tr_id.update({'action': request.GET.get('action')})
+        # request.session[(self.kwargs['trID'])] = session_tr_id
+
+        query_dictionary = QueryDict('', mutable=True)
+        query_dictionary.update(
+            {
+                'action': action
+            })
+        url = f"{reverse('add_tr_oattr', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}?{query_dictionary.urlencode()}"
+        return redirect(url)
+
+
 
 
 def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars):

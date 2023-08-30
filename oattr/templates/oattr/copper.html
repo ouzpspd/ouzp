@@ -19,7 +19,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb align-items-center justify-content-center">
-                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Присоединение к СПД ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}}</h6></li>
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">ТР №{{view.kwargs.trID}} {{ticket_tr.address_cp}} Присоединение к СПД</h6></li>
               </ol>
             </nav>
         </div>
@@ -66,6 +66,12 @@
                       {{form.no_exit}}
                   </div>
                   </div>
+              </div>
+        </div>
+        <div class="card mb-2">
+            <h5 class="card-header">Монтаж оборудования</h5>
+              <div class="card-body">
+                  {{form.equipment}}
               </div>
         </div>
         <div class="card mb-2">
