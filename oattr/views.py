@@ -492,15 +492,15 @@ def specific(request):
     # resource_list_sku = specification.get_resource_list_sku(cookie)
     csp_resources = []
     csp_resources.append({'Name':"# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 3})
-    csp_resources.append({'Name':'# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 1})
+    csp_resources.append({'Name':'# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90})
     csp_resources.append({'Name':'Выезд автомобиля В2В ВОЛС', 'Amount': 1})
     csp_resources.append({'Name':'Присоединение B2B UTP', 'Amount': 1})
-    prices_sku = specification.get_resource_price_sku(cookie, csp_resources)
-    prices_tao = specification.get_resource_price_tao(cookie, csp_resources)
-    prices = prices_sku | prices_tao
-    print(prices)
+    # prices_sku = specification.get_resource_price_sku(cookie, csp_resources)
+    # prices_tao = specification.get_resource_price_tao(cookie, csp_resources)
+    # prices = prices_sku | prices_tao
+    # print(prices)
     inventory_object_id = 128874 #2268
-    specification.set_csp(cookie, inventory_object_id, prices, csp_resources)
+    specification.set_csp(cookie, inventory_object_id, csp_resources)
 
 
 
