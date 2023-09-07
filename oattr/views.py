@@ -21,7 +21,7 @@ from tickets.utils import flush_session_key
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
     send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses, get_nodes_by_address, \
-    get_initial_node, get_tentura
+    get_initial_node, get_tentura, Tentura, Specification
 from .utils import add_tag_for_services
 
 
@@ -444,12 +444,63 @@ def data(request, trID):
     return redirect('saved_data_oattr', trID)
 
 
+
+
 def tentura(request):
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    get_tentura(username, password)
+    #get_tentura(username, password)
+    tentura = Tentura(username, password, 39203)
+    status = tentura.check_active_project_for_user() #connection(username, password, 39203)
+    print(status)
+    project_context = tentura.get_project_context()
+    print(project_context)
+    matched_addresses = tentura.get_matched_addresses('Куйбышева, 10')
+    print(matched_addresses)
+    id_address = 2170
+    construction_center = tentura.get_construction_center(2170)
+    print(construction_center)
+    set_ioc_filter = tentura.set_ioc_filter(project_context)
+    print(set_ioc_filter)
+    id_gis_objects = tentura.get_id_gis_objects(project_context, id_address)
+
+    gis_objects = tentura.get_params_binded_objects(id_gis_objects, project_context)
+    for k, v in gis_objects.items():
+        print(k)
+        print(v.get('name'))
+
+    gis_object = gis_objects.get(70252)
+
+    result = tentura.add_csp(id_address, 'Куйбышева, 10')
+    print(result)
+    # result = tentura.add_node(gis_object)
+    # print(result)
+
+
+def specific(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    otu_project_id = 37859  #39421 #39203
+    specification = Specification(username, password, otu_project_id)
+    cookie = specification.authenticate()
+    # manager_id = specification.get_manager_id(cookie)
+    # print(manager_id)
+    # resource_list_sku = specification.get_resource_list_sku(cookie)
+    csp_resources = []
+    csp_resources.append({'Name':"# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 3})
+    csp_resources.append({'Name':'# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 1})
+    csp_resources.append({'Name':'Выезд автомобиля В2В ВОЛС', 'Amount': 1})
+    csp_resources.append({'Name':'Присоединение B2B UTP', 'Amount': 1})
+    prices_sku = specification.get_resource_price_sku(cookie, csp_resources)
+    prices_tao = specification.get_resource_price_tao(cookie, csp_resources)
+    prices = prices_sku | prices_tao
+    print(prices)
+    inventory_object_id = 128874 #2268
+    specification.set_csp(cookie, inventory_object_id, prices, csp_resources)
 
 
 
