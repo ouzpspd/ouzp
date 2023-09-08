@@ -484,23 +484,30 @@ def specific(request):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    otu_project_id = 37859  #39421 #39203
+    otu_project_id = 39421 #37859 #39203
     specification = Specification(username, password, otu_project_id)
     cookie = specification.authenticate()
-    # manager_id = specification.get_manager_id(cookie)
-    # print(manager_id)
-    # resource_list_sku = specification.get_resource_list_sku(cookie)
-    csp_resources = []
-    csp_resources.append({'Name':"# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 3})
-    csp_resources.append({'Name':'# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90})
-    csp_resources.append({'Name':'Выезд автомобиля В2В ВОЛС', 'Amount': 1})
-    csp_resources.append({'Name':'Присоединение B2B UTP', 'Amount': 1})
+
+    csp_resources = [
+        {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
+    ]
+
     # prices_sku = specification.get_resource_price_sku(cookie, csp_resources)
     # prices_tao = specification.get_resource_price_tao(cookie, csp_resources)
     # prices = prices_sku | prices_tao
     # print(prices)
-    inventory_object_id = 128874 #2268
-    specification.set_csp(cookie, inventory_object_id, csp_resources)
+    inventory_object_id = 131124 #128874
+    specification.set_resources(cookie, inventory_object_id, csp_resources, update=False)
+
+    pps_resources = [
+        {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 3},
+        {'Name': '# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90},
+        {'Name': 'Выезд автомобиля В2В ВОЛС', 'Amount': 1},
+        {'Name': 'Присоединение B2B UTP', 'Amount': 1},
+    ]
+
+    inventory_object_id = 2268
+    specification.set_resources(cookie, inventory_object_id, pps_resources, update=False)
 
 
 

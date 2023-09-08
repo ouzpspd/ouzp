@@ -737,15 +737,15 @@ class Specification:
         output = self.__connection(cookie, data)
         return output.get('result', {}).get('SpecificationForSppDetailsGet', {}).get('EntityInfoList')
 
-    def get_exist_obj(self, cookie, inventory_object_id):
-        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"SpecificationForSppDetailsGet","args":{"task_id":8391318}}
-        output = self.__connection(cookie, data)
-        entity_info_list = output.get('result', {}).get('SpecificationForSppDetailsGet', {}).get('EntityInfoList')
-        entity = [i for i in entity_info_list if i.get('InventoryObjectId') == inventory_object_id][0]
-        exist_resource_type_list = entity.get('ResourceTypeList')
-        return exist_resource_type_list
+    # def get_exist_obj(self, cookie, inventory_object_id):
+    #     data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"SpecificationForSppDetailsGet","args":{"task_id":8391318}}
+    #     output = self.__connection(cookie, data)
+    #     entity_info_list = output.get('result', {}).get('SpecificationForSppDetailsGet', {}).get('EntityInfoList')
+    #     entity = [i for i in entity_info_list if i.get('InventoryObjectId') == inventory_object_id][0]
+    #     exist_resource_type_list = entity.get('ResourceTypeList')
+    #     return exist_resource_type_list
 
-    def set_csp(self, cookie, inventory_object_id, resources):
+    def set_resources(self, cookie, inventory_object_id, resources, update=False):
         kwargs = {'inventory_object_id': inventory_object_id}
         manager_id = self.get_manager_id(cookie)
         kwargs.update({'manager_id': manager_id})
@@ -761,23 +761,16 @@ class Specification:
         kwargs.update({'detailed_resources_sku': detailed_resources_sku})
         kwargs.update({'detailed_resources_tao': detailed_resources_tao})
 
-
-
         task_id = self.get_task_id(cookie)
         kwargs.update({'task_id': task_id})
 
         entity_info_list = self.get_entity_info_list(cookie)
-        #entity = [i for i in entity_info_list if i.get('InventoryObjectId') == inventory_object_id][0]
         kwargs.update({'entity_info_list': entity_info_list})
 
-
-
         template = SpecTemplate(**kwargs)
-        #data_csp = template.csp()
+        data = template.spec(update=update)
 
-        data_csp = template.pps()
-
-        spec_j = self.__connection(cookie, data_csp)
+        spec_j = self.__connection(cookie, data)
         #spec_j =1
         print(spec_j)
         return spec_j
