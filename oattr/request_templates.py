@@ -1,5 +1,9 @@
 
 class SpecTemplate:
+    """Класс, формирующий структуру тела запроса для добавления ресурсов в объект спецификации. Класс позволяет
+     формировать запрос как на наполнение объекта спецификации только переданными в него ресурсами, так и добавлять
+      переданные ресурсы к уже существующим ресурсам. В случае, если переданный ресурс совпадает с уже существующим,
+       то будет сохранен ресурс с новыми данными."""
     def __init__(self, resource_list_sku=None, resource_list_tao=None, task_id=None, manager_id=None,
                  entity_info_list=None, inventory_object_id=None, prices=None, resource_type_list=None,
                  detailed_resources_sku=None, detailed_resources_tao=None):
@@ -65,17 +69,18 @@ class SpecTemplate:
                                    })
 
     def __update_changed_entity(self):
-
-        resources_sku = []
-        resources_tao = []
+        """Метод встраивает в структуру запроса существующие ресурсы в объекте спецификации при выборе обновления
+         ресурсов объекта спецификации"""
+        exist_resources_sku = []
+        exist_resources_tao = []
         entity = [i for i in self.entity_info_list if i.get('InventoryObjectId') == self.inventory_object_id][0]
         resources_sku_list = [i.get('ItemList') for i in entity.get('ResourceTypeList') if i.get('Code') == "sku"]
         if resources_sku_list:
-            resources_sku = resources_sku_list[0]
+            exist_resources_sku = resources_sku_list[0]
         resources_tao_list = [i.get('ItemList') for i in entity.get('ResourceTypeList') if i.get('Code') == "labour"]
         if resources_tao_list:
-            resources_tao = resources_tao_list[0]
-        for resource in resources_sku:
+            exist_resources_tao = resources_tao_list[0]
+        for resource in exist_resources_sku:
             resource.update({
                 "ItemList": [], "searchText": "", "resourceList": [], "ResourceType": {}, "ResourceModel": {"Name": ""},
                 "list": [{}, {}, {}, {}], "specObjects":[{"Name":entity.get('Name'),
@@ -83,7 +88,7 @@ class SpecTemplate:
                                                           "InventoryObjectId":entity.get('InventoryObjectId'),
                                                           "objAmount":resource.get('Amount')}],
             })
-        for resource in resources_tao:
+        for resource in exist_resources_tao:
             resource.update({
                 "ItemList": [], "searchText": "", "resourceList": [], "ResourceType": {}, "ResourceModel": {"Name": ""},
                 "list": [{}, {}, {}, {}], "specObjects":[{"Name":entity.get('Name'),
@@ -91,7 +96,7 @@ class SpecTemplate:
                                                           "InventoryObjectId":entity.get('InventoryObjectId'),
                                                           "objAmount":resource.get('Amount')}],
             })
-        if resources_sku:
+        if exist_resources_sku:
             item = [i for i in self.item_list if i.get("Code") == "sku"]
             if not item:
                 self.item_list.append({"ItemList": [],
@@ -107,7 +112,7 @@ class SpecTemplate:
                                        "showItems": True
                                        })
 
-        if resources_tao:
+        if exist_resources_tao:
             item = [i for i in self.item_list if i.get("Code") == "labour"]
             if not item:
                 self.item_list.append({"ItemList": [],
@@ -123,21 +128,20 @@ class SpecTemplate:
                                        "Name": "Трудовые ресурсы ТЭО"
                                        })
 
-
         for i in self.item_list:
-            if i.get('ResourceType') == {"Code": "sku", "Id": 1, "Name": "SKU"} and resources_sku:
-                for res in resources_sku:
+            if i.get('ResourceType') == {"Code": "sku", "Id": 1, "Name": "SKU"} and exist_resources_sku:
+                for exist_res in exist_resources_sku:
                     if not [new_res for new_res in i.get('ItemList') if
-                            new_res.get('Resource').get('Name') == res.get('Resource').get('Name')]:
-                        i.get('ItemList').append(res)
+                            new_res.get('Resource').get('Name') == exist_res.get('Resource').get('Name')]:
+                        i.get('ItemList').append(exist_res)
             if i.get('ResourceType') == {"Id": 10, "Name": "Трудовые ресурсы ТЭО", "Code": "labour",
-                                                    "Mem": "Трудовые ресурсы ТЭО"} and resources_tao:
-                for res in resources_tao:
+                                                    "Mem": "Трудовые ресурсы ТЭО"} and exist_resources_tao:
+                for exist_res in exist_resources_tao:
                     if not [new_res for new_res in i.get('ItemList') if
-                            new_res.get('Resource').get('Name') == res.get('Resource').get('Name')]:
-                        i.get('ItemList').append(res)
+                            new_res.get('Resource').get('Name') == exist_res.get('Resource').get('Name')]:
+                        i.get('ItemList').append(exist_res)
 
-    def spec(self, update=False):
+    def add_resources(self, update=False):
         entity_new = [i for i in self.entity_info_list if i.get('InventoryObjectId') == self.inventory_object_id][0]
         if update:
             self.__update_changed_entity()

@@ -5,10 +5,10 @@ import re
 import random
 from bs4 import BeautifulSoup
 from requests.auth import HTTPBasicAuth
-from django.utils import timezone
+
 
 from oattr.request_templates import SpecTemplate
-from tickets.parsing import get_connection_point, lost_whitespace
+from tickets.parsing import lost_whitespace
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -609,27 +609,21 @@ class Tentura:
 
 
 class Specification:
+    """Класс выполняет заполнение объектов спецификации ресурсами в рабочем проекте"""
     def __init__(self, username, password, otu_project_id):
-        #self.client = requests.session()
         self.username = username
         self.password = password
         self.otu_project_id = otu_project_id
     def authenticate(self):
         """Данный метод выполняет авторизацию sts"""
-        pas = '123456uiowo'
         data_sts = {'UserName': f'CORP\\{self.username}', 'Password': f'{self.password}', 'AuthMethod': 'FormsAuthentication'}
         url = """https://arm.itmh.ru/v3/backend/manager/login/"""
         req = requests.get(url)
-
-        # if req.headers.get('X-Frame-Options') == 'DENY':
-        #     return {'error': 'Нет доступа. Неверный логин/пароль.'}
         sts_url = req.url
         req = requests.post(sts_url, data=data_sts)
         response = req.content.decode('utf-8')
         if 'Enter your user ID' in response:
             return {'error': 'Аутентификация не выполнена. Неверный логин/пароль.'}
-        # print(req.content.decode('utf-8'))
-        # print(req.status_code)
         regex_wresult = """name="wresult" value="(.+TokenResponse>)"""
         result = re.search(regex_wresult, response, flags=re.DOTALL)
         wwresult = result.group(1)
@@ -641,62 +635,63 @@ class Specification:
         req = requests.post(url, data=data_arm)
         cookie = req.request.headers.get('Cookie')
         x_session_id = cookie.split(';')[0].strip('PHPSESSID=')
-        print(cookie)
-        print(x_session_id)
         return {'cookie': cookie, 'x_session_id': x_session_id}
 
     def __connection(self, cookie, data):
+        """Внутренний метод, выполняющий запрос к API"""
         url = 'https://arm.itmh.ru/v3/api'
         headers = {
             'Cookie': cookie.get('cookie'),
             'X-Session-Id': cookie.get('x_session_id')
         }
-
-        req = requests.post(url, verify=False, headers=headers, json=data) #
+        req = requests.post(url, verify=False, headers=headers, json=data)
         if req.status_code == 401:
             return {'error': 'Нет доступа. Неверный логин/пароль.'}
-        print(req.status_code, req.url)
         return req.json()
 
     def get_task_id(self, cookie):
+        """Метод по номеру проекта получает ID задачи"""
         data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"TaskIdByProjectGet","args":{"project_id":self.otu_project_id}}
         output = self.__connection(cookie, data)
         return output.get('result', {}).get('TaskIdByProjectGet')
 
     def is_edited(self, task_id, cookie):
+        """Метод проверяет возможность редактирования спецификации"""
         data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"TaskCanBeEdited","args":{"task_id":task_id}}
         output = self.__connection(cookie, data)
         return output.get('result', {}).get('TaskCanBeEdited')
 
-    def __extract_prices(self, output, resources):
-        resource_prices = output.get('result', {}).get('ResourcePriceInfoList')
-        prices = {}
-        for resource in resources:
-            price = [i.get('UnitPrice') for i in resource_prices if i.get('Name') == resource]
-            if price:
-                prices.update({resource: price[0]})
-        return prices
+    # def __extract_prices(self, output, resources):
+    #     resource_prices = output.get('result', {}).get('ResourcePriceInfoList')
+    #     prices = {}
+    #     for resource in resources:
+    #         price = [i.get('UnitPrice') for i in resource_prices if i.get('Name') == resource]
+    #         if price:
+    #             prices.update({resource: price[0]})
+    #     return prices
 
-    def get_resource_price_sku(self, cookie, resources):
-        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
-                "args":{"resource_type":{"Id":1,"Name":"SKU","Code":"sku","Mem":"Образы SKU"}}}
-        output = self.__connection(cookie, data)
-        prices = self.__extract_prices(output, resources)
-        return prices
+    # def get_resource_price_sku(self, cookie, resources):
+    #     data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
+    #             "args":{"resource_type":{"Id":1,"Name":"SKU","Code":"sku","Mem":"Образы SKU"}}}
+    #     output = self.__connection(cookie, data)
+    #     prices = self.__extract_prices(output, resources)
+    #     return prices
 
-    def get_resource_price_tao(self, cookie, resources):
-        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
-                "args":{
-                    "resource_type":{
-                        "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"
-                    }
-                }}
-        output = self.__connection(cookie, data)
-        prices = self.__extract_prices(output, resources)
-        return prices
+    # def get_resource_price_tao(self, cookie, resources):
+    #     data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
+    #             "args":{
+    #                 "resource_type":{
+    #                     "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"
+    #                 }
+    #             }}
+    #     output = self.__connection(cookie, data)
+    #     prices = self.__extract_prices(output, resources)
+    #     return prices
 
 
     def extract_resource_detail(self, output, resources):
+        """Метод на основе методов get_resource_list_sku и get_resource_list_tao добавляет к ресурсам, которые
+         требуется добавить, параметры, полученные из БД(ID и прочее)"""
         resource_detail = output
         detailed_resources = []
         for resource in resources:
@@ -707,13 +702,14 @@ class Specification:
         return detailed_resources
 
     def get_resource_list_sku(self, cookie):
-        url = 'https://arm.itmh.ru/v3/api'
+        """Метод получает список всех ресурсов СКУ в БД"""
         data = {"app":"ARM","alias":"production","service":"ArmTask","method":"ResourceList",
                 "args":{"resource_type":{"Code":"sku","Id":1,"Name":"SKU"},"term":""}}
         output = self.__connection(cookie, data)
         return output.get('result', {}).get('ResourceList')
 
     def get_resource_list_tao(self, cookie):
+        """Метод получает список всех ресурсов ТЭО в БД"""
         data = {"app":"ARM","alias":"production","service":"ArmTask","method":"ResourceList",
                 "args":{"resource_type":{
                             "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"},
@@ -722,6 +718,7 @@ class Specification:
         return output.get('result', {}).get('ResourceList')
 
     def get_manager_id(self, cookie):
+        """Метод получает ID пользователя, для отправления запроса, от его имени"""
         headers = {
             'Cookie': cookie.get('cookie'),
             'X-Session-Id': cookie.get('x_session_id')
@@ -732,6 +729,7 @@ class Specification:
         return output.get('manager')
 
     def get_entity_info_list(self, cookie):
+        """Метод получает данные о всех объектах спецификации со всеми существующими ресурсами"""
         task_id = self.get_task_id(cookie)
         data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"SpecificationForSppDetailsGet","args":{"task_id":task_id}}
         output = self.__connection(cookie, data)
@@ -746,6 +744,8 @@ class Specification:
     #     return exist_resource_type_list
 
     def set_resources(self, cookie, inventory_object_id, resources, update=False):
+        """Метод на основе полученной информации во вспомогательных методах вызывает формирование шаблона запроса
+         и добавляет ресурсы в объект спецификации"""
         kwargs = {'inventory_object_id': inventory_object_id}
         manager_id = self.get_manager_id(cookie)
         kwargs.update({'manager_id': manager_id})
@@ -767,8 +767,8 @@ class Specification:
         entity_info_list = self.get_entity_info_list(cookie)
         kwargs.update({'entity_info_list': entity_info_list})
 
-        template = SpecTemplate(**kwargs)
-        data = template.spec(update=update)
+        spec_template = SpecTemplate(**kwargs)
+        data = spec_template.add_resources(update=update)
 
         spec_j = self.__connection(cookie, data)
         #spec_j =1
