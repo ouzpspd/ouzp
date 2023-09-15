@@ -1,4 +1,5 @@
 
+
 class SpecTemplate:
     """Класс, формирующий структуру тела запроса для добавления ресурсов в объект спецификации. Класс позволяет
      формировать запрос как на наполнение объекта спецификации только переданными в него ресурсами, так и добавлять
@@ -21,22 +22,26 @@ class SpecTemplate:
 
         if self.detailed_resources_sku:
             for index, resource in enumerate(self.detailed_resources_sku):
+                price = self.prices.get(resource['Name'])
                 del resource['Name']
                 resource.update({"ItemList": [],
                                  "searchText": "",
                                  "resourceList": [],
                                  "ResourceType": {},
                                  "ResourceModel": {"Name": ""},
+                                 "Price": price,
                                  "TotalCost": "0,00"})
 
         if self.detailed_resources_tao:
             for index, resource in enumerate(self.detailed_resources_tao):
+                price = self.prices.get(resource['Name'])
                 del resource['Name']
                 resource.update({"ItemList": [],
                                  "searchText": "",
                                  "resourceList": [],
                                  "ResourceType": {},
                                  "ResourceModel": {"Name": ""},
+                                 "Price": price,
                                  "TotalCost": "0,00"})
 
         self.item_list = []

@@ -4,6 +4,7 @@ from django.views import View
 from django.views.generic import DetailView, FormView
 
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
+from oattr.parsing import get_or_create_otu, Tentura, Specification
 from .models import TR, SPP, OrtrTR
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
@@ -166,6 +167,7 @@ def login_for_service(request):
     else:
         authform = AuthForServiceForm()
     return render(request, 'tickets/login_is.html', {'form': authform})
+
 
 
 def cache_check(func):
@@ -440,17 +442,28 @@ def project_tr(request, dID, tID, trID):
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
-    elif data_sss[2] == 'Не выбран':
-        return redirect('tr_view', dID, tID, trID)
+    # elif data_sss[2] == 'Не выбран':
+    #     return redirect('tr_view', dID, tID, trID)
     else:
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        oattr = ticket_tr.oattr
+        pps = ticket_tr.pps
+        pps = pps.strip()
+        turnoff = ticket_tr.turnoff
+        task_otpm = ticket_tr.ticket_k.task_otpm
+        services_plus_desc = ticket_tr.services
+        des_tr = ticket_tr.ticket_k.des_tr
+
+
         services_plus_desc = data_sss[0]
         counter_line_services = data_sss[1]
-        pps = data_sss[2]
-        turnoff = data_sss[3]
+        #pps = data_sss[2]
+        #turnoff = data_sss[3]
         sreda = data_sss[4]
         tochka = data_sss[5]
         hotspot_points = data_sss[6]
-        oattr = data_sss[7]
+        #oattr = data_sss[7]
         address = data_sss[8]
         client = data_sss[9]
         manager = data_sss[10]
@@ -1285,7 +1298,8 @@ def saved_data(request):
                 'ortrform': ortrform,
                 'not_required_tr': True,
                 'ticket_spp_id': request.session.get('ticket_spp_id'),
-                'dID': request.session.get('dID')
+                'dID': request.session.get('dID'),
+                'ticket_tr': ticket_tr,
             }
 
             tag_service = request.session.get('tag_service')
@@ -1348,6 +1362,7 @@ def saved_data(request):
             'ortrform': ortrform,
             'not_required_tr': True,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
+            'ticket_tr': ticket_tr,
             'dID': request.session.get('dID')
         }
 
@@ -1504,6 +1519,7 @@ def manually_tr(request, dID, tID, trID):
             ticket_tr = TR()
             ticket_tr.ticket_k = ticket_spp
             ticket_tr.ticket_tr = trID
+            ticket_tr.ticket_cp = tID
             ticket_tr.pps = tr_params['Узел подключения клиента']
             ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
             ticket_tr.info_tr = tr_params['Информация для разработки ТР']
@@ -2218,6 +2234,7 @@ def video(request):
         return render(request, 'tickets/video.html', context)
 
 
+
 @cache_check
 def get_resources(request):
     """Данный метод получает от пользователя номер договора. с помощью метода get_contract_id получает ID договора.
@@ -2268,15 +2285,14 @@ def add_spp(request, dID):
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
-    sostav = spp_params.get('Состав Заявки ТР')
-    is_accepted_ortr = True if len([i for i in sostav if 'Техрешение' in next(iter(i))]) > 0 else False
-    if spp_params.get('ТР по упрощенной схеме') is True and not is_accepted_ortr:
-        messages.warning(request, 'Необходимо принять в работу упрощенное ТР в СПП')
-        return redirect('ortr')
 
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
+        if spp_params['ТР по упрощенной схеме'] is True:
+            accept_to_ortr(username, password, dID, spp_params['uID'], spp_params['trDifPeriod'],
+                           spp_params['trCuratorPhone'])
+            spp_params = for_spp_view(username, password, dID)
         version = 1
         ticket_spp = SPP()
         ticket_spp.dID = dID
@@ -2304,6 +2320,10 @@ def add_spp(request, dID):
         if current_spp.process == True:
             messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
             return redirect('ortr')
+        if spp_params['ТР по упрощенной схеме'] is True:
+            accept_to_ortr(username, password, dID, spp_params['uID'], spp_params['trDifPeriod'],
+                           spp_params['trCuratorPhone'])
+            spp_params = for_spp_view(username, password, dID)
         exist_dID = len(SPP.objects.filter(dID=dID))
         version = exist_dID + 1
         ticket_spp = SPP()
@@ -2406,13 +2426,13 @@ def add_tr(request, dID, tID, trID):
         return response
     else:
         ticket_spp_id = request.session['ticket_spp_id']
-        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
         request.session['ticket_tr_id'] = ticket_tr_id
         request.session['technical_solution'] = trID
         return redirect('project_tr', dID, tID, trID)
 
 
-def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
+def add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id):
     """Данный метод получает ID заявки СПП, ID ТР, параметры полученные с распарсенной страницы ТР, ID заявки в АРМ.
     создает ТР в АРМ и добавляет в нее данные. Возвращает ID ТР в АРМ"""
     ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
@@ -2422,6 +2442,7 @@ def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
         ticket_tr = TR()
     ticket_tr.ticket_k = ticket_spp
     ticket_tr.ticket_tr = trID
+    ticket_tr.ticket_cp = tID
     ticket_tr.pps = tr_params['Узел подключения клиента']
     ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
     ticket_tr.info_tr = tr_params['Информация для разработки ТР']
@@ -2429,6 +2450,8 @@ def add_tr_to_db(dID, trID, tr_params, ticket_spp_id):
     ticket_tr.connection_point = tr_params['Точка подключения']
     ticket_tr.oattr = tr_params['Решение ОТПМ']
     ticket_tr.vID = tr_params['vID']
+    ticket_tr.aid = tr_params['aid']
+    ticket_tr.id_otu_project = tr_params['id_otu_project']
     ticket_tr.save()
     ticket_tr_id = ticket_tr.id
     return ticket_tr_id
@@ -3070,7 +3093,7 @@ def add_tr_exist_cl(request, dID, tID, trID):
         return response
     else:
         ticket_spp_id = request.session['ticket_spp_id']
-        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
         spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
         request.session['spplink'] = spplink
         request.session['ticket_tr_id'] = ticket_tr_id
@@ -3094,7 +3117,7 @@ def add_tr_not_required(request, dID, tID, trID):
         return response
     else:
         ticket_spp_id = request.session['ticket_spp_id']
-        ticket_tr_id = add_tr_to_db(dID, trID, tr_params, ticket_spp_id)
+        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
         spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
         request.session['spplink'] = spplink
         ticket_tr = TR.objects.get(id=ticket_tr_id)
@@ -4057,6 +4080,57 @@ class RtkFormView(FormView, CredentialMixin):
         return f'{next(iter(tag_service[index + 1]))}?prev_page={next(iter(tag_service[index]))}&index={index}'
 
 
+class CreateSpecificationView(CredentialMixin, View):
+    """Создание и заполнение спецификации"""
+    @cache_check_view
+    def get(self, request, trID):
+        username, password = super().get_credential(self)
+
+        ticket_tr = TR.objects.filter(ticket_tr=trID).last()
+        id_otu = get_or_create_otu(username, password, trID)
+        tentura = Tentura(username, password, id_otu)
+        status_project = tentura.check_active_project_for_user()
+
+
+        # if status_project.get('error'):
+        #     redirect()
+        result = tentura.get_id_node_by_name({'Name': ticket_tr.pps})
+        if result.get('result'):
+            id_node_tentura = int(result.get('result'))
+
+        project_context = tentura.get_project_context()
+        gis_object = tentura.get_gis_object_by_id_node(id_node_tentura, project_context)
+
+        result = tentura.get_id_address_connection_point(ticket_tr.aid)
+        id_address = result.get('result')
+
+        id_csp_tentura = tentura.add_csp(id_address, ticket_tr.connection_point)
+        print(id_csp_tentura)
+
+        result = tentura.add_node(gis_object)
+        print(result)
+
+        #id_csp_tentura = 131124
+        specification = Specification(username, password, id_otu)
+        cookie = specification.authenticate()
+        csp_resources = [
+            {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
+        ]
+        specification.set_resources(cookie, id_csp_tentura, csp_resources, update=False)
+        pps_resources = [
+            {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
+            {'Name': '# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90},
+            {'Name': 'Выезд автомобиля В2В ВОЛС', 'Amount': 1},
+            {'Name': 'Присоединение B2B UTP', 'Amount': 1},
+            #{'Name': '# [СПП] [Шлюз Cisco 1760 для 24 канального номера]', 'Amount': 1}
+        ]
+
+        #id_node_tentura = 2268
+        specification.set_resources(cookie, id_node_tentura, pps_resources, update=False)
+
+        return redirect(f'https://arm.itmh.ru/v3/spec/{id_otu}')
+
+
 def sppdata(request):
     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
     if request.method == 'POST':
@@ -4087,6 +4161,9 @@ def sppdata(request):
         form = SppDataForm()
         tag_service = request.session['tag_service']
         visible = True if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
+        ticket_tr_id = request.session.get('ticket_tr_id')
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        print(ticket_tr.pps)
         context = {
             'services_plus_desc': request.session.get('services_plus_desc'),
             'client': request.session.get('client'),
@@ -4097,12 +4174,12 @@ def sppdata(request):
             'turnoff': request.session.get('turnoff'),
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID'),
+            'ticket_tr': ticket_tr,
+            'pps': request.session.get('pps'),
             'form': form,
             'visible': visible
         }
         return render(request, 'tickets/sppdata.html', context)
-
-
 
 
 def static_formset(request):

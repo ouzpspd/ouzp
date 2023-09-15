@@ -1,15 +1,6 @@
 {% extends 'base.html' %}
 
-{% block nav_active %}
-{% load custom_filters %}
 
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link active" aria-current="page" href="{% url 'otpm' %}">Пул задач</a>
-</li>
-{% endblock %}
 
 {% block content %}
 
@@ -18,7 +9,11 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb align-items-center justify-content-center">
+                  {% if department == 'otpm'%}
                   <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Поиск адресов ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.address_cp}}</h6></li>
+                  {% else %}
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Поиск адресов ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.connection_point}}</h6></li>
+                  {% endif %}
               </ol>
             </nav>
         </div>
@@ -31,7 +26,7 @@
 <div class="card mb-2">
     <h5 class="card-header">Параметры поиска</h5>
   <div class="card-body">
-<form action="{% url 'addresses' ticket_tr.ticket_tr %}" method="get" id="otpmForm">
+<form action="{% url 'addresses' department ticket_tr.ticket_tr %}" method="get" id="otpmForm">
     <div class="container">
         <div class="row">
             <div class="col-4">
@@ -96,8 +91,8 @@
             <td>{{address.3}}</td>
             <td>
             {% if address.3 %}
-                <a class="btn btn-outline-success custom" href="{% url 'select_node' ticket_tr.ticket_tr  address.4 %}"
-                   role="button">Выбрать</a>
+                <a class="btn btn-outline-success custom" href="{% url 'select_node' department ticket_tr.ticket_tr  address.4 %}"
+                   role="button">Перейти</a>
             {% endif %}
             </td>
 

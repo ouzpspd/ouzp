@@ -39,6 +39,22 @@
         <td class="table-light" style="width: 75%">{{i}}</td>
     </tr>
     {% endfor %}
+      <tr>
+        <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+          {% if ticket_tr.ticket_k.simplified_tr %}
+              {% if ticket_tr.pps == 'Не выбран' %}
+                <td class="table-light" style="width: 75%; color: red">Не выбран
+                    <a class="btn btn-outline-danger" href="{% url 'addresses' 'ortr' ticket_tr.ticket_tr %}">Выбрать</a></td>
+                {% else %}
+                <td class="table-light" style="width: 75%">{{ticket_tr.pps}} <a class="btn btn-outline-success" href="{% url 'addresses' 'ortr' ticket_tr.ticket_tr %}">Изменить</a></td>
+                {% endif %}
+          {% else %}
+            <td class="table-light" style="width: 75%">{{ticket_tr.pps}}</td>
+          {% endif %}
+        </tr>
+    <tr>
+
+    </tr>
   </tbody>
 </table>
 

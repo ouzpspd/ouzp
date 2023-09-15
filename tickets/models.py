@@ -37,6 +37,7 @@ class SPP(models.Model):
 class TR(models.Model):
     ticket_k = models.ForeignKey(SPP, on_delete=models.CASCADE, related_name='children')
     ticket_tr = models.CharField(max_length=100, verbose_name='ТР')
+    ticket_cp = models.IntegerField(default=0, verbose_name='ID Точки подключения')
     pps = models.CharField(max_length=200, verbose_name='ППС')
     turnoff = models.BooleanField(default=False, verbose_name='Отключение')
     info_tr = models.TextField(verbose_name='Инфо для разработки', blank=True, null=True)
@@ -45,6 +46,8 @@ class TR(models.Model):
     connection_point = models.CharField(default='Неизвестно', max_length=400, verbose_name='Точка подключения')
     kad = models.CharField(max_length=400, verbose_name='КАД')
     vID = models.IntegerField()
+    aid = models.IntegerField(default=0, verbose_name='ID адреса точки подключения')
+    id_otu_project = models.IntegerField(default=0, verbose_name='ID проекта ОТУ')
 
     def __str__(self):
         return self.ticket_tr

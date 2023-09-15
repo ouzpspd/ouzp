@@ -28,7 +28,7 @@ def ckb_parse(login, password):
     return templates
 
 
-def dispatch(login, password, trID):
+def get_or_create_otu(login, password, trID):
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_ajax.php'
     data = {'action': 'GetOtu', 'trID': f'{trID}'}
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
@@ -383,49 +383,40 @@ def send_spp_check(login, password, dID, tID, trID):
     req_check = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     return req_check
 
-def send_spp(login, password, ticket_tr):
+def send_spp(login, password, ticket_tr, department):
     dID = ticket_tr.ticket_k.dID
     tID = ticket_tr.ticket_cp
     trID = ticket_tr.ticket_tr
     url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
-    print('dID')
-    print(dID)
-    print('tID')
-    print(tID)
-    print('trID')
-    print(trID)
     vID = ticket_tr.vID
-    print('vID')
-    print(vID)
-    # trTurnOff = None  # для отключения
-    # trTurnOffInput = None
-    # data = {'FileLink': 'файл', 'action': 'saveVariant',
-    #         'vID': vID, 'trID': trID}
-    # headers
-    # 'Content-Type': multipart/form-data; boundary
-    tr_without_os = 1 if ticket_tr.tr_without_os else 0
-    tr_complex_access = 1 if ticket_tr.tr_complex_access else 0
-    tr_complex_equip = 1 if ticket_tr.tr_complex_equip else 0
-    tr_turn_off = 1 if ticket_tr.tr_turn_off else 0
-    tr_complex_access_input = ticket_tr.tr_complex_access_input
-    tr_complex_equip_input = ticket_tr.tr_complex_equip_input
-    tr_turn_off_input = ticket_tr.tr_turn_off_input
-    trOTPM_Resolution = ticket_tr.oattr
-    print('tr_complex_access')
-    print(tr_complex_access)
-    print('tr_complex_access_input')
-    print(tr_complex_access_input)
-    data = {'trOTPM_Resolution': trOTPM_Resolution,
-            'trWithoutOS': tr_without_os,
-            'trComplexAccess': tr_complex_access,
-            'trComplexEquip': tr_complex_equip,
-            'trTurnOff': tr_turn_off,
-            'trComplexAccessInput': tr_complex_access_input,
-            'trComplexEquipInput': tr_complex_equip_input,
-            'trTurnOffInput': tr_turn_off_input,
+    if department == 'ortr':
+        data = {'action': 'saveVariant', 'vID': vID}
+    else:
+        # trTurnOff = None  # для отключения
+        # trTurnOffInput = None
+        # data = {'FileLink': 'файл', 'action': 'saveVariant',
+        #         'vID': vID, 'trID': trID}
+        # headers
+        # 'Content-Type': multipart/form-data; boundary
+        tr_without_os = 1 if ticket_tr.tr_without_os else 0
+        tr_complex_access = 1 if ticket_tr.tr_complex_access else 0
+        tr_complex_equip = 1 if ticket_tr.tr_complex_equip else 0
+        tr_turn_off = 1 if ticket_tr.tr_turn_off else 0
+        tr_complex_access_input = ticket_tr.tr_complex_access_input
+        tr_complex_equip_input = ticket_tr.tr_complex_equip_input
+        tr_turn_off_input = ticket_tr.tr_turn_off_input
+        trOTPM_Resolution = ticket_tr.oattr
+        data = {'trOTPM_Resolution': trOTPM_Resolution,
+                'trWithoutOS': tr_without_os,
+                'trComplexAccess': tr_complex_access,
+                'trComplexEquip': tr_complex_equip,
+                'trTurnOff': tr_turn_off,
+                'trComplexAccessInput': tr_complex_access_input,
+                'trComplexEquipInput': tr_complex_equip_input,
+                'trTurnOffInput': tr_turn_off_input,
 
-            'action': 'saveVariant',
-            'vID': vID}
+                'action': 'saveVariant',
+                'vID': vID}
     requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
 
@@ -543,6 +534,45 @@ class Tentura:
             #query.append(subquery)
         return subquery
 
+    def get_gis_object_by_id_node(self, id_node, project_context):
+        self.set_ioc_filter(project_context)
+        data = {"id": 5555, "method": "get_object_bounding_box", "params": [id_node, project_context]}
+        output = self.__connection(data)
+        result = output.get('result')
+        id_gis_object = json.loads(result).get('ris_id')
+        binded_objects = self.__get_binded_objects(id_gis_object, project_context)
+        gis_object = {'name': binded_objects.get('name_with_name_attribute'),
+                        'id_binded_object': binded_objects.get('id'),
+                        'project_registers': binded_objects.get('projectRegisters'),
+                        'plan_registers': binded_objects.get('planRegisters'),
+                        'status_registers': binded_objects.get('statusRegisters')}
+
+        print(gis_object['name'])
+        return gis_object
+
+    def get_id_node_by_name(self, data):
+        url = 'https://tas.corp.itmh.ru/Node/Search'
+        req = self.client.post(url, verify=False, auth=HTTPBasicAuth(self.username, self.password), data=data)
+        if req.status_code == 401:
+            return {'error': 'Нет доступа. Неверный логин/пароль.'}
+        soup = BeautifulSoup(req.json().get('data'), "html.parser")
+        search = soup.find_all('a')
+        id_nodes_tentura = [i.text for i in search if i.get('href') and 'https://tentura' in i.get('href')]
+        id_node_tentura = id_nodes_tentura[0] if id_nodes_tentura else None
+        return {'result': id_node_tentura}
+
+    def get_id_address_connection_point(self, aid):
+        url = f'https://sss.corp.itmh.ru/building/address_main.php?aID={aid}'
+        req = self.client.get(url, verify=False, auth=HTTPBasicAuth(self.username, self.password))
+        if req.status_code == 401:
+            return {'error': 'Нет доступа. Неверный логин/пароль.'}
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('a')
+        address_link = [i.get('href') for i in search if i.text and i.text == 'адрес в Тентуре'][0]
+        match = re.search(r'building_id=(\d+)', address_link)
+        id_address = match.group(1) if match else None
+        return {'result': id_address}
+
     def add_node(self, gis_object):
         status_registers = gis_object.get('status_registers')
         project_registers = gis_object.get('project_registers')
@@ -605,7 +635,8 @@ class Tentura:
             }]
         }
         output = self.__connection(data)
-        return output.get('result')
+        result = output.get('result')
+        return json.loads(result).get('inventoryObject').get('id')
 
 
 class Specification:
@@ -661,32 +692,32 @@ class Specification:
         output = self.__connection(cookie, data)
         return output.get('result', {}).get('TaskCanBeEdited')
 
-    # def __extract_prices(self, output, resources):
-    #     resource_prices = output.get('result', {}).get('ResourcePriceInfoList')
-    #     prices = {}
-    #     for resource in resources:
-    #         price = [i.get('UnitPrice') for i in resource_prices if i.get('Name') == resource]
-    #         if price:
-    #             prices.update({resource: price[0]})
-    #     return prices
+    def __extract_prices(self, output, resources):
+        resource_prices = output.get('result', {}).get('ResourcePriceInfoList')
+        prices = {}
+        for resource in resources:
+            price = [i.get('UnitPrice') for i in resource_prices if i.get('Name') == resource.get('Name')]
+            if price:
+                prices.update({resource.get('Name'): price[0]})
+        return prices
 
-    # def get_resource_price_sku(self, cookie, resources):
-    #     data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
-    #             "args":{"resource_type":{"Id":1,"Name":"SKU","Code":"sku","Mem":"Образы SKU"}}}
-    #     output = self.__connection(cookie, data)
-    #     prices = self.__extract_prices(output, resources)
-    #     return prices
+    def get_resource_price_sku(self, cookie, resources):
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
+                "args":{"resource_type":{"Id":1,"Name":"SKU","Code":"sku","Mem":"Образы SKU"}}}
+        output = self.__connection(cookie, data)
+        prices = self.__extract_prices(output, resources)
+        return prices
 
-    # def get_resource_price_tao(self, cookie, resources):
-    #     data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
-    #             "args":{
-    #                 "resource_type":{
-    #                     "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"
-    #                 }
-    #             }}
-    #     output = self.__connection(cookie, data)
-    #     prices = self.__extract_prices(output, resources)
-    #     return prices
+    def get_resource_price_tao(self, cookie, resources):
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
+                "args":{
+                    "resource_type":{
+                        "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"
+                    }
+                }}
+        output = self.__connection(cookie, data)
+        prices = self.__extract_prices(output, resources)
+        return prices
 
 
     def extract_resource_detail(self, output, resources):
@@ -761,6 +792,11 @@ class Specification:
         kwargs.update({'detailed_resources_sku': detailed_resources_sku})
         kwargs.update({'detailed_resources_tao': detailed_resources_tao})
 
+        prices_sku = self.get_resource_price_sku(cookie, resources)
+        prices_tao = self.get_resource_price_tao(cookie, resources)
+        prices = prices_sku | prices_tao
+        kwargs.update({'prices': prices})
+
         task_id = self.get_task_id(cookie)
         kwargs.update({'task_id': task_id})
 
@@ -769,10 +805,8 @@ class Specification:
 
         spec_template = SpecTemplate(**kwargs)
         data = spec_template.add_resources(update=update)
-
         spec_j = self.__connection(cookie, data)
         #spec_j =1
-        print(spec_j)
         return spec_j
 
 
