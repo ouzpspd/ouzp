@@ -120,6 +120,39 @@ def get_selected_readable_service(readable_services, selected_ono):
     return desc_service, name_passage_service
 
 
+def append_change_log_shpd(session):
+    tag_service = session.get('tag_service')
+    type_pass = session.get('type_pass')
+    if 'Перенос, СПД' in type_pass:
+        type_passage = session.get('type_passage')
+        if type_passage == 'Перенос сервиса в новую точку' or (
+                type_passage == 'Перевод на гигабит' and not any([session.get('logic_change_csw'), session.get('logic_change_gi_csw')])):
+            selected_ono = session.get('selected_ono')
+            selected_service = selected_ono[0][-3]
+            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
+                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                            '125 -', '131 -', '107 -', '109 -', '483 -']
+            if any(serv in selected_service for serv in service_shpd):
+                tag_service.append({'change_log_shpd': None})
+                session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
+        else:
+            readable_services = session.get('readable_services')
+            _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
+            if service_shpd_change:
+                session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                tag_service.append({'change_log_shpd': None})
+
+    elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and session.get('logic_csw') == True:
+        readable_services = session.get('readable_services')
+        _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
+                                                                    'Новая подсеть /32')
+        if service_shpd_change:
+            session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+            tag_service.append({'change_log_shpd': None})
+    return tag_service
+
+
+
 def analyzer_vars(stroka, static_vars, hidden_vars):
     """Данный метод принимает строковую переменную, содержащую шаблон услуги со страницы
     Типовые блоки технического решения. Ищет в шаблоне блоки <> и сравнивает с аналогичными переменными из СПП.

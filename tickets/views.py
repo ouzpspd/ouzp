@@ -436,7 +436,8 @@ def project_tr(request, dID, tID, trID):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    data_sss = parse_tr(username, password, spplink)
+    #data_sss = parse_tr(username, password, spplink)
+    data_sss = ['1']
     if data_sss[0] == 'Access denied':
         messages.warning(request, 'Нет доступа в ИС Холдинга')
         response = redirect('login_for_service')
@@ -454,22 +455,33 @@ def project_tr(request, dID, tID, trID):
         task_otpm = ticket_tr.ticket_k.task_otpm
         services_plus_desc = ticket_tr.services
         des_tr = ticket_tr.ticket_k.des_tr
+        address = ticket_tr.connection_point
+        client = ticket_tr.ticket_k.client
+        manager = ticket_tr.ticket_k.manager
+        technolog = ticket_tr.ticket_k.technolog
+        task_otpm = ticket_tr.ticket_k.task_otpm
+        tochka = [str(dID), str(tID)]
+        counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(services_plus_desc)
+        request.session['services_plus_desc'] = services_plus_desc  # здесь сервисы модифицированы со знаками |
+        sreda = get_oattr_sreda(oattr) if oattr else '1'
 
+        tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
+        tag_service.insert(0, {f'sppdata/{dID}/{tID}/{trID}/?cp=new': None})
 
-        services_plus_desc = data_sss[0]
-        counter_line_services = data_sss[1]
+        #services_plus_desc = data_sss[0]
+        #counter_line_services = data_sss[1]
         #pps = data_sss[2]
         #turnoff = data_sss[3]
-        sreda = data_sss[4]
-        tochka = data_sss[5]
-        hotspot_points = data_sss[6]
+        #sreda = data_sss[4]
+        #tochka = data_sss[5]
+        #hotspot_points = data_sss[6]
         #oattr = data_sss[7]
-        address = data_sss[8]
-        client = data_sss[9]
-        manager = data_sss[10]
-        technolog = data_sss[11]
-        task_otpm = data_sss[12]
-        request.session['services_plus_desc'] = services_plus_desc
+        #address = data_sss[8]
+        # client = data_sss[9]
+        # manager = data_sss[10]
+        # technolog = data_sss[11]
+        # task_otpm = data_sss[12]
+
         request.session['counter_line_services'] = counter_line_services
         request.session['counter_line_services_initial'] = counter_line_services
         request.session['pps'] = pps
@@ -486,25 +498,34 @@ def project_tr(request, dID, tID, trID):
         request.session['tID'] = tID
         request.session['dID'] = dID
         request.session['trID'] = trID
-        tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
-        tag_service.insert(0, {'sppdata': None})
+
 
 
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
         request.session['premium_plus'] = premium_plus
+        spd = request.session['spd']
         if counter_line_services == 0:
             tag_service.append({'data': None})
         else:
-            if sreda == '1':
-                tag_service.append({'copper': None})
-            elif sreda == '2' or sreda == '4':
-                tag_service.append({'vols': None})
-            elif sreda == '3':
-                tag_service.append({'wireless': None})
-        request.session['tag_service'] = tag_service
-        return redirect(next(iter(tag_service[0])))
+            if spd == 'РТК':
+                if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
+                    tag_service.pop()
+                tag_service.append({'rtk': None})
+            elif spd == 'Комтехцентр':
+                if tag_service[-1] == {'rtk': None}:
+                    tag_service.pop()
+                #sreda = request.session['sreda']
+                if sreda == '1':
+                    tag_service.append({'copper': None})
+                elif sreda == '2' or sreda == '4':
+                    tag_service.append({'vols': None})
+                elif sreda == '3':
+                    tag_service.append({'wireless': None})
 
+        request.session['tag_service'] = tag_service
+        response = get_response_with_prev_get_params(request)
+        return response
 
 @cache_check
 def copper(request):
@@ -537,28 +558,29 @@ def copper(request):
                 except KeyError:
                     pass
                 else:
-                    selected_ono = request.session['selected_ono']
-                    if 'Перенос, СПД' in type_pass:
-                        type_passage = request.session['type_passage']
-                        if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
-                            selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -', '57 -', '60 -', '62 -', '64 -', '68 -', '67 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
-                            if any(serv in selected_service for serv in service_shpd):
-                                tag_service.append({'change_log_shpd': None})
-                                request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
-                        else:
-                            readable_services = request.session['readable_services']
-                            _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            if service_shpd_change:
-                                request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                                tag_service.append({'change_log_shpd': None})
-                    elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
-                        readable_services = request.session['readable_services']
-                        _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
-                                                                                    'Новая подсеть /32')
-                        if service_shpd_change:
-                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                            tag_service.append({'change_log_shpd': None})
+                    tag_service = append_change_log_shpd(request.session)
+                    # selected_ono = request.session['selected_ono']
+                    # if 'Перенос, СПД' in type_pass:
+                    #     type_passage = request.session['type_passage']
+                    #     if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
+                    #         selected_service = selected_ono[0][-3]
+                    #         service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -', '57 -', '60 -', '62 -', '64 -', '68 -', '67 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
+                    #         if any(serv in selected_service for serv in service_shpd):
+                    #             tag_service.append({'change_log_shpd': None})
+                    #             request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
+                    #     else:
+                    #         readable_services = request.session['readable_services']
+                    #         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
+                    #         if service_shpd_change:
+                    #             request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                    #             tag_service.append({'change_log_shpd': None})
+                    # elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
+                    #     readable_services = request.session['readable_services']
+                    #     _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
+                    #                                                                 'Новая подсеть /32')
+                    #     if service_shpd_change:
+                    #         request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                    #         tag_service.append({'change_log_shpd': None})
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
@@ -681,31 +703,32 @@ def vols(request):
                 except KeyError:
                     pass
                 else:
-                    selected_ono = request.session['selected_ono']
-                    if 'Перенос, СПД' in type_pass:
-                        type_passage = request.session['type_passage']
-                        if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw, logic_replace_csw])):
-                            selected_ono = request.session['selected_ono']
-                            selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
-                                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
-                                            '125 -', '131 -', '107 -', '109 -', '483 -']
-                            if any(serv in selected_service for serv in service_shpd):
-                                tag_service.append({'change_log_shpd': None})
-                                request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
-                        else:
-                            readable_services = request.session['readable_services']
-                            _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            if service_shpd_change:
-                                request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                                tag_service.append({'change_log_shpd': None})
-                    elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
-                        readable_services = request.session['readable_services']
-                        _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
-                                                                                    'Новая подсеть /32')
-                        if service_shpd_change:
-                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                            tag_service.append({'change_log_shpd': None})
+                    tag_service = append_change_log_shpd(request.session)
+                    # selected_ono = request.session['selected_ono']
+                    # if 'Перенос, СПД' in type_pass:
+                    #     type_passage = request.session['type_passage']
+                    #     if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw, logic_replace_csw])):
+                    #         selected_ono = request.session['selected_ono']
+                    #         selected_service = selected_ono[0][-3]
+                    #         service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
+                    #                         '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                    #                         '125 -', '131 -', '107 -', '109 -', '483 -']
+                    #         if any(serv in selected_service for serv in service_shpd):
+                    #             tag_service.append({'change_log_shpd': None})
+                    #             request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
+                    #     else:
+                    #         readable_services = request.session['readable_services']
+                    #         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
+                    #         if service_shpd_change:
+                    #             request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                    #             tag_service.append({'change_log_shpd': None})
+                    # elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
+                    #     readable_services = request.session['readable_services']
+                    #     _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
+                    #                                                                 'Новая подсеть /32')
+                    #     if service_shpd_change:
+                    #         request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                    #         tag_service.append({'change_log_shpd': None})
 
                 if logic_csw == True:
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
@@ -765,11 +788,13 @@ def vols(request):
         pps = request.session['pps']
         services_plus_desc = request.session['services_plus_desc']
         sreda = request.session['sreda']
-        spplink = request.session['spplink']
-        regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
-        match_link = re.search(regex_link, spplink)
-        tID = match_link.group(2)
-        trID = match_link.group(3)
+        # spplink = request.session['spplink']
+        # regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
+        # match_link = re.search(regex_link, spplink)
+        # tID = match_link.group(2)
+        # trID = match_link.group(3)
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
         prev_page, index = backward_page(request)
         tag_service = request.session['tag_service']
 
@@ -818,8 +843,9 @@ def vols(request):
             'sreda': sreda,
             'turnoff': request.session.get('turnoff'),
             'dID': request.session.get('dID'),
-            'tID': tID,
-            'trID': trID,
+            'ticket_tr': ticket_tr,
+            # 'tID': tID,
+            # 'trID': trID,
             'volsform': volsform,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': request.session.get('ticket_spp_id')
@@ -862,31 +888,32 @@ def wireless(request):
                 except KeyError:
                     pass
                 else:
-                    if 'Перенос, СПД' in type_pass:
-                        type_passage = request.session['type_passage']
-                        if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
-                            selected_ono = request.session['selected_ono']
-                            selected_service = selected_ono[0][-3]
-                            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
-                                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
-                                            '125 -', '131 -', '107 -', '109 -', '483 -']
-                            if any(serv in selected_service for serv in service_shpd):
-                                tag_service.append({'change_log_shpd': None})
-                                request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
-                        else:
-                            readable_services = request.session['readable_services']
-                            _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-                            if service_shpd_change:
-                                request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                                tag_service.append({'change_log_shpd': None})
-
-                    elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
-                        readable_services = request.session['readable_services']
-                        _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
-                                                                                    'Новая подсеть /32')
-                        if service_shpd_change:
-                            request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                            tag_service.append({'change_log_shpd': None})
+                    tag_service = append_change_log_shpd(request.session)
+                    # if 'Перенос, СПД' in type_pass:
+                    #     type_passage = request.session['type_passage']
+                    #     if type_passage == 'Перенос сервиса в новую точку' or (type_passage == 'Перевод на гигабит' and not any([logic_change_csw, logic_change_gi_csw])):
+                    #         selected_ono = request.session['selected_ono']
+                    #         selected_service = selected_ono[0][-3]
+                    #         service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
+                    #                         '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                    #                         '125 -', '131 -', '107 -', '109 -', '483 -']
+                    #         if any(serv in selected_service for serv in service_shpd):
+                    #             tag_service.append({'change_log_shpd': None})
+                    #             request.session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
+                    #     else:
+                    #         readable_services = request.session['readable_services']
+                    #         _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
+                    #         if service_shpd_change:
+                    #             request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                    #             tag_service.append({'change_log_shpd': None})
+                    #
+                    # elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and logic_csw == True:
+                    #     readable_services = request.session['readable_services']
+                    #     _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
+                    #                                                                 'Новая подсеть /32')
+                    #     if service_shpd_change:
+                    #         request.session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                    #         tag_service.append({'change_log_shpd': None})
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
@@ -1056,7 +1083,7 @@ def data(request):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    spp_link = request.session['spplink']
+    #spp_link = request.session['spplink']
     templates = ckb_parse(username, password)
     if request.session.get('rtk_form', {}).get('type_pm') == 'FVNO FTTH':
         msan_exist = ckb_parse_msan_exist(username, password, request.session.get('rtk_form').get('switch_ip'))
@@ -1615,12 +1642,16 @@ def hotspot(request):
         tag_service = request.session['tag_service']
         service_name = 'hotspot'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
         context = {
             'premium_plus': premium_plus,
             'hotspotform': hotspotform,
             'service_hotspot': service,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -1779,6 +1810,10 @@ def phone(request):
         tag_service = request.session['tag_service']
         service_name = 'phone'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         if request.GET.get('next_page'):
             clear_session_params(
                 request,
@@ -1810,7 +1845,7 @@ def phone(request):
             'vats': vats,
             'oattr': oattr,
             'phoneform': phoneform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -1867,13 +1902,17 @@ def local(request):
         tag_service = request.session['tag_service']
         service_name = 'local'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         request.session['current_service'] = service
         request.session['current_index_local'] = index + 1
         localform = LocalForm()
         context = {
             'service_lvs': service,
             'localform': localform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -1895,11 +1934,15 @@ def sks(request):
         tag_service = request.session['tag_service']
         service_name = 'sks'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         sksform = SksForm()
         context = {
             'service_lvs': service,
             'sksform': sksform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -1921,11 +1964,15 @@ def lvs(request):
         tag_service = request.session['tag_service']
         service_name = 'lvs'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         lvsform = LvsForm()
         context = {
             'service_lvs': service,
             'lvsform': lvsform,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -1984,13 +2031,17 @@ def itv(request):
         tag_service = request.session['tag_service']
         service_name = 'itv'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         request.session['current_service'] = service
 
         itvform = ItvForm(initial={'type_itv': 'novl'})
         return render(request, 'tickets/itv.html', {
             'itvform': itvform,
             'service_itv': service,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         })
@@ -2026,6 +2077,10 @@ def cks(request):
         password = credent['password']
         service_name = 'cks'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         request.session['current_service'] = service
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -2050,7 +2105,7 @@ def cks(request):
                     'services_cks': service,
                     'trunk_turnoff_on': trunk_turnoff_on,
                     'trunk_turnoff_off': trunk_turnoff_off,
-                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                    'back_link': back_link,
                     'ticket_spp_id': request.session.get('ticket_spp_id'),
                     'dID': request.session.get('dID')
                 })
@@ -2062,7 +2117,7 @@ def cks(request):
                     'services_cks': service,
                     'trunk_turnoff_on': trunk_turnoff_on,
                     'trunk_turnoff_off': trunk_turnoff_off,
-                    'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                    'back_link': back_link,
                     'ticket_spp_id': request.session.get('ticket_spp_id'),
                     'dID': request.session.get('dID')
                 })
@@ -2093,13 +2148,17 @@ def shpd(request):
         tag_service = request.session['tag_service']
         service_name = 'shpd'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         dID = request.session['dID']
         ticket_spp_id = request.session['ticket_spp_id']
         spd = request.session['spd']
         request.session['current_service'] = service
-        if 'Интернет, DHCP' in service and spd == 'РТК':
-            messages.warning(request, 'Интернет, DHCP через РТК не предоставляется.')
-            return redirect('spp_view_save', dID, ticket_spp_id)
+        # if 'Интернет, DHCP' in service and spd == 'РТК':
+        #     messages.warning(request, 'Интернет, DHCP через РТК не предоставляется.')
+        #     return redirect('spp_view_save', dID, ticket_spp_id)
 
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
@@ -2108,7 +2167,7 @@ def shpd(request):
             'services_shpd': service,
             'trunk_turnoff_on': trunk_turnoff_on,
             'trunk_turnoff_off': trunk_turnoff_off,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -2141,6 +2200,10 @@ def portvk(request):
         tag_service = request.session['tag_service']
         service_name = 'portvk'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         request.session['current_service'] = service
 
         types_change_service = request.session.get('types_change_service')
@@ -2150,7 +2213,7 @@ def portvk(request):
                    'services_vk': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
                    'trunk_turnoff_off': trunk_turnoff_off,
-                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                   'back_link': back_link,
                    'ticket_spp_id': request.session.get('ticket_spp_id'),
                    'dID': request.session.get('dID')
                    }
@@ -2182,6 +2245,10 @@ def portvm(request):
         tag_service = request.session['tag_service']
         service_name = 'portvm'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         request.session['current_service'] = service
         types_change_service = request.session.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -2190,7 +2257,7 @@ def portvm(request):
                    'services_vm': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
                    'trunk_turnoff_off': trunk_turnoff_off,
-                   'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+                   'back_link': back_link,
                    'ticket_spp_id': request.session.get('ticket_spp_id'),
                    'dID': request.session.get('dID')
                    }
@@ -2220,6 +2287,10 @@ def video(request):
         tag_service = request.session['tag_service']
         service_name = 'video'
         request, service, prev_page, index = backward_page_service(request, service_name)
+        if '?' in next(iter(tag_service[index])):
+            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
+        else:
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         request.session['current_service'] = service
         task_otpm = request.session['task_otpm']
         videoform = VideoForm()
@@ -2227,7 +2298,7 @@ def video(request):
             'service_video': service,
             'videoform': videoform,
             'task_otpm': task_otpm,
-            'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
+            'back_link': back_link,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
         }
@@ -2702,6 +2773,8 @@ def job_formset(request):
             request.session['change_job_services'] = change_job_services
             return redirect('project_tr_exist_cl')
     else:
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
         formset = ListJobsFormSet()
         context = {
             'head': head,
@@ -2710,7 +2783,8 @@ def job_formset(request):
             'services': services,
             'formset': formset,
             'ticket_spp_id': request.session.get('ticket_spp_id'),
-            'dID': request.session.get('dID')
+            'dID': request.session.get('dID'),
+            'ticket_tr': ticket_tr
         }
         return render(request, 'tickets/job_formset.html', context)
 
@@ -3163,21 +3237,22 @@ def project_tr_exist_cl(request):
     request.session['pps'] = pps
     if oattr:
         request.session['oattr'] = oattr
-        wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
-        ftth_temp = ['Alpha', 'ОК-1']
-        vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
-        if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
-            sreda = '3'
-        elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
-            sreda = '4'
-        elif any(vo in oattr for vo in vols_temp):
-            sreda = '2'
-        else:
-            sreda = '1'
+        sreda = get_oattr_sreda(oattr)
+        # wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+        # ftth_temp = ['Alpha', 'ОК-1']
+        # vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+        # if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+        #     sreda = '3'
+        # elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+        #     sreda = '4'
+        # elif any(vo in oattr for vo in vols_temp):
+        #     sreda = '2'
+        # else:
+        #     sreda = '1'
     else:
-        request.session['oattr'] = None
+        #request.session['oattr'] = None
         sreda = '1'
-        request.session['sreda'] = '1'
+        #request.session['sreda'] = '1'
     new_job_services = request.session['new_job_services']
     pass_job_services = request.session['pass_job_services']
     change_job_services = request.session['change_job_services']
@@ -3202,15 +3277,34 @@ def project_tr_exist_cl(request):
                 tag_service.insert(1, tag)
                 tag_service.insert(1, {'change_serv': None})
 
+        # if counter_line_services == 0:
+        #     tag_service.append({'data': None})
+        # else:
+        #     if sreda == '1':
+        #         tag_service.append({'copper': None})
+        #     elif sreda == '2' or sreda == '4':
+        #         tag_service.append({'vols': None})
+        #     elif sreda == '3':
+        #         tag_service.append({'wireless': None})
+
+        spd = request.session['spd']
         if counter_line_services == 0:
             tag_service.append({'data': None})
         else:
-            if sreda == '1':
-                tag_service.append({'copper': None})
-            elif sreda == '2' or sreda == '4':
-                tag_service.append({'vols': None})
-            elif sreda == '3':
-                tag_service.append({'wireless': None})
+            if spd == 'РТК':
+                if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
+                    tag_service.pop()
+                tag_service.append({'rtk': None})
+            elif spd == 'Комтехцентр':
+                if tag_service[-1] == {'rtk': None}:
+                    tag_service.pop()
+
+                if sreda == '1':
+                    tag_service.append({'copper': None})
+                elif sreda == '2' or sreda == '4':
+                    tag_service.append({'vols': None})
+                elif sreda == '3':
+                    tag_service.append({'wireless': None})
 
         request.session['hotspot_points'] = hotspot_points
         request.session['hotspot_users'] = hotspot_users
@@ -3233,10 +3327,10 @@ def project_tr_exist_cl(request):
     request.session['sreda'] = sreda
     request.session['type_pass'] = type_pass
     request.session['tag_service'] = tag_service
-    tag_service_index = []
-    index = 0
-    tag_service_index.append(index)
-    request.session['tag_service_index'] = tag_service_index
+    # tag_service_index = []
+    # index = 0
+    # tag_service_index.append(index)
+    # request.session['tag_service_index'] = tag_service_index
     response = get_response_with_prev_get_params(request)
     return response
 
@@ -3394,7 +3488,7 @@ def change_log_shpd(request):
             return response
     else:
         head = request.session['head']
-        kad = request.session['kad']
+        kad = request.session['kad'] if request.session['spd'] != 'РТК' else 'РТК'
         subnet_for_change_log_shpd = request.session['subnet_for_change_log_shpd']
         changelogshpdform = ChangeLogShpdForm()
         if request.session.get('pass_job_services'):
@@ -3507,12 +3601,29 @@ def pass_serv(request):
                     else:
                         if {'data': None} in tag_service:
                             tag_service.remove({'data': None})
-                        if sreda == '1':
-                            tag_service.append({'copper': None})
-                        elif sreda == '2' or sreda == '4':
-                            tag_service.append({'vols': None})
-                        elif sreda == '3':
-                            tag_service.append({'wireless': None})
+
+                        spd = request.session['spd']
+                        if spd == 'РТК':
+                            # if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
+                            #     tag_service.pop()
+                            tag_service.append({'rtk': None})
+                        elif spd == 'Комтехцентр':
+                            # if tag_service[-1] == {'rtk': None}:
+                            #     tag_service.pop()
+
+                            if sreda == '1':
+                                tag_service.append({'copper': None})
+                            elif sreda == '2' or sreda == '4':
+                                tag_service.append({'vols': None})
+                            elif sreda == '3':
+                                tag_service.append({'wireless': None})
+
+                        # if sreda == '1':
+                        #     tag_service.append({'copper': None})
+                        # elif sreda == '2' or sreda == '4':
+                        #     tag_service.append({'vols': None})
+                        # elif sreda == '3':
+                        #     tag_service.append({'wireless': None})
                 if tag_service[-1] == {'pass_serv': None}:
                     tag_service.append({'data': None})
                 response = get_response_with_get_params(request)
@@ -3562,21 +3673,24 @@ def pass_turnoff(request):
         head = request.session['head']
         tag_service = request.session['tag_service']
         prev_page, index = backward_page(request)
-        spplink = request.session['spplink']
-        regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
-        match_link = re.search(regex_link, spplink)
-        dID = match_link.group(1)
-        tID = match_link.group(2)
-        trID = match_link.group(3)
+        ticket_tr_id = request.session['ticket_tr_id']
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        # spplink = request.session['spplink']
+        # regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
+        # match_link = re.search(regex_link, spplink)
+        # dID = match_link.group(1)
+        # tID = match_link.group(2)
+        # trID = match_link.group(3)
         passturnoffform = PassTurnoffForm()
         context = {
             'passturnoffform': passturnoffform,
             'oattr': oattr,
             'pps': pps,
             'head': head,
-            'dID': dID,
-            'tID': tID,
-            'trID': trID,
+            'ticket_tr': ticket_tr,
+            'dID': request.session.get('dID'),
+            # 'tID': tID,
+            # 'trID': trID,
             'back_link': next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID')
@@ -4069,10 +4183,17 @@ class RtkFormView(FormView, CredentialMixin):
         context['back_link'] = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         context['oattr'] = oattr
         context['ticket_k'] = ticket_k
+        context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
+        context['dID'] = self.request.session.get('dID')
         return context
 
     def get_success_url(self, **kwargs):
-        tag_service = self.request.session['tag_service']
+
+        if self.request.session.get('type_pass'):
+            tag_service = append_change_log_shpd(self.request.session)
+        else:
+            tag_service = self.request.session['tag_service']
+
         tag_service.append({'data': None})
         tag_service_index = self.request.session['tag_service_index']
         index = tag_service_index[-1] + 1
@@ -4131,53 +4252,113 @@ class CreateSpecificationView(CredentialMixin, View):
         return redirect(f'https://arm.itmh.ru/v3/spec/{id_otu}')
 
 
-def sppdata(request):
+def primer(request, dID, tID, trID):
+    if request.method == 'POST':
+        form = SppDataForm(request.POST)
+        if form.is_valid():
+            print(request.GET.get('cp'))
+
+    else:
+        user = User.objects.get(username=request.user.username)
+        credent = cache.get(user)
+        username = credent['username']
+        password = credent['password']
+        tr_params = for_tr_view(username, password, dID, tID, trID)
+        if tr_params.get('Access denied') == 'Access denied':
+            messages.warning(request, 'Нет доступа в ИС Холдинга')
+            response = redirect('login_for_service')
+            response['Location'] += '?next={}'.format(request.path)
+            return response
+
+        ticket_spp_id = request.session['ticket_spp_id']
+        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
+        request.session['ticket_tr_id'] = ticket_tr_id
+        request.session['technical_solution'] = trID
+        #return redirect('project_tr', dID, tID, trID)
+        form = SppDataForm()
+
+        visible = True
+        #ticket_tr_id = request.session.get('ticket_tr_id')
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        context = {
+            'services_plus_desc': ticket_tr.services,#request.session.get('services_plus_desc'),
+            'client': ticket_tr.ticket_k.client,#request.session.get('client'),
+            'manager': ticket_tr.ticket_k.manager,#request.session.get('manager'),
+            'technolog': ticket_tr.ticket_k.technolog,#request.session.get('technolog'),
+            'task_otpm': ticket_tr.ticket_k.task_otpm,#request.session.get('task_otpm'),
+            'address': ticket_tr.connection_point,#request.session.get('address'),
+            'turnoff': ticket_tr.turnoff,#request.session.get('turnoff'),
+            'ticket_spp_id': ticket_spp_id,#request.session.get('ticket_spp_id'),
+            'dID': dID, #request.session.get('dID'),
+            'ticket_tr': ticket_tr,
+            'pps': ticket_tr.pps,#request.session.get('pps'),
+            'form': form,
+            'visible': visible,
+            'cp': request.GET.get('cp')
+        }
+        return render(request, 'tickets/primer.html', context)
+
+@cache_check
+def sppdata(request, dID, tID, trID):
     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
     if request.method == 'POST':
         form = SppDataForm(request.POST)
         if form.is_valid():
-            tag_service = request.session['tag_service']
             tag_service_index = []
             index = 0
             tag_service_index.append(index)
             request.session['tag_service_index'] = tag_service_index
             spd = form.cleaned_data['spd']
+
+            ticket_tr_id = request.session.get('ticket_tr_id')
+            ticket_tr = TR.objects.get(id=ticket_tr_id)
+            if [service for service in ticket_tr.services if 'Интернет, DHCP' in service] and spd == 'РТК':
+                messages.warning(request, 'Интернет, DHCP через РТК не предоставляется.')
+                return redirect('spp_view_save', ticket_tr.ticket_k.dID, ticket_tr.ticket_k.id)
             request.session['spd'] = spd
-            if spd == 'РТК' and tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
-                tag_service.pop()
-                tag_service.append({'rtk': None})
-            if spd == 'Комтехцентр' and tag_service[-1] == {'rtk': None}:
-                tag_service.pop()
-                sreda = request.session['sreda']
-                if sreda == '1':
-                    tag_service.append({'copper': None})
-                elif sreda == '2' or sreda == '4':
-                    tag_service.append({'vols': None})
-                elif sreda == '3':
-                    tag_service.append({'wireless': None})
-            response = get_response_with_prev_get_params(request)
-            return response
+            if request.GET.get('cp') == 'new':
+                return redirect('project_tr', dID, tID, trID)
+            if request.GET.get('cp') == 'exist':
+                return redirect('get_resources')
     else:
+        user = User.objects.get(username=request.user.username)
+        credent = cache.get(user)
+        username = credent['username']
+        password = credent['password']
+        tr_params = for_tr_view(username, password, dID, tID, trID)
+        if tr_params.get('Access denied') == 'Access denied':
+            messages.warning(request, 'Нет доступа в ИС Холдинга')
+            response = redirect('login_for_service')
+            response['Location'] += '?next={}'.format(request.path)
+            return response
+        else:
+            ticket_spp_id = request.session['ticket_spp_id']
+            ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
+            request.session['ticket_tr_id'] = ticket_tr_id
+            request.session['technical_solution'] = trID
+            #return redirect('project_tr', dID, tID, trID)
         form = SppDataForm()
-        tag_service = request.session['tag_service']
-        visible = True if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
+        #tag_service = request.session['tag_service']
+        visible = True #if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
         ticket_tr_id = request.session.get('ticket_tr_id')
         ticket_tr = TR.objects.get(id=ticket_tr_id)
-        print(ticket_tr.pps)
+        cp = request.GET.get('cp')
+        request.session['cp'] = cp
         context = {
-            'services_plus_desc': request.session.get('services_plus_desc'),
-            'client': request.session.get('client'),
-            'manager': request.session.get('manager'),
-            'technolog': request.session.get('technolog'),
-            'task_otpm': request.session.get('task_otpm'),
-            'address': request.session.get('address'),
-            'turnoff': request.session.get('turnoff'),
+            #'services_plus_desc': request.session.get('services_plus_desc'),
+            #'client': request.session.get('client'),
+            #'manager': request.session.get('manager'),
+            #'technolog': request.session.get('technolog'),
+            #'task_otpm': request.session.get('task_otpm'),
+             #'address': request.session.get('address'),
+            #'turnoff': request.session.get('turnoff'),
             'ticket_spp_id': request.session.get('ticket_spp_id'),
             'dID': request.session.get('dID'),
             'ticket_tr': ticket_tr,
-            'pps': request.session.get('pps'),
+            #'pps': request.session.get('pps'),
             'form': form,
-            'visible': visible
+            'visible': visible,
+            'cp': request.GET.get('cp')
         }
         return render(request, 'tickets/sppdata.html', context)
 

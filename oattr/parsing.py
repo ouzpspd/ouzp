@@ -546,8 +546,6 @@ class Tentura:
                         'project_registers': binded_objects.get('projectRegisters'),
                         'plan_registers': binded_objects.get('planRegisters'),
                         'status_registers': binded_objects.get('statusRegisters')}
-
-        print(gis_object['name'])
         return gis_object
 
     def get_id_node_by_name(self, data):

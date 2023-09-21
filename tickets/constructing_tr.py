@@ -1403,8 +1403,11 @@ def get_need(value_vars):
                 "- перенести трассу присоединения клиента;")
         elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get(
                 'change_log') == 'Порт/КАД меняются':
-            need.append(
-                f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
+            if value_vars.get('spd') == 'РТК':
+                need.append('перенести логическое подключение на ПМ РТК;')
+            else:
+                need.append(
+                    f"- перенести логическое подключение на узел {_readable_node(value_vars.get('pps'))};")
         elif value_vars.get('type_passage') == 'Перевод на гигабит':
             need.append(
                 f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
@@ -1501,6 +1504,10 @@ def _passage_services(result_services, value_vars):
                     hidden_vars[
                         '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
                     static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
+                if value_vars.get('spd') == 'РТК':
+                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                    static_vars.update(add_static_vars)
+                    hidden_vars.update(add_hidden_vars)
             else:
                 services = []
                 for key, value in readable_services.items():
@@ -1571,6 +1578,11 @@ def _passage_services(result_services, value_vars):
                         static_vars['указать сервис'] = ', '.join(services)
                 else:
                     static_vars['указать сервис'] = ', '.join(services)
+
+                if value_vars.get('spd') == 'РТК':
+                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                    static_vars.update(add_static_vars)
+                    hidden_vars.update(add_hidden_vars)
             else:
                 static_vars['указать сервис'] = ', '.join(services)
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
@@ -1619,16 +1631,29 @@ def _passage_services(result_services, value_vars):
             hidden_vars[
                 '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
             static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
-        if service_shpd_change and value_vars.get('change_log_shpd') == 'Новая подсеть /32':
+        if service_shpd_change and value_vars.get('change_log_shpd') != 'существующая адресация': #'Новая подсеть /32':
             if value_vars.get('type_ticket') != 'ПТО':
                 hidden_vars['- Согласовать необходимость смены реквизитов.'] = '- Согласовать необходимость смены реквизитов.'
-            hidden_vars['- Выделить подсеть с маской /32.'] = '- Выделить подсеть с маской /32.'
-            hidden_vars['- Cменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской /32.'] = '- Cменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской /32.'
+            hidden_vars[
+                '- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'] = '- По заявке в Cordis выделить подсеть с маской %указать новую маску%.'
+            static_vars['указать новую маску'] = '/30' if value_vars.get(
+                'change_log_shpd') == 'Новая подсеть /30' else '/32'
+            hidden_vars[
+                '- По согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'] = '- По согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %указать новую маску%.'
+            hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
+            #hidden_vars['- Выделить подсеть с маской /32.'] = '- Выделить подсеть с маской /32.'
+            #hidden_vars['- Cменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской /32.'] = '- Cменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской /32.'
             hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
             static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
         static_vars['указать сервис'] = ', '.join(services)
         static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
-        static_vars['указать узел связи'] = _readable_node(value_vars.get('pps'))
+        if value_vars.get('spd') == 'РТК':
+            static_vars['указать узел связи'] = 'ПМ РТК'
+            add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+            static_vars.update(add_static_vars)
+            hidden_vars.update(add_hidden_vars)
+        else:
+            static_vars['указать узел связи'] = _readable_node(value_vars.get('pps'))
         static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
         counter_plur = len(services)
@@ -2296,7 +2321,16 @@ def passage_services_with_passage_csw(value_vars):
 def passage_services(value_vars):
     """Данный метод формирует готовое ТР для переноса услуг"""
     if (value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения') and value_vars.get('change_log') != 'Порт и КАД не меняется':
-        result_services, value_vars = _new_enviroment(value_vars)
+        if value_vars.get('spd') == 'РТК':
+            result_services, value_vars = rtk_enviroment(value_vars)
+        else:
+            result_services, value_vars = _new_enviroment(value_vars)
+        #result_services, value_vars = _new_enviroment(value_vars)
+    elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') != 'Порт и КАД не меняется':
+        if value_vars.get('spd') == 'РТК':
+            result_services, value_vars = rtk_enviroment(value_vars)
+        else:
+            result_services, value_vars = _passage_enviroment(value_vars)
     else:
         result_services, value_vars = _passage_enviroment(value_vars)
     result_services, value_vars = _passage_services(result_services, value_vars)

@@ -773,7 +773,10 @@ class UpdateNodeView(CredentialMixin, View):
         username, password = super().get_credential(self)
         if department == 'ortr':
             ticket_tr = TR.objects.filter(ticket_tr=trID).last()
-            url = f"{reverse('add_tr', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}"
+            cp = request.session.get('cp')
+            query_dictionary = QueryDict('', mutable=True)
+            query_dictionary.update({'cp': cp})
+            url = f"{reverse('sppdata', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}?{query_dictionary.urlencode()}"
         else:
             ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
             action = request.session.get(str(self.kwargs['trID'])).get('action')

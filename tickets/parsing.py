@@ -84,6 +84,20 @@ def get_rtk_initial(username, password, line_data):
     return rtk_initial
 
 
+def get_oattr_sreda(oattr):
+    wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+    ftth_temp = ['Alpha', 'ОК-1']
+    vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+    if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+        sreda = '3'
+    elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+        sreda = '4'
+    elif any(vo in oattr for vo in vols_temp):
+        sreda = '2'
+    else:
+        sreda = '1'
+    return sreda
+
 
 def parse_tr(login, password, url):
     """Данный метод парсит ТР в СПП и возвращает полученные данные о ТР"""

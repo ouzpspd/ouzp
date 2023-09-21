@@ -55,8 +55,8 @@
                       Проектировать
                     </button>
                     <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-                      <a class="dropdown-item" href="{% url 'add_tr' current_ticket_spp.dID v.0 v.1 %}">Нов. точка</a>
-                      <a class="dropdown-item" href="{% url 'add_tr_exist_cl' current_ticket_spp.dID v.0 v.1 %}">Сущ. точка</a>
+                      <a class="dropdown-item" href="{% url 'sppdata' current_ticket_spp.dID v.0 v.1 %}?cp=new">Нов. точка</a>
+                      <a class="dropdown-item" href="{% url 'sppdata' current_ticket_spp.dID v.0 v.1 %}?cp=exist">Сущ. точка</a>
                         <a class="dropdown-item" href="{% url 'add_tr_not_required' current_ticket_spp.dID v.0 v.1 %}">Не требуется</a>
                     </div>
                   </div>
