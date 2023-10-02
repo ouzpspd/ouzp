@@ -2,7 +2,7 @@
 {% block content %}
 
 
-<form action="{% url 'get_resources' %}" method="post">
+<form action="{% url 'get_resources' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
         <div class="row justify-content-center">

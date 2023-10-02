@@ -120,6 +120,39 @@ def get_selected_readable_service(readable_services, selected_ono):
     return desc_service, name_passage_service
 
 
+def append_change_log_shpd(session):
+    tag_service = session.get('tag_service')
+    type_pass = session.get('type_pass')
+    if 'Перенос, СПД' in type_pass:
+        type_passage = session.get('type_passage')
+        if type_passage == 'Перенос сервиса в новую точку' or (
+                type_passage == 'Перевод на гигабит' and not any([session.get('logic_change_csw'), session.get('logic_change_gi_csw')])):
+            selected_ono = session.get('selected_ono')
+            selected_service = selected_ono[0][-3]
+            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
+                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
+                            '125 -', '131 -', '107 -', '109 -', '483 -']
+            if any(serv in selected_service for serv in service_shpd):
+                tag_service.append({'change_log_shpd': None})
+                session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
+        else:
+            readable_services = session.get('readable_services')
+            _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
+            if service_shpd_change:
+                session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+                tag_service.append({'change_log_shpd': None})
+
+    elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and session.get('logic_csw') == True:
+        readable_services = session.get('readable_services')
+        _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
+                                                                    'Новая подсеть /32')
+        if service_shpd_change:
+            session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
+            tag_service.append({'change_log_shpd': None})
+    return tag_service
+
+
+
 def analyzer_vars(stroka, static_vars, hidden_vars):
     """Данный метод принимает строковую переменную, содержащую шаблон услуги со страницы
     Типовые блоки технического решения. Ищет в шаблоне блоки <> и сравнивает с аналогичными переменными из СПП.
@@ -276,6 +309,8 @@ def _tag_service_for_new_serv(services_plus_desc):
             tag_service.append({'hotspot': services_plus_desc[index_service]})
         elif 'ЛВС' in services_plus_desc[index_service]:
             tag_service.append({'local': services_plus_desc[index_service]})
+    print('tag_service')
+    print(tag_service)
     return tag_service, hotspot_users, premium_plus
 
 
@@ -588,75 +623,116 @@ def get_vlan_4094_and_description(switch_config, model):
     return config_ports_device
 
 
-def backward_page_service(request, service_name):
+def backward_page_service(request, trID, service_name):
     """Данный метод аналогичен методу backward_page, но используется для страниц сервисов. Отличие в том, что следующая
     страница в последовательности tag_service не удаляется, т.к. список сервисов формируется только в начале и
     удаленный сервис не попадет в итоговое ТР"""
     index = int(request.GET.get('index'))
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
+    # tag_service = request.session['tag_service']
+    # tag_service_index = request.session['tag_service_index']
+    session_tr_id = request.session[str(trID)]
+    tag_service = session_tr_id.get('tag_service')
+    tag_service_index = session_tr_id.get('tag_service_index')
+    print(tag_service)
+    print(tag_service_index)
+    # if request.GET.get('next_page'):  # вариант без случая обновления страницы
+    #     prev_page = next(iter(tag_service[index - 1]))
+    #     service = tag_service[index][service_name]
+    #     index -= 1
+    #     tag_service_index.pop()
+    #     session_tr_id.update({'tag_service_index': tag_service_index})
+    #     request.session[trID] = session_tr_id
     if request.GET.get('next_page'):
-        prev_page = next(iter(tag_service[index - 1]))
-        service = tag_service[index][service_name]
-        index -= 1
-        tag_service_index.pop()
-        request.session['tag_service_index'] = tag_service_index
+        if tag_service_index[-1] == index:
+            prev_page = next(iter(tag_service[index - 1]))
+            service = tag_service[index][service_name]
+            index -= 1
+            tag_service_index.pop()
+            session_tr_id.update({'tag_service_index': tag_service_index})
+            request.session[trID] = session_tr_id
+        else:
+            prev_page = next(iter(tag_service[index]))
+            service = tag_service[index][service_name]
+
     else:
         prev_page = request.GET.get('prev_page')
         service = tag_service[index + 1][service_name]
     return request, service, prev_page, index
 
 
-def backward_page(request):
+def backward_page(request, trID):
     """Данный метод возвращает значения для GET параметров(предыдущая страница и ее индекс), которые будут переданы
     в url кнопки Вернуться. Для определения этих параметров, проверяется наличие GET параметра next_page.
     В случае если next_page не существует в кнопку Вернуться передаются соответствующие значения из GET параметров.
     В слугчае ссли next_page существует, это означает, что на данную страницу перешли не с предыдущей, а со следующей
     по кнопке Вернуться. В этом случае в кнопку Вернуться передается уменьшенный индекс и из последовательности страниц
     tag_service удаляется следующая страница"""
+
     index = int(request.GET.get('index'))
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
+    # tag_service = request.session['tag_service']
+    # tag_service_index = request.session['tag_service_index']
+
+    session_tr_id = request.session[str(trID)]
+    tag_service = session_tr_id.get('tag_service')
+    tag_service_index = session_tr_id.get('tag_service_index')
+    # if request.GET.get('next_page'):  # вариант без случая обновления страницы
+    #     prev_page = next(iter(tag_service[index - 1]))
+    #     index -= 1
+    #     tag_service_index.pop()
+    #     tag_service.pop()
+    #     session_tr_id.update({'tag_service_index': tag_service_index, 'tag_service': tag_service})
+    #     request.session[trID] = session_tr_id
     if request.GET.get('next_page'):
-        prev_page = next(iter(tag_service[index - 1]))
-        index -= 1
-        tag_service_index.pop()
-        tag_service.pop()
-        request.session['tag_service_index'] = tag_service_index
-        request.session['tag_service'] = tag_service
+        if tag_service_index[-1] == index:
+            prev_page = next(iter(tag_service[index - 1]))
+            index -= 1
+            tag_service_index.pop()
+            tag_service.pop()
+            # request.session['tag_service_index'] = tag_service_index
+            # request.session['tag_service'] = tag_service
+            session_tr_id.update({'tag_service_index': tag_service_index, 'tag_service': tag_service})
+            request.session[trID] = session_tr_id
+        else:
+            prev_page = next(iter(tag_service[index - 1]))
     else:
         prev_page = request.GET.get('prev_page')
     return prev_page, index # request,
 
 
-def get_response_with_get_params(request):
+def get_response_with_get_params(request, tag_service, session_tr_id, trID):  #request
     """Данный метод создает индекс для отображаемой страницы и при редиректе на новую страницу добавляет в url
      GET параметры текущей страницы и ее индекс"""
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
+    #tag_service = session_tr_id.get('tag_service')
+    tag_service_index = session_tr_id.get('tag_service_index')
+    # tag_service = request.session['tag_service']
+    # tag_service_index = request.session['tag_service_index']
     index = tag_service_index[-1] + 1
     tag_service_index.append(index)
-    response = redirect(next(iter(tag_service[index + 1])))
+    session_tr_id.update({'tag_service': tag_service, 'tag_service_index': tag_service_index})
+    response = redirect(next(iter(tag_service[index + 1])), trID)
     response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+    request.session[trID] = session_tr_id
     return response
 
 
-def get_response_with_prev_get_params(request):
+def get_response_with_prev_get_params(request, tag_service, session_tr_id, trID):
     """Данный метод не создает новый индекс для отображаемой страницы и при редиректе на новую страницу добавляет в url
     GET параметры текущей страницы и предыдущий индекс"""
-    tag_service = request.session['tag_service']
-    tag_service_index = request.session['tag_service_index']
+    #tag_service = session_tr_id.get('tag_service')
+    tag_service_index = session_tr_id.get('tag_service_index')
     index = tag_service_index[-1]
-    response = redirect(next(iter(tag_service[index + 1])))
+    session_tr_id.update({'tag_service': tag_service})
+    response = redirect(next(iter(tag_service[index + 1])), trID)
     response['Location'] += f'?prev_page={next(iter(tag_service[index]))}&index={index}'
+    request.session[trID] = session_tr_id
     return response
 
 
-def clear_session_params(request, *args):
+def clear_session_params(session_tr_id, *args):
     """Данный метод удаляет из сессии полученные ключи"""
     for param in args:
-        if request.session.get(param):
-            del request.session[param]
+        if session_tr_id.get(param):
+            del session_tr_id[param]
 
 
 def get_services(file):

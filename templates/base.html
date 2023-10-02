@@ -54,30 +54,33 @@
 
           <ul class="navbar-nav mr-auto mb-2 mb-lg-0">
             {% block nav_active %}
-            {% if request.user|has_group:"Сотрудники ОУЗП" %}
+            {% if request.user|has_group:"Сотрудники ОУЗП" or request.user|has_group:"Менеджеры" %}
+
             <li class="nav-item">
               <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
             </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'search' %}">Поиск</a>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Утилиты
-              </a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
-                <a class="dropdown-item" href="{% url 'ppr' %}" target ="_blank">ППР</a>
-              </div>
-            </li>
-            {% if request.user|has_group:"Руководство ОУЗП" %}
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
-            </li>
-            {% endif %}
+              {% if request.user|has_group:"Сотрудники ОУЗП" %}
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'search' %}">Поиск</a>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Утилиты
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                  <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
+                  <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР</a>
+                </div>
+              </li>
+              {% endif %}
+              {% if request.user|has_group:"Руководство ОУЗП" %}
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
+              </li>
+              {% endif %}
             {% elif request.user|has_group:"Сотрудники ОАТТР" %}
             <li class="nav-item">
               <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>

@@ -1,9 +1,14 @@
+import datetime
+
 import requests
 import re
+import random
 from bs4 import BeautifulSoup
 from requests.auth import HTTPBasicAuth
 
-from tickets.parsing import get_connection_point, lost_whitespace
+
+from oattr.request_templates import SpecTemplate
+from tickets.parsing import lost_whitespace
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -23,7 +28,7 @@ def ckb_parse(login, password):
     return templates
 
 
-def dispatch(login, password, trID):
+def get_or_create_otu(login, password, trID):
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_ajax.php'
     data = {'action': 'GetOtu', 'trID': f'{trID}'}
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
@@ -378,53 +383,430 @@ def send_spp_check(login, password, dID, tID, trID):
     req_check = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     return req_check
 
-def send_spp(login, password, ticket_tr):
+def send_spp(login, password, ticket_tr, department):
     dID = ticket_tr.ticket_k.dID
     tID = ticket_tr.ticket_cp
     trID = ticket_tr.ticket_tr
     url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
-    print('dID')
-    print(dID)
-    print('tID')
-    print(tID)
-    print('trID')
-    print(trID)
     vID = ticket_tr.vID
-    print('vID')
-    print(vID)
-    # trTurnOff = None  # для отключения
-    # trTurnOffInput = None
-    # data = {'FileLink': 'файл', 'action': 'saveVariant',
-    #         'vID': vID, 'trID': trID}
-    # headers
-    # 'Content-Type': multipart/form-data; boundary
-    tr_without_os = 1 if ticket_tr.tr_without_os else 0
-    tr_complex_access = 1 if ticket_tr.tr_complex_access else 0
-    tr_complex_equip = 1 if ticket_tr.tr_complex_equip else 0
-    tr_turn_off = 1 if ticket_tr.tr_turn_off else 0
-    tr_complex_access_input = ticket_tr.tr_complex_access_input
-    tr_complex_equip_input = ticket_tr.tr_complex_equip_input
-    tr_turn_off_input = ticket_tr.tr_turn_off_input
-    trOTPM_Resolution = ticket_tr.oattr
-    print('tr_complex_access')
-    print(tr_complex_access)
-    print('tr_complex_access_input')
-    print(tr_complex_access_input)
-    data = {'trOTPM_Resolution': trOTPM_Resolution,
-            'trWithoutOS': tr_without_os,
-            'trComplexAccess': tr_complex_access,
-            'trComplexEquip': tr_complex_equip,
-            'trTurnOff': tr_turn_off,
-            'trComplexAccessInput': tr_complex_access_input,
-            'trComplexEquipInput': tr_complex_equip_input,
-            'trTurnOffInput': tr_turn_off_input,
+    if department == 'ortr':
+        data = {'action': 'saveVariant', 'vID': vID}
+    else:
+        # trTurnOff = None  # для отключения
+        # trTurnOffInput = None
+        # data = {'FileLink': 'файл', 'action': 'saveVariant',
+        #         'vID': vID, 'trID': trID}
+        # headers
+        # 'Content-Type': multipart/form-data; boundary
+        tr_without_os = 1 if ticket_tr.tr_without_os else 0
+        tr_complex_access = 1 if ticket_tr.tr_complex_access else 0
+        tr_complex_equip = 1 if ticket_tr.tr_complex_equip else 0
+        tr_turn_off = 1 if ticket_tr.tr_turn_off else 0
+        tr_complex_access_input = ticket_tr.tr_complex_access_input
+        tr_complex_equip_input = ticket_tr.tr_complex_equip_input
+        tr_turn_off_input = ticket_tr.tr_turn_off_input
+        trOTPM_Resolution = ticket_tr.oattr
+        data = {'trOTPM_Resolution': trOTPM_Resolution,
+                'trWithoutOS': tr_without_os,
+                'trComplexAccess': tr_complex_access,
+                'trComplexEquip': tr_complex_equip,
+                'trTurnOff': tr_turn_off,
+                'trComplexAccessInput': tr_complex_access_input,
+                'trComplexEquipInput': tr_complex_equip_input,
+                'trTurnOffInput': tr_turn_off_input,
 
-            'action': 'saveVariant',
-            'vID': vID}
+                'action': 'saveVariant',
+                'vID': vID}
     requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
 
 import json
+
+class Tentura:
+    URL = 'https://tentura.corp.itmh.ru/ajax2/'
+    def __init__(self, username, password, otu_project_id):
+        self.client = requests.session()
+        self.username = username
+        self.password = password
+        self.otu_project_id = otu_project_id
+
+    def check_active_project_for_user(self):
+        data = {"id": 5555, "method": "set_active_project_for_user", "params": [self.otu_project_id]}
+        return self.__connection(data)
+
+    def __connection(self, data):
+        req = self.client.post(self.URL, verify=False, auth=HTTPBasicAuth(self.username, self.password), data=json.dumps(data))
+        if req.status_code == 401:
+            return {'error': 'Нет доступа. Неверный логин/пароль.'}
+        return req.json()
+
+    def get_project_context(self):
+        data = {"id": 5555, "method":"project_context_get", "params":[f'{self.otu_project_id}']}
+        output = self.__connection(data)
+        return output.get('result')
+
+    def get_matched_addresses(self, address):
+        data = {"id": 5555, "method": "get_matched_addresses", "params": [address, True]}
+        output = self.__connection(data)
+        result = output.get('result')
+        return json.loads(result)
+
+    def get_construction_center(self, id_address):
+        data = {"id": 5555, "method": "get_construction_center", "params": [int(id_address)]}
+        output = self.__connection(data)
+        result = output.get('result')
+        return json.loads(result)
+
+    def set_ioc_filter(self, project_context):
+        """Применение фильтра только по КК, АВ, УА, РУА"""
+        data = {"id": 5555, "method": "set_ioc_filter", "params": [project_context, [258, 281, 330, 331, 332, 333], 79]}
+        output = self.__connection(data)
+        return output.get('result')
+
+    def get_id_gis_objects(self, project_context, id_address):
+        center = self.get_construction_center(id_address)
+        lon = center.get('lon')
+        lat = center.get('lat')
+        offset = 0.001
+        data = {"id": 5555,
+                    "method": "get_gis_objects",
+                    "params": [project_context, {"left": lon - offset, "right": lon + offset,
+                                                 "bottom": lat - offset, "top": lat + offset}]}
+        output = self.__connection(data)
+        result = output.get('result')
+        mounting_points = json.loads(result).get('mounting_points')
+        id_gis_objects = [point.get('id') for point in mounting_points]
+        return id_gis_objects
+
+    def get_params_binded_objects(self, id_gis_objects, project_context):
+        gis_objects = {}
+        for id_gis_object in id_gis_objects:
+            binded_objects = self.__get_binded_objects(id_gis_object, project_context)
+            gis_objects.update({id_gis_object:{'name': binded_objects.get('name_with_name_attribute'),
+                                                      'id_binded_object': binded_objects.get('id'),
+                                                      'project_registers': binded_objects.get('projectRegisters'),
+                                                      'plan_registers': binded_objects.get('planRegisters'),
+                                                      'status_registers': binded_objects.get('statusRegisters')}})
+        return gis_objects
+
+    def __get_binded_objects(self, id_gis_object, project_context):
+        data = {"id": 5555, "method": "get_binded_objects", "params": [id_gis_object, project_context]}
+        output = self.__connection(data)
+        return json.loads(output.get('result'))[0]
+
+    def __get_query_status_registers(self, registers):
+        query_status_registers = []
+        for status_register in registers:
+            if status_register.get('RegisterRecord'):
+                record = status_register.get('RegisterRecord')
+                query_status_registers.append({
+                    "IsActual": True,
+                    "RegisterId": record.get('RegisterId'),
+                    "RegisterRecord": {"Id": record.get('Id'), "IsActual": True, "ProjectId": record.get('ProjectId')}
+                })
+            else:
+                query_status_registers.append(
+                    {"IsActual": False, "RegisterId": status_register.get('RegisterId'), "RegisterRecord": None})
+        return query_status_registers
+
+
+    def __get_query_project_plan_registers(self, registers):
+        # query = []
+        # for registers in (id_gis_object.get('project_registers'), id_gis_object.get('plan_registers')):
+        subquery = []
+        for project_register in registers:
+            if project_register.get('RegisterRecords'):
+                records = project_register.get('RegisterRecords')
+                query_record = []
+                for record in records:
+                    query_record.append(
+                        {"Id": record.get('Id'), "IsActual": True, "ProjectId": record.get('ProjectId')}
+                    )
+                query_record.append({"Id": None, "IsActual": True, "ProjectId": self.otu_project_id})
+                subquery.append({"IsActual": True, "RegisterId": project_register.get('RegisterId'),
+                                 "RegisterRecords": query_record})
+            elif project_register.get('RegisterName') == 'Проектируемые к реконструкции':
+                subquery.append({"IsActual": True, "RegisterId": project_register.get('RegisterId'),
+                                 "RegisterRecords": [{"Id": None, "IsActual": True, "ProjectId": self.otu_project_id}]})
+            else:
+                subquery.append(
+                    {"IsActual": False, "RegisterId": project_register.get('RegisterId'), "RegisterRecords": None})
+            #query.append(subquery)
+        return subquery
+
+    def get_gis_object_by_id_node(self, id_node, project_context):
+        self.set_ioc_filter(project_context)
+        data = {"id": 5555, "method": "get_object_bounding_box", "params": [id_node, project_context]}
+        output = self.__connection(data)
+        result = output.get('result')
+        id_gis_object = json.loads(result).get('ris_id')
+        binded_objects = self.__get_binded_objects(id_gis_object, project_context)
+        gis_object = {'name': binded_objects.get('name_with_name_attribute'),
+                        'id_binded_object': binded_objects.get('id'),
+                        'project_registers': binded_objects.get('projectRegisters'),
+                        'plan_registers': binded_objects.get('planRegisters'),
+                        'status_registers': binded_objects.get('statusRegisters')}
+        return gis_object
+
+    def get_id_node_by_name(self, data):
+        url = 'https://tas.corp.itmh.ru/Node/Search'
+        req = self.client.post(url, verify=False, auth=HTTPBasicAuth(self.username, self.password), data=data)
+        if req.status_code == 401:
+            return {'error': 'Нет доступа. Неверный логин/пароль.'}
+        soup = BeautifulSoup(req.json().get('data'), "html.parser")
+        search = soup.find_all('a')
+        id_nodes_tentura = [i.text for i in search if i.get('href') and 'https://tentura' in i.get('href')]
+        id_node_tentura = id_nodes_tentura[0] if id_nodes_tentura else None
+        return {'result': id_node_tentura}
+
+    def get_id_address_connection_point(self, aid):
+        url = f'https://sss.corp.itmh.ru/building/address_main.php?aID={aid}'
+        req = self.client.get(url, verify=False, auth=HTTPBasicAuth(self.username, self.password))
+        if req.status_code == 401:
+            return {'error': 'Нет доступа. Неверный логин/пароль.'}
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('a')
+        address_link = [i.get('href') for i in search if i.text and i.text == 'адрес в Тентуре'][0]
+        match = re.search(r'building_id=(\d+)', address_link)
+        id_address = match.group(1) if match else None
+        return {'result': id_address}
+
+    def add_node(self, gis_object):
+        status_registers = gis_object.get('status_registers')
+        project_registers = gis_object.get('project_registers')
+        plan_registers = gis_object.get('plan_registers')
+        query_status_registers = self.__get_query_status_registers(status_registers)
+        query_project_registers = self.__get_query_project_plan_registers(project_registers)
+        query_plan_registers = self.__get_query_project_plan_registers(plan_registers)
+
+        data = {"id": 5555,
+                "method": "update_io_registers",
+                "params": [gis_object.get('id_binded_object'),
+                           query_status_registers,
+                           query_plan_registers,
+                           query_project_registers]
+                }
+        output = self.__connection(data)
+        return output.get('result')
+
+    def add_csp(self, id_address, address):
+        center = self.get_construction_center(id_address)
+        lon = center.get('lon')
+        lat = center.get('lat')
+        offset = round(random.random() * 0.0001 + 0.0001, 6)
+        lon += offset
+        lat += offset
+        date_today = datetime.date.today().strftime("%d.%m.%Y")
+
+        data = {
+            "id": 5555, "method": "create_object", "params": [{
+                "inventory_objects_class": 1138,
+                "attributes": [
+                    {"id": 2448, "name": "Помещение", "value": address, "isDirty": True, "isNullable": False},
+                    {"id": 2443, "name": "Адрес", "value": address, "isDirty": True, "isNullable": False},
+                    {"id": 59, "name": "Дата постройки", "value": date_today, "isDirty": True, "isNullable": False},
+                    {"id": 178, "name": "Основание размещения", "value": "", "isDirty": False, "isNullable": True},
+                    {"id": 31, "name": "Наименование", "value": "", "isDirty": False, "isNullable": True},
+                    {"id": 34, "name": "Фотографии", "value": "", "isDirty": False, "isNullable": True},
+                    {"id": 79, "name": "Владелец", "value": "ООО «Комтехцентр»", "isDirty": True, "isNullable": False},
+                    {"id": 80, "name": "Примечание", "value": "", "isDirty": False, "isNullable": True},
+                    {"id": 2447, "name": "ГИС: точка привязки", "value": f"POINT({lon} {lat})", "isDirty": True,
+                     "isNullable": True}
+                ],
+                "project": {
+                    "id": self.otu_project_id, "_checked": True,
+                    "registers": [
+                        {"r2pt": 2, "_checked": False},
+                        {"r2pt": 3, "_checked": False},
+                        {"r2pt": 4, "_checked": False},
+                        {"r2pt": 5, "_checked": False},
+                        {"r2pt": 6, "_checked": False},
+                        {"r2pt": 7, "_checked": False},
+                        {"r2pt": 8, "_checked": False},
+                        {"r2pt": 12, "_checked": True},
+                        {"r2pt": 13, "_checked": False},
+                        {"r2pt": 14, "_checked": False}
+                    ],
+                    "checked_register": 12
+                },
+                "includes": []
+            }]
+        }
+        output = self.__connection(data)
+        result = output.get('result')
+        return json.loads(result).get('inventoryObject').get('id')
+
+
+class Specification:
+    """Класс выполняет заполнение объектов спецификации ресурсами в рабочем проекте"""
+    def __init__(self, username, password, otu_project_id):
+        self.username = username
+        self.password = password
+        self.otu_project_id = otu_project_id
+    def authenticate(self):
+        """Данный метод выполняет авторизацию sts"""
+        data_sts = {'UserName': f'CORP\\{self.username}', 'Password': f'{self.password}', 'AuthMethod': 'FormsAuthentication'}
+        url = """https://arm.itmh.ru/v3/backend/manager/login/"""
+        req = requests.get(url)
+        sts_url = req.url
+        req = requests.post(sts_url, data=data_sts)
+        response = req.content.decode('utf-8')
+        if 'Enter your user ID' in response:
+            return {'error': 'Аутентификация не выполнена. Неверный логин/пароль.'}
+        regex_wresult = """name="wresult" value="(.+TokenResponse>)"""
+        result = re.search(regex_wresult, response, flags=re.DOTALL)
+        wwresult = result.group(1)
+        wresult = wwresult.replace('&lt;', '<').replace('&quot;', '"')
+        soup = BeautifulSoup(response, "html.parser")
+        wa = soup.find('input', {"name": "wa"}).get('value')
+        wctx = soup.find('input', {"name": "wctx"}).get('value')
+        data_arm = {'wa': wa, 'wresult': wresult, 'wctx': wctx}
+        req = requests.post(url, data=data_arm)
+        cookie = req.request.headers.get('Cookie')
+        x_session_id = cookie.split(';')[0].strip('PHPSESSID=')
+        return {'cookie': cookie, 'x_session_id': x_session_id}
+
+    def __connection(self, cookie, data):
+        """Внутренний метод, выполняющий запрос к API"""
+        url = 'https://arm.itmh.ru/v3/api'
+        headers = {
+            'Cookie': cookie.get('cookie'),
+            'X-Session-Id': cookie.get('x_session_id')
+        }
+        req = requests.post(url, verify=False, headers=headers, json=data)
+        if req.status_code == 401:
+            return {'error': 'Нет доступа. Неверный логин/пароль.'}
+        return req.json()
+
+    def get_task_id(self, cookie):
+        """Метод по номеру проекта получает ID задачи"""
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"TaskIdByProjectGet","args":{"project_id":self.otu_project_id}}
+        output = self.__connection(cookie, data)
+        return output.get('result', {}).get('TaskIdByProjectGet')
+
+    def is_edited(self, task_id, cookie):
+        """Метод проверяет возможность редактирования спецификации"""
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"TaskCanBeEdited","args":{"task_id":task_id}}
+        output = self.__connection(cookie, data)
+        return output.get('result', {}).get('TaskCanBeEdited')
+
+    def __extract_prices(self, output, resources):
+        resource_prices = output.get('result', {}).get('ResourcePriceInfoList')
+        prices = {}
+        for resource in resources:
+            price = [i.get('UnitPrice') for i in resource_prices if i.get('Name') == resource.get('Name')]
+            if price:
+                prices.update({resource.get('Name'): price[0]})
+        return prices
+
+    def get_resource_price_sku(self, cookie, resources):
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
+                "args":{"resource_type":{"Id":1,"Name":"SKU","Code":"sku","Mem":"Образы SKU"}}}
+        output = self.__connection(cookie, data)
+        prices = self.__extract_prices(output, resources)
+        return prices
+
+    def get_resource_price_tao(self, cookie, resources):
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"ResourcePriceInfoList",
+                "args":{
+                    "resource_type":{
+                        "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"
+                    }
+                }}
+        output = self.__connection(cookie, data)
+        prices = self.__extract_prices(output, resources)
+        return prices
+
+
+    def extract_resource_detail(self, output, resources):
+        """Метод на основе методов get_resource_list_sku и get_resource_list_tao добавляет к ресурсам, которые
+         требуется добавить, параметры, полученные из БД(ID и прочее)"""
+        resource_detail = output
+        detailed_resources = []
+        for resource in resources:
+            detail = [i for i in resource_detail if i.get('Name') == resource.get('Name')]
+            if detail:
+                resource.update({'Resource': detail[0]})
+                detailed_resources.append(resource)
+        return detailed_resources
+
+    def get_resource_list_sku(self, cookie):
+        """Метод получает список всех ресурсов СКУ в БД"""
+        data = {"app":"ARM","alias":"production","service":"ArmTask","method":"ResourceList",
+                "args":{"resource_type":{"Code":"sku","Id":1,"Name":"SKU"},"term":""}}
+        output = self.__connection(cookie, data)
+        return output.get('result', {}).get('ResourceList')
+
+    def get_resource_list_tao(self, cookie):
+        """Метод получает список всех ресурсов ТЭО в БД"""
+        data = {"app":"ARM","alias":"production","service":"ArmTask","method":"ResourceList",
+                "args":{"resource_type":{
+                            "Id":10,"Name":"Трудовые ресурсы ТЭО","Code":"labour","Mem":"Трудовые ресурсы ТЭО"},
+                        "term":""}}
+        output = self.__connection(cookie, data)
+        return output.get('result', {}).get('ResourceList')
+
+    def get_manager_id(self, cookie):
+        """Метод получает ID пользователя, для отправления запроса, от его имени"""
+        headers = {
+            'Cookie': cookie.get('cookie'),
+            'X-Session-Id': cookie.get('x_session_id')
+        }
+        url = 'https://arm.itmh.ru/v3/backend/manager/user-info/'
+        req = requests.get(url, verify=False, headers=headers)
+        output = req.json()
+        return output.get('manager')
+
+    def get_entity_info_list(self, cookie):
+        """Метод получает данные о всех объектах спецификации со всеми существующими ресурсами"""
+        task_id = self.get_task_id(cookie)
+        data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"SpecificationForSppDetailsGet","args":{"task_id":task_id}}
+        output = self.__connection(cookie, data)
+        return output.get('result', {}).get('SpecificationForSppDetailsGet', {}).get('EntityInfoList')
+
+    # def get_exist_obj(self, cookie, inventory_object_id):
+    #     data = {"app":"ARM","alias":"production","service":"ArmOopm","method":"SpecificationForSppDetailsGet","args":{"task_id":8391318}}
+    #     output = self.__connection(cookie, data)
+    #     entity_info_list = output.get('result', {}).get('SpecificationForSppDetailsGet', {}).get('EntityInfoList')
+    #     entity = [i for i in entity_info_list if i.get('InventoryObjectId') == inventory_object_id][0]
+    #     exist_resource_type_list = entity.get('ResourceTypeList')
+    #     return exist_resource_type_list
+
+    def set_resources(self, cookie, inventory_object_id, resources, update=False):
+        """Метод на основе полученной информации во вспомогательных методах вызывает формирование шаблона запроса
+         и добавляет ресурсы в объект спецификации"""
+        kwargs = {'inventory_object_id': inventory_object_id}
+        manager_id = self.get_manager_id(cookie)
+        kwargs.update({'manager_id': manager_id})
+
+        resource_list_sku = self.get_resource_list_sku(cookie)
+        kwargs.update({'resource_list_sku': resource_list_sku})
+
+        resource_list_tao = self.get_resource_list_tao(cookie)
+        kwargs.update({'resource_list_tao': resource_list_tao})
+
+        detailed_resources_sku = self.extract_resource_detail(resource_list_sku, resources)
+        detailed_resources_tao = self.extract_resource_detail(resource_list_tao, resources)
+        kwargs.update({'detailed_resources_sku': detailed_resources_sku})
+        kwargs.update({'detailed_resources_tao': detailed_resources_tao})
+
+        prices_sku = self.get_resource_price_sku(cookie, resources)
+        prices_tao = self.get_resource_price_tao(cookie, resources)
+        prices = prices_sku | prices_tao
+        kwargs.update({'prices': prices})
+
+        task_id = self.get_task_id(cookie)
+        kwargs.update({'task_id': task_id})
+
+        entity_info_list = self.get_entity_info_list(cookie)
+        kwargs.update({'entity_info_list': entity_info_list})
+
+        spec_template = SpecTemplate(**kwargs)
+        data = spec_template.add_resources(update=update)
+        spec_j = self.__connection(cookie, data)
+        #spec_j =1
+        return spec_j
+
 
 def get_tentura(login, password):
     url = 'https://tentura.corp.itmh.ru/?mode=project_objects&project_id=39203&active_project_id=39203'
@@ -528,56 +910,69 @@ def get_tentura(login, password):
     data_get_matched_addresses = {"id": 5555, "method": "get_matched_addresses", "params": ["Малышева, 28", True]}
 
     # нужен вывод полученного списка и выбор одного из id, далее выполняется запрос по id
-    data_get_construction_center = {"id": 5555, "method": "get_construction_center", "params": [2459]}
-    # {"id":42015,"result":"{\"lon\":60.593568271428573,\"lat\":56.833121157142855}"}
-    req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=json.dumps(data_get_construction_center))
-    print('!!')
-    result = req.json().get('result')
-    result = json.loads(result)
-    lon = result.get('lon')
-    lat = result.get('lat')
-    horizontal_offset = 0.0001
-    vertical_offset = 0.0001
-    lon += horizontal_offset
-    lat += vertical_offset
-    print(lon)
-    print(lat)
-    address = 'Малышева28'
+    # data_get_construction_center = {"id": 5555, "method": "get_construction_center", "params": [2459]}
+    # # {"id":42015,"result":"{\"lon\":60.593568271428573,\"lat\":56.833121157142855}"}
+    # req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=json.dumps(data_get_construction_center))
+    # print('!!')
+    # result = req.json().get('result')
+    # result = json.loads(result)
+    # lon = result.get('lon')
+    # lat = result.get('lat')
+    # horizontal_offset = 0.0001
+    # vertical_offset = 0.0001
+    # lon += horizontal_offset
+    # lat += vertical_offset
+    # print(lon)
+    # print(lat)
+    # address = 'Малышева28'
+    #
+    # data_create_csp = {
+    #     "id":5555, "method":"create_object", "params": [{
+    #         "inventory_objects_class":1138,
+    #         "attributes": [
+    #             {"id":2448,"name":"Помещение","value": address,"isDirty":True,"isNullable":False},
+    #             {"id":2443,"name":"Адрес","value": address,"isDirty":True,"isNullable":False},
+    #             {"id":59,"name":"Дата постройки","value":"30.08.2023","isDirty":True,"isNullable":False},
+    #             {"id":178,"name":"Основание размещения","value":"","isDirty":False,"isNullable":True},
+    #             {"id":31,"name":"Наименование","value":"","isDirty":False,"isNullable":True},
+    #             {"id":34,"name":"Фотографии","value":"","isDirty":False,"isNullable":True},
+    #             {"id":79,"name":"Владелец","value":"ООО «Комтехцентр»","isDirty":True,"isNullable":False},
+    #             {"id":80,"name":"Примечание","value":"","isDirty":False,"isNullable":True},
+    #             {"id":2447,"name":"ГИС: точка привязки","value":f"POINT({lon} {lat})","isDirty":True,"isNullable":True}
+    #         ],
+    #         "project": {
+    #             "id":project,"_checked":True,
+    #             "registers": [
+    #                 {"r2pt":2,"_checked":False},
+    #                 {"r2pt":3,"_checked":False},
+    #                 {"r2pt":4,"_checked":False},
+    #                 {"r2pt":5,"_checked":False},
+    #                 {"r2pt":6,"_checked":False},
+    #                 {"r2pt":7,"_checked":False},
+    #                 {"r2pt":8,"_checked":False},
+    #                 {"r2pt":12,"_checked":True},
+    #                 {"r2pt":13,"_checked":False},
+    #                 {"r2pt":14,"_checked":False}
+    #             ],
+    #             "checked_register":12
+    #         },
+    #         "includes":[]
+    #     }]
+    # }
 
-    data_create_csp = {
-        "id":5555, "method":"create_object", "params": [{
-            "inventory_objects_class":1138,
-            "attributes": [
-                {"id":2448,"name":"Помещение","value": address,"isDirty":True,"isNullable":False},
-                {"id":2443,"name":"Адрес","value": address,"isDirty":True,"isNullable":False},
-                {"id":59,"name":"Дата постройки","value":"30.08.2023","isDirty":True,"isNullable":False},
-                {"id":178,"name":"Основание размещения","value":"","isDirty":False,"isNullable":True},
-                {"id":31,"name":"Наименование","value":"","isDirty":False,"isNullable":True},
-                {"id":34,"name":"Фотографии","value":"","isDirty":False,"isNullable":True},
-                {"id":79,"name":"Владелец","value":"ООО «Комтехцентр»","isDirty":True,"isNullable":False},
-                {"id":80,"name":"Примечание","value":"","isDirty":False,"isNullable":True},
-                {"id":2447,"name":"ГИС: точка привязки","value":f"POINT({lon} {lat})","isDirty":True,"isNullable":True}
-            ],
-            "project": {
-                "id":project,"_checked":True,
-                "registers": [
-                    {"r2pt":2,"_checked":False},
-                    {"r2pt":3,"_checked":False},
-                    {"r2pt":4,"_checked":False},
-                    {"r2pt":5,"_checked":False},
-                    {"r2pt":6,"_checked":False},
-                    {"r2pt":7,"_checked":False},
-                    {"r2pt":8,"_checked":False},
-                    {"r2pt":12,"_checked":True},
-                    {"r2pt":13,"_checked":False},
-                    {"r2pt":14,"_checked":False}
-                ],
-                "checked_register":12
-            },
-            "includes":[]
-        }]
-    }
+    # Проверка является ли пользователь автором проекта
+    active_project = {"id": 50814, "method": "set_active_project_for_user", "params": [27605]}
 
+    # если да то возвращается True
+    # {'id': 50814, 'result': True}
+
+    # если нет то возвращается error, при этом status_code тоже 200
+    """{'id': 50814, 'error': {'name': 'JSONRPCError', 'message': 'При установке активного проекта для контекста пользователя произошла ошибка! = проект id= 27605 не может быть выбран, так как пользователь id= 469 не является его автором',
+    'errors': [{'name': 'Exception', 'message': 'set_active_project_for_user error: При установке активного проекта для контекста пользователя произошла ошибка! = проект id= 27605 не может быть выбран, так как пользователь id= 469 не я
+    вляется его автором'}, {'name': 'UserContextServiceException', 'message': 'При установке активного проекта для контекста пользователя произошла ошибка! = проект id= 27605 не может быть выбран, так как пользователь id= 469 не являетс
+    я его автором'}]}}
+    """
     req = client.post(url, verify=False, auth=HTTPBasicAuth(login, password),
-                      data=json.dumps(data_create_csp))
+                      data=json.dumps(active_project)) # data_create_csp
+    print(req.status_code)
     print(req.json())

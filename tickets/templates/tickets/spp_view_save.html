@@ -55,15 +55,15 @@
                       Проектировать
                     </button>
                     <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-                      <a class="dropdown-item" href="{% url 'add_tr' current_ticket_spp.dID v.0 v.1 %}">Нов. точка</a>
-                      <a class="dropdown-item" href="{% url 'add_tr_exist_cl' current_ticket_spp.dID v.0 v.1 %}">Сущ. точка</a>
-                        <a class="dropdown-item" href="{% url 'add_tr_not_required' current_ticket_spp.dID v.0 v.1 %}">Не требуется</a>
+                      <a class="dropdown-item" href="{% url 'sppdata' current_ticket_spp.dID v.0 v.1 %}?cp=new">Нов. точка</a>
+                      <a class="dropdown-item" href="{% url 'sppdata' current_ticket_spp.dID v.0 v.1 %}?cp=exist">Сущ. точка</a>
+                        <a class="dropdown-item" href="{% url 'sppdata' current_ticket_spp.dID v.0 v.1 %}?cp=not">Не требуется</a>
                     </div>
                   </div>
                     <a class="btn btn-outline-danger" href="{% url 'manually_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Редактировать</a>
                     <a class="btn btn-outline-danger" href="{% url 'add_spp_wait' current_ticket_spp.id %}" role="button">В ожидание</a>
-                    <a class="btn btn-outline-danger" href="{% url 'add_comment_to_return_ticket' %}" role="button">Вернуть</a>
-                    <a class="btn btn-outline-danger" href="{% url 'send_ticket_to_otpm_control' %}" role="button">Контроль и выпуск</a>
+                    <a class="btn btn-outline-danger" href="{% url 'add_comment_to_return_ticket' v.1 %}" role="button">Вернуть</a>
+                    <a class="btn btn-outline-danger" href="{% url 'send_ticket_to_otpm_control' v.1 %}" role="button">Контроль и выпуск</a>
                 </div>
                 {% endif %}
             </ul>

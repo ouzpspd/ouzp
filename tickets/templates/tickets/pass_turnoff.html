@@ -47,7 +47,7 @@
 <div class="card mb-2">
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">
-<form action="{% url 'pass_turnoff' %}" method="post">
+<form action="{% url 'pass_turnoff' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
         <div class="row">
@@ -58,7 +58,7 @@
 
         <div class="row mb-2">
             <div class="d-grid gap-2 col-2">
-                <a class="btn btn-info btn-block" href="{% url 'tr_view' dID tID trID %}" target ="_blank" role="button">Нагрузки</a>
+                <a class="btn btn-info btn-block" href="{% url 'tr_view' dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
             </div>
             <div class="d-grid gap-2 col-2">
                 <a class="btn btn-info btn-block" href="{% url 'ppr' %}" target ="_blank" role="button">Создать ППР</a>
@@ -67,7 +67,7 @@
         <div class="row mt-2">
                             <div class="col-2">
                                 <div class="form-group">
-                                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                                    <a class="btn btn-secondary btn-block" href="{{ request.scheme }}://{{ request.META.HTTP_HOST }}/{{back_link}}" role="button">Вернуться</a>
                                 </div>
                             </div>
                             <div class="col-2">

@@ -7,45 +7,61 @@
   <tbody>
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Адрес</th>
-        <td class="table-light" style="width: 75%">{{address}}</td>
+        <td class="table-light" style="width: 75%">{{ticket_tr.connection_point}}</td>
     </tr>
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Клиент</th>
-        <td class="table-light" style="width: 75%">{{client}}</td>
+        <td class="table-light" style="width: 75%">{{ticket_tr.ticket_k.client}}</td>
     </tr>
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Менеджер</th>
-        <td class="table-light" style="width: 75%">{{manager}}</td>
+        <td class="table-light" style="width: 75%">{{ticket_tr.ticket_k.manager}}</td>
     </tr>
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Технолог</th>
-        <td class="table-light" style="width: 75%">{{technolog}}</td>
+        <td class="table-light" style="width: 75%">{{ticket_tr.ticket_k.technolog}}</td>
     </tr>
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Задача в ОТПМ</th>
-        <td class="table-light" style="width: 75%">{% autoescape off %}{{task_otpm}}{% endautoescape %}</td>
+        <td class="table-light" style="width: 75%">{% autoescape off %}{{ticket_tr.ticket_k.task_otpm}}{% endautoescape %}</td>
     </tr>
     <tr>
         <th class="table-secondary text-right" style="width: 25%">Отключение</th>
-        {% if turnoff %}
+        {% if ticket_tr.turnoff %}
           <td class="table-light" style="width: 75%; color: red">Требуется отключение</td>
           {% else %}
             <td class="table-light" style="width: 75%">Нет</td>
           {% endif %}
     </tr>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_plus_desc|length}}">Услуг{{ services_plus_desc|length|pluralize:"а,и" }}</th>
-      {% for i in services_plus_desc%}
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{ticket_tr.services|length}}">Услуг{{ ticket_tr.services|length|pluralize:"а,и" }}</th>
+      {% for i in ticket_tr.services%}
         <td class="table-light" style="width: 75%">{{i}}</td>
     </tr>
     {% endfor %}
+      <tr>
+        <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+          {% if ticket_tr.ticket_k.simplified_tr %}
+              {% if ticket_tr.pps == 'Не выбран' %}
+                <td class="table-light" style="width: 75%; color: red">Не выбран
+                    <a class="btn btn-outline-danger" href="{% url 'addresses' 'ortr' ticket_tr.ticket_tr %}">Выбрать</a></td>
+                {% else %}
+                <td class="table-light" style="width: 75%">{{ticket_tr.pps}} <a class="btn btn-outline-success" href="{% url 'addresses' 'ortr' ticket_tr.ticket_tr %}">Изменить</a></td>
+                {% endif %}
+          {% else %}
+            <td class="table-light" style="width: 75%">{{ticket_tr.pps}} </td>
+          {% endif %}
+        </tr>
+    <tr>
+
+    </tr>
   </tbody>
 </table>
 
 </div>
 
 <div class="container">
-    <form id="form" action="{% url 'sppdata' %}" method="post">
+    <form id="form" action="{% url 'sppdata' ticket_tr.ticket_k.dID ticket_tr.ticket_cp ticket_tr.ticket_tr%}?cp={{ request.GET.cp }}" method="post">
         {% csrf_token %}
 
         <div class="card mb-2">

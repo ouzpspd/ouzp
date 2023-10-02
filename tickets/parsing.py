@@ -84,6 +84,20 @@ def get_rtk_initial(username, password, line_data):
     return rtk_initial
 
 
+def get_oattr_sreda(oattr):
+    wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
+    ftth_temp = ['Alpha', 'ОК-1']
+    vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
+    if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
+        sreda = '3'
+    elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
+        sreda = '4'
+    elif any(vo in oattr for vo in vols_temp):
+        sreda = '2'
+    else:
+        sreda = '1'
+    return sreda
+
 
 def parse_tr(login, password, url):
     """Данный метод парсит ТР в СПП и возвращает полученные данные о ТР"""
@@ -642,6 +656,15 @@ def for_tr_view(login, password, dID, tID, trID):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        aid_link = soup.find('a', class_='nodec')['href']
+        match = re.search(r'php\?aID=(\d+)', aid_link)
+        aid = match.group(1) if match else None
+        spp_params['aid'] = aid
+        stu_find = soup.find('a', title="Переход в СТУ")
+        stu_link = stu_find.get('href') if stu_find else '0'
+        match = re.search(r'Edit/(\d+)', stu_link)
+        id_otu_project = match.group(1) if match else 0
+        spp_params['id_otu_project'] = id_otu_project
         search = soup.find_all('tr')
         for index, i in enumerate(search):
             if 'Перечень' in i.find_all('td')[0].text:
@@ -663,7 +686,7 @@ def for_tr_view(login, password, dID, tID, trID):
                 if 'Изменить' in i.find_all('td')[0].text:
                     spp_params['Узел подключения клиента'] = node.group(1)
                 else:
-                    spp_params['Узел подключения клиента'] = url
+                    spp_params['Узел подключения клиента'] = 'Не выбран'
             elif 'Отключение' in i.find_all('td')[0].text and len(i.find_all('td')) > 1 and i.find_all('td')[1].find('input'):
                 try:
                     checked = i.find_all('td')[1].find('input')['checked']
@@ -910,6 +933,19 @@ def save_to_otpm(login, password, dID, comment, uid, trdifperiod, trcuratorphone
             'action': 'saveSummary',
             'dID': dID,
             'trAdv': comment,
+            }
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    return req.status_code
+
+
+def accept_to_ortr(login, password, dID, uid, trdifperiod, trcuratorphone):
+    """Данный метод выполняет запрос в СПП на сохранение комментария"""
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'
+    data = {'uID': uid,
+            'trCuratorPhone': trcuratorphone,
+            'trDifPeriod': trdifperiod,
+            'action': 'reciveSummary',
+            'dID': dID
             }
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     return req.status_code

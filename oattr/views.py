@@ -1,6 +1,7 @@
 import datetime
 import re
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
@@ -13,17 +14,23 @@ from django.views import View
 from django.core.exceptions import ObjectDoesNotExist
 from django.views.generic import DetailView, FormView
 
-
+from tickets.models import TR
 from tickets.views import cache_check
 from .models import OtpmSpp, OtpmTR
 from tickets.utils import flush_session_key
 
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
-from .parsing import ckb_parse, dispatch, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
+from .parsing import ckb_parse, get_or_create_otu, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
     send_spp_check, in_work_otpm, get_spp_stage, get_spp_addresses, get_spp_addresses, get_nodes_by_address, \
-    get_initial_node, get_tentura
+    get_initial_node, get_tentura, Tentura, Specification
 from .utils import add_tag_for_services
 
+
+def error_500(request):
+    # print('exception')
+    # print(exception)
+    data = {}
+    return render(request, '500.html', data)
 
 def filter_otpm_search(search, technologs, group, status):
     """Данный метод фильтрует пул заявок по технологу, группе"""
@@ -103,8 +110,9 @@ class CredentialMixin:
         return response
 
 
-class OtpmPoolView(CredentialMixin, View):
+class OtpmPoolView(CredentialMixin, LoginRequiredMixin, View):
     """Пул задач ОТПМ"""
+    login_url = '/login/'
     @cache_check_view
     def get(self, request):
         username, password = super().get_credential(self)
@@ -346,7 +354,7 @@ class CreateProjectOtuView(CredentialMixin, View):
     @cache_check_view
     def get(self, request, trID):
         username, password = super().get_credential(self)
-        id_otu = dispatch(username, password, trID)
+        id_otu = get_or_create_otu(username, password, trID)
         return redirect(f'https://tas.corp.itmh.ru/OtuProject/Edit/{id_otu}')
 
 
@@ -444,12 +452,70 @@ def data(request, trID):
     return redirect('saved_data_oattr', trID)
 
 
+
+
 def tentura(request):
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    get_tentura(username, password)
+    #get_tentura(username, password)
+    tentura = Tentura(username, password, 39203)
+    status = tentura.check_active_project_for_user() #connection(username, password, 39203)
+    print(status)
+    project_context = tentura.get_project_context()
+    print(project_context)
+    matched_addresses = tentura.get_matched_addresses('Куйбышева, 10')
+    print(matched_addresses)
+    id_address = 2170
+    construction_center = tentura.get_construction_center(2170)
+    print(construction_center)
+    set_ioc_filter = tentura.set_ioc_filter(project_context)
+    print(set_ioc_filter)
+    id_gis_objects = tentura.get_id_gis_objects(project_context, id_address)
+
+    gis_objects = tentura.get_params_binded_objects(id_gis_objects, project_context)
+    for k, v in gis_objects.items():
+        print(k)
+        print(v.get('name'))
+
+    gis_object = gis_objects.get(70252)
+
+    result = tentura.add_csp(id_address, 'Куйбышева, 10')
+    print(result)
+    # result = tentura.add_node(gis_object)
+    # print(result)
+
+
+def specific(request):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    otu_project_id = 39421 #37859 #39203
+    specification = Specification(username, password, otu_project_id)
+    cookie = specification.authenticate()
+
+    csp_resources = [
+        {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
+    ]
+
+    # prices_sku = specification.get_resource_price_sku(cookie, csp_resources)
+    # prices_tao = specification.get_resource_price_tao(, csp_resources)
+    # prices = prices_sku | prices_taocookie
+    # print(prices)
+    inventory_object_id = 131124 #128874
+    specification.set_resources(cookie, inventory_object_id, csp_resources, update=False)
+
+    pps_resources = [
+        {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 3},
+        {'Name': '# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90},
+        {'Name': 'Выезд автомобиля В2В ВОЛС', 'Amount': 1},
+        {'Name': 'Присоединение B2B UTP', 'Amount': 1},
+    ]
+
+    inventory_object_id = 2268
+    specification.set_resources(cookie, inventory_object_id, pps_resources, update=False)
 
 
 
@@ -653,9 +719,14 @@ def save_spp(request):
 class AddressView(CredentialMixin, View):
     """Поиск адресов в СПП"""
     @cache_check_view
-    def get(self, request, trID):
+    def get(self, request, department, trID):
         username, password = super().get_credential(self)
-        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        print('department')
+        print(department)
+        if department == 'ortr':
+            ticket_tr = TR.objects.filter(ticket_tr=trID).last()
+        else:
+            ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
         if request.GET:
             form = AddressForm(request.GET)
             if form.is_valid():
@@ -664,7 +735,7 @@ class AddressView(CredentialMixin, View):
                 house = None if not form.cleaned_data['house'] else form.cleaned_data['house']
 
                 search = get_spp_addresses(username, password, city, street, house)
-                context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search}
+                context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search, 'department': department}
                 #get_nodes_by_address(username, password, 154)
 
                 return render(request, 'oattr/addresses.html', context)
@@ -672,21 +743,25 @@ class AddressView(CredentialMixin, View):
             form = AddressForm()
 
             search = get_initial_node(username, password, ticket_tr)
-            context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search}
+            context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search, 'department': department}
             return render(request, 'oattr/addresses.html', context)
 
 
 class SelectNodeView(CredentialMixin, View):
     """Выбор узла на адресе для добавления в ТР"""
     @cache_check_view
-    def get(self, request, trID, aid):
+    def get(self, request, department, trID, aid):
         username, password = super().get_credential(self)
-        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        if department == 'ortr':
+            ticket_tr = TR.objects.filter(ticket_tr=trID).last()
+        else:
+            ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
         search = get_nodes_by_address(username, password, aid)
 
         context = {
             'search': search,
-            'ticket_tr': ticket_tr
+            'ticket_tr': ticket_tr,
+            'department': department
         }
         return render(request, 'oattr/select_node.html', context)
 
@@ -694,23 +769,27 @@ class SelectNodeView(CredentialMixin, View):
 class UpdateNodeView(CredentialMixin, View):
     """Выбор узла на адресе для добавления в ТР"""
     @cache_check_view
-    def get(self, request, trID, vid):
+    def get(self, request, department, trID, vid):
         username, password = super().get_credential(self)
-        ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+        if department == 'ortr':
+            ticket_tr = TR.objects.filter(ticket_tr=trID).last()
+            cp = request.session.get(str(self.kwargs['trID'])).get('cp')
+            query_dictionary = QueryDict('', mutable=True)
+            query_dictionary.update({'cp': cp})
+            url = f"{reverse('sppdata', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}?{query_dictionary.urlencode()}"
+        else:
+            ticket_tr = OtpmTR.objects.get(ticket_tr=trID)
+            action = request.session.get(str(self.kwargs['trID'])).get('action')
+            query_dictionary = QueryDict('', mutable=True)
+            query_dictionary.update({'action': action})
+            url = f"{reverse('add_tr_oattr', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}?{query_dictionary.urlencode()}"
         ticket_tr.vID = vid
         ticket_tr.save()
         #send_node_to_spp(username, password, ticket_tr)
-        send_spp(username, password, ticket_tr)
-        action = request.session.get(str(self.kwargs['trID'])).get('action')
+        send_spp(username, password, ticket_tr, department)
+
         # session_tr_id.update({'action': request.GET.get('action')})
         # request.session[(self.kwargs['trID'])] = session_tr_id
-
-        query_dictionary = QueryDict('', mutable=True)
-        query_dictionary.update(
-            {
-                'action': action
-            })
-        url = f"{reverse('add_tr_oattr', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})}?{query_dictionary.urlencode()}"
         return redirect(url)
 
 

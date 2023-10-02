@@ -1,16 +1,5 @@
 {% extends 'base.html' %}
 
-{% block nav_active %}
-{% load custom_filters %}
-
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link active" aria-current="page" href="{% url 'otpm' %}">Пул задач</a>
-</li>
-{% endblock %}
-
 {% block content %}
 
 <div class="container">
@@ -18,7 +7,11 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb align-items-center justify-content-center">
+                  {% if department == 'otpm'%}
                   <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Выбор Узла Связи ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.address_cp}}</h6></li>
+                  {% else %}
+                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Выбор Узла Связи ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.connection_point}}</h6></li>
+                  {% endif %}
               </ol>
             </nav>
         </div>
@@ -53,7 +46,7 @@
             <td>{{node.4}}</td>
             <td>{{node.5}}</td>
             <td>
-                <a class="btn btn-outline-success custom" href="{% url 'update_node' ticket_tr.ticket_tr node.0 %}"
+                <a class="btn btn-outline-success custom" href="{% url 'update_node' department ticket_tr.ticket_tr node.0 %}"
                    role="button">Выбрать</a>
             </td>
 

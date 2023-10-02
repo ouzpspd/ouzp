@@ -2,6 +2,8 @@
 {% extends 'base.html' %}
 
 {% block nav_active %}
+{% load custom_filters %}
+{% if request.user|has_group:"Сотрудники ОУЗП" or request.user|has_group:"Менеджеры" %}
 
 <li class="nav-item">
   <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
@@ -9,6 +11,7 @@
 <li class="nav-item">
   <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
 </li>
+{% if request.user|has_group:"Сотрудники ОУЗП" %}
 <li class="nav-item">
   <a class="nav-link" href="{% url 'search' %}">Поиск</a>
 </li>
@@ -18,11 +21,12 @@
   </a>
   <div class="dropdown-menu" aria-labelledby="navbarDropdown">
     <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
-    <a class="dropdown-item" href="{% url 'ppr' %}" target ="_blank">ППР</a>
+    <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР</a>
   </div>
 </li>
+{% endif %}
 <li class="nav-item">
   <a class="nav-link" href="{% url 'spp_view_save' dID ticket_spp_id %}">К заявке</a>
 </li>
-
+{% endif %}
 {% endblock %}
