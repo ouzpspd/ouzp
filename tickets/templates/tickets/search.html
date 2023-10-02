@@ -18,7 +18,7 @@
   </a>
   <div class="dropdown-menu" aria-labelledby="navbarDropdown">
     <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
-      <a class="dropdown-item" href="{% url 'ppr' %}" target ="_blank">ППР</a>
+      <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР</a>
   </div>
 </li>
 {% if request.user|has_group:"Руководство ОУЗП" %}

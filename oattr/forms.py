@@ -47,6 +47,12 @@ class UserRegistrationForm(UserCreationForm):
         if 'Техник-технолог ОАТТР' in str(self.cleaned_data.get('hold_position')):
             oattr_group = Group.objects.get(name='Сотрудники ОАТТР')
             oattr_group.user_set.add(user)
+        elif 'Инженер-технолог ОУЗП СПД' in str(self.cleaned_data.get('hold_position')):
+            mko_group = Group.objects.get(name='Сотрудники ОУЗП')
+            mko_group.user_set.add(user)
+        elif 'Менеджер' in str(self.cleaned_data.get('hold_position')):
+            mko_group = Group.objects.get(name='Менеджеры')
+            mko_group.user_set.add(user)
         user.save()
         return user
 

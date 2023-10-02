@@ -272,21 +272,21 @@ def _new_services(result_services, value_vars):
             else:
                 static_vars['требуется запись звука / запись звука не требуется'] = 'запись звука не требуется'
             camera_number = value_vars.get('camera_number')
-            if int(camera_number) < 3:
+            if camera_number < 3:
                 stroka = templates.get("Организация услуги Видеонаблюдение с использованием PoE-инжектора")
                 if sreda == '2' or sreda == '4':
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-                static_vars['указать количество линий'] = camera_number
-                static_vars['указать количество камер'] = camera_number
-                static_vars['указать количество инжекторов'] = camera_number
+                static_vars['указать количество линий'] = str(camera_number)
+                static_vars['указать количество камер'] = str(camera_number)
+                static_vars['указать количество инжекторов'] = str(camera_number)
                 static_vars['номер порта маршрутизатора'] = 'свободный'
                 static_vars['0/3/7/15/30'] = value_vars.get('deep_archive')
                 static_vars['указать адрес'] = value_vars.get('address')
                 static_vars['указать место установки 1'] = value_vars.get('camera_place_one')
 
-                if int(camera_number) == 2:
+                if camera_number == 2:
                     hidden_vars[
                         '-- %номер порта маршрутизатора%: %указать адрес%, Камера %указать место установки 2%, %указать модель камеры%, %требуется запись звука / запись звука не требуется%.'] = '-- %номер порта маршрутизатора%: %указать адрес%, Камера %указать место установки 2%, %указать модель камеры%, %требуется запись звука / запись звука не требуется%.'
                     hidden_vars[
@@ -295,22 +295,22 @@ def _new_services(result_services, value_vars):
                 static_vars[
                     'PoE-инжектор СКАТ PSE-PoE.220AC/15VA / OSNOVO Midspan-1/151A'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                counter_plur = int(camera_number)
+                counter_plur = camera_number
                 result_services.append(pluralizer_vars(stroka, counter_plur))
-            elif int(camera_number) == 5 or int(camera_number) == 9:
+            elif camera_number == 5 or camera_number == 9:
                 stroka = templates.get(
                     "Организация услуги Видеонаблюдение с использованием POE-коммутатора и PoE-инжектора")
                 if sreda == '2' or sreda == '4':
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-                static_vars['указать количество линий'] = str(int(camera_number) - 1)
-                static_vars['указать количество камер'] = camera_number
-                if int(camera_number) == 5:
+                static_vars['указать количество линий'] = str(camera_number - 1)
+                static_vars['указать количество камер'] = str(camera_number)
+                if camera_number == 5:
                     static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор D-Link DES-1005P'
                     static_vars['указать номер порта POE-коммутатора'] = '5'
                     static_vars['номер камеры'] = '5'
-                elif int(camera_number) == 9:
+                elif camera_number == 9:
                     static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор Atis PoE-1010-8P'
                     static_vars['указать номер порта POE-коммутатора'] = '10'
                     static_vars['номер камеры'] = '9'
@@ -319,11 +319,11 @@ def _new_services(result_services, value_vars):
                 static_vars['указать адрес'] = value_vars.get('address')
                 list_cameras_one = []
                 list_cameras_two = []
-                for i in range(int(camera_number) - 1):
+                for i in range(camera_number - 1):
                     extra_stroka_one = 'Порт {}: %указать адрес%, Камера №{}, %указать модель камеры%, %требуется запись звука / запись звука не требуется%\n'.format(
                         i + 1, i + 1)
                     list_cameras_one.append(extra_stroka_one)
-                for i in range(int(camera_number)):
+                for i in range(camera_number):
                     extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %0/3/7/15/30%< и запись звука>;\n'.format(
                         i + 1)
                     list_cameras_two.append(extra_stroka_two)
@@ -337,7 +337,7 @@ def _new_services(result_services, value_vars):
                     'PoE-инжектор СКАТ PSE-PoE.220AC/15VA / OSNOVO Midspan-1/151A'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
                 static_vars['указать количество POE-коммутаторов'] = '1'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                counter_plur = int(camera_number) - 1
+                counter_plur = camera_number - 1
                 result_services.append(pluralizer_vars(stroka, counter_plur))
             else:
                 stroka = templates.get("Организация услуги Видеонаблюдение с использованием POE-коммутатора")
@@ -345,12 +345,12 @@ def _new_services(result_services, value_vars):
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-                static_vars['указать количество линий'] = camera_number
-                static_vars['указать количество камер'] = camera_number
-                if 5 < int(camera_number) < 9:
+                static_vars['указать количество линий'] = str(camera_number)
+                static_vars['указать количество камер'] = str(camera_number)
+                if 5 < camera_number < 9:
                     static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор Atis PoE-1010-8P'
                     static_vars['указать номер порта POE-коммутатора'] = '10'
-                elif 2 < int(camera_number) < 5:
+                elif 2 < camera_number < 5:
                     static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор D-Link DES-1005P'
                     static_vars['указать номер порта POE-коммутатора'] = '5'
                 static_vars['номер порта маршрутизатора'] = 'свободный'
@@ -358,11 +358,11 @@ def _new_services(result_services, value_vars):
                 static_vars['указать адрес'] = value_vars.get('address')
                 list_cameras_one = []
                 list_cameras_two = []
-                for i in range(int(camera_number)):
+                for i in range(camera_number):
                     extra_stroka_one = 'Порт {}: %указать адрес%, Камера №{}, %указать модель камеры%, %требуется запись звука / запись звука не требуется%;\n'.format(
                         i + 1, i + 1)
                     list_cameras_one.append(extra_stroka_one)
-                for i in range(int(camera_number)):
+                for i in range(camera_number):
                     extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %0/3/7/15/30%< и запись звука>;\n'.format(
                         i + 1)
                     list_cameras_two.append(extra_stroka_two)
@@ -375,7 +375,7 @@ def _new_services(result_services, value_vars):
                 stroka = stroka + '\n' + extra_extra_stroka_two
                 static_vars['указать количество POE-коммутаторов'] = '1'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                counter_plur = int(camera_number)
+                counter_plur = camera_number
                 result_services.append(pluralizer_vars(stroka, counter_plur))
         elif 'Телефон' in service:
             name_new_service.add('Телефония')
@@ -543,7 +543,7 @@ def _new_services(result_services, value_vars):
             static_vars = {}
             hidden_vars = {}
             local_ports = value_vars.get('local_ports')
-            static_vars['2-23'] = local_ports
+            static_vars['2-23'] = str(local_ports)
             if value_vars.get('local_type') == 'СКС':
                 stroka = templates.get("Организация СКС на %2-23% {порт}")
                 if value_vars.get('sks_poe') == True:
@@ -552,9 +552,9 @@ def _new_services(result_services, value_vars):
                 if value_vars.get('sks_router') == True:
                     hidden_vars[
                         '- Подключить %2-23% {организованную} {линию} связи в ^свободный^ ^порт^ маршрутизатора клиента.'] = '- Подключить %2-23% {организованную} {линию} связи в ^свободный^ ^порт^ маршрутизатора клиента.'
-                static_vars['указать количество'] = local_ports
+                static_vars['указать количество'] = str(local_ports)
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                counter_plur = int(local_ports)
+                counter_plur = local_ports
                 result_services.append(pluralizer_vars(stroka, counter_plur))
             else:
                 stroka = templates.get("Организация ЛВС на %2-23% {порт}")

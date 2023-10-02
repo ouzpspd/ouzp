@@ -134,7 +134,7 @@
 
 
     {% if counter_str_ots == 1 %}
-          <form action="{% url 'saved_data' %}" method="post">
+          <form action="{% url 'saved_data' trID %}" method="post">
             {% csrf_token %}
               <div class="card mb-2">
       <h5 class="card-header">Решение ОРТР</h5>
@@ -161,7 +161,7 @@
                   {% if not_required_tr == False %}
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{ request.scheme }}://{{ request.META.HTTP_HOST }}/{{back_link}}" role="button">Вернуться</a>
                 </div>
             </div>
                   {% endif %}
@@ -172,7 +172,7 @@
             </div>
               <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' %}" target ="_blank" role="button">Отправить</a>
+                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
               <div class="col-2">
@@ -189,7 +189,7 @@
           </form>
 
               {% else %}
-    <form action="{% url 'saved_data' %}" method="post">
+    <form action="{% url 'saved_data' trID %}" method="post">
             {% csrf_token %}
               <div class="card mb-2">
       <h5 class="card-header">Решение ОРТР</h5>
@@ -217,7 +217,7 @@
               {% if not_required_tr == False %}
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{ request.scheme }}://{{ request.META.HTTP_HOST }}/{{back_link}}" role="button">Вернуться</a>
                 </div>
             </div>
               {% endif %}
@@ -228,7 +228,7 @@
             </div>
               <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' %}" target ="_blank" role="button">Отправить</a>
+                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
               <div class="col-2">

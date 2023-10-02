@@ -53,7 +53,7 @@
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">
 
-<form action="{% url 'job_formset' %}" method="post">
+<form action="{% url 'job_formset' trID %}" method="post">
     {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
     {% csrf_token %}
     <div class="container">

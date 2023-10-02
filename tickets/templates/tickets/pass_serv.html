@@ -47,7 +47,7 @@
 <div class="card mb-2">
     <h5 class="card-header">Параметры</h5>
   <div class="card-body">
-<form action="{% url 'pass_serv' %}" method="post">
+<form action="{% url 'pass_serv' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
         <div class="row">
@@ -58,7 +58,7 @@
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{ request.scheme }}://{{ request.META.HTTP_HOST }}/{{back_link}}" role="button">Вернуться</a>
                 </div>
             </div>
             <div class="col-2">
