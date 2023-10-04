@@ -22,7 +22,7 @@ from django.conf import settings
 
 from oattr.views import AddressView, SelectNodeView, UpdateNodeView
 
-handler500 = 'oattr.views.error_500'
+handler500 = 'oattr.views.handler500'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
