@@ -5,9 +5,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
-from django.http import QueryDict
+from django.http import QueryDict, HttpResponseServerError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
+from django.template import loader
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -25,12 +26,9 @@ from .parsing import ckb_parse, get_or_create_otu, for_tr_view, for_spp_view, sa
     get_initial_node, get_tentura, Tentura, Specification
 from .utils import add_tag_for_services
 
+def handler500(request, *args, **argv):
+    return render(request, '500.html', status=500)
 
-def error_500(request):
-    # print('exception')
-    # print(exception)
-    data = {}
-    return render(request, '500.html', data)
 
 def filter_otpm_search(search, technologs, group, status):
     """Данный метод фильтрует пул заявок по технологу, группе"""

@@ -214,6 +214,7 @@ def ortr(request):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
+    print({k:v for k, v in request.session.items()})
     #request = flush_session_key(request)
     search = in_work_ortr(username, password)
     if search[0] == 'Access denied':
@@ -453,8 +454,7 @@ def project_tr(request, dID, tID, trID):
     pps = ticket_tr.pps
     pps = pps.strip()
     turnoff = ticket_tr.turnoff
-    task_otpm = ticket_tr.ticket_k.task_otpm
-    services_plus_desc = ticket_tr.services
+    services_plus_desc = splice_services(ticket_tr.services)
     des_tr = ticket_tr.ticket_k.des_tr
     address = ticket_tr.connection_point
     client = ticket_tr.ticket_k.client
@@ -462,6 +462,22 @@ def project_tr(request, dID, tID, trID):
     technolog = ticket_tr.ticket_k.technolog
     task_otpm = ticket_tr.ticket_k.task_otpm
     #tochka = [str(dID), str(tID)]
+    # splice = {}
+    # for service in services_plus_desc:
+    #     for serv in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение']:
+    #         if service.startswith(serv):
+    #             if splice.get(serv):
+    #                 splice[serv] = splice[serv] + ' ' + service[len(serv):]
+    #             else:
+    #                 splice[serv] = service
+    #         elif not [i for i in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение'] if service.startswith(i)]:
+    #             splice[service] = service
+    #
+    # services_plus_desc = list(splice.values())
+
+
+
+
     counter_line_services, hotspot_points, services_plus_desc = _counter_line_services(services_plus_desc)
     #request.session['services_plus_desc'] = services_plus_desc  # здесь сервисы модифицированы со знаками |
     cks_points = []
@@ -2140,6 +2156,7 @@ def cks(request, trID):
         else:
             back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
+        request.session[trID] = session_tr_id
         types_change_service = session_tr_id.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         list_cks = session_tr_id.get('cks_points')
@@ -2760,56 +2777,57 @@ def job_formset(request, trID):
     ticket_tr = TR.objects.get(id=ticket_tr_id)
     oattr = ticket_tr.oattr
     pps = ticket_tr.pps
-    services = ticket_tr.services
-    services_con = []
-    for service in services:
-        if service.startswith('Телефон'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('Телефон'):
-                        services_con[i] = services_con[i] +' '+ service[len('Телефон'):]
-                        break
-                    else:
-                        if i == len(services_con)-1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        elif service.startswith('ЛВС'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('ЛВС'):
-                        services_con[i] = services_con[i] +' '+ service[len('ЛВС'):]
-                        break
-                    else:
-                        if i == len(services_con)-1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        elif service.startswith('Видеонаблюдение'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('Видеонаблюдение'):
-                        services_con[i] = services_con[i] +' '+ service[len('Видеонаблюдение'):]
-                        break
-                    else:
-                        if i == len(services_con) - 1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        elif service.startswith('HotSpot'):
-            if len(services_con) != 0:
-                for i in range(len(services_con)):
-                    if services_con[i].startswith('HotSpot'):
-                        services_con[i] = services_con[i] +' '+ service[len('HotSpot'):]
-                        break
-                    else:
-                        if i == len(services_con) - 1:
-                            services_con.append(service)
-            else:
-                services_con.append(service)
-        else:
-            services_con.append(service)
-    services = services_con
+    services = splice_services(ticket_tr.services)
+    # services_con = []
+    # for service in services:
+    #     if service.startswith('Телефон'):
+    #         if len(services_con) != 0:
+    #             for i in range(len(services_con)):
+    #                 if services_con[i].startswith('Телефон'):
+    #                     services_con[i] = services_con[i] +' '+ service[len('Телефон'):]
+    #                     break
+    #                 else:
+    #                     if i == len(services_con)-1:
+    #                         services_con.append(service)
+    #         else:
+    #             services_con.append(service)
+    #     elif service.startswith('ЛВС'):
+    #         if len(services_con) != 0:
+    #             for i in range(len(services_con)):
+    #                 if services_con[i].startswith('ЛВС'):
+    #                     services_con[i] = services_con[i] +' '+ service[len('ЛВС'):]
+    #                     break
+    #                 else:
+    #                     if i == len(services_con)-1:
+    #                         services_con.append(service)
+    #         else:
+    #             services_con.append(service)
+    #     elif service.startswith('Видеонаблюдение'):
+    #         if len(services_con) != 0:
+    #             for i in range(len(services_con)):
+    #                 if services_con[i].startswith('Видеонаблюдение'):
+    #                     services_con[i] = services_con[i] +' '+ service[len('Видеонаблюдение'):]
+    #                     break
+    #                 else:
+    #                     if i == len(services_con) - 1:
+    #                         services_con.append(service)
+    #         else:
+    #             services_con.append(service)
+    #     elif service.startswith('HotSpot'):
+    #         if len(services_con) != 0:
+    #             for i in range(len(services_con)):
+    #                 if services_con[i].startswith('HotSpot'):
+    #                     services_con[i] = services_con[i] +' '+ service[len('HotSpot'):]
+    #                     break
+    #                 else:
+    #                     if i == len(services_con) - 1:
+    #                         services_con.append(service)
+    #         else:
+    #             services_con.append(service)
+    #     else:
+    #         services_con.append(service)
+    # services = services_con
+
     ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
     if request.method == 'POST':
         formset = ListJobsFormSet(request.POST)
@@ -4056,21 +4074,23 @@ def report_time_tracking(request):
 
 
 @cache_check
-def add_comment_to_return_ticket(request, trID):
+def add_comment_to_return_ticket(request, dID):    #trID
     """Данный метод отображает html-страничку c формой для заполнения комментария к возвращаемой ТР"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
+    ticket_spp = SPP.objects.filter(dID=dID).last()
+    ticket_spp_id = ticket_spp.id
     if request.method == 'POST':
         addcommentform = AddCommentForm(request.POST)
         if addcommentform.is_valid():
             comment = addcommentform.cleaned_data['comment']
             return_to = addcommentform.cleaned_data['return_to']
-            session_tr_id = request.session[str(trID)]
-            dID = session_tr_id.get('dID')
-            ticket_spp_id = session_tr_id.get('ticket_spp_id')
-            ticket_spp = SPP.objects.get(id=ticket_spp_id)
+            #session_tr_id = request.session[str(trID)]
+            #dID = session_tr_id.get('dID')
+            #ticket_spp_id = session_tr_id.get('ticket_spp_id')
+            #ticket_spp = SPP.objects.get(id=ticket_spp_id)
             uid = ticket_spp.uID
             trdifperiod = ticket_spp.trdifperiod
             trcuratorphone = ticket_spp.trcuratorphone
@@ -4113,26 +4133,28 @@ def add_comment_to_return_ticket(request, trID):
                 return redirect('ortr')
     else:
         addcommentform = AddCommentForm()
-        session_tr_id = request.session[str(trID)]
+        #session_tr_id = request.session[str(trID)]
         context = {'addcommentform': addcommentform,
-                   'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-                   'dID': session_tr_id.get('dID'),
-                   'trID': trID
+                   'ticket_spp_id': ticket_spp_id, #session_tr_id.get('ticket_spp_id'),
+                   'dID': dID,#session_tr_id.get('dID'),
+                   #'trID': trID
                    }
         return render(request, 'tickets/return_comment.html', context)
 
 
 @cache_check
-def send_ticket_to_otpm_control(request, trID):
+def send_ticket_to_otpm_control(request, dID): #trID
     """Данный метод завершает работу над заявкой отправленной в ОТПМ Контроль и выпуск"""
     user = User.objects.get(username=request.user.username)
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    session_tr_id = request.session[str(trID)]
-    dID = session_tr_id.get('dID')
-    ticket_spp_id = session_tr_id.get('ticket_spp_id')
-    ticket_spp = SPP.objects.get(id=ticket_spp_id)
+    #session_tr_id = request.session[str(trID)]
+    #dID = session_tr_id.get('dID')
+    #ticket_spp_id = session_tr_id.get('ticket_spp_id')
+    #ticket_spp = SPP.objects.get(id=ticket_spp_id)
+    ticket_spp = SPP.objects.filter(dID=dID).last()
+    ticket_spp_id = ticket_spp.id
     uid = ticket_spp.uID
     trdifperiod = ticket_spp.trdifperiod
     trcuratorphone = ticket_spp.trcuratorphone
@@ -4158,7 +4180,7 @@ def send_ticket_to_otpm_control(request, trID):
     for ticket_tr in tickets_tr:
         if request.session.get(ticket_tr.ticket_tr):
             del request.session[ticket_tr.ticket_tr]
-    messages.success(request, f'Заявка {ticket_k} выполнена и отправлена в ОТПМ Контроль и выпуск.')
+    messages.success(request, f'Заявка {ticket_k} выполнена и отправлена.')
     return redirect('ortr')
 
 

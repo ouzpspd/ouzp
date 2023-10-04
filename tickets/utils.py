@@ -727,6 +727,21 @@ def get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
     request.session[trID] = session_tr_id
     return response
 
+def splice_services(services):
+    """Объединение нескольких строк с сервисами Телефон, ЛВС, HotSpot, Видеонаблюдение в одну"""
+    splice = {}
+    for service in services:
+        for serv in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение']:
+            if service.startswith(serv):
+                if splice.get(serv):
+                    splice[serv] = splice[serv] + ' ' + service[len(serv):]
+                else:
+                    splice[serv] = service
+            elif not [i for i in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение'] if service.startswith(i)]:
+                splice[service] = service
+    return list(splice.values())
+
+
 
 def clear_session_params(session_tr_id, *args):
     """Данный метод удаляет из сессии полученные ключи"""
