@@ -792,7 +792,7 @@ class Specification:
 
         prices_sku = self.get_resource_price_sku(cookie, resources)
         prices_tao = self.get_resource_price_tao(cookie, resources)
-        prices = prices_sku | prices_tao
+        prices = {**prices_sku, **prices_tao}
         kwargs.update({'prices': prices})
 
         task_id = self.get_task_id(cookie)
