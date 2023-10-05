@@ -488,21 +488,7 @@ def project_tr(request, dID, tID, trID):
     sreda = get_oattr_sreda(oattr) if oattr else '1'
 
     tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
-    tag_service.insert(0, {f'sppdata/{dID}/{tID}/{trID}/?cp=new': None})
-
-    #services_plus_desc = data_sss[0]
-    #counter_line_services = data_sss[1]
-    #pps = data_sss[2]
-    #turnoff = data_sss[3]
-    #sreda = data_sss[4]
-    #tochka = data_sss[5]
-    #hotspot_points = data_sss[6]
-    #oattr = data_sss[7]
-    #address = data_sss[8]
-    # client = data_sss[9]
-    # manager = data_sss[10]
-    # technolog = data_sss[11]
-    # task_otpm = data_sss[12]
+    tag_service.insert(0, {f'sppdata/{dID}/{tID}/{trID}/': None})
 
     session_tr_id = request.session[str(trID)]
     session_tr_id.update({'services_plus_desc': services_plus_desc})  # здесь сервисы модифицированы со знаками |
@@ -694,7 +680,7 @@ def copper(request, trID):
             'list_switches': list_switches,
             'sreda': session_tr_id.get('sreda'),
             'copperform': copperform,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -2202,7 +2188,7 @@ def shpd(request, trID):
         if '?cp' in next(iter(tag_service[index])):
             back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
         else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+            back_link = next(iter(tag_service[index])) + f'?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -4400,6 +4386,7 @@ def sppdata(request, dID, tID, trID):
             tag_service_index.append(index)
             #request.session['tag_service_index'] = tag_service_index
             spd = form.cleaned_data['spd']
+            type_tr = form.cleaned_data['type_tr']
             session_tr_id = request.session[str(trID)]
             session_tr_id.update({'tag_service_index': tag_service_index})
 
@@ -4410,11 +4397,19 @@ def sppdata(request, dID, tID, trID):
                 return redirect('spp_view_save', ticket_tr.ticket_k.dID, ticket_tr.ticket_k.id)
             #request.session['spd'] = spd
             session_tr_id.update({'spd': spd})
+            if type_tr == 'Не требуется': #request.GET.get('cp') == 'exist':
+                session_tr_id.update({
+                    'services_plus_desc': ticket_tr.services, 'oattr': ticket_tr.oattr,
+                    'not_required': True, 'dID': dID
+                })
+                request.session[trID] = session_tr_id
+                return redirect('data', trID)
             request.session[trID] = session_tr_id
-            if request.GET.get('cp') == 'new':
+            if type_tr == 'Нов. точка': #request.GET.get('cp') == 'new':
                 return redirect('project_tr', dID, tID, trID)
-            if request.GET.get('cp') == 'exist':
+            if type_tr == 'Сущ. точка': #request.GET.get('cp') == 'exist':
                 return redirect('get_resources', trID)
+
 
     else:
         user = User.objects.get(username=request.user.username)
@@ -4438,6 +4433,7 @@ def sppdata(request, dID, tID, trID):
         form = SppDataForm()
         if user.groups.filter(name='Менеджеры').exists():
             form.fields['spd'].widget.choices = [('Комтехцентр', 'Комтехцентр'),]
+            form.fields['type_tr'].widget.choices = [('Нов. точка', 'Нов. точка'), ('Сущ. точка', 'Сущ. точка')]
         #tag_service = request.session['tag_service']
         visible = True #if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
         #ticket_tr_id = request.session.get('ticket_tr_id')
@@ -4457,7 +4453,7 @@ def sppdata(request, dID, tID, trID):
             # request.session['not_required'] = True
             # request.session['technical_solution'] = trID
             return redirect('data', trID)
-        request.session[trID] = {'ticket_spp_id': ticket_spp_id, 'ticket_tr_id': ticket_tr_id, 'cp': cp,
+        request.session[trID] = {'ticket_spp_id': ticket_spp_id, 'ticket_tr_id': ticket_tr_id, #'cp': cp,
                                  'technical_solution': trID}
         #request.session['cp'] = cp
         context = {
@@ -4474,7 +4470,7 @@ def sppdata(request, dID, tID, trID):
             #'pps': request.session.get('pps'),
             'form': form,
             'visible': visible,
-            'cp': request.GET.get('cp')
+            #'cp': request.GET.get('cp')
         }
         return render(request, 'tickets/sppdata.html', context)
 
