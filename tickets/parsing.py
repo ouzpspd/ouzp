@@ -656,9 +656,13 @@ def for_tr_view(login, password, dID, tID, trID):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        aid_link = soup.find('a', class_='nodec')['href']
+        aid_link = soup.find('a', class_='nodec')
+        if aid_link:
+            aid_link = aid_link['href']
+        else:
+            aid_link = ''
         match = re.search(r'php\?aID=(\d+)', aid_link)
-        aid = match.group(1) if match else None
+        aid = match.group(1) if match else 0
         spp_params['aid'] = aid
         stu_find = soup.find('a', title="Переход в СТУ")
         stu_link = stu_find.get('href') if stu_find else '0'
@@ -1080,7 +1084,6 @@ def spec(username, password):
     #         print(resp.request.headers)
     #         print(resp.status_code, resp.headers, resp.url)
     #         print('!!end respon!!!')
-    print(cookie)
     return cookie, x_session_id
 
 

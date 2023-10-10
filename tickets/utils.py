@@ -309,8 +309,6 @@ def _tag_service_for_new_serv(services_plus_desc):
             tag_service.append({'hotspot': services_plus_desc[index_service]})
         elif 'ЛВС' in services_plus_desc[index_service]:
             tag_service.append({'local': services_plus_desc[index_service]})
-    print('tag_service')
-    print(tag_service)
     return tag_service, hotspot_users, premium_plus
 
 
@@ -633,8 +631,6 @@ def backward_page_service(request, trID, service_name):
     session_tr_id = request.session[str(trID)]
     tag_service = session_tr_id.get('tag_service')
     tag_service_index = session_tr_id.get('tag_service_index')
-    print(tag_service)
-    print(tag_service_index)
     # if request.GET.get('next_page'):  # вариант без случая обновления страницы
     #     prev_page = next(iter(tag_service[index - 1]))
     #     service = tag_service[index][service_name]

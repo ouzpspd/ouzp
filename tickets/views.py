@@ -214,7 +214,6 @@ def ortr(request):
     credent = cache.get(user)
     username = credent['username']
     password = credent['password']
-    print({k:v for k, v in request.session.items()})
     #request = flush_session_key(request)
     search = in_work_ortr(username, password)
     if search[0] == 'Access denied':
@@ -488,21 +487,7 @@ def project_tr(request, dID, tID, trID):
     sreda = get_oattr_sreda(oattr) if oattr else '1'
 
     tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
-    tag_service.insert(0, {f'sppdata/{dID}/{tID}/{trID}/?cp=new': None})
-
-    #services_plus_desc = data_sss[0]
-    #counter_line_services = data_sss[1]
-    #pps = data_sss[2]
-    #turnoff = data_sss[3]
-    #sreda = data_sss[4]
-    #tochka = data_sss[5]
-    #hotspot_points = data_sss[6]
-    #oattr = data_sss[7]
-    #address = data_sss[8]
-    # client = data_sss[9]
-    # manager = data_sss[10]
-    # technolog = data_sss[11]
-    # task_otpm = data_sss[12]
+    tag_service.insert(0, {'sppdata': None})
 
     session_tr_id = request.session[str(trID)]
     session_tr_id.update({'services_plus_desc': services_plus_desc})  # здесь сервисы модифицированы со знаками |
@@ -694,7 +679,7 @@ def copper(request, trID):
             'list_switches': list_switches,
             'sreda': session_tr_id.get('sreda'),
             'copperform': copperform,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -905,7 +890,7 @@ def vols(request, trID):
             # 'tID': tID,
             'trID': trID,
             'volsform': volsform,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id')
         }
         return render(request, 'tickets/env.html', context)
@@ -991,7 +976,7 @@ def wireless(request, trID):
             'sreda': session_tr_id.get('sreda'),
             'turnoff': session_tr_id.get('turnoff'),
             'wirelessform': wirelessform,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -1082,7 +1067,7 @@ def csw(request, trID):
             'logic_change_gi_csw': logic_change_gi_csw,
             'logic_replace_csw': logic_replace_csw,
             'logic_change_csw': logic_change_csw,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -1115,8 +1100,6 @@ def data(request, trID):
         counter_line_services += session_tr_id.get('counter_line_hotspot')
     if session_tr_id.get('counter_line_itv'):
         counter_line_services += session_tr_id.get('counter_line_itv')
-        print('counter_line_services')
-        print(counter_line_services)
     session_tr_id.update({'counter_line_services': counter_line_services})
     if session_tr_id.get('result_services'):
         del session_tr_id['result_services']
@@ -1370,7 +1353,7 @@ def saved_data(request, trID):
                     'not_required_tr': False,
                 })
                 context.update({
-                    'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+                    'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
                 })
 
             return render(request, 'tickets/saved_data.html', context)
@@ -1436,7 +1419,7 @@ def saved_data(request, trID):
                 'not_required_tr': False,
             })
             context.update({
-                'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+                'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
             })
 
         return render(request, 'tickets/saved_data.html', context)
@@ -1696,10 +1679,7 @@ def hotspot(request, trID):
 
         service_name = 'hotspot'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
         context = {
             'premium_plus': session_tr_id.get('premium_plus'),
@@ -1869,10 +1849,7 @@ def phone(request, trID):
         #tag_service = request.session['tag_service']
         service_name = 'phone'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         if request.GET.get('next_page'):
             clear_session_params(
                 session_tr_id,
@@ -1967,10 +1944,7 @@ def local(request, trID):
         tag_service = session_tr_id.get('tag_service')
         service_name = 'local'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
 
         session_tr_id.update({'current_service': service, 'current_index_local': index + 1})
         request.session[trID] = session_tr_id
@@ -2001,10 +1975,7 @@ def sks(request, trID):
         tag_service = session_tr_id.get('tag_service')
         service_name = 'sks'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         sksform = SksForm()
         context = {
             'service_lvs': service,
@@ -2032,10 +2003,7 @@ def lvs(request, trID):
         tag_service = session_tr_id.get('tag_service')
         service_name = 'lvs'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         lvsform = LvsForm()
         context = {
             'service_lvs': service,
@@ -2099,10 +2067,7 @@ def itv(request, trID):
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
         itvform = ItvForm(initial={'type_itv': 'novl'})
@@ -2151,10 +2116,7 @@ def cks(request, trID):
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
         types_change_service = session_tr_id.get('types_change_service')
@@ -2199,10 +2161,7 @@ def shpd(request, trID):
         session_tr_id = request.session[str(trID)]
         types_change_service = session_tr_id.get('types_change_service')
         tag_service = session_tr_id.get('tag_service')
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -2252,10 +2211,7 @@ def portvk(request, trID):
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         #request.session['current_service'] = service
         session_tr_id.update({'current_service': service})
         types_change_service = session_tr_id.get('types_change_service')
@@ -2304,10 +2260,7 @@ def portvm(request, trID):
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
         types_change_service = session_tr_id.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -2340,10 +2293,7 @@ def video(request, trID):
         tag_service = session_tr_id.get('tag_service')
         service_name = 'video'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        if '?cp' in next(iter(tag_service[index])):
-            back_link = next(iter(tag_service[index])) + f'&next_page={prev_page}&index={index}'
-        else:
-            back_link = next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
         videoform = VideoForm()
@@ -3490,7 +3440,7 @@ def change_serv(request, trID):
         context = {
             'changeservform': changeservform,
             'service': service_change,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -3540,7 +3490,7 @@ def change_params_serv(request, trID):
             'changeparamsform': changeparamsform,
             'only_mask': only_mask,
             'routed': routed,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -3598,7 +3548,7 @@ def change_log_shpd(request, trID):
             'subnet_for_change_log_shpd': subnet_for_change_log_shpd,
             'pass_job_services': services,
             'changelogshpdform': changelogshpdform,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -3630,7 +3580,7 @@ def params_extend_service(request, trID):
             'type_passage': session_tr_id.get('type_passage'),
             'pass_job_services': session_tr_id.get('pass_job_services'),
             'extendserviceform': extendserviceform,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -3736,7 +3686,7 @@ def pass_serv(request, trID):
             'oattr': session_tr_id.get('oattr'),
             'pps': session_tr_id.get('pps'),
             'head': session_tr_id.get('head'),
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
             'trID': trID
@@ -3777,7 +3727,7 @@ def pass_turnoff(request, trID):
             'head': session_tr_id.get('head'),
             'ticket_tr': ticket_tr,
             'trID': trID,
-            'back_link': next(iter(tag_service[index])) + f'/{trID}/?next_page={prev_page}&index={index}',
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID')
         }
@@ -4315,7 +4265,8 @@ class RtkFormView(FormView, CredentialMixin):
             form = context['form']
             rtk_models = get_gottlieb(form['switch_ip'].initial)
             context['rtk_models'] = rtk_models
-        context['back_link'] = next(iter(tag_service[index])) + f'/{self.kwargs["trID"]}/?next_page={prev_page}&index={index}'
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': self.kwargs["trID"]}) + f'?next_page={prev_page}&index={index}'
+        context['back_link'] = back_link
         context['oattr'] = oattr
         context['ticket_k'] = ticket_k
         context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
@@ -4340,9 +4291,6 @@ class RtkFormView(FormView, CredentialMixin):
         session_tr_id.update({'tag_service': tag_service, 'tag_service_index': tag_service_index})
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
         url = f"{reverse(next(iter(tag_service[index + 1])), kwargs={'trID': self.kwargs['trID']})}?prev_page={next(iter(tag_service[index]))}&index={index}"
-        # print(tag_service)
-        # print(f'{next(iter(tag_service[index + 1]))}?prev_page={next(iter(tag_service[index]))}&index={index}')
-        # return f'{next(iter(tag_service[index + 1]))}/{self.kwargs["trID"]}/?prev_page={next(iter(tag_service[index]))}&index={index}'
         return url
 
 
@@ -4398,7 +4346,7 @@ class CreateSpecificationView(CredentialMixin, View):
 
 
 @cache_check
-def sppdata(request, dID, tID, trID):
+def sppdata(request, trID):
     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
     if request.method == 'POST':
         form = SppDataForm(request.POST)
@@ -4408,6 +4356,7 @@ def sppdata(request, dID, tID, trID):
             tag_service_index.append(index)
             #request.session['tag_service_index'] = tag_service_index
             spd = form.cleaned_data['spd']
+            type_tr = form.cleaned_data['type_tr']
             session_tr_id = request.session[str(trID)]
             session_tr_id.update({'tag_service_index': tag_service_index})
 
@@ -4418,27 +4367,35 @@ def sppdata(request, dID, tID, trID):
                 return redirect('spp_view_save', ticket_tr.ticket_k.dID, ticket_tr.ticket_k.id)
             #request.session['spd'] = spd
             session_tr_id.update({'spd': spd})
+            if type_tr == 'Не требуется': #request.GET.get('cp') == 'exist':
+                session_tr_id.update({
+                    'services_plus_desc': ticket_tr.services, 'oattr': ticket_tr.oattr,
+                    'not_required': True, 'dID': ticket_tr.ticket_k.dID
+                })
+                request.session[trID] = session_tr_id
+                return redirect('data', trID)
             request.session[trID] = session_tr_id
-            if request.GET.get('cp') == 'new':
-                return redirect('project_tr', dID, tID, trID)
-            if request.GET.get('cp') == 'exist':
+            if type_tr == 'Нов. точка': #request.GET.get('cp') == 'new':
+                return redirect('project_tr', ticket_tr.ticket_k.dID, ticket_tr.ticket_cp, trID)
+            if type_tr == 'Сущ. точка': #request.GET.get('cp') == 'exist':
                 return redirect('get_resources', trID)
+
 
     else:
         user = User.objects.get(username=request.user.username)
-        credent = cache.get(user)
-        username = credent['username']
-        password = credent['password']
-        tr_params = for_tr_view(username, password, dID, tID, trID)
-        if tr_params.get('Access denied') == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        # else:
-        ticket_spp = SPP.objects.filter(dID=dID).last()
-        ticket_spp_id = ticket_spp.id
-        ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
+        # credent = cache.get(user)
+        # username = credent['username']
+        # password = credent['password']
+        # tr_params = for_tr_view(username, password, dID, tID, trID)
+        # if tr_params.get('Access denied') == 'Access denied':
+        #     messages.warning(request, 'Нет доступа в ИС Холдинга')
+        #     response = redirect('login_for_service')
+        #     response['Location'] += '?next={}'.format(request.path)
+        #     return response
+        # # else:
+        # ticket_spp = SPP.objects.filter(dID=dID).last()
+        # ticket_spp_id = ticket_spp.id
+        # ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
 
         #request.session['ticket_tr_id'] = ticket_tr_id
         #request.session['technical_solution'] = trID
@@ -4446,26 +4403,27 @@ def sppdata(request, dID, tID, trID):
         form = SppDataForm()
         if user.groups.filter(name='Менеджеры').exists():
             form.fields['spd'].widget.choices = [('Комтехцентр', 'Комтехцентр'),]
+            form.fields['type_tr'].widget.choices = [('Нов. точка', 'Новая точка'), ('Сущ. точка', 'Существующая точка')]
         #tag_service = request.session['tag_service']
         visible = True #if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
         #ticket_tr_id = request.session.get('ticket_tr_id')
-        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        ticket_tr = TR.objects.filter(ticket_tr=trID).last() #(id=ticket_tr_id)
 
-        cp = request.GET.get('cp')
-
-        if cp == 'not':
-            request.session[trID] = {
-                'ticket_spp_id': ticket_spp_id, 'ticket_tr_id': ticket_tr_id, 'cp': cp,
-                'services_plus_desc': ticket_tr.services, 'oattr': ticket_tr.oattr,
-                'not_required': True, 'technical_solution': trID, 'dID': dID
-            }
+        # cp = request.GET.get('cp')
+        #
+        # if cp == 'not':
+        #     request.session[trID] = {
+        #         'ticket_spp_id': ticket_tr.ticket_k.id, 'ticket_tr_id': ticket_tr.id, 'cp': cp,
+        #         'services_plus_desc': ticket_tr.services, 'oattr': ticket_tr.oattr,
+        #         'not_required': True, 'technical_solution': trID, 'dID': dID
+        #     }
             # request.session['services_plus_desc'] = services_plus_desc
             # request.session['oattr'] = oattr
             # request.session['ticket_tr_id'] = ticket_tr_id
             # request.session['not_required'] = True
             # request.session['technical_solution'] = trID
-            return redirect('data', trID)
-        request.session[trID] = {'ticket_spp_id': ticket_spp_id, 'ticket_tr_id': ticket_tr_id, 'cp': cp,
+            # return redirect('data', trID)
+        request.session[trID] = {'ticket_spp_id': ticket_tr.ticket_k.id, 'ticket_tr_id': ticket_tr.id, #'cp': cp,
                                  'technical_solution': trID}
         #request.session['cp'] = cp
         context = {
@@ -4476,15 +4434,32 @@ def sppdata(request, dID, tID, trID):
             #'task_otpm': request.session.get('task_otpm'),
              #'address': request.session.get('address'),
             #'turnoff': request.session.get('turnoff'),
-            'ticket_spp_id': ticket_spp_id,
-            'dID': dID,
+            'ticket_spp_id': ticket_tr.ticket_k.id,
+            'dID': ticket_tr.ticket_k.dID,
             'ticket_tr': ticket_tr,
             #'pps': request.session.get('pps'),
             'form': form,
             'visible': visible,
-            'cp': request.GET.get('cp')
+            #'cp': request.GET.get('cp')
         }
         return render(request, 'tickets/sppdata.html', context)
+
+def add_tr(request, dID, tID, trID):
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    tr_params = for_tr_view(username, password, dID, tID, trID)
+    if tr_params.get('Access denied') == 'Access denied':
+        messages.warning(request, 'Нет доступа в ИС Холдинга')
+        response = redirect('login_for_service')
+        response['Location'] += '?next={}'.format(request.path)
+        return response
+    ticket_spp = SPP.objects.filter(dID=dID).last()
+    ticket_spp_id = ticket_spp.id
+    ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
+    return redirect('sppdata', trID)
+
 
 
 def static_formset(request):

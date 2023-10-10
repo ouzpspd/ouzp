@@ -61,7 +61,7 @@
 </div>
 
 <div class="container">
-    <form id="form" action="{% url 'sppdata' ticket_tr.ticket_k.dID ticket_tr.ticket_cp ticket_tr.ticket_tr%}?cp={{ request.GET.cp }}" method="post">
+    <form id="form" action="{% url 'sppdata' ticket_tr.ticket_tr%}" method="post">
         {% csrf_token %}
 
         <div class="card mb-2">
@@ -70,7 +70,15 @@
                     <div class="row">
                         <div class="col-4">
                             <div class="form-group spd">
-                                <label for="{{form.vlan.id_for_label}}">СПД:</label>
+                                <label for="{{form.type_tr.id_for_label}}">Тип ТР:</label>
+                                {{form.type_tr}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group spd">
+                                <label for="{{form.spd.id_for_label}}">СПД:</label>
                                 {{form.spd}}
                             </div>
                         </div>
