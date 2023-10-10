@@ -449,8 +449,8 @@ class SppDataForm(forms.Form):
         ('РТК', 'РТК'),
     ]
     types_tr = [
-        ('Нов. точка', 'Нов. точка'),
-        ('Сущ. точка', 'Сущ. точка'),
+        ('Нов. точка', 'Новая точка'),
+        ('Сущ. точка', 'Существующая точка'),
         ('Не требуется', 'Не требуется'),
     ]
     type_tr = forms.CharField(widget=forms.Select(choices=types_tr, attrs={'class': 'form-control'}))

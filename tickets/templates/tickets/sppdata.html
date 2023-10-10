@@ -61,7 +61,7 @@
 </div>
 
 <div class="container">
-    <form id="form" action="{% url 'sppdata' ticket_tr.ticket_k.dID ticket_tr.ticket_cp ticket_tr.ticket_tr%}" method="post">
+    <form id="form" action="{% url 'sppdata' ticket_tr.ticket_tr%}" method="post">
         {% csrf_token %}
 
         <div class="card mb-2">
