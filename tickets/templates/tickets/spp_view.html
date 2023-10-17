@@ -71,6 +71,16 @@
         <th class="table-secondary text-right" style="width: 25%">{{key}}</th>
         <td class="table-light" style="width: 75%">{{value|linebreaksbr}}</td>
     </tr>
+    {% elif 'ТР по упрощенной схеме' in key and value %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%"></th>
+        <td class="table-light" style="width: 75%">Упрощенное ТР</td>
+    </tr>
+    {% elif 'Оценочное ТР' in key and value %}
+    <tr>
+        <th class="table-secondary text-right" style="width: 25%"></th>
+        <td class="table-light" style="width: 75%">Оценочное ТР</td>
+    </tr>
 
     {% endif %}
     {% endfor %}

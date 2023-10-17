@@ -8,7 +8,7 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_plus_desc|length}}">Услуг{{ services_plus_desc|length|pluralize:"а,и" }}</th>
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_plus_desc|length}}">Услуг{{ ticket_tr.services|length|pluralize:"а,и" }}</th>
       {% for i in services_plus_desc%}
         <td class="table-light" style="width: 75%">{{i}}</td>
     </tr>
@@ -18,94 +18,7 @@
 
 </div>
 
-{% if list_switches %}
-<div class="container">
-    <table class="table table-striped" id="switch">
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">Название</th>
-          <th scope="col">Модель</th>
-            <th scope="col">IP-адрес</th>
-            <th scope="col">Uplink</th>
-            <th scope="col">Всего</th>
-            <th scope="col">Клиенты</th>
-            <th scope="col">Линки</th>
-            <th scope="col">Свободно</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for switch in list_switches %}
-        <tr>
-            <th scope="row"></th>
 
-            <td>{{switch.0}}</td>
-            <td>{{switch.1}}</td>
-            <td><a href="telnet://{{switch.2}}">{{switch.2}}</a></td>
-            <td>{{switch.3}}</td>
-            <td>{{switch.4}}</td>
-            <td>{{switch.5}}</td>
-            <td>{{switch.6}}</td>
-            <td>{{switch.7}}</td>
-            <td>
-                <a href="#myModal{{forloop.counter}}" class="btn btn-link" data-toggle="modal">Детальнее</a>
-            <!-- HTML-код модального окна -->
-            <div id="myModal{{forloop.counter}}" class="modal fade">
-              <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                  <!-- Заголовок модального окна -->
-                  <div class="modal-header">
-                    <h4 class="modal-title">Порты</h4>
-                  </div>
-                  <!-- Основное содержимое модального окна -->
-                  <div class="modal-body">
-                      <table>
-                          <thead>
-                            <tr>
-                                <th scope="col">#</th>
-                              <th scope="col">Порт</th>
-                                <th scope="col">Тэг</th>
-                              <th scope="col">Договор</th>
-                                <th scope="col">Дескрипшн</th>
-                                <th scope="col">Заглушка</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                              {% for key, value in switch.8.items %}
-                                <tr>
-                                    <th scope="row"></th>
-
-                                    <td>{{key}}</td>
-                                    <td>{{value.0}}</td>
-                                    <td>{{value.1}}</td>
-                                    <td>{{value.2}}</td>
-                                    <td>{{value.3}}</td>
-
-
-                                </tr>
-                                {% endfor %}
-                          </tbody>
-                        </table>
-                  </div>
-
-                  <!-- Футер модального окна -->
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
-
-                  </div>
-                </div>
-              </div>
-            </div>
-            </td>
-
-        </tr>
-
-      {% endfor %}
-      </tbody>
-    </table>
-</div>
-
-{% endif %}
 
 
 
@@ -114,14 +27,14 @@
     <div class="card mb-2">
       <h5 class="card-header">Решение ОТПМ</h5>
       <div class="card-body">
-        <p class="card-text">{{oattr|linebreaksbr}}</p>
+        <p class="card-text">{{ticket_tr.oattr|linebreaksbr}}</p>
       </div>
     </div>
 
 
 
     {% if counter_str_ots == 1 %}
-          <form action="{% url 'edit_tr' dID ticket_spp_id ticket_tr %}" method="post">
+          <form action="{% url 'edit_tr' dID ticket_spp_id ticket_tr.ticket_tr %}" method="post">
             {% csrf_token %}
               <div class="card mb-2">
       <h5 class="card-header">Решение ОРТР</h5>
@@ -164,7 +77,7 @@
           </form>
 
               {% else %}
-    <form action="{% url 'edit_tr' dID ticket_spp_id ticket_tr %}" method="post">
+    <form action="{% url 'edit_tr' dID ticket_spp_id ticket_tr.ticket_tr %}" method="post">
             {% csrf_token %}
               <div class="card mb-2">
       <h5 class="card-header">Решение ОРТР</h5>
@@ -196,7 +109,7 @@
             </div>
               <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' %}" target ="_blank" role="button">Отправить</a>
+                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
         </div>
