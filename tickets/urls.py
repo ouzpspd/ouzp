@@ -80,6 +80,7 @@ urlpatterns = [
     path('report_time_tracking/', report_time_tracking, name='report_time_tracking'),
     path('send_to_otpm_control/<int:dID>/', send_ticket_to_otpm_control, name='send_ticket_to_otpm_control'),
     path('rtk/<int:trID>/', RtkFormView.as_view(), name='rtk'),
+    path('mko/', MkoView.as_view(), name='mko'),
     path('specification/<int:trID>/', CreateSpecificationView.as_view(), name='specification'),
 
 

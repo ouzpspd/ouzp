@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
-from django.views.generic import DetailView, FormView
+from django.views.generic import DetailView, FormView, ListView
 
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from oattr.parsing import get_or_create_otu, Tentura, Specification
@@ -221,41 +221,40 @@ def ortr(request):
         response = redirect('login_for_service')
         response['Location'] += '?next={}'.format(request.path)
         return response
-    else:
-        list_search = []
-        if type(search[0]) != str:
-            for i in search:
-                list_search.append(i[0])
-        spp_proc = SPP.objects.filter(process=True)
-        list_spp_proc = []
-        for i in spp_proc:
-            list_spp_proc.append(i.ticket_k)
-        spp_wait = SPP.objects.filter(wait=True)
-        list_spp_wait = []
-        return_from_wait = []
-        for i in spp_wait:
-            if i.ticket_k or i.ticket_k + ' ПТО' in list_search:
-                list_spp_wait.append(i.ticket_k)
-            else:
-                i.wait = False
-                i.save()
-                return_from_wait.append(i.ticket_k)
-        list_search_rem = []
-        for i in list_spp_proc:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        for i in list_spp_wait:
-            for index_j in range(len(list_search)):
-                if i in list_search[index_j]:
-                    list_search_rem.append(index_j)
-        if search[0] == 'Empty list tickets':
-            search = None
+    list_search = []
+    if type(search[0]) != str:
+        for i in search:
+            list_search.append(i[0])
+    spp_proc = SPP.objects.filter(process=True)
+    list_spp_proc = []
+    for i in spp_proc:
+        list_spp_proc.append(i.ticket_k)
+    spp_wait = SPP.objects.filter(wait=True)
+    list_spp_wait = []
+    return_from_wait = []
+    for i in spp_wait:
+        if i.ticket_k or i.ticket_k + ' ПТО' in list_search:
+            list_spp_wait.append(i.ticket_k)
         else:
-            search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
-        if return_from_wait:
-            messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
-        return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
+            i.wait = False
+            i.save()
+            return_from_wait.append(i.ticket_k)
+    list_search_rem = []
+    for i in list_spp_proc:
+        for index_j in range(len(list_search)):
+            if i in list_search[index_j]:
+                list_search_rem.append(index_j)
+    for i in list_spp_wait:
+        for index_j in range(len(list_search)):
+            if i in list_search[index_j]:
+                list_search_rem.append(index_j)
+    if search[0] == 'Empty list tickets':
+        search = None
+    else:
+        search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
+    if return_from_wait:
+        messages.success(request, 'Заявка {} удалена из ожидания'.format(', '.join(return_from_wait)))
+    return render(request, 'tickets/ortr.html', {'search': search, 'spp_process': spp_proc})
 
 
 @cache_check
@@ -1189,7 +1188,10 @@ def data(request, trID):
 
     userlastname = None
     if request.user.is_authenticated:
-        userlastname = request.user.last_name
+        if user.groups.filter(name='Менеджеры').exists():
+            userlastname = 'МКО ' + request.user.last_name
+        else:
+            userlastname = 'ОУЗП СПД ' + request.user.last_name
     now = datetime.datetime.now()
     now = now.strftime("%d.%m.%Y")
     need = get_need(value_vars)
@@ -1200,15 +1202,15 @@ def data(request, trID):
         session_tr_id.update({'titles': titles})
         result_services = '\n\n\n'.join(result_services)
         if evaluative_tr:
-            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + value_vars.get(
+            result_services = userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + value_vars.get(
                 'head') + '\n\n' + need + '\n\n' + titles + '\n' + result_services
         else:
-            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
+            result_services = userlastname + ' ' + now + '\n\n' + value_vars.get('head') +'\n\n'+ need + '\n\n' + titles + '\n' + result_services
     elif value_vars.get('not_required'):
         if evaluative_tr:
-            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + result_services
+            result_services = userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + result_services
         else:
-            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services
+            result_services = userlastname + ' ' + now + '\n\n' + result_services
     else:
         titles = _titles(result_services, result_services_ots)
         titles = ''.join(titles)
@@ -1216,9 +1218,9 @@ def data(request, trID):
         session_tr_id.update({'titles': titles})
         result_services = '\n\n\n'.join(result_services)
         if evaluative_tr:
-            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + titles + '\n' + result_services
+            result_services = userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + titles + '\n' + result_services
         else:
-            result_services = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
+            result_services = userlastname + ' ' + now + '\n\n' + titles + '\n' + result_services
     counter_str_ortr = result_services.count('\n')
 
     if result_services_ots == None:
@@ -1226,9 +1228,9 @@ def data(request, trID):
     else:
         result_services_ots = '\n\n\n'.join(result_services_ots)
         if evaluative_tr:
-            result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + result_services_ots
+            result_services_ots = userlastname + ' ' + now + '\n\n' + 'Оценка' + '\n\n' + result_services_ots
         else:
-            result_services_ots = 'ОУЗП СПД ' + userlastname + ' ' + now + '\n\n' + result_services_ots
+            result_services_ots = userlastname + ' ' + now + '\n\n' + result_services_ots
         counter_str_ots = result_services_ots.count('\n')
 
     # request.session['kad'] = value_vars.get('kad') if value_vars.get('kad') else 'Не требуется'
@@ -1603,7 +1605,7 @@ def manually_tr(request, dID, tID, trID):
                 'ortrform': ortrform,
                 'ticket_spp_id': ticket_spp.id,
                 'dID': dID,
-                'ticket_tr': trID
+                'ticket_tr': ticket_tr
             }
             return render(request, 'tickets/edit_tr.html', context)
 
@@ -2431,6 +2433,7 @@ def add_spp(request, dID):
 
 def remove_spp_process(request, ticket_spp_id):
     """Данный метод удаляет заявку из обрабатываемых заявок"""
+    user = User.objects.get(username=request.user.username)
     current_ticket_spp = SPP.objects.get(id=ticket_spp_id)
     current_ticket_spp.process = False
     current_ticket_spp.projected = False
@@ -2440,6 +2443,8 @@ def remove_spp_process(request, ticket_spp_id):
         if request.session.get(ticket_tr.ticket_tr):
             del request.session[ticket_tr.ticket_tr]
     messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
+    if user.groups.filter(name='Менеджеры').exists():
+        return redirect('mko')
     return redirect('ortr')
 
 
@@ -2496,7 +2501,7 @@ def spp_view(request, dID):
         response['Location'] += '?next={}'.format(request.path)
         return response
     else:
-        return render(request, 'tickets/spp_view_oattr.html', {'spp_params': spp_params})
+        return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
 
 
 # @cache_check
@@ -4139,6 +4144,8 @@ def send_ticket_to_otpm_control(request, dID): #trID
         if request.session.get(ticket_tr.ticket_tr):
             del request.session[ticket_tr.ticket_tr]
     messages.success(request, f'Заявка {ticket_k} выполнена и отправлена.')
+    if user.groups.filter(name='Менеджеры').exists():
+        return redirect('mko')
     return redirect('ortr')
 
 
@@ -4292,6 +4299,20 @@ class RtkFormView(FormView, CredentialMixin):
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
         url = f"{reverse(next(iter(tag_service[index + 1])), kwargs={'trID': self.kwargs['trID']})}?prev_page={next(iter(tag_service[index]))}&index={index}"
         return url
+
+
+class MkoView(CredentialMixin, View):
+    @cache_check_view
+    def get(self, request):
+        username, password = super().get_credential(self)
+        search = in_work_ortr(username, password)
+        spp_proc = SPP.objects.filter(process=True, client__startswith="Тест")
+        list_spp_proc = list(spp_proc.values_list('ticket_k', flat=True))
+        if not isinstance(search[0], str):
+            search = [i for i in search if i[2].startswith('Тест') and i[0] not in list_spp_proc]
+        else:
+            search = None
+        return render(request, 'tickets/mko.html', {'search': search, 'spp_process': spp_proc})
 
 
 class CreateSpecificationView(CredentialMixin, View):

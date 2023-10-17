@@ -54,15 +54,21 @@
 
           <ul class="navbar-nav mr-auto mb-2 mb-lg-0">
             {% block nav_active %}
-            {% if request.user|has_group:"Сотрудники ОУЗП" or request.user|has_group:"Менеджеры" %}
+            {% if request.user|has_group:"Менеджеры" %}
 
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'mko' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
+            </li>
+              {% elif request.user|has_group:"Сотрудники ОУЗП" %}
             <li class="nav-item">
               <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a> {%comment%}?next={{ request.path }}{%endcomment%}
             </li>
-              {% if request.user|has_group:"Сотрудники ОУЗП" %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'search' %}">Поиск</a>
               </li>
@@ -75,7 +81,7 @@
                   <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР</a>
                 </div>
               </li>
-              {% endif %}
+
               {% if request.user|has_group:"Руководство ОУЗП" %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>

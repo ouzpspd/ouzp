@@ -1,31 +1,13 @@
 {% extends 'base.html' %}
 
 {% block nav_active %}
-{% load custom_filters %}
+
 <li class="nav-item">
   <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
 </li>
 <li class="nav-item">
-  <a class="nav-link active" aria-current="page" href="{% url 'ortr' %}">В пуле ОРТР</a>
+  <a class="nav-link active" aria-current="page" href="{% url 'mko' %}">В пуле ОРТР</a>
 </li>
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'search' %}">Поиск</a>
-</li>
-<li class="nav-item dropdown">
-  <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    Утилиты
-  </a>
-  <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-    <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
-      <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР</a>
-  </div>
-</li>
-
-{% if request.user|has_group:"Руководство ОУЗП" %}
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
-</li>
-{% endif %}
 
 {% endblock %}
 
@@ -35,102 +17,6 @@
 
 <div class="container">
 
-
-    <div class="row mt-2">
-
-        {% if com_search %}
-        <ul class="nav nav-tabs">
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'commercial' %}">Коммерческие</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
-          </li>
-        </ul>
-        {% elif pto_search %}
-        <ul class="nav nav-tabs">
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'pto' %}">ПТО</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
-          </li>
-        </ul>
-        {% elif all_search %}
-        <ul class="nav nav-tabs">
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
-          </li>
-            </li>
-            <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'all_com_pto_wait' %}">Все</a>
-          </li>
-        </ul>
-        {% elif wait_search %}
-        <ul class="nav nav-tabs">
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'ortr' %}">Новые</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'wait' %}">Ожидание</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
-          </li>
-        </ul>
-        {% else%}
-        <ul class="nav nav-tabs">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'ortr' %}">Новые</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'commercial' %}">Коммерческие</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'pto' %}">ПТО</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'wait' %}">Ожидание</a>
-          </li>
-            <li class="nav-item">
-            <a class="nav-link" href="{% url 'all_com_pto_wait' %}">Все</a>
-          </li>
-        </ul>
-        {% endif %}
-    </div>
-
     <div class="row mt-3">
     <table class="table table-striped table-bordered">
       <thead>
@@ -139,8 +25,10 @@
           <th scope="col">№ Заявки</th>
           <th scope="col">Клиент</th>
             <th scope="col">Точка подключения</th>
-            <th scope="col">Технолог</th>
+            {%comment%}<th scope="col">Технолог</th>{%endcomment%}
+
             <th scope="col">Куратор</th>
+            <th scope="col">Работает</th>
             {% comment %}<th scope="col">Статус</th>{% endcomment %}
             <th scope="col" colspan="2">Действие</th>
         </tr>
@@ -155,8 +43,10 @@
             <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.1}}">{{ticket.0}}</a></td>
             <td>{{ticket.2}}</td>
             <td>{{ticket.3}}</td>
-            <td>{{ticket.4}}</td>
+            {%comment%}<td>{{ticket.4}}</td>{%endcomment%}
+
             <td>{{ticket.5}}</td>
+            <td></td>
             {% comment %}<td>{{ticket.6}}</td>{% endcomment %}
             <td>
                 <a class="btn btn-outline-danger custom" href="{% url 'add_spp' ticket.1 %}?next={{ request.path }}" role="button">Обработать заявку</a>
@@ -191,9 +81,10 @@
 
 
             </td>
-            <td>{{ticket.technolog}}</td>
-            <td>{{ticket.manager}}</td>
+            {%comment%}<td>{{ticket.technolog}}</td>{%endcomment%}
 
+            <td>{{ticket.manager}}</td>
+            <td>{{ticket.user.last_name}}</td>
             {% if wait_search %}
             <td>
                 <a class="btn btn-outline-warning custom" href="{% url 'remove_spp_wait' ticket.id %}" role="button">Вернуть в работу</a>
@@ -204,10 +95,10 @@
             {% else %}
             <td>
                 {% if ticket.user.username == user.username%}
-                <a class="btn btn-outline-success custom" href="{% url 'remove_spp_process' ticket.id %}" role="button">Завершить<br /> {{ticket.user.last_name}}</a>
+                <a class="btn btn-outline-success custom" href="{% url 'remove_spp_process' ticket.id %}" role="button">Завершить<br /> работу</a>
                 {% else %}
                 {% comment %}<a class="btn btn-outline-warning custom" href="#" role="button">Завершить<br /> {{ticket.user.last_name}}</a>{% endcomment %}
-                <button type="button" class="btn btn-outline-success custom" disabled>Завершить<br /> {{ticket.user.last_name}}</button>
+                {% comment %}<button type="button" class="btn btn-outline-success custom" disabled>Завершить<br /> {{ticket.user.last_name}}</button>{% endcomment %}
                 {% endif %}
             </td>
             <td>

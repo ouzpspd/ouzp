@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-
+{% load custom_filters %}
 <div class="container">
   <div class="row mt-2">
 <table class="table table-bordered">
@@ -68,7 +68,9 @@
 <!--                  </div>-->
                     <a class="btn btn-outline-danger" href="{% url 'add_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Проектировать</a>
                     <a class="btn btn-outline-danger" href="{% url 'manually_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Редактировать</a>
+                    {% if not request.user|has_group:"Менеджеры" %}
                     <a class="btn btn-outline-danger" href="{% url 'add_spp_wait' current_ticket_spp.id %}" role="button">В ожидание</a>
+                    {% endif %}
                     <a class="btn btn-outline-danger" href="{% url 'add_comment_to_return_ticket' current_ticket_spp.dID %}" role="button">Вернуть</a>
                     <a class="btn btn-outline-danger" href="{% url 'send_ticket_to_otpm_control' current_ticket_spp.dID %}" role="button">Контроль и выпуск</a>
                 </div>
