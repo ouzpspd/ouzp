@@ -30,7 +30,7 @@
             <th scope="col">Куратор</th>
             <th scope="col">Работает</th>
             {% comment %}<th scope="col">Статус</th>{% endcomment %}
-            <th scope="col" colspan="2">Действие</th>
+            <th scope="col">Действие</th>
         </tr>
       </thead>
       <tbody>
@@ -50,9 +50,6 @@
             {% comment %}<td>{{ticket.6}}</td>{% endcomment %}
             <td>
                 <a class="btn btn-outline-danger custom" href="{% url 'add_spp' ticket.1 %}?next={{ request.path }}" role="button">Обработать заявку</a>
-            </td>
-            <td>
-                <a class="btn btn-outline-info custom" href="{% url 'spp_view' ticket.1 %}" role="button">Посмотреть заявку</a>
             </td>
         </tr>
 
@@ -85,65 +82,18 @@
 
             <td>{{ticket.manager}}</td>
             <td>{{ticket.user.last_name}}</td>
-            {% if wait_search %}
+
+
             <td>
-                <a class="btn btn-outline-warning custom" href="{% url 'remove_spp_wait' ticket.id %}" role="button">Вернуть в работу</a>
-            </td>
-            <td>
-                <a class="btn btn-outline-info custom" href="{% url 'spp_view' ticket.dID %}" role="button">Посмотреть заявку</a>
-            </td>
-            {% else %}
-            <td>
-                {% if ticket.user.username == user.username%}
-                <a class="btn btn-outline-success custom" href="{% url 'remove_spp_process' ticket.id %}" role="button">Завершить<br /> работу</a>
-                {% else %}
-                {% comment %}<a class="btn btn-outline-warning custom" href="#" role="button">Завершить<br /> {{ticket.user.last_name}}</a>{% endcomment %}
-                {% comment %}<button type="button" class="btn btn-outline-success custom" disabled>Завершить<br /> {{ticket.user.last_name}}</button>{% endcomment %}
-                {% endif %}
-            </td>
-            <td>
+                {% comment %}{% if ticket.user.username == user.username%}{% endcomment %}
                 <a class="btn btn-outline-info custom" href="{% url 'spp_view_save' ticket.dID ticket.id %}" role="button">Перейти к заявке</a>
-            </td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-      </tbody>
-        <tbody>
-      {% for ticket in spp_wait %}{%comment%} Только для случая когда нужны абсолютно все заявки {%endcomment%}
-        <tr>
-            <th scope="row">{{search|length|add:forloop.counter}}</th>
-            {% if ticket.type_ticket == 'ПТО' %}
-            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}} {{ticket.type_ticket}}</a></td>
-            {% else %}
-            <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.dID}}">{{ticket.ticket_k}}</a></td>
-            {% endif %}
-
-            <td>{{ticket.client}}</td>
-            <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
-            {% for it in ticket.des_tr %}
-                {% for k, v in it.items %}
-                {%comment%}{% if forloop.counter == 1 %}{%endcomment%}
-                {% if 'г.' in k and forloop.counter == 1 or forloop.counter == 2 %}
-                {{k}}
-                {% endif %}
-                {%endfor%}
-                {%endfor%}
-
-
-            </td>
-            <td>{{ticket.technolog}}</td>
-            <td>{{ticket.manager}}</td>
-
-            <td>
-                <a class="btn btn-outline-warning custom" href="{% url 'remove_spp_wait' ticket.id %}" role="button">Вернуть в работу</a>
-            </td>
-            <td>
-                <a class="btn btn-outline-info custom" href="{% url 'spp_view' ticket.dID %}" role="button">Посмотреть заявку</a>
+                {% comment %}{% endif %}{% endcomment %}
             </td>
 
         </tr>
         {% endfor %}
       </tbody>
+
     </table>
   </div>
 
