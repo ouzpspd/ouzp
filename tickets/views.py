@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
@@ -29,6 +30,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.contrib.auth.decorators import user_passes_test
 
 
 import xlwt
@@ -202,7 +204,17 @@ def cache_check_view(func):
     return wrapper
 
 
+def group_check_ouzp(user):
+    return user.groups.filter(name='Сотрудники ОУЗП').exists()
+
+def group_check_mko(user):
+    return user.groups.filter(name='Менеджеры').exists()
+
+
+
+
 @cache_check
+@user_passes_test(group_check_ouzp)
 def ortr(request):
     """Данный метод перенаправляет на страницу Новые заявки, которые находятся в пуле ОРТР/в работе.
         1. Получает данные от redis о логин/пароле
@@ -653,7 +665,15 @@ def copper(request, trID):
             list_switches = session_tr_id.get('list_switches')
         else:
             list_switches = parsingByNodename(pps, username, password)
-
+        if user.groups.filter(name='Менеджеры').exists() and not isinstance(list_switches[0], str):
+            manager_allowed = ('SNR S2990G-24T', 'SNR S2990G-48T', 'SNR S2982G-24TE', 'SNR S2985G-24TC', 'SNR S2985G-48T',
+                               'D-Link DGS-1210-28/ME', 'SNR S2950-24G', 'Orion Alpha A26', 'SNR S2960-48G',
+                               'SNR S2962-24T','SNR S2965-24T', 'SNR S2965-48T', 'D-Link DES-1210-52/ME',
+                               'D-Link DES-1228/ME/B1', 'Cisco Cisco WS-C2950', '3COM')
+            list_switches = [switch for switch in list_switches if any(switch[1].startswith(sw) for sw in manager_allowed)]
+            if not list_switches:
+                messages.warning(request, f'Нет коммутаторов на узле {pps}')
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
         if list_switches[0] == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
@@ -661,7 +681,8 @@ def copper(request, trID):
             return response
         elif 'No records to display' in list_switches[0]:
             messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
-            return redirect('ortr')
+            return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
+
         list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         #request.session['list_switches'] = list_switches
         session_tr_id.update({'list_switches': list_switches})
@@ -2366,7 +2387,7 @@ def add_spp(request, dID):
         return response
     elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
         messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
-        return redirect('ortr')
+        return redirect('mko')
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
@@ -4293,7 +4314,9 @@ class RtkFormView(FormView, CredentialMixin):
         return url
 
 
-class MkoView(CredentialMixin, View):
+class MkoView(CredentialMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.groups.filter(name='Менеджеры').exists()
     @cache_check_view
     def get(self, request):
         username, password = super().get_credential(self)

@@ -72,7 +72,7 @@
                     <a class="btn btn-outline-danger" href="{% url 'add_spp_wait' current_ticket_spp.id %}" role="button">В ожидание</a>
                     {% endif %}
                     <a class="btn btn-outline-danger" href="{% url 'add_comment_to_return_ticket' current_ticket_spp.dID %}" role="button">Вернуть</a>
-                    <a class="btn btn-outline-danger" href="{% url 'send_ticket_to_otpm_control' current_ticket_spp.dID %}" role="button">Контроль и выпуск</a>
+                    <a class="btn btn-outline-danger" href="{% url 'send_ticket_to_otpm_control' current_ticket_spp.dID %}" role="button">Выпустить</a>
                 </div>
                 {% endif %}
             </ul>
