@@ -1,8 +1,10 @@
+import requests
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, FormView, ListView
+from urllib3.exceptions import NewConnectionError
 
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from oattr.parsing import get_or_create_otu, Tentura, Specification
@@ -155,8 +157,20 @@ def login_for_service(request):
             password = authform.cleaned_data['password']
             if re.search(r'[а-яА-Я]', username) or re.search(r'[а-яА-Я]', password):
                 messages.warning(request, 'Введен русский язык')
-                return redirect('login_for_service')
-            else:
+                response = redirect('login_for_service')
+                if 'next' in request.GET:
+                    response['Location'] += f'?next={request.GET["next"]}'
+                return response
+
+            try:
+                req = requests.get('https://sss.corp.itmh.ru/menu.php', verify=False, auth=(username, password))
+            except requests.exceptions.ConnectionError:
+                messages.warning(request, 'ИС СПП не отвечает')
+                response = redirect('login_for_service')
+                if 'next' in request.GET:
+                    response['Location'] += f'?next={request.GET["next"]}'
+                return response
+            if req.status_code == 200:
                 user = User.objects.get(username=request.user.username)
                 credent = dict()
                 credent.update({'username': username})
@@ -166,6 +180,11 @@ def login_for_service(request):
                 if 'next' in request.GET:
                     return redirect(request.GET['next'])
                 return redirect('/')
+            messages.warning(request, 'Введены неверные логин/пароль для доступа в ИС Холдинга')
+            response = redirect('login_for_service')
+            if 'next' in request.GET:
+                response['Location'] += f'?next={request.GET["next"]}'
+            return response
     else:
         authform = AuthForServiceForm()
     return render(request, 'tickets/login_is.html', {'form': authform})
@@ -4314,13 +4333,17 @@ class RtkFormView(FormView, CredentialMixin):
         return url
 
 
-class MkoView(CredentialMixin, UserPassesTestMixin, View):
+class MkoView(CredentialMixin, View):   #UserPassesTestMixin
     def test_func(self):
         return self.request.user.groups.filter(name='Менеджеры').exists()
     @cache_check_view
     def get(self, request):
         username, password = super().get_credential(self)
+        print(username)
+        print(password)
         search = in_work_ortr(username, password)
+        # if search[0] == 'Access denied':
+        #     return super().redirect_to_login_for_service(self)
         spp_proc = SPP.objects.filter(process=True, client__startswith="Тест")
         list_spp_proc = list(spp_proc.values_list('ticket_k', flat=True))
         if not isinstance(search[0], str):
