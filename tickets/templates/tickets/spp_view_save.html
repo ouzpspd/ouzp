@@ -2,7 +2,18 @@
 {% block content %}
 {% load custom_filters %}
 <div class="container">
-  <div class="row mt-2">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">Информация заявки СПП {{current_ticket_spp.ticket_k}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+<div class="container">
+
 <table class="table table-bordered">
   <tbody>
     <tr>
@@ -51,7 +62,9 @@
             {% for k, v in i.items %}
             {% if 'Техрешение' in k or 'Тех Решение' in k %}
             <ul>
+                {% if current_ticket_spp.process == False%}
                 <a href="{% url 'tr_view_save' current_ticket_spp.dID current_ticket_spp.id v.1 %}">{{k}}</a><br >
+                {% endif %}
                 {% if current_ticket_spp.user.username == user.username and current_ticket_spp.process == True%}
 
                 <div class="btn-group" role="group" aria-label="Button group with nested dropdown">
@@ -67,12 +80,15 @@
 <!--                    </div>-->
 <!--                  </div>-->
                     <a class="btn btn-outline-danger" href="{% url 'add_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Проектировать</a>
+
+                    {% if request.user|has_group:"Сотрудники ОУЗП" %}
                     <a class="btn btn-outline-danger" href="{% url 'manually_tr' current_ticket_spp.dID v.0 v.1 %}" role="button">Редактировать</a>
-                    {% if not request.user|has_group:"Менеджеры" %}
                     <a class="btn btn-outline-danger" href="{% url 'add_spp_wait' current_ticket_spp.id %}" role="button">В ожидание</a>
-                    {% endif %}
                     <a class="btn btn-outline-danger" href="{% url 'add_comment_to_return_ticket' current_ticket_spp.dID %}" role="button">Вернуть</a>
                     <a class="btn btn-outline-danger" href="{% url 'send_ticket_to_otpm_control' current_ticket_spp.dID %}" role="button">Выпустить</a>
+                    {% else %}
+                    <a class="btn btn-outline-danger" href="{% url 'remove_spp_process' current_ticket_spp.id %}" role="button">Завершить</a>
+                    {% endif %}
                 </div>
                 {% endif %}
             </ul>
@@ -93,7 +109,7 @@
 
   </tbody>
 </table>
-  </div>
+
 
 </div>
 

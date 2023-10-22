@@ -1,5 +1,17 @@
 {% extends 'tickets/nav_ticket.html' %}
 {% block content %}
+{% load custom_filters %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
 
 <div class="container">
     <table class="table table-bordered">
@@ -27,7 +39,8 @@
       </div>
     </div>
   </div>
-  <div class="card mb-2">
+  {% if request.user|has_group:"Сотрудники ОУЗП" %}
+    <div class="card mb-2">
     <div class="card-header" id="headingTwo">
       <h5 class="mb-0">
         <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
@@ -39,7 +52,7 @@
       </div>
     </div>
   </div>
-
+    {% endif %}
 </div>
 </div>
 
@@ -58,12 +71,12 @@
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
                 </div>
             </div>
             <div class="col-2">
                 <div class="form-group">
-                    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
                 </div>
             </div>
         </div>

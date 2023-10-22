@@ -1,7 +1,20 @@
 {% extends 'tickets/nav_ticket.html' %}
 {% block content %}
-
+{% load custom_filters %}
 {% load widget_tweaks %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
 
 <div class="container">
 
@@ -14,7 +27,7 @@
     </tr>
   {% endfor %}
   <tr>
-        <th class="table-secondary text-right" style="width: 25%" >ТР</th>
+        <th class="table-secondary text-right" style="width: 25%" >Заявка К</th>
         <td class="table-light" style="width: 75%">{{ticket_k}}</td>
     </tr>
   </tbody>
@@ -124,13 +137,14 @@
 
 
 <div class="container">
+    {% if request.user|has_group:"Сотрудники ОУЗП" %}
     <div class="card mb-2">
       <h5 class="card-header">Решение ОТПМ</h5>
       <div class="card-body">
         <p class="card-text">{{oattr|linebreaksbr}}</p>
       </div>
     </div>
-
+    {% endif %}
 
 
     {% if counter_str_ots == 1 %}
@@ -174,15 +188,17 @@
                   {% if not_required_tr == False %}
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
                 </div>
             </div>
                   {% endif %}
+                  {% if request.user|has_group:"Сотрудники ОУЗП" %}
             <div class="col-2">
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary btn-block">Сохранить</button>
                 </div>
             </div>
+                  {% endif %}
               <div class="col-2">
                 <div class="form-group">
                     <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
@@ -195,6 +211,7 @@
                 </div>
             </div>
               {% endif %}
+
         </div>
 
       </div>
@@ -245,15 +262,17 @@
               {% if not_required_tr == False %}
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
                 </div>
             </div>
               {% endif %}
+              {% if request.user|has_group:"Сотрудники ОУЗП" %}
             <div class="col-2">
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary btn-block">Сохранить</button>
                 </div>
             </div>
+              {% endif %}
               <div class="col-2">
                 <div class="form-group">
                     <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
