@@ -2,11 +2,25 @@
 
 {% block content %}
 
+{% if trID != 1 %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="container">
     <table class="table table-bordered">
         <tbody>
             <tr>
-                <th class="table-secondary text-right" style="width: 25%" >ТР</th>
+                <th class="table-secondary text-right" style="width: 25%" >Заявка К</th>
                 <td class="table-light" style="width: 75%">{{ticket_k}}</td>
             </tr>
         </tbody>
@@ -86,12 +100,12 @@
                     <div class="row mt-3">
                         <div class="col-2">
                                 <div class="form-group">
-                                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
                                 </div>
                             </div>
                         <div class="col-2">
                             <div class="form-group">
-                                <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                                <button type="submit" class="btn btn-primary btn-block">Далее</button>
                             </div>
                         </div>
                     </div>

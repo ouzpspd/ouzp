@@ -1,6 +1,16 @@
 {% extends 'tickets/nav_ticket.html' %}
 {% block content %}
-
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">Информация ТР №{{ticket_tr.ticket_tr}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
 <div class="container">
 
 <table class="table table-bordered">
@@ -84,12 +94,13 @@
                         </div>
                     </div>
                     <div class="row mt-3">
-                        <div class="col-4">
+                        <div class="col-2">
                             <div class="form-group">
-                                <button type="submit" class="btn btn-primary btn-block">Проектировать</button>
+                                <button type="submit" class="btn btn-primary btn-block">Далее</button>
                             </div>
                         </div>
                     </div>
+
           </div>
 
         </div>

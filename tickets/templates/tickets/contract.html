@@ -1,6 +1,19 @@
 {% extends 'base.html' %}
 {% block content %}
 
+{% if trID != 1 %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <form action="{% url 'get_resources' trID %}" method="post">
     {% csrf_token %}

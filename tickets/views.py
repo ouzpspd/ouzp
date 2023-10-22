@@ -4039,7 +4039,8 @@ def ppr_result(request, trID):
         del request.session[str(trID)]
     context = {
         'next_link': next_link,
-        'exist_ppr': exist_ppr
+        'exist_ppr': exist_ppr,
+        'trID': trID
     }
     return render(request, 'tickets/ppr_result.html', context)
 
@@ -4333,14 +4334,12 @@ class RtkFormView(FormView, CredentialMixin):
         return url
 
 
-class MkoView(CredentialMixin, View):   #UserPassesTestMixin
+class MkoView(CredentialMixin, UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.groups.filter(name='Менеджеры').exists()
     @cache_check_view
     def get(self, request):
         username, password = super().get_credential(self)
-        print(username)
-        print(password)
         search = in_work_ortr(username, password)
         # if search[0] == 'Access denied':
         #     return super().redirect_to_login_for_service(self)
@@ -4462,7 +4461,7 @@ def sppdata(request, trID):
         form = SppDataForm()
         if user.groups.filter(name='Менеджеры').exists():
             form.fields['spd'].widget.choices = [('Комтехцентр', 'Комтехцентр'),]
-            form.fields['type_tr'].widget.choices = [('Нов. точка', 'Новая точка'), ('Сущ. точка', 'Существующая точка')]
+            form.fields['type_tr'].widget.choices = [('Нов. точка', 'Новая точка'),]
         #tag_service = request.session['tag_service']
         visible = True #if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
         #ticket_tr_id = request.session.get('ticket_tr_id')

@@ -6,17 +6,11 @@
 {% if request.user|has_group:"Менеджеры" %}
 
 <li class="nav-item">
-  <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'mko' %}">В пуле ОРТР</a>
+  <a class="nav-link" href="{% url 'mko' %}">Пул заявок</a>
 </li>
 {% elif request.user|has_group:"Сотрудники ОУЗП" %}
 <li class="nav-item">
-  <a class="nav-link" href="{% url 'private_page' %}">Личное пространство</a>
-</li>
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'ortr' %}">В пуле ОРТР</a>
+  <a class="nav-link" href="{% url 'ortr' %}">Пул заявок</a>
 </li>
 <li class="nav-item">
   <a class="nav-link" href="{% url 'search' %}">Поиск</a>
@@ -32,7 +26,7 @@
 </li>
 {% endif %}
 <li class="nav-item">
-  <a class="nav-link" href="{% url 'spp_view_save' dID ticket_spp_id %}">К заявке</a>
+  <a class="nav-link" href="{% url 'spp_view_save' dID ticket_spp_id %}">Заявка</a>
 </li>
 
 {% endblock %}
