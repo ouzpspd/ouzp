@@ -18,6 +18,15 @@ GOTTLIEB_USER = os.getenv('GOTTLIEB_USER')
 GOTTLIEB_PASSWORD = os.getenv('GOTTLIEB_PASSWORD')
 
 
+def check_fio(login, password):
+    """Данный метод парсит страницу СПП с данными о ФИО пользователя"""
+    templates = {}
+    url = 'https://sss.corp.itmh.ru/dem_tr/demands_filter.php'
+    req = requests.get(url, verify=False, auth=(login, password))
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    search = soup.find('td', id='td_space5').text
+    return search
+
 
 def _counter_line_services(services_plus_desc):
     """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
@@ -750,6 +759,7 @@ def in_work_ortr(login, password):
         search_demand_point = soup.find_all('td', class_='demand_point')[num:]
         search_demand_tech = soup.find_all('td', class_='demand_tech')[num:]
         search_demand_cur = soup.find_all('td', class_='demand_cur')
+        search_demand_stat = soup.find_all('td', class_='demand_stat')
         for index in range(len(search_demand_num2)-1):
             unwanted = ['Бражкин П.В.', 'Короткова И.В.', 'Полейко А.Л.', 'Полейко А. Л.', 'Чернов А. С.']
             if search_demand_cur[index].text not in unwanted:
@@ -761,7 +771,8 @@ def in_work_ortr(login, password):
                                   search_demand_cust[index].text,
                                   search_demand_point[index].text,
                                   search_demand_tech[index].text,
-                                  search_demand_cur[index].text])
+                                  search_demand_cur[index].text,
+                                  search_demand_stat[index].text])
         for index in range(len(lines)):
             if 'ПТО' in lines[index][0]:
                 lines[index][0] = lines[index][0][:lines[index][0].index('ПТО')]+' '+lines[index][0][lines[index][0].index('ПТО'):]
