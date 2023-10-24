@@ -22,11 +22,7 @@
           <th scope="col">№ Заявки</th>
           <th scope="col">Клиент</th>
             <th scope="col">Точка подключения</th>
-            {%comment%}<th scope="col">Технолог</th>{%endcomment%}
 
-            <th scope="col">Куратор</th>
-            <th scope="col">Работает</th>
-            {% comment %}<th scope="col">Статус</th>{% endcomment %}
             <th scope="col">Действие</th>
         </tr>
       </thead>
@@ -40,11 +36,6 @@
             <td><a href="https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={{ticket.1}}">{{ticket.0}}</a></td>
             <td>{{ticket.2}}</td>
             <td>{{ticket.3}}</td>
-            {%comment%}<td>{{ticket.4}}</td>{%endcomment%}
-
-            <td>{{ticket.5}}</td>
-            <td></td>
-            {% comment %}<td>{{ticket.6}}</td>{% endcomment %}
             <td>
                 <a class="btn btn-outline-danger custom" href="{% url 'add_spp' ticket.1 %}?next={{ request.path }}" role="button">Обработать заявку</a>
             </td>
@@ -73,14 +64,7 @@
                 {%endfor%}
                 {%endfor%}
 
-
             </td>
-            {%comment%}<td>{{ticket.technolog}}</td>{%endcomment%}
-
-            <td>{{ticket.manager}}</td>
-            <td>{{ticket.user.last_name}}</td>
-
-
             <td>
                 {% comment %}{% if ticket.user.username == user.username%}{% endcomment %}
                 <a class="btn btn-outline-info custom" href="{% url 'spp_view_save' ticket.dID ticket.id %}" role="button">Перейти к заявке</a>

@@ -1,5 +1,5 @@
 import requests
-from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
@@ -684,15 +684,7 @@ def copper(request, trID):
             list_switches = session_tr_id.get('list_switches')
         else:
             list_switches = parsingByNodename(pps, username, password)
-        if user.groups.filter(name='Менеджеры').exists() and not isinstance(list_switches[0], str):
-            manager_allowed = ('SNR S2990G-24T', 'SNR S2990G-48T', 'SNR S2982G-24TE', 'SNR S2985G-24TC', 'SNR S2985G-48T',
-                               'D-Link DGS-1210-28/ME', 'SNR S2950-24G', 'Orion Alpha A26', 'SNR S2960-48G',
-                               'SNR S2962-24T','SNR S2965-24T', 'SNR S2965-48T', 'D-Link DES-1210-52/ME',
-                               'D-Link DES-1228/ME/B1', 'Cisco Cisco WS-C2950', '3COM')
-            list_switches = [switch for switch in list_switches if any(switch[1].startswith(sw) for sw in manager_allowed)]
-            if not list_switches:
-                messages.warning(request, f'Нет коммутаторов на узле {pps}')
-                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
+
         if list_switches[0] == 'Access denied':
             messages.warning(request, 'Нет доступа в ИС Холдинга')
             response = redirect('login_for_service')
@@ -703,13 +695,35 @@ def copper(request, trID):
             return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
 
         list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
+
         #request.session['list_switches'] = list_switches
         session_tr_id.update({'list_switches': list_switches})
         request.session[trID] = session_tr_id
         copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
 
-
         if user.groups.filter(name='Менеджеры').exists():
+            manager_allowed = (
+            'SNR S2990G-24T', 'SNR S2990G-48T', 'SNR S2982G-24TE', 'SNR S2985G-24TC', 'SNR S2985G-48T',
+            'D-Link DGS-1210-28/ME', 'SNR S2950-24G', 'Orion Alpha A26', 'SNR S2960-48G',
+            'SNR S2962-24T', 'SNR S2965-24T', 'SNR S2965-48T', 'D-Link DES-1210-52/ME',
+            'D-Link DES-1228/ME/B1', 'Cisco Cisco WS-C2950')
+            list_switches = [switch for switch in list_switches if
+                             any(switch[1].startswith(sw) for sw in manager_allowed)]
+            if not list_switches:
+                messages.warning(request, f'Нет медных коммутаторов на узле {pps}. Требуется полноценное ТР.')
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
+            ports_all_switches = [switch[10] for switch in list_switches]
+            counter_free_ports = 0
+            for ports in ports_all_switches:
+                for port, value in ports.items():
+                    port_free = all([value[0] == '-', value[1] == '-', value[2] == '-', value[3] == 'Заглушка 4094'])
+                    if port_free and len(ports) > 30 and not any(_ in port for _ in ['49', '50', '51', '52', 'Gi']):
+                        counter_free_ports += 1
+                    elif port_free and len(ports) < 30 and not any(_ in port for _ in ['25', '26', '27', '28', 'Gi']):
+                        counter_free_ports += 1
+            if counter_free_ports < 4:
+                messages.warning(request, 'На узле связи недостаточно свободных портов. Требуется решению ОУЗП СПД')
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
             copperform.fields['correct_sreda'].widget.choices = [('1', 'UTP'), ]
 
         context = {
@@ -4342,19 +4356,25 @@ class RtkFormView(FormView, CredentialMixin):
         return url
 
 
-class MkoView(CredentialMixin, UserPassesTestMixin, View):
+class MkoView(CredentialMixin, UserPassesTestMixin, LoginRequiredMixin, View):
+    login_url = '/login/'
     def test_func(self):
         return self.request.user.groups.filter(name='Менеджеры').exists()
     @cache_check_view
     def get(self, request):
         username, password = super().get_credential(self)
         search = in_work_ortr(username, password)
-        # if search[0] == 'Access denied':
-        #     return super().redirect_to_login_for_service(self)
-        spp_proc = SPP.objects.filter(process=True, client__startswith="Тест")
+        user = User.objects.get(username=request.user.username)
+        # fio = check_fio(username, password)
+        # if not user.last_name in fio:
+        #     messages.warning(request, 'Фамилия И.О. не соответствуют данным СПП. Обратитесь к администратору')
+        #     return redirect('private_page')
+
+        #spp_proc = SPP.objects.filter(process=True, client__startswith="Тест")
+        spp_proc = SPP.objects.filter(process=True, user=user)
         list_spp_proc = list(spp_proc.values_list('ticket_k', flat=True))
         if not isinstance(search[0], str):
-            search = [i for i in search if i[2].startswith('Тест') and i[0] not in list_spp_proc]
+            search = [i for i in search if i[0] not in list_spp_proc and i[5]==user.last_name]   #i[2].startswith('Тест') and i[6] == 'Отправлена в ОРТР'
         else:
             search = None
         return render(request, 'tickets/mko.html', {'search': search, 'spp_process': spp_proc})
