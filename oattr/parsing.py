@@ -772,6 +772,22 @@ class Specification:
     #     exist_resource_type_list = entity.get('ResourceTypeList')
     #     return exist_resource_type_list
 
+    def check_exist_inventory_object(self, cookie, inventory_objects, resources=False):
+        """Метод проверяет наличие объектов в спецификации. Ключ resources добавляет проверку у объекта ресурсов"""
+        if not inventory_objects:
+            return False
+        spec = self.get_entity_info_list(cookie)
+        for inventory_object in inventory_objects:
+            exist = [obj for obj in spec if inventory_object in obj.get('Name')]
+            if not exist:
+                return False
+            if resources:
+                exist = [obj for obj in spec if inventory_object in obj.get('Name') and obj.get('ResourceTypeList')]
+                if not exist:
+                    return False
+        return True
+
+
     def set_resources(self, cookie, inventory_object_id, resources, update=False):
         """Метод на основе полученной информации во вспомогательных методах вызывает формирование шаблона запроса
          и добавляет ресурсы в объект спецификации"""

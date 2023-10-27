@@ -4380,6 +4380,15 @@ class CreateSpecificationView(CredentialMixin, View):
 
         ticket_tr = TR.objects.filter(ticket_tr=trID).last()
         id_otu = get_or_create_otu(username, password, trID)
+        specification = Specification(username, password, id_otu)
+        cookie = specification.authenticate()
+        inventory_objects = ('Цифровая сеть потребителя',)
+        csp_exist = specification.check_exist_inventory_object(cookie, inventory_objects, resources=True)
+        inventory_objects = (', АВ',)
+        pps_exist = specification.check_exist_inventory_object(cookie, inventory_objects, resources=True)
+        if csp_exist or pps_exist:
+            messages.warning(request, f'Новая стоимость в ТР №{trID} не добавлена. Cпецификация заполнялась ранее.')
+            return redirect(f'https://arm.itmh.ru/v3/spec/{id_otu}')
         tentura = Tentura(username, password, id_otu)
         status_project = tentura.check_active_project_for_user()
 
@@ -4403,8 +4412,9 @@ class CreateSpecificationView(CredentialMixin, View):
         #print(result)
 
         #id_csp_tentura = 131124
-        specification = Specification(username, password, id_otu)
-        cookie = specification.authenticate()
+
+
+
         csp_resources = [
             {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
         ]
