@@ -66,6 +66,15 @@ def _readable_node(node_mon):
     return finish_node
 
 
+def short_readable_node(node_mon):
+    """Данный метод приводит название узла форме без окончания после запятой"""
+    node_templates = [', РУА', ', УА', ', АВ', ', КК']
+    for key in node_templates:
+        if node_mon.endswith(key):
+            node_mon = node_mon[:node_mon.index(key)]
+    return node_mon
+
+
 def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
     """Данный метод принимает услуги(название + значение) и значение изменения адресации. Определяет услуги с DHCP.
      Если адресация меняется, в массив services добавляет название услуги ШПД без подсети. В массив service_shpd_change

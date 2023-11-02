@@ -1198,3 +1198,76 @@ def get_gottlieb(rtk_ip):
     parent_node_soup = BeautifulSoup(parent_node, "html.parser")
     rtk_models.update({'Модель вышестоящего коммутатора': parent_node_soup.text.split(',')[-2]})
     return rtk_models
+
+
+def get_uplink_data(chain_device, username, password):
+    chains = _get_chain_data(username, password, chain_device)
+    if chains:
+        for chain in chains:
+            if chain.get('host_name') == chain_device:
+                level = chain.get('level')
+                node = chain.get('alias')
+
+        for chain in chains:
+            if chain_device in chain.get('title') and chain.get('level') < level:
+                uplink = chain.get('host_name')
+                uplink_node = chain.get('alias')
+                uplink_port = chain.get('title').split(chain_device)[0].split(uplink)[-1][1:-1]
+                uplink_port = uplink_port.replace('_', '/')
+        return (uplink_node, uplink, uplink_port)
+
+
+def parsing_stu_switch(chain_device, username, password):
+    url = 'https://cis.corp.itmh.ru/stu/Switch/Search'
+    data = {'Name': chain_device, 'IncludeDeleted': 'false'}
+    req = requests.post(url, verify=False, auth=(username, password), data=data)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        details = [a['href'] for a in soup.find_all('a') if '/stu/Switch/Details/' in a['href']][0]
+        req = requests.get('https://cis.corp.itmh.ru' + details, verify=False, auth=(username, password))
+        if req.status_code == 200:
+            return req.content.decode('utf-8')
+
+
+def get_switch_data(chain_device, stu_data, uplink_data):
+    model = None
+    node = None
+    soup = BeautifulSoup(stu_data, "html.parser")
+    table_switch = soup.find_all('table')[0]
+    tds = table_switch.find_all('td')
+    for index, td in enumerate(tds):
+        if 'Модель' in td.text:
+            if tds[index+1].text.startswith('S'):
+                model = 'SNR ' + tds[index+1].text
+            elif tds[index+1].text.startswith('D'):
+                model = 'D-link ' + tds[index+1].text
+            elif tds[index+1].text.startswith('A'):
+                model = 'Orion ' + tds[index+1].text
+            else:
+                model = tds[index+1].text
+        if 'Узел связи' in td.text:
+            node = tds[index + 1].find('a').text
+
+    table_ports_desc = soup.find_all('table')[2]
+    tds = table_ports_desc.find_all('td')
+    gig_ports = {}
+    for index, td in enumerate(tds):
+        if 'SFP' in td.text or 'GBIC' in td.text:
+            if tds[index+2].find('a').text:
+                gig_ports.update({td.text: tds[index+2].find('a').text})
+            elif tds[index+2].text:
+                gig_ports.update({td.text: tds[index+2].text.strip()})
+        elif 'RJ45' in td.text:
+            if td.text[:td.text.index('[')]+'[SFP]' in gig_ports.keys():
+                if tds[index + 2].find('a').text:
+                    gig_ports.update({td.text: tds[index + 2].find('a').text})
+                elif tds[index + 2].text:
+                    gig_ports.update({td.text: tds[index + 2].text.strip()})
+    uplink_node, uplink, uplink_port = uplink_data
+    gig_ports = {k:v for k, v in gig_ports.items() if v and not f'{uplink}, {uplink_port}' in v }
+    for k, v in gig_ports.items():
+        if chain_device in v:
+            for i in v.split(' - '):
+                if chain_device not in i:
+                    gig_ports.update({k: i.split(',')[0]})
+    return (model, node, gig_ports)

@@ -21,8 +21,8 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%" rowspan="{{services_plus_desc|length}}">Услуг{{ services_plus_desc|length|pluralize:"а,и" }}</th>
-      {% for i in services_plus_desc%}
+        <th class="table-secondary text-right" style="width: 25%" rowspan="{{ticket_tr.services|length}}">Услуг{{ ticket_tr.services|length|pluralize:"а,и" }}</th>
+      {% for i in ticket_tr.services%}
         <td class="table-light" style="width: 75%">{{i}}</td>
     </tr>
   {% endfor %}
@@ -141,7 +141,7 @@
     <div class="card mb-2">
       <h5 class="card-header">Решение ОТПМ</h5>
       <div class="card-body">
-        <p class="card-text">{{oattr|linebreaksbr}}</p>
+        <p class="card-text">{{ticket_tr.oattr|linebreaksbr}}</p>
       </div>
     </div>
     {% endif %}

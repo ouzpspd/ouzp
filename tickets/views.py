@@ -15,7 +15,7 @@ from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     OrtrForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
-    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, RtkForm, SppDataForm
+    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, RtkForm, SppDataForm, PpsForm
 
 from oattr.models import OtpmSpp
 
@@ -1229,7 +1229,7 @@ def data(request, trID):
     if value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
         result_services, result_services_ots, value_vars = change_services(value_vars)
 
-    if value_vars.get('not_required'):
+    if value_vars.get('type_tr') == 'Не требуется':
         result_services = 'Решение ОУЗП СПД не требуется'
         for service in ticket_tr.services:
             if 'Телефон' in service:
@@ -1237,8 +1237,15 @@ def data(request, trID):
             else:
                 result_services_ots = None
 
-    if not value_vars.get('type_pass') and not value_vars.get('not_required'):
+    if value_vars.get('type_tr') == 'Нов. точка':
         result_services, result_services_ots, value_vars = client_new(value_vars)
+
+    if value_vars.get('type_tr') == 'ПТО':
+        if value_vars.get('type_change_node') == 'Замена КАД':
+            result_services, value_vars = replace_kad(value_vars)
+        elif value_vars.get('type_change_node') == 'Установка дополнительного КАД':
+            result_services, value_vars = add_kad(value_vars)
+        result_services_ots = None
 
     userlastname = None
     if request.user.is_authenticated:
@@ -1387,8 +1394,8 @@ def saved_data(request, trID):
 
             context = {
                 'ticket_k': ticket_k,
-                'services_plus_desc': services_plus_desc,
-                'oattr': oattr,
+                #'services_plus_desc': services_plus_desc,
+                #'oattr': oattr,
                 'result_services_ots': result_services_ots,
                 'list_switches': list_switches,
                 'counter_str_ortr': counter_str_ortr,
@@ -1396,7 +1403,7 @@ def saved_data(request, trID):
                 'ortrform': ortrform,
                 'not_required_tr': True,
                 'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-                'dID': session_tr_id.get('dID'),
+                'dID': ticket_tr.ticket_k.dID, #session_tr_id.get('dID'),
                 'ticket_tr': ticket_tr,
                 'trID': trID
             }
@@ -1416,8 +1423,9 @@ def saved_data(request, trID):
 
     else:
         session_tr_id = request.session[str(trID)]
-        services_plus_desc = session_tr_id['services_plus_desc']
-        oattr = session_tr_id['oattr']
+
+        #services_plus_desc = session_tr_id['services_plus_desc']
+        #oattr = session_tr_id['oattr']
         kad = session_tr_id['kad']
         if kad == 'Не требуется':
             pps = 'Не требуется'
@@ -1453,8 +1461,8 @@ def saved_data(request, trID):
 
         context = {
             'ticket_k': ticket_k,
-            'services_plus_desc': services_plus_desc,
-            'oattr': oattr,
+            #'services_plus_desc': services_plus_desc,
+            #'oattr': oattr,
             'result_services_ots': result_services_ots,
             'list_switches': list_switches,
             'counter_str_ortr': counter_str_ortr,
@@ -1463,7 +1471,7 @@ def saved_data(request, trID):
             'not_required_tr': True,
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'ticket_tr': ticket_tr,
-            'dID': session_tr_id.get('dID'),
+            'dID': ticket_tr.ticket_k.dID,   #session_tr_id.get('dID'),
             'trID': trID
         }
 
@@ -4348,6 +4356,65 @@ class RtkFormView(FormView, CredentialMixin):
         return url
 
 
+class PpsFormView(FormView, CredentialMixin):
+    template_name = "tickets/pps.html"
+    form_class = PpsForm
+
+    def form_valid(self, form):
+        #pps_form = dict(**form.cleaned_data)
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        #session_tr_id.update({'pps_form': pps_form})
+        session_tr_id.update(**form.cleaned_data)
+        kad_name = form.cleaned_data['kad_name']
+        username, password = super().get_credential(self)
+        uplink_data = get_uplink_data(kad_name, username, password)
+
+        stu_data = parsing_stu_switch(kad_name, username, password)
+        if stu_data and uplink_data:
+            switch_data = get_switch_data(kad_name, stu_data, uplink_data)
+            session_tr_id.update({'uplink_data': uplink_data, 'switch_data': switch_data})
+        if form.cleaned_data['deleted_kad']:
+            stu_data = parsing_stu_switch(form.cleaned_data['deleted_kad'], username, password)
+            if stu_data:
+                deleted_switch_data = get_switch_data(form.cleaned_data['deleted_kad'], stu_data, ('', kad_name, ''))
+                session_tr_id.update({'deleted_switch_data': deleted_switch_data})
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        username, password = super().get_credential(self)
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        ticket_tr_id = session_tr_id.get('ticket_tr_id')
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        context['ticket_tr'] = ticket_tr
+        context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
+        context['dID'] = self.request.session.get('dID')
+        context['trID'] = self.kwargs['trID']
+        if session_tr_id.get('list_switches'):
+            list_switches = session_tr_id.get('list_switches')
+        else:
+            list_switches = parsingByNodename(ticket_tr.pps.strip(), username, password)
+            list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
+            if isinstance(list_switches[0], str): #== 'Access denied':
+                list_switches = None
+            session_tr_id.update({'list_switches': list_switches})
+            self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        context['list_switches'] = list_switches
+        return context
+
+    def get_success_url(self, **kwargs):
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        tag_service = [{'pps': None}, {'data': None}]
+        # tag_service_index = self.request.session['tag_service_index']
+        tag_service_index = session_tr_id.get('tag_service_index')
+        index = tag_service_index[-1] + 1
+        tag_service_index.append(index)
+        session_tr_id.update({'tag_service': tag_service, 'tag_service_index': tag_service_index})
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        return reverse('data', kwargs={'trID': self.kwargs['trID']})
+
+
 class MkoView(CredentialMixin, UserPassesTestMixin, LoginRequiredMixin, View):
     login_url = '/login/'
     def test_func(self):
@@ -4454,8 +4521,8 @@ def sppdata(request, trID):
                 messages.warning(request, 'Интернет, DHCP через РТК не предоставляется.')
                 return redirect('spp_view_save', ticket_tr.ticket_k.dID, ticket_tr.ticket_k.id)
             #request.session['spd'] = spd
-            session_tr_id.update({'spd': spd})
-            if type_tr == 'Не требуется': #request.GET.get('cp') == 'exist':
+            session_tr_id.update({'spd': spd, 'type_tr': type_tr})
+            if type_tr == 'Не требуется':
                 session_tr_id.update({
                     'services_plus_desc': ticket_tr.services, 'oattr': ticket_tr.oattr,
                     'not_required': True, 'dID': ticket_tr.ticket_k.dID
@@ -4463,11 +4530,12 @@ def sppdata(request, trID):
                 request.session[trID] = session_tr_id
                 return redirect('data', trID)
             request.session[trID] = session_tr_id
-            if type_tr == 'Нов. точка': #request.GET.get('cp') == 'new':
+            if type_tr == 'Нов. точка':
                 return redirect('project_tr', ticket_tr.ticket_k.dID, ticket_tr.ticket_cp, trID)
-            if type_tr == 'Сущ. точка': #request.GET.get('cp') == 'exist':
+            if type_tr == 'Сущ. точка':
                 return redirect('get_resources', trID)
-
+            if type_tr == 'ПТО':
+                return redirect('pps', trID)
 
     else:
         user = User.objects.get(username=request.user.username)
