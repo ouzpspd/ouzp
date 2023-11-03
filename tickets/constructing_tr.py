@@ -1803,7 +1803,7 @@ def _passage_phone_service(result_services, value_vars):
 from oattr.utils import analyzer_vars as analyzer
 
 def get_replace_kad(value_vars):
-    """Данный метод формирует блок ТТР для изменение присоединения к СПД"""
+    """Данный метод формирует блок ТТР для замены КАД"""
     result_services = []
     templates = value_vars.get('templates')
     stroka = templates.get("Замена КАД на ППС %Название узла связи%")
@@ -1876,7 +1876,7 @@ def get_replace_kad(value_vars):
 
 
 def get_add_kad(value_vars):
-    """Данный метод формирует блок ТТР для изменение присоединения к СПД"""
+    """Данный метод формирует блок ТТР для установки доп. КАД"""
     result_services = []
     templates = value_vars.get('templates')
     stroka = ' ------'
@@ -1989,6 +1989,47 @@ def get_add_kad(value_vars):
         static_vars['Модель демонтируемого КАД'] = deleted_model
     result_services.append(analyzer(stroka, static_vars, hidden_vars, multi_vars))
     value_vars.update({'pps': node, 'kad': value_vars.get('kad_name')})
+    return result_services, value_vars
+
+
+def get_new_kad(value_vars):
+    """Данный метод формирует блок ТТР для установки доп. КАД"""
+    result_services = []
+    templates = value_vars.get('templates')
+    stroka = ' ------'
+    static_vars = {}
+    hidden_vars = {}
+    multi_vars = {}
+    type_new_model_kad = value_vars.get('type_new_model_kad')
+    static_vars['Новая модель КАД'] = type_new_model_kad
+    new_pps = {k:v for k, v in value_vars.items() if 'pps_' in k}
+    for i in new_pps.keys():
+        index = i.strip('pps_')
+        if value_vars.get(f'ftth_{index}') and\
+                type_new_model_kad not in ('24-портовый оптогигабитный коммутатор', '48-портовый оптогигабитный коммутатор'):
+            stroka = templates.get("Установка новых КАД на УАД %Название узла связи%")
+        else:
+            stroka = templates.get("Установка нового КАД на УАД %Название узла связи%")
+        if 'ИБП' in value_vars.get(f'pps_{index}'):
+            hidden_vars[', адаптированный для работы с РЭКопитоном'] = ', адаптированный для работы с РЭКопитоном'
+            hidden_vars[
+                '- Совместно с ОНИТС СПД проверить резервирование по питанию.'
+            ] = '- Совместно с ОНИТС СПД проверить резервирование по питанию.'
+            hidden_vars[
+                '- Совместно c ТЭО проверить резервирование по питанию.'
+            ] = '- Совместно c ТЭО проверить резервирование по питанию.'
+            hidden_vars['от ИБП,'] = 'от ИБП,'
+            hidden_vars[
+                '- По решению ОТПМ организовать резервирование УАД по питанию.'
+            ] = '- По решению ОТПМ организовать резервирование УАД по питанию.'
+        static_vars['Название узла связи'] = short_readable_node(value_vars.get(f'pps_{index}'))
+        static_vars['Название вышестоящего узла связи'] = _readable_node(value_vars.get('pps'))
+        static_vars['Название вышестоящего коммутатора'] = value_vars.get(f'uplink_{index}')
+        static_vars['Порт вышестоящего коммутатора'] = value_vars.get(f'uplink_port_{index}')
+        static_vars['GBIC/SFP'] = value_vars.get(f'transceiver_{index}')
+        result_services.append(analyzer(stroka, static_vars, hidden_vars, multi_vars))
+        value_vars.update({'kad': value_vars.get(f'uplink_{index}')})
+    value_vars.update({'pps': value_vars.get('pps')})
     return result_services, value_vars
 
 
@@ -2625,6 +2666,13 @@ def replace_kad(value_vars):
 def add_kad(value_vars):
     """Данный метод формирует готовое ТР для установки доп. КАД"""
     result_services, value_vars = get_add_kad(value_vars)
+    value_vars.update({'result_services': result_services})
+    return result_services, value_vars
+
+
+def new_kad(value_vars):
+    """Данный метод формирует готовое ТР для установки доп. КАД"""
+    result_services, value_vars = get_new_kad(value_vars)
     value_vars.update({'result_services': result_services})
     return result_services, value_vars
 

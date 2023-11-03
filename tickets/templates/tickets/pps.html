@@ -167,7 +167,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group type_add_kad">
+                            <div class="form-group type_add_kad add-g">
                                 <label for="{{form.type_add_kad.id_for_label}}">Тип установки доп. КАД</label>
                                 {{form.type_add_kad}}
                             </div>
@@ -175,7 +175,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group disable">
+                            <div class="form-group disable add-g">
                                 <label for="{{form.disable.id_for_label}}">Отключение</label>
                                 {{form.disable}}
                             </div>
@@ -183,7 +183,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group disabled_port">
+                            <div class="form-group disabled_port add-g">
                                 <label for="{{form.disabled_port.id_for_label}}">Порт отключения</label>
                                 {{form.disabled_port}}
                             </div>
@@ -191,7 +191,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group disabled_link">
+                            <div class="form-group disabled_link add-g">
                                 <label for="{{form.disabled_link.id_for_label}}">Линк/договор отключения</label>
                                 {{form.disabled_link}}
                             </div>
@@ -199,7 +199,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group deleted_kad">
+                            <div class="form-group deleted_kad add-g">
                                 <label for="{{form.deleted_kad.id_for_label}}">Второй КАД в гирлянде</label>
                                 {{form.deleted_kad}}
                             </div>
@@ -207,7 +207,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group delete_kad">
+                            <div class="form-group delete_kad add-g">
                                 <label for="{{form.delete_kad.id_for_label}}">Демонтаж второго КАД</label>
                                 {{form.delete_kad}}
                             </div>
@@ -230,7 +230,20 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row mt-3">
+                        <div class="col-4">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-info btn-block" id="id_get_node" type="button">
+                                      <span class="" role="status" aria-hidden="true"></span>
+                                        <span class="sr-only">Lo...</span>
+                                        Получить Узлы связи
+                                    </button>
 
+                                </div>
+                            </div>
+                    </div>
+                    <div id="forms">
+                    </div>
 
 
                     <div class="row mt-3">
@@ -249,6 +262,7 @@
 
         </div>
     </form>
+
 </div>
 
 
@@ -256,13 +270,9 @@
 
 $(function () {
     $(".kad_name").hide();
-	$(".type_add_kad").hide();
-    $(".disabled_port").hide();
-    $(".disabled_link").hide();
-    $(".disable").hide();
-	$(".ppr").hide();
-	$(".deleted_kad").hide();
-	$(".delete_kad").hide();
+    $(".ppr").hide();
+    $(".add-g").hide();
+	$(".get_node").hide();
 
 
 });
@@ -272,26 +282,120 @@ $(function () {
   $("#id_type_change_node").change(function() {
     var val = $(this).val();
     console.log(1)
-    if(val === "Замена КАД") {
-        $(".kad_name").show();
-        $(".type_new_model_kad").show();
-        $(".ppr").show();
-        $(".disabled_port").hide();
-        $(".disabled_link").hide();
-        $(".disable").hide();
-        $(".deleted_kad").hide();
-        $(".delete_kad").hide();
+    if(val === "Установка нового КАД") {
+        $(".get_node").show();
         $("#id_disabled_port").val("");
         $("#id_disabled_link").val("");
-
         $('.type_add_kad option:contains("не требуется")').prop('selected', true);
-        $(".type_add_kad").hide();
+        $(".add-g").hide();
+        $(".kad_name").hide();
+        $(".ppr").hide();
+        $('#id_get_node').click(function () {
+          $(this).find('span').addClass('spinner-border spinner-border-sm');
+          // создаем AJAX-вызов
+          $.ajax({
+              url: "{% url 'spec_objects' trID %}",
+              // если успешно, то
+              success: function (response) {
+                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  if (response.error) {
+                      alert(response.error);
+                      $('#id_username').removeClass('is-valid').addClass('is-invalid');
+                      $('#id_username').after('<div class="invalid-feedback d-block" id="usernameError">This username is not available!</div>')
+                  }
+
+                  else {
+                      console.log(response.result)
+                      console.log(response.result[1])
+
+                      for (let counter = 0; counter < response.result.length; counter++) {
+                      $("#forms").append(`
+
+                        <div class="row">
+
+
+
+                            <div class="col-1">
+                                <div class="form-group get_node">
+                                    <label class="radio-inline">FTTH<input type="checkbox" name="ftth_${counter}" class="form-check" value="1"></label>
+                                </div>
+                            </div>
+                            <div class="col-5">
+                                <div class="form-group get_node">
+
+                                    <input type="text" name="pps_${counter}" class="form-control" value="${response.result[counter]}" required="True">
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="form-group get_node">
+
+                                    <input type="text" name="uplink_${counter}" class="form-control" required="True" placeholder="АМ/КПА">
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="form-group get_node">
+                                    <input type="text" name="uplink_port_${counter}" class="form-control" required="True" placeholder="Порт АМ/КПА">
+                                </div>
+                            </div>
+
+                                <div class="form-group get_node">
+                                    <select name="transceiver_${counter}" class="form-control" id="transceiver_${counter}">
+                                      <option value="SFP">SFP</option>
+                                      <option value="GBIC">GBIC</option>
+                                    </select>
+                                </div>
+
+
+                            <div class="col-1">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-danger remove_item_btn">
+                                    <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                    <span class="sr-only">Close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                          `);
+                      }
+
+
+
+
+
+                  }
+              },
+              error: function (response) {
+                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  alert("Не удалось получить объекты Спецификации.");
+
+              }
+          });
+          return false;
+        });
+
+
+    }
+    else if (val === "Замена КАД") {
+        $(".kad_name").show();
+        $("#id_kad_name").prop("required", true);
+        $(".type_new_model_kad").show();
+        $(".ppr").show();
+        $(".add-g").hide();
+
+        $("#id_disabled_port").val("");
+        $("#id_disabled_link").val("");
+        $('.type_add_kad option:contains("не требуется")').prop('selected', true);
+
+        $(".get_node").hide();
 
     }
     else if (val === "Установка дополнительного КАД") {
         $(".ppr").hide();
+        $(".get_node").hide();
         $(".type_add_kad").show();
         $(".kad_name").show();
+        $("#id_kad_name").prop("required", true);
         $("#id_type_add_kad").change(function() {
             var add_kad = $(this).val();
             if(add_kad === "Установка 2-го медного кад в гирлянду") {
@@ -332,13 +436,9 @@ $(function () {
     }
     else {
         $(".ppr").hide();
-        $(".disabled_port").hide();
-        $(".disabled_link").hide();
-        $(".ppr").hide();
-        $(".deleted_kad").hide();
-        $(".delete_kad").hide();
         $(".kad_name").hide();
-	    $(".type_add_kad").hide();
+	    $(".add_g").hide();
+	    $(".get_node").hide();
 	    $("#id_kad_name").val("");
 	    $("#id_disabled_port").val("");
 	    $("#id_disabled_link").val("");
@@ -351,6 +451,13 @@ $(function () {
     }
 
   });
+
+  $(document).on("click",".remove_item_btn",function(e){
+          e.preventDefault();
+          let row_item = $(this).parent().parent().parent();
+          $(row_item).remove();
+      });
+
 });
 
 </script>

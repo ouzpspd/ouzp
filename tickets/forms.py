@@ -459,6 +459,7 @@ class SppDataForm(forms.Form):
 
 class PpsForm(forms.Form):
     types_change_node = [
+        ('0', '-----'),
         ('Установка нового КАД', 'Установка нового КАД'),
         ('Установка дополнительного КАД', 'Установка дополнительного КАД'),
         ('Замена КАД', 'Замена КАД'),
@@ -495,6 +496,16 @@ class PpsForm(forms.Form):
                                     widget=forms.TextInput(attrs={'class': 'form-control'}))
     delete_kad = forms.BooleanField(label='Демонтаж второго КАД', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
+
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.CharField()
 
 
 class RtkForm(forms.Form):

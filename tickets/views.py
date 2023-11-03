@@ -26,7 +26,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
@@ -1245,6 +1245,8 @@ def data(request, trID):
             result_services, value_vars = replace_kad(value_vars)
         elif value_vars.get('type_change_node') == 'Установка дополнительного КАД':
             result_services, value_vars = add_kad(value_vars)
+        elif value_vars.get('type_change_node') == 'Установка нового КАД':
+            result_services, value_vars = new_kad(value_vars)
         result_services_ots = None
 
     userlastname = None
@@ -4356,6 +4358,26 @@ class RtkFormView(FormView, CredentialMixin):
         return url
 
 
+@cache_check
+def spec_objects(request, trID):
+    """Получение объектов спецификации"""
+    user = User.objects.get(username=request.user.username)
+    credent = cache.get(user)
+    username = credent['username']
+    password = credent['password']
+    id_otu = get_or_create_otu(username, password, trID, only_get=True)
+    if not id_otu:
+        response = {'error': 'Не удалось получить Проект ОТУ', 'result': id_otu}
+        return JsonResponse(response)
+    specification = Specification(username, password, id_otu)
+    cookie = specification.authenticate()
+    entities = specification.get_entity_info_list(cookie)
+    pattern = '2.2.2.АВ \(#\d+\) '
+    nodes = [re.sub(pattern, '', entity.get('Name')) for entity in entities if entity.get('Name').startswith('2.2.2.АВ')]
+    response = {'result': nodes}
+    return JsonResponse(response)
+
+
 class PpsFormView(FormView, CredentialMixin):
     template_name = "tickets/pps.html"
     form_class = PpsForm
@@ -4365,19 +4387,19 @@ class PpsFormView(FormView, CredentialMixin):
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
         #session_tr_id.update({'pps_form': pps_form})
         session_tr_id.update(**form.cleaned_data)
-        kad_name = form.cleaned_data['kad_name']
-        username, password = super().get_credential(self)
-        uplink_data = get_uplink_data(kad_name, username, password)
-
-        stu_data = parsing_stu_switch(kad_name, username, password)
-        if stu_data and uplink_data:
-            switch_data = get_switch_data(kad_name, stu_data, uplink_data)
-            session_tr_id.update({'uplink_data': uplink_data, 'switch_data': switch_data})
-        if form.cleaned_data['deleted_kad']:
-            stu_data = parsing_stu_switch(form.cleaned_data['deleted_kad'], username, password)
-            if stu_data:
-                deleted_switch_data = get_switch_data(form.cleaned_data['deleted_kad'], stu_data, ('', kad_name, ''))
-                session_tr_id.update({'deleted_switch_data': deleted_switch_data})
+        if form.cleaned_data['type_change_node'] in ('Установка дополнительного КАД', 'Замена КАД'):
+            kad_name = form.cleaned_data['kad_name']
+            username, password = super().get_credential(self)
+            uplink_data = get_uplink_data(kad_name, username, password)
+            stu_data = parsing_stu_switch(kad_name, username, password)
+            if stu_data and uplink_data:
+                switch_data = get_switch_data(kad_name, stu_data, uplink_data)
+                session_tr_id.update({'uplink_data': uplink_data, 'switch_data': switch_data})
+            if form.cleaned_data['deleted_kad']:
+                stu_data = parsing_stu_switch(form.cleaned_data['deleted_kad'], username, password)
+                if stu_data:
+                    deleted_switch_data = get_switch_data(form.cleaned_data['deleted_kad'], stu_data, ('', kad_name, ''))
+                    session_tr_id.update({'deleted_switch_data': deleted_switch_data})
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
         return super().form_valid(form)
 
@@ -4398,7 +4420,7 @@ class PpsFormView(FormView, CredentialMixin):
             list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
             if isinstance(list_switches[0], str): #== 'Access denied':
                 list_switches = None
-            session_tr_id.update({'list_switches': list_switches})
+            session_tr_id.update({'list_switches': list_switches, 'pps': ticket_tr.pps.strip()})
             self.request.session[str(self.kwargs['trID'])] = session_tr_id
         context['list_switches'] = list_switches
         return context

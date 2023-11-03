@@ -28,11 +28,11 @@ def ckb_parse(login, password):
     return templates
 
 
-def get_or_create_otu(login, password, trID):
+def get_or_create_otu(login, password, trID, only_get=False):
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_ajax.php'
     data = {'action': 'GetOtu', 'trID': f'{trID}'}
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
-    if not req.json().get('id'):
+    if not req.json().get('id') and not only_get:
         data = {'action': 'CreateOtu', 'trID': f'{trID}'}
         requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
         data = {'action': 'GetOtu', 'trID': f'{trID}'}

@@ -83,6 +83,7 @@ urlpatterns = [
     path('mko/', MkoView.as_view(), name='mko'),
     path('specification/<int:trID>/', CreateSpecificationView.as_view(), name='specification'),
     path('pps/<int:trID>/', PpsFormView.as_view(), name='pps'),
+    path('spec_objects/<int:trID>/', spec_objects, name='spec_objects'),
 
 
 
