@@ -28,11 +28,11 @@ def ckb_parse(login, password):
     return templates
 
 
-def get_or_create_otu(login, password, trID):
+def get_or_create_otu(login, password, trID, only_get=False):
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_ajax.php'
     data = {'action': 'GetOtu', 'trID': f'{trID}'}
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
-    if not req.json().get('id'):
+    if not req.json().get('id') and not only_get:
         data = {'action': 'CreateOtu', 'trID': f'{trID}'}
         requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
         data = {'action': 'GetOtu', 'trID': f'{trID}'}
@@ -771,6 +771,22 @@ class Specification:
     #     entity = [i for i in entity_info_list if i.get('InventoryObjectId') == inventory_object_id][0]
     #     exist_resource_type_list = entity.get('ResourceTypeList')
     #     return exist_resource_type_list
+
+    def check_exist_inventory_object(self, cookie, inventory_objects, resources=False):
+        """Метод проверяет наличие объектов в спецификации. Ключ resources добавляет проверку у объекта ресурсов"""
+        if not inventory_objects:
+            return False
+        spec = self.get_entity_info_list(cookie)
+        for inventory_object in inventory_objects:
+            exist = [obj for obj in spec if inventory_object in obj.get('Name')]
+            if not exist:
+                return False
+            if resources:
+                exist = [obj for obj in spec if inventory_object in obj.get('Name') and obj.get('ResourceTypeList')]
+                if not exist:
+                    return False
+        return True
+
 
     def set_resources(self, cookie, inventory_object_id, resources, update=False):
         """Метод на основе полученной информации во вспомогательных методах вызывает формирование шаблона запроса

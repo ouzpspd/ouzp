@@ -1,0 +1,465 @@
+{% extends 'tickets/nav_ticket.html' %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+            <td class="table-light" style="width: 75%">{{ticket_tr.pps}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <table class="table table-striped" id="switch">
+      <thead>
+        <tr>
+
+          <th scope="col">Название</th>
+          <th scope="col">Модель</th>
+            <th scope="col">IP-адрес</th>
+            <th scope="col">Uplink</th>
+            <th scope="col">Статус</th>
+            <th scope="col">Описание</th>
+
+            <th scope="col">Кл.</th>
+            <th scope="col">Лин.</th>
+            <th scope="col">Своб.</th>
+            <th scope="col">Всего</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for switch in list_switches %}
+        <tr>
+
+
+            <td>{{switch.0}}</td>
+            <td>{{switch.1}}</td>
+            <td><a href="telnet://{{switch.2}}">{{switch.2}}</a></td>
+            <td>{{switch.3}}</td>
+            {%if switch.4 == 'ВЫКЛ'%}
+            <td style="color:red;font-weight:bold">{{switch.4}}</td>
+            {%else%}
+            <td style="color:green;font-weight:bold">{{switch.4}}</td>
+            {%endif%}
+            <td>{{switch.5}}</td>
+
+            <td>{{switch.7}}</td>
+            <td>{{switch.8}}</td>
+            <td>{{switch.9}}</td>
+            <td>
+                <a href="#myModal{{forloop.counter}}" data-toggle="modal">{{switch.6}}</a>
+            <!-- HTML-код модального окна -->
+            <div id="myModal{{forloop.counter}}" class="modal fade">
+              <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                  <!-- Заголовок модального окна -->
+                  <div class="modal-header">
+                    <h4 class="modal-title">Порты</h4>
+                  </div>
+                  <!-- Основное содержимое модального окна -->
+                  <div class="modal-body">
+                      <table>
+                          <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                              <th scope="col">Порт</th>
+                                <th scope="col">Тэг</th>
+                              <th scope="col">Договор</th>
+                                <th scope="col">Дескрипшн</th>
+                                <th scope="col">Заглушка</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                              {% for key, value in switch.10.items %}
+                                <tr>
+                                    <th scope="row"></th>
+
+                                    <td>{{key}}</td>
+                                    <td>{{value.0}}</td>
+                                    <td>{{value.1}}</td>
+                                    <td>{{value.2}}</td>
+                                    <td>{{value.3}}</td>
+
+
+                                </tr>
+                                {% endfor %}
+                          </tbody>
+                        </table>
+                  </div>
+
+                  <!-- Футер модального окна -->
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+            </td>
+
+        </tr>
+
+      {% endfor %}
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+    <div class="card mb-2">
+      <h5 class="card-header">Решение ОТПМ</h5>
+      <div class="card-body">
+          {% if ticket_tr.oattr %}
+        <p class="card-text">{{ticket_tr.oattr|linebreaksbr}}</p>
+          {% endif %}
+      </div>
+    </div>
+    <form id="form" action="{% url 'pps' trID %}" method="post">
+        {% csrf_token %}
+
+        <div class="card mb-2">
+            <h5 class="card-header">Параметры</h5>
+          <div class="card-body">
+
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label for="{{form.type_change_node.id_for_label}}">Тип работ на узле</label>
+                                {{form.type_change_node}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group type_new_model_kad">
+                                <label for="{{form.type_new_model_kad.id_for_label}}">Новая модель КАД</label>
+                                {{form.type_new_model_kad}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group kad_name">
+                                <label for="{{form.kad_name.id_for_label}}">Название коммутатора</label>
+                                {{form.kad_name}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group type_add_kad add-g">
+                                <label for="{{form.type_add_kad.id_for_label}}">Тип установки доп. КАД</label>
+                                {{form.type_add_kad}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group disable add-g">
+                                <label for="{{form.disable.id_for_label}}">Отключение</label>
+                                {{form.disable}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group disabled_port add-g">
+                                <label for="{{form.disabled_port.id_for_label}}">Порт отключения</label>
+                                {{form.disabled_port}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group disabled_link add-g">
+                                <label for="{{form.disabled_link.id_for_label}}">Линк/договор отключения</label>
+                                {{form.disabled_link}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group deleted_kad add-g">
+                                <label for="{{form.deleted_kad.id_for_label}}">Второй КАД в гирлянде</label>
+                                {{form.deleted_kad}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group delete_kad add-g">
+                                <label for="{{form.delete_kad.id_for_label}}">Демонтаж второго КАД</label>
+                                {{form.delete_kad}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                            <div class="d-grid gap-2 col-2 ppr">
+                                <a class="btn btn-info btn-block" href="{% url 'tr_view' ticket_tr.ticket_k.dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
+                            </div>
+                            <div class="d-grid gap-2 col-2 ppr">
+                                <a class="btn btn-info btn-block" href="{% url 'ppr' trID %}" target ="_blank" role="button">Создать ППР</a>
+                            </div>
+                        </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group ppr">
+                                <label for="{{form.ppr.id_for_label}}">ППР</label>
+                                {{form.ppr}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-4">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-info btn-block" id="id_get_node" type="button">
+                                      <span class="" role="status" aria-hidden="true"></span>
+                                        <span class="sr-only">Lo...</span>
+                                        Получить Узлы связи
+                                    </button>
+
+                                </div>
+                            </div>
+                    </div>
+                    <div id="forms">
+                    </div>
+
+
+                    <div class="row mt-3">
+                        <div class="col-2">
+                                <div class="form-group">
+                                    <a class="btn btn-secondary btn-block" href="{% url 'sppdata' ticket_tr.ticket_tr %}" role="button">Назад</a>
+                                </div>
+                            </div>
+                        <div class="col-2">
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                            </div>
+                        </div>
+                    </div>
+          </div>
+
+        </div>
+    </form>
+
+</div>
+
+
+<script>
+
+$(function () {
+    $(".kad_name").hide();
+    $(".ppr").hide();
+    $(".add-g").hide();
+	$(".get_node").hide();
+
+
+});
+
+
+$(function () {
+  $("#id_type_change_node").change(function() {
+    var val = $(this).val();
+    console.log(1)
+    if(val === "Установка нового КАД") {
+        $(".get_node").show();
+        $("#id_disabled_port").val("");
+        $("#id_disabled_link").val("");
+        $('.type_add_kad option:contains("не требуется")').prop('selected', true);
+        $(".add-g").hide();
+        $(".kad_name").hide();
+        $(".ppr").hide();
+        $('#id_get_node').click(function () {
+          $(this).find('span').addClass('spinner-border spinner-border-sm');
+          // создаем AJAX-вызов
+          $.ajax({
+              url: "{% url 'spec_objects' trID %}",
+              // если успешно, то
+              success: function (response) {
+                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  if (response.error) {
+                      alert(response.error);
+                      $('#id_username').removeClass('is-valid').addClass('is-invalid');
+                      $('#id_username').after('<div class="invalid-feedback d-block" id="usernameError">This username is not available!</div>')
+                  }
+
+                  else {
+                      console.log(response.result)
+                      console.log(response.result[1])
+
+                      for (let counter = 0; counter < response.result.length; counter++) {
+                      $("#forms").append(`
+
+                        <div class="row">
+
+
+
+                            <div class="col-1">
+                                <div class="form-group get_node">
+                                    <label class="radio-inline">FTTH<input type="checkbox" name="ftth_${counter}" class="form-check" value="1"></label>
+                                </div>
+                            </div>
+                            <div class="col-5">
+                                <div class="form-group get_node">
+
+                                    <input type="text" name="pps_${counter}" class="form-control" value="${response.result[counter]}" required="True">
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="form-group get_node">
+
+                                    <input type="text" name="uplink_${counter}" class="form-control" required="True" placeholder="АМ/КПА">
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="form-group get_node">
+                                    <input type="text" name="uplink_port_${counter}" class="form-control" required="True" placeholder="Порт АМ/КПА">
+                                </div>
+                            </div>
+
+                                <div class="form-group get_node">
+                                    <select name="transceiver_${counter}" class="form-control" id="transceiver_${counter}">
+                                      <option value="SFP">SFP</option>
+                                      <option value="GBIC">GBIC</option>
+                                    </select>
+                                </div>
+
+
+                            <div class="col-1">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-danger remove_item_btn">
+                                    <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                    <span class="sr-only">Close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                          `);
+                      }
+
+
+
+
+
+                  }
+              },
+              error: function (response) {
+                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  alert("Не удалось получить объекты Спецификации.");
+
+              }
+          });
+          return false;
+        });
+
+
+    }
+    else if (val === "Замена КАД") {
+        $(".kad_name").show();
+        $("#id_kad_name").prop("required", true);
+        $(".type_new_model_kad").show();
+        $(".ppr").show();
+        $(".add-g").hide();
+
+        $("#id_disabled_port").val("");
+        $("#id_disabled_link").val("");
+        $('.type_add_kad option:contains("не требуется")').prop('selected', true);
+
+        $(".get_node").hide();
+
+    }
+    else if (val === "Установка дополнительного КАД") {
+        $(".ppr").hide();
+        $(".get_node").hide();
+        $(".type_add_kad").show();
+        $(".kad_name").show();
+        $("#id_kad_name").prop("required", true);
+        $("#id_type_add_kad").change(function() {
+            var add_kad = $(this).val();
+            if(add_kad === "Установка 2-го медного кад в гирлянду") {
+                $(".disable").show();
+                $(".deleted_kad").hide();
+                $(".delete_kad").hide();
+                $("#id_deleted_kad").val("");
+                $("#id_delete_kad").prop("checked", false);
+                $("#id_disable").change(function() {
+                    var dis = $(this).val();
+                    console.log(dis)
+                    if(this.checked) {
+                        $(".disabled_port").show();
+                        $(".disabled_link").show();
+                        $(".ppr").show();
+                    }
+                    else {
+                        $(".ppr").hide();
+                        $(".disabled_port").hide();
+                        $(".disabled_link").hide();
+                    }
+                });
+            }
+            else {
+                $(".disabled_port").hide();
+                $(".disabled_link").hide();
+                $("#id_disabled_port").val("");
+                $("#id_disabled_link").val("");
+                $(".disable").hide();
+                $("#id_disable").prop("checked", false);
+                $(".deleted_kad").show();
+                $(".delete_kad").show();
+                $(".ppr").show();
+
+            }
+        });
+
+    }
+    else {
+        $(".ppr").hide();
+        $(".kad_name").hide();
+	    $(".add_g").hide();
+	    $(".get_node").hide();
+	    $("#id_kad_name").val("");
+	    $("#id_disabled_port").val("");
+	    $("#id_disabled_link").val("");
+	    $("#id_ppr").val("");
+	    $("#id_deleted_kad").val("");
+	    $("#id_delete_kad").prop("checked", false);
+	    $("#id_disable").prop("checked", false);
+	    $('.type_add_kad option:contains("не требуется")').prop('selected', true);
+
+    }
+
+  });
+
+  $(document).on("click",".remove_item_btn",function(e){
+          e.preventDefault();
+          let row_item = $(this).parent().parent().parent();
+          $(row_item).remove();
+      });
+
+});
+
+</script>
+
+{% endblock %}

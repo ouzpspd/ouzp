@@ -451,10 +451,61 @@ class SppDataForm(forms.Form):
     types_tr = [
         ('Нов. точка', 'Новая точка'),
         ('Сущ. точка', 'Существующая точка'),
+        ('ПТО', 'ПТО'),
         ('Не требуется', 'Не требуется'),
     ]
     type_tr = forms.CharField(widget=forms.Select(choices=types_tr, attrs={'class': 'form-control'}))
     spd = forms.CharField(widget=forms.Select(choices=types_spd, attrs={'class': 'form-control'}))
+
+class PpsForm(forms.Form):
+    types_change_node = [
+        ('0', '-----'),
+        ('Установка нового КАД', 'Установка нового КАД'),
+        ('Установка дополнительного КАД', 'Установка дополнительного КАД'),
+        ('Замена КАД', 'Замена КАД'),
+    ]
+    types_new_model = [
+        ('24-портовый медный коммутатор (с 4-мя SFP портами)', '24-портовый медный коммутатор (с 4-мя SFP портами)'),
+        ('24-портовый медный коммутатор', '24-портовый медный коммутатор'),
+        ('48-портовый медный коммутатор', '48-портовый медный коммутатор'),
+        ('24-портовый оптогигабитный коммутатор', '24-портовый оптогигабитный коммутатор'),
+        ('48-портовый оптогигабитный коммутатор', '48-портовый оптогигабитный коммутатор'),
+    ]
+    types_add_kad = [
+        ('не требуется', 'не требуется'),
+        ('Установка 2-го медного кад в гирлянду', 'Установка 2-го медного кад в гирлянду'),
+        ('Установка 1-го оптического кад в гирлянду', 'Установка 1-го оптического кад в гирлянду'),
+    ]
+    type_change_node = forms.CharField(label='Тип работ на узле',
+                                       widget=forms.Select(choices=types_change_node, attrs={'class': 'form-control'}))
+    kad_name = forms.CharField(label='Название КАД', required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
+    type_new_model_kad = forms.CharField(label='Новая модель КАД',
+                                   widget=forms.Select(choices=types_new_model, attrs={'class': 'form-control'}))
+    ppr = forms.CharField(label='ППР', required=False,
+                                widget=forms.TextInput(attrs={'class': 'form-control'}))
+    type_add_kad = forms.CharField(label='Тип установки доп. КАД',
+                                       widget=forms.Select(choices=types_add_kad, attrs={'class': 'form-control'}))
+    disabled_port = forms.CharField(label='Порт для доп. КАД', required=False,
+                          widget=forms.TextInput(attrs={'class': 'form-control'}))
+    disabled_link = forms.CharField(label='Линк/договор отключения', required=False,
+                          widget=forms.TextInput(attrs={'class': 'form-control'}))
+    disable = forms.BooleanField(label='Отключение', required=False,
+                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    deleted_kad = forms.CharField(label='Второй КАД в гирлянде', required=False,
+                                    widget=forms.TextInput(attrs={'class': 'form-control'}))
+    delete_kad = forms.BooleanField(label='Демонтаж второго КАД', required=False,
+                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
+
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.CharField()
 
 
 class RtkForm(forms.Form):

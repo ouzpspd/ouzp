@@ -62,8 +62,17 @@ def _readable_node(node_mon):
     node_templates = {', РУА': 'РУА ', ', УА': 'УПА ', ', АВ': 'ППС ', ', КК': 'КК '}
     for key, item in node_templates.items():
         if node_mon.endswith(key):
-            finish_node = item + node_mon[:node_mon.index(key)]
-    return finish_node
+            return item + node_mon[:node_mon.index(key)]
+    return ''
+
+
+def short_readable_node(node_mon):
+    """Данный метод приводит название узла форме без окончания после запятой"""
+    node_templates = [', РУА', ', УА', ', АВ', ', КК']
+    for key in node_templates:
+        if node_mon.endswith(key):
+            return node_mon[:node_mon.index(key)]
+    return ''
 
 
 def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
