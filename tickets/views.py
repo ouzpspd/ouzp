@@ -230,29 +230,45 @@ def group_check_mko(user):
     return user.groups.filter(name='Менеджеры').exists()
 
 
+def permission_check(perm_groups=[]):
+    """Проверка пользователя в составе перечисленных групп"""
+    def decorator(func):
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect(f'/login/?next={request.path}')
+            user = User.objects.get(username=request.user.username)
+            if not [perm_group for perm_group in perm_groups if user.groups.filter(name=perm_group).exists()]:
+                return HttpResponse("Forbidden",
+                                    content_type="application/json", status=403)
+            return func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+
+
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 dotenv_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path)
-CORDIS_USER_OUZP_SPD = os.getenv('CORDIS_USER_OUZP_SPD')
-CORDIS_PASSWORD_OUZP_SPD = os.getenv('CORDIS_PASSWORD_OUZP_SPD')
-CORDIS_USER_MKO = os.getenv('CORDIS_USER_MKO')
-CORDIS_PASSWORD_MKO = os.getenv('CORDIS_PASSWORD_MKO')
 
 
-def get_credential(request):
-    # if not request.user.is_authenticated:
-    #     print(reverse(f'login/?next={request.path}'))
-    #     return redirect(reverse(f'login/?next={request.path}'))
-    user = User.objects.get(username=request.user.username)
+
+def get_user_credential_cordis(user):
     if user.groups.filter(name='Менеджеры').exists():
         return (os.getenv('CORDIS_USER_MKO'), os.getenv('CORDIS_PASSWORD_MKO'))
     elif user.groups.filter(name='Сотрудники ОУЗП').exists():
         return (os.getenv('CORDIS_USER_OUZP_SPD'), os.getenv('CORDIS_PASSWORD_OUZP_SPD'))
+    elif user.groups.filter(name='Сотрудники ОАТТР').exists():
+        return (os.getenv('CORDIS_USER_OATTR'), os.getenv('CORDIS_PASSWORD_OATTR'))
 
 
-@login_required(login_url='login/')
+
 #@cache_check
-@user_passes_test(group_check_ouzp)
+
+@permission_check(["Сотрудники ОУЗП"])
+#@user_passes_test(group_check_ouzp)
 def ortr(request):
     """Данный метод перенаправляет на страницу Новые заявки, которые находятся в пуле ОРТР/в работе.
         1. Получает данные от redis о логин/пароле
@@ -260,11 +276,11 @@ def ortr(request):
         3. Получает данные о всех заявках которые уже находятся в БД(в работе)
         4. Удаляет из списка в пуле заявки, которые есть в работе
         5. Формирует итоговый список всех заявок в пуле/в работе"""
-    # user = User.objects.get(username=request.user.username)
+    user = User.objects.get(username=request.user.username)
     # credent = cache.get(user)
     # username = credent['username']
     # password = credent['password']
-    username, password = get_credential(request)
+    username, password = get_user_credential_cordis(user)
     print(username, password)
     #request = flush_session_key(request)
     search = in_work_ortr(username, password)
@@ -4458,15 +4474,18 @@ class PpsFormView(FormView, CredentialMixin):
         return reverse('data', kwargs={'trID': self.kwargs['trID']})
 
 
-class MkoView(CredentialMixin, UserPassesTestMixin, LoginRequiredMixin, View):
+class MkoView(UserPassesTestMixin, LoginRequiredMixin, View): #CredentialMixin
     login_url = '/login/'
     def test_func(self):
         return self.request.user.groups.filter(name='Менеджеры').exists()
-    @cache_check_view
+    #@cache_check_view
     def get(self, request):
-        username, password = super().get_credential(self)
-        search = in_work_ortr(username, password)
+        #username, password = super().get_credential(self)
+
         user = User.objects.get(username=request.user.username)
+        username, password = get_user_credential_cordis(user)
+        search = in_work_ortr(username, password)
+
         # fio = check_fio(username, password)
         # if not user.last_name in fio:
         #     messages.warning(request, 'Фамилия И.О. не соответствуют данным СПП. Обратитесь к администратору')
