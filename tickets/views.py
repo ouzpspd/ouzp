@@ -230,9 +230,28 @@ def group_check_mko(user):
     return user.groups.filter(name='Менеджеры').exists()
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+dotenv_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path)
+CORDIS_USER_OUZP_SPD = os.getenv('CORDIS_USER_OUZP_SPD')
+CORDIS_PASSWORD_OUZP_SPD = os.getenv('CORDIS_PASSWORD_OUZP_SPD')
+CORDIS_USER_MKO = os.getenv('CORDIS_USER_MKO')
+CORDIS_PASSWORD_MKO = os.getenv('CORDIS_PASSWORD_MKO')
 
 
-@cache_check
+def get_credential(request):
+    # if not request.user.is_authenticated:
+    #     print(reverse(f'login/?next={request.path}'))
+    #     return redirect(reverse(f'login/?next={request.path}'))
+    user = User.objects.get(username=request.user.username)
+    if user.groups.filter(name='Менеджеры').exists():
+        return (os.getenv('CORDIS_USER_MKO'), os.getenv('CORDIS_PASSWORD_MKO'))
+    elif user.groups.filter(name='Сотрудники ОУЗП').exists():
+        return (os.getenv('CORDIS_USER_OUZP_SPD'), os.getenv('CORDIS_PASSWORD_OUZP_SPD'))
+
+
+@login_required(login_url='login/')
+#@cache_check
 @user_passes_test(group_check_ouzp)
 def ortr(request):
     """Данный метод перенаправляет на страницу Новые заявки, которые находятся в пуле ОРТР/в работе.
@@ -241,10 +260,12 @@ def ortr(request):
         3. Получает данные о всех заявках которые уже находятся в БД(в работе)
         4. Удаляет из списка в пуле заявки, которые есть в работе
         5. Формирует итоговый список всех заявок в пуле/в работе"""
-    user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
+    # user = User.objects.get(username=request.user.username)
+    # credent = cache.get(user)
+    # username = credent['username']
+    # password = credent['password']
+    username, password = get_credential(request)
+    print(username, password)
     #request = flush_session_key(request)
     search = in_work_ortr(username, password)
     if search[0] == 'Access denied':
