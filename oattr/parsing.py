@@ -777,6 +777,8 @@ class Specification:
         if not inventory_objects:
             return False
         spec = self.get_entity_info_list(cookie)
+        if spec is None:
+            return False
         for inventory_object in inventory_objects:
             exist = [obj for obj in spec if inventory_object in obj.get('Name')]
             if not exist:
