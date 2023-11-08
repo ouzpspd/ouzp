@@ -148,7 +148,10 @@
     </div>
 
     {% block content %}
-    Hello, world!
+    <blockquote class="blockquote text-center">
+      <p class="mb-0">Ошибка</p>
+      <footer class="blockquote-footer">{{my_message}}</footer>
+    </blockquote>
     {% endblock %}
 
 

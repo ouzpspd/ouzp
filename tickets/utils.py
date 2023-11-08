@@ -1,5 +1,10 @@
 import re
+import os
+from pathlib import Path
+
 import pymorphy2
+from dotenv import load_dotenv
+
 from .parsing import parsing_config_ports_vgw
 from .parsing import _parsing_id_client_device_by_device_name
 from .parsing import _parsing_config_ports_client_device
@@ -9,6 +14,10 @@ from .parsing import get_sw_config
 
 from collections import OrderedDict
 from django.shortcuts import redirect
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+dotenv_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path)
 
 
 def add_portconfig_to_list_swiches(list_switches, username, password):
@@ -816,3 +825,12 @@ def formatted(string):
     """Данный метод удаляет из строки пробелы и точки"""
     string = string.replace(' ', '_').replace('.', '_')
     return string
+
+
+def get_user_credential_cordis(user):
+    if user.groups.filter(name='Менеджеры').exists():
+        return (os.getenv('CORDIS_USER_MKO'), os.getenv('CORDIS_PASSWORD_MKO'))
+    elif user.groups.filter(name='Сотрудники ОУЗП').exists():
+        return (os.getenv('CORDIS_USER_OUZP_SPD'), os.getenv('CORDIS_PASSWORD_OUZP_SPD'))
+    elif user.groups.filter(name='Сотрудники ОАТТР').exists():
+        return (os.getenv('CORDIS_USER_OATTR'), os.getenv('CORDIS_PASSWORD_OATTR'))
