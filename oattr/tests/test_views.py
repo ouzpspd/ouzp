@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from dotenv import load_dotenv
 from oattr.models import HoldPosition, UserHoldPosition, OtpmSpp, OtpmTR
+from django.contrib.auth.models import Group
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 dotenv_path = os.path.join(BASE_DIR, '.env')
@@ -26,6 +27,9 @@ class ViewsTestCase(TestCase):
         User = get_user_model()
         user = User.objects.create_user('temporary', 'temporary@gmail.com', 'temporary', last_name='Аристов Д.В.')
         UserHoldPosition.objects.create(user=user, hold_position=hold_position)
+        group = Group.objects.create(name='Сотрудники ОАТТР')
+        group.user_set.add(user)
+
         self.otpm_spp = OtpmSpp.objects.create(user=user, dID='123456', services={}, des_tr={}, created=timezone.now(),
                                           waited=timezone.now(), duration_process=datetime.timedelta(0),
                                           duration_wait=datetime.timedelta(0), ticket_k='2023_00000', process = True
@@ -33,17 +37,17 @@ class ViewsTestCase(TestCase):
         self.otpm_tr = OtpmTR.objects.create(ticket_k=self.otpm_spp, ticket_tr=self.TRID, services={}, vID=1
                                                )
         self.client.login(username='temporary', password='temporary')
-        response = self.client.post('/login_for_service/',
-                                    data={'username': TEST_CORDIS_USER, 'password': TEST_CORDIS_PASSWORD})
-        self.assertRedirects(response, '/')
+        # response = self.client.post('/login_for_service/',
+        #                             data={'username': TEST_CORDIS_USER, 'password': TEST_CORDIS_PASSWORD})
+        # self.assertRedirects(response, '/')
 
     def test_call_view_login(self):
         response = self.client.get('/login/')
         self.assertEqual(response.status_code, 200)
 
-    def test_call_view_login_for_service(self):
-        response = self.client.get('/login_for_service/')
-        self.assertEqual(response.status_code, 200)
+    # def test_call_view_login_for_service(self):
+    #     response = self.client.get('/login_for_service/')
+    #     self.assertEqual(response.status_code, 200)
 
     def test_call_view_registration(self):
         response = self.client.get('/registration')

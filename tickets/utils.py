@@ -14,10 +14,8 @@ from .parsing import get_sw_config
 
 from collections import OrderedDict
 from django.shortcuts import redirect
+from django.conf import settings
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-dotenv_path = os.path.join(BASE_DIR, '.env')
-load_dotenv(dotenv_path)
 
 
 def add_portconfig_to_list_swiches(list_switches, username, password):
@@ -829,8 +827,8 @@ def formatted(string):
 
 def get_user_credential_cordis(user):
     if user.groups.filter(name='Менеджеры').exists():
-        return (os.getenv('CORDIS_USER_MKO'), os.getenv('CORDIS_PASSWORD_MKO'))
+        return (settings.CORDIS_USER_MKO, settings.CORDIS_PASSWORD_MKO)
     elif user.groups.filter(name='Сотрудники ОУЗП').exists():
-        return (os.getenv('CORDIS_USER_OUZP_SPD'), os.getenv('CORDIS_PASSWORD_OUZP_SPD'))
+        return (settings.CORDIS_USER_OUZP_SPD, settings.CORDIS_PASSWORD_OUZP_SPD)
     elif user.groups.filter(name='Сотрудники ОАТТР').exists():
-        return (os.getenv('CORDIS_USER_OATTR'), os.getenv('CORDIS_PASSWORD_OATTR'))
+        return (settings.CORDIS_USER_OATTR, settings.CORDIS_PASSWORD_OATTR)

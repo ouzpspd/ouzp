@@ -244,7 +244,7 @@ def _new_services(result_services, value_vars):
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 static_vars['указать количество станций'] = value_vars.get('hotspot_points')
-                static_vars['ОАТТР/ОТИИ'] = 'ОАТТР'
+
                 static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
 
                 if value_vars.get('spd') == 'РТК':

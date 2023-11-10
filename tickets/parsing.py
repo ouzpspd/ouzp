@@ -375,10 +375,6 @@ def parsingByNodename(node_name, login, password):
                      list_ports[i]['Всего портов'], list_ports[i]['Занятых клиентами'], list_ports[i]['Занятых линками'], list_ports[i]['Доступные'], configport_switches[i]])
 
             return list_switches
-    # else:
-    #     list_switches = []
-    #     list_switches.append('Access denied')
-    #     return list_switches
 
 
 def ckb_parse(login, password):

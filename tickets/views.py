@@ -551,11 +551,6 @@ def copper(request, trID):
             list_switches = parsingByNodename(pps, username, password)
             if not isinstance(list_switches, list):
                 return render(request, 'base.html', {'my_message': 'Нет доступа к странице Cordis с коммутаторами'})
-        # if list_switches[0] == 'Access denied':
-        #     messages.warning(request, 'Нет доступа в ИС Холдинга')
-        #     response = redirect('login_for_service')
-        #     response['Location'] += '?next={}'.format(request.path)
-        #     return response
             if 'No records to display' in list_switches[0]:
                 messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
@@ -696,39 +691,22 @@ def vols(request, trID):
     else:
         user = User.objects.get(username=request.user.username)
         username, password = get_user_credential_cordis(user)
-
-        # spplink = request.session['spplink']
-        # regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
-        # match_link = re.search(regex_link, spplink)
-        # tID = match_link.group(2)
-        # trID = match_link.group(3)
-
         prev_page, index = backward_page(request, trID)
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         pps = session_tr_id.get('pps')
-        #services_plus_desc = request.session['services_plus_desc']
         sreda = session_tr_id.get('sreda')
-
-        # try:
-        #     type_pass = request.session['type_pass']
-        # except KeyError:
-        #     type_pass = None
-        type_pass = session_tr_id.get('type_pass') if session_tr_id.get('type_pass') else None
         if session_tr_id.get('list_switches'):
             list_switches = session_tr_id.get('list_switches')
         else:
             list_switches = parsingByNodename(pps, username, password)
-        if list_switches[0] == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        elif 'No records to display' in list_switches[0]:
-            messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
-            return redirect('ortr')
+            if not isinstance(list_switches, list):
+                return render(request, 'base.html', {'my_message': 'Нет доступа к странице Cordis с коммутаторами'})
+            elif 'No records to display' in list_switches[0]:
+                messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
         list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         session_tr_id.update({'list_switches': list_switches})
         request.session[trID] = session_tr_id
@@ -825,14 +803,11 @@ def wireless(request, trID):
             list_switches = session_tr_id.get('list_switches')
         else:
             list_switches = parsingByNodename(pps, username, password)
-        if list_switches[0] == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        elif 'No records to display' in list_switches[0]:
-            messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
-            return redirect('ortr')
+            if not isinstance(list_switches, list):
+                return render(request, 'base.html', {'my_message': 'Нет доступа к странице Cordis с коммутаторами'})
+            elif 'No records to display' in list_switches[0]:
+                messages.warning(request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
         list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
         session_tr_id.update({'list_switches': list_switches})
 
@@ -1426,59 +1401,50 @@ def manually_tr(request, dID, tID, trID):
         user = User.objects.get(username=request.user.username)
         username, password = get_user_credential_cordis(user)
         tr_params = for_tr_view(username, password, dID, tID, trID)
-        if tr_params.get('Access denied') == 'Access denied':
-            messages.warning(request, 'Нет доступа в ИС Холдинга')
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(request.path)
-            return response
-        else:
-            #session_tr_id = request.session[str(trID)]
+        if tr_params.get('Access denied'):
+            return render(request, 'base.html', {'my_message': 'Нет доступа к странице СПП с ТР'})
+        ticket_spp = SPP.objects.filter(dID=dID).last()
+        request.session[trID] = {'ticket_spp_id': ticket_spp.id}
+        if ticket_spp.children.filter(ticket_tr=trID):
+            return redirect('edit_tr', dID, ticket_spp.id, trID)
+        ticket_tr = TR()
+        ticket_tr.ticket_k = ticket_spp
+        ticket_tr.ticket_tr = trID
+        ticket_tr.ticket_cp = tID
+        ticket_tr.pps = tr_params['Узел подключения клиента']
+        ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
+        ticket_tr.info_tr = tr_params['Информация для разработки ТР']
+        ticket_tr.services = tr_params['Перечень требуемых услуг']
+        ticket_tr.connection_point = tr_params['Точка подключения']
+        ticket_tr.oattr = tr_params['Решение ОТПМ']
+        ticket_tr.vID = tr_params['vID']
+        ticket_tr.save()
+        ortr = OrtrTR()
+        ortr.ticket_tr = ticket_tr
+        ortr.save()
 
-            # spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
-            # request.session['spplink'] = spplink
-            #ticket_spp_id = session_tr_id.get('ticket_spp_id')
+        request.session[trID] = {'ticket_spp_id': ticket_spp.id, 'ticket_tr_id': ticket_tr.id,
+                              'ortr_id': ortr.id, 'technical_solution': trID, 'dID': dID}
 
-            ticket_spp = SPP.objects.filter(dID=dID).last()
-            request.session[trID] = {'ticket_spp_id': ticket_spp.id}
-            if ticket_spp.children.filter(ticket_tr=trID):
-                return redirect('edit_tr', dID, ticket_spp.id, trID)
-            ticket_tr = TR()
-            ticket_tr.ticket_k = ticket_spp
-            ticket_tr.ticket_tr = trID
-            ticket_tr.ticket_cp = tID
-            ticket_tr.pps = tr_params['Узел подключения клиента']
-            ticket_tr.turnoff = False if tr_params['Отключение'] == 'Нет' else True
-            ticket_tr.info_tr = tr_params['Информация для разработки ТР']
-            ticket_tr.services = tr_params['Перечень требуемых услуг']
-            ticket_tr.connection_point = tr_params['Точка подключения']
-            ticket_tr.oattr = tr_params['Решение ОТПМ']
-            ticket_tr.vID = tr_params['vID']
-            ticket_tr.save()
-            ortr = OrtrTR()
-            ortr.ticket_tr = ticket_tr
-            ortr.save()
+        for service in ticket_tr.services:
+            if 'Телефон' in service:
+                counter_str_ots = 10
+            else:
+                counter_str_ots = 1
+        ortrform = OrtrForm()
 
-            request.session[trID] = {'ticket_spp_id': ticket_spp.id, 'ticket_tr_id': ticket_tr.id,
-                                  'ortr_id': ortr.id, 'technical_solution': trID, 'dID': dID}
-
-            for service in ticket_tr.services:
-                if 'Телефон' in service:
-                    counter_str_ots = 10
-                else:
-                    counter_str_ots = 1
-            ortrform = OrtrForm()
-
-            context = {
-                'services_plus_desc': ticket_tr.services,
-                'oattr': ticket_tr.oattr,
-                'counter_str_ortr': 10,
-                'counter_str_ots': counter_str_ots,
-                'ortrform': ortrform,
-                'ticket_spp_id': ticket_spp.id,
-                'dID': dID,
-                'ticket_tr': ticket_tr
-            }
-            return render(request, 'tickets/edit_tr.html', context)
+        context = {
+            'services_plus_desc': ticket_tr.services,
+            'oattr': ticket_tr.oattr,
+            'counter_str_ortr': 10,
+            'counter_str_ots': counter_str_ots,
+            'ortrform': ortrform,
+            'ticket_spp_id': ticket_spp.id,
+            'dID': dID,
+            'ticket_tr': ticket_tr,
+            'trID': trID
+        }
+        return render(request, 'tickets/edit_tr.html', context)
 
 
 def send_to_spp(request, trID):
@@ -1508,11 +1474,7 @@ def send_to_spp(request, trID):
         req = requests.post(url, verify=False, auth=HTTPBasicAuth(username, password), data=data)
 
         return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={did}&tID={tid}&trID={trid}')
-    else:
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
+    return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
 
 
 def hotspot(request, trID):
@@ -2215,10 +2177,7 @@ def add_spp(request, dID):
     username, password = get_user_credential_cordis(user)
     spp_params = for_spp_view(username, password, dID)
     if spp_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
+        return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
     elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
         messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
         return redirect('mko')
@@ -2348,12 +2307,8 @@ def spp_view(request, dID):
     username, password = get_user_credential_cordis(user)
     spp_params = for_spp_view(username, password, dID)
     if spp_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
+        return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
+    return render(request, 'tickets/spp_view.html', {'spp_params': spp_params})
 
 
 def add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id):
@@ -2403,12 +2358,8 @@ def tr_view(request, dID, tID, trID):
     username, password = get_user_credential_cordis(user)
     ticket_tr = for_tr_view(username, password, dID, tID, trID)
     if ticket_tr.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
-    else:
-        return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
+        return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
+    return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
 
 
 def get_title_tr(request):
@@ -3000,33 +2951,6 @@ def head(request, trID):
         return redirect('job_formset', trID)
     else:
         return redirect('title_tr', trID)
-
-
-# def add_tr_not_required(request, dID, tID, trID):
-#     """Данный метод работает для существующей точки подключения. Получает данные о ТР в СПП, добавляет ТР в БД,
-#     перенаправляет на страницу запроса контракта клиента. """
-#     user = User.objects.get(username=request.user.username)
-#     username, password = get_user_credential_cordis(user)
-#     tr_params = for_tr_view(username, password, dID, tID, trID)
-#     if tr_params.get('Access denied') == 'Access denied':
-#         messages.warning(request, 'Нет доступа в ИС Холдинга')
-#         response = redirect('login_for_service')
-#         response['Location'] += '?next={}'.format(request.path)
-#         return response
-#     else:
-#         ticket_spp_id = request.session['ticket_spp_id']
-#         ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
-#         spplink = 'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={}&tID={}&trID={}'.format(dID, tID, trID)
-#         request.session['spplink'] = spplink
-#         ticket_tr = TR.objects.get(id=ticket_tr_id)
-#         services_plus_desc = ticket_tr.services
-#         oattr = ticket_tr.oattr
-#         request.session['services_plus_desc'] = services_plus_desc
-#         request.session['oattr'] = oattr
-#         request.session['ticket_tr_id'] = ticket_tr_id
-#         request.session['not_required'] = True
-#         request.session['technical_solution'] = trID
-#         return redirect('data')
 
 
 def project_tr_exist_cl(request, trID):
@@ -4277,10 +4201,7 @@ def add_tr(request, dID, tID, trID):
     username, password = get_user_credential_cordis(user)
     tr_params = for_tr_view(username, password, dID, tID, trID)
     if tr_params.get('Access denied') == 'Access denied':
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
+        return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
     ticket_spp = SPP.objects.filter(dID=dID).last()
     ticket_spp_id = ticket_spp.id
     ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)

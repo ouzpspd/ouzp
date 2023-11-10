@@ -16,6 +16,13 @@ DB_PORT = os.getenv('DB_PORT')
 SECRET_KEY = os.getenv('SECRET_KEY')
 REDIS_LOCATION = os.getenv('REDIS_LOCATION')
 
+CORDIS_USER_MKO = os.getenv('CORDIS_USER_MKO')
+CORDIS_PASSWORD_MKO = os.getenv('CORDIS_PASSWORD_MKO')
+CORDIS_USER_OUZP_SPD = os.getenv('CORDIS_USER_OUZP_SPD')
+CORDIS_PASSWORD_OUZP_SPD = os.getenv('CORDIS_PASSWORD_OUZP_SPD')
+CORDIS_USER_OATTR = os.getenv('CORDIS_USER_OATTR')
+CORDIS_PASSWORD_OATTR = os.getenv('CORDIS_PASSWORD_OATTR')
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/

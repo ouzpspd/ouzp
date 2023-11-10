@@ -97,7 +97,7 @@ class CredentialMixin:
     def get_credential(self, *args, **kwargs):
         user = User.objects.get(username=self.request.user.username)
         username, password = get_user_credential_cordis(user)
-        return username, password
+        return (username, password)
 
 
 class OtpmPoolView(CredentialMixin, LoginRequiredMixin, View):
@@ -128,8 +128,6 @@ class OtpmPoolView(CredentialMixin, LoginRequiredMixin, View):
                 search = in_work_otpm(username, password)
                 if not isinstance(search, list):
                     return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
-                # if search[0] == 'Access denied':
-                #     return super().redirect_to_login_for_service(self)
                 technologs = [user.last_name for user in queryset_user_group] if technolog is None else [technolog]
                 output_search, spp_process, missing = filter_otpm_search(search, technologs, group, status)
                 context.update({'search': output_search,
@@ -428,18 +426,14 @@ class CreateTrView(CredentialMixin, View):
         username, password = super().get_credential(self)
         tr_params = for_tr_view(username, password, dID, tID, trID)
         if tr_params.get('Access denied'):
-            return super().redirect_to_login_for_service(self)
+            return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
 
         ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params) # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session['ticket_tr_id'] = ticket_tr_id # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session[self.kwargs['trID']] = {}
-
         session_tr_id = request.session[(self.kwargs['trID'])]
         session_tr_id.update({'action': request.GET.get('action')})
         request.session[(self.kwargs['trID'])] = session_tr_id
-
-
-
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
@@ -568,7 +562,7 @@ def saved_data_oattr(request, trID):
 
 
 def save_spp(request):
-    """Данный метод заполняет поля блока ОРТР в СПП готовым ТР"""
+    """Данный метод заполняет поля блока ОТПМ в СПП готовым ТР"""
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
     ticket_tr_id = request.session.get('ticket_tr_id')
@@ -580,11 +574,7 @@ def save_spp(request):
     if req_check.status_code == 200:
         send_spp(username, password, ticket_tr)
         return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={dID}&tID={tID}&trID={trID}')
-    else:
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
+    return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
 
 
 class AddressView(CredentialMixin, View):
@@ -592,8 +582,6 @@ class AddressView(CredentialMixin, View):
     #@cache_check_view
     def get(self, request, department, trID):
         username, password = super().get_credential(self)
-        print('department')
-        print(department)
         if department == 'ortr':
             ticket_tr = TR.objects.filter(ticket_tr=trID).last()
         else:

@@ -105,12 +105,8 @@ def in_work_otpm(login, password):
                 if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
                     lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
                     break
-        return lines #if lines == []:
-    #         lines.append(['Empty list tickets'])
-    #
-    # else:
-    #     lines.append('Access denied')
-    # return lines
+        return lines
+
 
 
 def construct_table_nodes(search):

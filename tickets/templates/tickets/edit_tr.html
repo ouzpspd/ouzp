@@ -52,19 +52,22 @@
               <div class="card mb-2">
       <h5 class="card-header">Решение ОРТР</h5>
       <div class="card-body">
+          <div class="row">
               <div class="col-6 mt-2">
                 <div class="form-group">
                     <label for="{{ ortrform.pps.id_for_label }}">ППС</label>
                     {{ortrform.pps}}
                 </div>
             </div>
+          </div>
+          <div class="row">
               <div class="col-6 mt-2">
                 <div class="form-group">
                     <label for="{{ ortrform.kad.id_for_label }}">КАД</label>
                     {{ortrform.kad}}
                 </div>
             </div>
-
+          </div>
                 <div class="mt-2">
                 <div class="form-group">
                 {% render_field ortrform.ortr_field rows=counter_str_ortr %}
@@ -79,7 +82,7 @@
             </div>
               <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить в СПП</a>
+                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
         </div>
@@ -95,19 +98,22 @@
               <div class="card mb-2">
       <h5 class="card-header">Решение ОРТР</h5>
       <div class="card-body">
+          <div class="row">
               <div class="col-6 mt-2">
                 <div class="form-group">
                     <label for="{{ ortrform.pps.id_for_label }}">ППС</label>
                     {{ortrform.pps}}
                 </div>
             </div>
+          </div>
+          <div class="row">
               <div class="col-6 mt-2">
                 <div class="form-group">
                     <label for="{{ ortrform.kad.id_for_label }}">КАД</label>
                     {{ortrform.kad}}
                 </div>
             </div>
-
+          </div>
                 <div class="mt-2">
                 <div class="form-group">
                 {% render_field ortrform.ortr_field rows=counter_str_ortr %}
@@ -122,7 +128,7 @@
             </div>
               <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить в СПП</a>
+                    <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
         </div>
