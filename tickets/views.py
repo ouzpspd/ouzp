@@ -1485,7 +1485,7 @@ def hotspot(request, trID):
             hotspot_points = hotspotform.cleaned_data['hotspot_points']
             hotspot_users = hotspotform.cleaned_data['hotspot_users']
             exist_hotspot_client = hotspotform.cleaned_data['exist_hotspot_client']
-
+            hotspot_local_wifi = hotspotform.cleaned_data['hotspot_local_wifi']
             session_tr_id = request.session[str(trID)]
             tag_service = session_tr_id.get('tag_service')
             services_plus_desc = session_tr_id.get('services_plus_desc')
@@ -1498,7 +1498,8 @@ def hotspot(request, trID):
                 counter_line_hotspot = hotspot_points-1
                 session_tr_id.update({'counter_line_hotspot': counter_line_hotspot})
             session_tr_id.update({'services_plus_desc': services_plus_desc, 'hotspot_points': str(hotspot_points),
-                                  'hotspot_users': str(hotspot_users), 'exist_hotspot_client': exist_hotspot_client})
+                                  'hotspot_users': str(hotspot_users), 'exist_hotspot_client': exist_hotspot_client,
+                                  'hotspot_local_wifi': hotspot_local_wifi})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
@@ -1509,10 +1510,12 @@ def hotspot(request, trID):
 
         service_name = 'hotspot'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
+        premium = True if 'прем' in service.lower() else False
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
         context = {
             'premium_plus': session_tr_id.get('premium_plus'),
+            'premium': premium,
             'hotspotform': hotspotform,
             'service_hotspot': service,
             'back_link': back_link,

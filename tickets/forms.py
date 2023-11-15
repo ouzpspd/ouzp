@@ -47,6 +47,8 @@ class LvsForm(forms.Form):
 
 class HotspotForm(forms.Form):
     exist_hotspot_client = forms.BooleanField(label='Существующий клиент', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    hotspot_local_wifi = forms.BooleanField(label='С локальной сетью WiFi', required=False,
+                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     hotspot_points = forms.IntegerField(max_value=10, required=False, label='Количество точек', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     hotspot_users = forms.IntegerField(max_value=1000, label='Количество пользователей', widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
