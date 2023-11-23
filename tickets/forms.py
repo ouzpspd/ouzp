@@ -269,6 +269,31 @@ class VideoForm(forms.Form):
                                        help_text='только если 1 или 2 камеры')
 
 
+class PassVideoForm(forms.Form):
+    change_video_ip = forms.BooleanField(label="Изменение IP", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    camera_port_0 = forms.CharField(label='Порт для камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    camera_name_0 = forms.CharField(label='Название камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    camera_place_0 = forms.CharField(label='Новое место камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    types_poe = [
+        ('Сущ. POE-инжектор', 'Сущ. POE-инжектор'),
+        ('Новый POE-инжектор', 'Новый POE-инжектор'),
+        ('Сущ. POE-коммутатор', 'Сущ. POE-коммутатор'),
+        ('Новый POE-коммутатор', 'Новый POE-коммутатор'),
+    ]
+    poe = forms.CharField(label='POE-оборудование',
+                                   widget=forms.Select(choices=types_poe, attrs={'class': 'form-control'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
+
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.CharField()
+
+
 class ContractForm(forms.Form):
     contract =forms.CharField(max_length=150, label='Договор', widget=forms.TextInput(attrs={'class': 'form-control'}))
 

@@ -572,7 +572,8 @@ def save_spp(request):
     trID = ticket_tr.ticket_tr
     req_check = send_spp_check(username, password, dID, tID, trID)
     if req_check.status_code == 200:
-        send_spp(username, password, ticket_tr)
+        department = 'otpm'
+        send_spp(username, password, ticket_tr, department)
         return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={dID}&tID={tID}&trID={trID}')
     return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
 

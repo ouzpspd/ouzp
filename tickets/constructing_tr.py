@@ -1432,6 +1432,8 @@ def get_need(value_vars):
         elif value_vars.get('type_passage') == 'Перевод на гигабит':
             need.append(
                 f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
+        elif not value_vars.get('type_passage') and 'Перенос Видеонаблюдение' in value_vars.get('type_pass'):
+            need.append("- перенести сервис Видеонаблюдение;")
     if value_vars.get('new_job_services'):
 
         if len(value_vars.get('name_new_service')) > 1:
@@ -2636,6 +2638,96 @@ def extend_service(value_vars):
         if value_vars.get('selected_ono')[0][-2].startswith('CSW'):
             node_csw = value_vars.get('node_csw')
             value_vars.update({'pps': node_csw})
+    return result_services, result_services_ots, value_vars
+
+
+def passage_video(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
+    templates = value_vars.get('templates')
+    static_vars = {}
+    hidden_vars = {}
+    rep_string = {}
+    camera_names = {k: v for k, v in value_vars.get('pass_video_form').items() if 'camera_name' in k}
+    count_cameras = len(camera_names)
+    rep_string[
+        'camera'] = '%Название Камеры% - порт: %Порт камеры%, новое место установки камеры: %Новое место Камеры%'
+    multi_vars = {rep_string['camera']: []}
+    static_vars['количество камер'] = str(count_cameras)
+    if value_vars.get('pass_video_form').get('change_video_ip') is True:
+        hidden_vars['ОВИТС проведение работ:'] = 'ОВИТС проведение работ:'
+        hidden_vars[
+            '- Произвести настройку ^видеокамер^ и маршрутизатора для предоставления сервиса.'
+        ] = '- Произвести настройку ^видеокамер^ и маршрутизатора для предоставления сервиса.'
+        hidden_vars['- Актуализировать в Cordis адреса видеопотока.'] = '- Актуализировать в Cordis адреса видеопотока.'
+
+    if value_vars.get('pass_video_form').get('poe') == 'Сущ. POE-инжектор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+        ] = '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+
+    elif value_vars.get('pass_video_form').get('poe') == 'Новый POE-инжектор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+        ] = '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+
+        hidden_vars['ОИПД подготовиться к работам:'] = 'ОИПД подготовиться к работам:'
+        hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
+        hidden_vars[
+            '-- PoE-инжектор %PoE-инжектор% - %указать количество% шт.'
+        ] = '-- PoE-инжектор %PoE-инжектор% - %указать количество% шт.'
+        static_vars['PoE-инжектор'] = 'СКАТ PSE-PoE.220AC/15VA'
+        static_vars['указать количество'] = str(count_cameras)
+
+    elif value_vars.get('pass_video_form').get('poe') == 'Сущ. POE-коммутатор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        ] = '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        hidden_vars[
+            '- Выполнить монтажные работы по переносу и подключению существующего POE-коммутатора.'
+        ] = '- Выполнить монтажные работы по переносу и подключению существующего POE-коммутатора.'
+
+    elif value_vars.get('pass_video_form').get('poe') == 'Новый POE-коммутатор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        ] = '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        hidden_vars['ОИПД подготовиться к работам:'] = 'ОИПД подготовиться к работам:'
+        hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
+        hidden_vars['-- POE-коммутатор %POE-коммутатор% - 1 шт.'] = '-- POE-коммутатор %POE-коммутатор% - 1 шт.'
+        if count_cameras < 5:
+            static_vars['POE-коммутатор'] = 'D-Link DES-1005P'
+        else:
+            static_vars[''] = 'Atis PoE-1010-8P'
+    for i in range(count_cameras):
+        static_vars[f'Название Камеры {i}'] = value_vars.get('pass_video_form').get(f'camera_name_{i}')
+        static_vars[f'Порт камеры {i}'] = value_vars.get('pass_video_form').get(f'camera_port_{i}')
+        static_vars[f'Новое место Камеры {i}'] = value_vars.get('pass_video_form').get(f'camera_place_{i}')
+        multi_vars[rep_string['camera']].append(
+                f'"%Название Камеры {i}%" - порт: %Порт камеры {i}%, новое место установки камеры: %Новое место Камеры {i}%')
+
+    static_vars['Перечисление камер'] = ', '.join([f'"{i}"' for i in camera_names.values()])
+    stroka = templates.get('Перенос сервиса Видеонаблюдение')
+    stroka = analyzer(stroka, static_vars, hidden_vars, multi_vars)
+    counter_plur = count_cameras
+    result_services.append(pluralizer_vars(stroka, counter_plur))
     return result_services, result_services_ots, value_vars
 
 

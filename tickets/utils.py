@@ -45,7 +45,23 @@ def add_portconfig_to_list_swiches(list_switches, username, password):
         switches_name = ' или '.join(switch_name)
     return list_switches, switches_name
 
-
+from copy import copy
+def get_ip_from_subset(subset):
+    ip_network = subset.split('/')[0]
+    if subset.endswith('/32'):
+        return (ip_network)
+    mask = subset.split('/')[1]
+    octets = ip_network.split('.')
+    if mask == '30':
+        octets[3] = str(int(octets[3]) + 2)
+        return ('.'.join(octets))
+    elif mask == '29':
+        ip_addresses = []
+        for i in range(5):
+            copy_octets = copy(octets)
+            copy_octets[3] = str(int(copy_octets[3]) + 2 + i)
+            ip_addresses.append('.'.join(copy_octets))
+        return tuple(ip_addresses)
 
 
 

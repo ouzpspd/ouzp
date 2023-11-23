@@ -57,6 +57,7 @@ urlpatterns = [
     #path('add_tr_exist_cl/<int:dID>/<int:tID>/<int:trID>/', add_tr_exist_cl, name='add_tr_exist_cl'),
     path('project_tr_exist_cl/<int:trID>/', project_tr_exist_cl, name='project_tr_exist_cl'),
     path('pass_serv/<int:trID>/', pass_serv, name='pass_serv'),
+    path('pass_video/<int:trID>/', PassVideoFormView.as_view(), name='pass_video'),
     path('pass_turnoff/<int:trID>/', pass_turnoff, name='pass_turnoff'),
     path('change_log_shpd/<int:trID>/', change_log_shpd, name='change_log_shpd'),
     path('change_serv/<int:trID>/', change_serv, name='change_serv'),

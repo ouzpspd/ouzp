@@ -552,13 +552,48 @@ def parsing_config_ports_vgw(href_ports, login, password):
     return contracts
 
 
-def check_contract_phone_exist(login, password, contract_id):
-    """Данный метод получает ID контракта и парсит вкладку Ресурсы в Cordis, проверяет налиличие ресурсов
-    Телефонный номер и возвращает список точек подключения, на которых есть такой ресурс"""
+def get_cis_resources(login, password, contract_id):
+    """Данный метод по id контракта получает данные с вкладки Ресурсы на договоре"""
     url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
     table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
+    return table
+
+from collections import namedtuple
+
+
+def get_cis_vss_camera(login, password, sim, contract_id):
+    """Данный метод по id контракта и id ресурса Управление видеокамерой получает данные о ресурсе"""
+    url = f'https://cis.corp.itmh.ru/mvc/Resource/CardVssCamera?contract={contract_id}&sim={sim.id}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    stream = soup.find('input', id="primary_stream_url").get('value')
+    match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", stream)
+    ip = match.group(1)
+    summary = soup.find('textarea', id="mem").text.strip()
+    return {'title': sim.title, 'ip': ip, 'summary': summary}
+
+
+def check_contract_video(login, password, table, contract_id):
+    all_a = table.find_all('a')
+    regex = "javascript:EditSIM\('SIM\.vss_camera'\,(\d+)\,(\d+)\,(\d+)\,(\d+)"
+    SimCamera = namedtuple('SimCamera', 'title id')
+    #sims = [[a.get('title'), a.get('href').split(',')[1]] for a in all_a if a.get('href') and 'vss_camera' in a['href']]
+    sims = [SimCamera(a.get('title'), a.get('href').split(',')[1]) for a in all_a if a.get('href') and 'vss_camera' in a['href']]
+    cameras = []
+    for sim in sims:
+        cameras.append(get_cis_vss_camera(login, password, sim, contract_id))
+    print(cameras)
+    return cameras
+
+def check_contract_phone_exist(table):
+    """Данный метод получает ID контракта и парсит вкладку Ресурсы в Cordis, проверяет налиличие ресурсов
+    Телефонный номер и возвращает список точек подключения, на которых есть такой ресурс"""
+    # url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
+    # req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    # soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    # table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
     rows_td = table.find_all('td')
     pre_phone_address = []
     for index, td in enumerate(rows_td):

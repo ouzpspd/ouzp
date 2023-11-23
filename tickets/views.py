@@ -15,7 +15,7 @@ from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     OrtrForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
-    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, RtkForm, SppDataForm, PpsForm
+    PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, RtkForm, SppDataForm, PpsForm, PassVideoForm
 
 from oattr.models import OtpmSpp
 
@@ -989,6 +989,7 @@ def data(request, trID):
             value_vars.update({'result_services': result_services})
             value_vars.update({'result_services_ots': result_services_ots})
 
+
     if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
         if value_vars.get('logic_csw'):
             counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
@@ -1013,6 +1014,9 @@ def data(request, trID):
 
     if value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
         result_services, result_services_ots, value_vars = change_services(value_vars)
+
+    if value_vars.get('type_pass') and 'Перенос Видеонаблюдение' in value_vars.get('type_pass'):
+        result_services, result_services_ots, value_vars = passage_video(value_vars)
 
     if value_vars.get('type_tr') == 'Не требуется':
         result_services = 'Решение ОУЗП СПД не требуется'
@@ -2160,7 +2164,11 @@ def get_resources(request, trID):
                     messages.warning(request, 'Договора не найдено')
                     return redirect('get_resources', trID)
                 ono = get_contract_resources(username, password, contract_id)
-                phone_address = check_contract_phone_exist(username, password, contract_id)
+                table = get_cis_resources(username, password, contract_id)
+                cameras = check_contract_video(username, password, table, contract_id)
+                if cameras:
+                    session_tr_id.update({'cameras': cameras})
+                phone_address = check_contract_phone_exist(table)
                 if phone_address:
                     session_tr_id.update({'phone_address': phone_address})
                 session_tr_id.update({'ono': ono, 'contract': contract})
@@ -2410,7 +2418,8 @@ def contract_id_formset(request, trID):
                     ono = get_contract_resources(username, password, selected_contract_id[0])
 
                     if ono:
-                        phone_address = check_contract_phone_exist(username, password, selected_contract_id[0])
+                        table = get_cis_resources(username, password, selected_contract_id[0])
+                        phone_address = check_contract_phone_exist(table)
                         if phone_address:
                             session_tr_id.update({'phone_address': phone_address})
                         session_tr_id.update({'ono': ono})
@@ -2440,15 +2449,13 @@ def resources_formset(request, trID):
       формирования заголовка."""
     session_tr_id = request.session[str(trID)]
     ono = session_tr_id.get('ono')
-    # try:
-    #     phone_address = request.session['phone_address']
-    # except KeyError:
-    #     phone_address = None
-    phone_address = session_tr_id.get('phone_address')
+
     ListResourcesFormSet = formset_factory(ListResourcesForm, extra=len(ono))
     if request.method == 'POST':
         formset = ListResourcesFormSet(request.POST)
         if formset.is_valid():
+            phone_address = session_tr_id.get('phone_address')
+            cameras = session_tr_id.get('cameras')
             data = formset.cleaned_data
             selected_ono = []
             unselected_ono = []
@@ -2466,6 +2473,10 @@ def resources_formset(request, trID):
                     for i in unselected_ono:
                         if selected_ono[0][-2] == i[-2]:
                             selected_ono.append(i)
+                    if cameras:
+                        client_ip_addresses = get_ip_from_subset(selected_ono[0][-4])
+                        cameras = [camera for camera in cameras if camera.get('ip') in client_ip_addresses]
+                        session_tr_id.update({'cameras': cameras})
                     if phone_address:
                         if any(phone_addr in selected_ono[0][3] for phone_addr in phone_address):
                             phone_exist = True
@@ -2712,6 +2723,7 @@ def head(request, trID):
     vgw_chains = session_tr_id.get('vgw_chains')
     selected_ono = session_tr_id.get('selected_ono')
     waste_vgw = session_tr_id.get('waste_vgw')
+    cameras = session_tr_id.get('cameras')
     templates = ckb_parse(username, password)
     result_services = []
     switch_config = None
@@ -2889,6 +2901,12 @@ def head(request, trID):
                 list_stroka_other_client_service.append(extra_stroka_other_client_service)
                 counter_exist_line.add(f'{i[-2]} {i[-1]}')
     if not stick:
+        if cameras:
+            extra_stroka_main_client_service = f'- услугу Видеонаблюдение:\n'
+            list_stroka_main_client_service.append(extra_stroka_main_client_service)
+            for camera in cameras:
+                extra_stroka_main_client_service = f"""-- "{camera.get('title')}" ({camera.get('summary')})\n"""
+                list_stroka_main_client_service.append(extra_stroka_main_client_service)
         if vgw_chains:
             old_name_model_vgws = []
             for i in vgw_chains:
@@ -3009,8 +3027,17 @@ def project_tr_exist_cl(request, trID):
     type_pass = []
     tag_service = session_tr_id.get('tag_service')
     if pass_job_services:
-        type_pass.append('Перенос, СПД')
-        tag_service.append({'pass_serv': None})
+        print('pass_job_services')
+        print(pass_job_services)
+        if [service for service in pass_job_services if service.startswith('Видеонаблюдение')]:
+            type_pass.append('Перенос Видеонаблюдение')
+            tag_service.append({'pass_video': None})
+
+        spd_services = ['Интернет', 'Порт ВЛС', 'Порт ВМ', 'ЦКС', 'Хот-спот']
+        if [service for service in pass_job_services if any(service.startswith(serv) for serv in spd_services)]:
+            type_pass.append('Перенос, СПД')
+            tag_service.append({'pass_serv': None})
+
 
     if new_job_services:
         type_pass.append('Организация/Изменение, СПД')
@@ -3405,6 +3432,79 @@ def pass_serv(request, trID):
             'trID': trID
         }
         return render(request, 'tickets/pass_serv.html', context)
+
+
+def pass_video(request, trID):
+    if request.method == 'POST':
+        form = PassVideoForm(request.POST)
+        if form.is_valid():
+            session_tr_id = request.session[str(trID)]
+            session_tr_id.update({**form.cleaned_data})
+    else:
+        session_tr_id = request.session[str(trID)]
+        tag_service = session_tr_id.get('tag_service')
+        prev_page, index = backward_page(request, trID)
+
+        request.session[trID] = session_tr_id
+        form = PassVideoForm()
+        context = {
+            'form': form,
+            'oattr': session_tr_id.get('oattr'),
+            'pps': session_tr_id.get('pps'),
+            'head': session_tr_id.get('head'),
+            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
+            'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
+            'dID': session_tr_id.get('dID'),
+            'trID': trID
+        }
+        return render(request, 'tickets/pass_video.html', context)
+
+
+class PassVideoFormView(FormView):
+    template_name = "tickets/pass_video.html"
+    form_class = PassVideoForm
+
+    def form_valid(self, form):
+        pass_video_form = dict(**form.cleaned_data)
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        session_tr_id.update({'pass_video_form': pass_video_form})
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        prev_page, index = backward_page(self.request, self.kwargs['trID'])
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        tag_service = session_tr_id.get('tag_service')
+        ticket_tr_id = session_tr_id.get('ticket_tr_id')
+        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': self.kwargs["trID"]}) + f'?next_page={prev_page}&index={index}'
+        context['back_link'] = back_link
+        context['pps'] = session_tr_id.get('pps')
+        context['oattr'] = session_tr_id.get('oattr')
+        context['head'] = session_tr_id.get('head')
+        context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
+        context['dID'] = self.request.session.get('dID')
+        context['trID'] = self.kwargs['trID']
+        return context
+
+    def get_success_url(self, **kwargs):
+        session_tr_id = self.request.session[str(self.kwargs['trID'])]
+        #if self.request.session.get('type_pass'):
+
+        tag_service = session_tr_id.get('tag_service')
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        print('tag_service')
+        print(tag_service)
+        tag_service.append({'data': None})
+        #tag_service_index = self.request.session['tag_service_index']
+        tag_service_index = session_tr_id.get('tag_service_index')
+        index = tag_service_index[-1] + 1
+        tag_service_index.append(index)
+        session_tr_id.update({'tag_service': tag_service, 'tag_service_index': tag_service_index})
+        self.request.session[str(self.kwargs['trID'])] = session_tr_id
+        url = f"{reverse(next(iter(tag_service[index + 1])), kwargs={'trID': self.kwargs['trID']})}?prev_page={next(iter(tag_service[index]))}&index={index}"
+        return url
+
 
 
 def pass_turnoff(request, trID):
