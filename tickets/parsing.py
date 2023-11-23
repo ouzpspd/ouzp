@@ -891,7 +891,7 @@ def add_links_to_ppr(ppr, link, login, password):
             ports = req.json()
             found_ports = []
             for port in ports:
-                if ppr_port in port['Name']:
+                if f'{ppr_port} ' in port['Name']:
                     found_ports.append(port)
             for found_port in found_ports:
                 url = 'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceObjectAddLink'

@@ -3652,7 +3652,8 @@ def ppr(request, trID):
                 return redirect('ppr', trID)
             elif exist_ppr:
                 session_tr_id.update({'exist_ppr': exist_ppr})
-                return redirect('add_resources_to_ppr')
+                request.session[trID] = session_tr_id
+                return redirect('add_resources_to_ppr', trID)
             if title_ppr == '':
                 messages.warning(request, 'Для новой ППР должно быть заполнено поле Кратко')
                 return redirect('ppr', trID)
