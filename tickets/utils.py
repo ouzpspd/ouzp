@@ -294,11 +294,38 @@ def trunk_turnoff_shpd_cks_vk_vm(service, types_change_service):
     if types_change_service:
         for type_change_service in types_change_service:
             if next(iter(type_change_service.values())) == service:
-                if "с простоем" in next(iter(type_change_service.keys())):
+                if "Организация ШПД trunk'ом с простоем" == next(iter(type_change_service.keys())):
                     trunk_turnoff_on = True
-                else:
+                elif "Организация ШПД trunk'ом" == next(iter(type_change_service.keys())):
                     trunk_turnoff_off = True
     return trunk_turnoff_on, trunk_turnoff_off
+
+
+def get_service_name_from_service_plus_desc(services_plus_desc):
+    """Получение названия услуги из строки с описанием"""
+    service = None
+    if services_plus_desc.startswith('Телефон'):
+        service = 'Телефон'
+    elif services_plus_desc.startswith('iTV'):
+        service = 'Вебург.ТВ'
+    elif services_plus_desc.startswith('Интернет, DHCP'):
+        service = 'ШПД в Интернет'
+    elif services_plus_desc.startswith('Интернет, блок Адресов Сети Интернет'):
+        service = 'ШПД в Интернет'
+    elif services_plus_desc.startswith('ЦКС'):
+        service = 'ЦКС'
+    elif services_plus_desc.startswith('Порт ВЛС'):
+        service = 'Порт ВЛС'
+    elif services_plus_desc.startswith('Порт ВМ'):
+        service = 'Порт ВМ'
+    elif services_plus_desc.startswith('Видеонаблюдение'):
+        service = 'Видеонаблюдение'
+    elif services_plus_desc.startswith('HotSpot'):
+        service = 'Хот-спот'
+    elif services_plus_desc.startswith('ЛВС'):
+        service = 'ЛВС'
+    return service
+
 
 
 def _tag_service_for_new_serv(services_plus_desc):
@@ -563,25 +590,27 @@ def get_extra_service_port_csw(service_port, switch_config, model):
                 service_port = service_port + f',{key}'
     elif 'SNR' in model or 'Cisco' in model or 'Orion' in model:
         port = service_port
+        vlan = 'no vlan'
         for interface in switch_config.split('!'):
 
             if port+'\n' in interface or port+'\r\n' in interface:
-                regex_interface = 'switchport access vlan (\d+)'
-                match = re.search(regex_interface, interface)
-                if match:
-                    if match.group(1) not in ['1', '4094']:
-                        vlan = match.group(1)
-                    else:
-                        vlan = '(на оборудовании не настроен)'
-                else:
-                    vlan = 'no vlan'
+                regexes = ['switchport access vlan (\d+)', 'switchport trunk native vlan (\d+)']
+                for regex_interface in regexes:
+                    match = re.search(regex_interface, interface)
+                    if match:
+                        if match.group(1) not in ['1', '4094']:
+                            vlan = match.group(1)
+                        else:
+                            vlan = '(на оборудовании не настроен)'
         extra_ports = []
 
         if vlan == '(на оборудовании не настроен)':
             extra_ports.append('(на оборудовании не настроен)')
         elif vlan != 'no vlan':
             for interface in switch_config.split('!'):
-                if f'switchport access vlan {vlan}' in interface and port not in interface:
+                access_command = f'switchport access vlan {vlan}' in interface and port not in interface
+                native_command = f'switchport trunk native vlan {vlan}' in interface and port not in interface
+                if access_command or native_command:
                     regex_port = "nterface (.+)['\n'|'\r\n']"
                     match = re.search(regex_port, interface)
                     extra_port = match.group(1).split('/')[-1].strip()

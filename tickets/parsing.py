@@ -584,7 +584,6 @@ def check_contract_video(login, password, table, contract_id):
     cameras = []
     for sim in sims:
         cameras.append(get_cis_vss_camera(login, password, sim, contract_id))
-    print(cameras)
     return cameras
 
 def check_contract_phone_exist(table):
@@ -1094,7 +1093,6 @@ def spec_with_cookie(cookie, x_session_id):
     url = 'https://arm.itmh.ru/v3/backend/manager/user-info/'
     req = requests.get(url, verify=False, headers=headers)
     spec_j = req.json()
-    print(spec_j, req.status_code, req.url)
     return req.status_code
 
 def spec(username, password):

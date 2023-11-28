@@ -2852,7 +2852,7 @@ def head(request, trID):
                     curr_value = readable_services.get('Порт ВЛС')
                     readable_services = _readable(curr_value, readable_services, 'Порт ВЛС', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
-                elif any(serv in i[-3].lower() for serv in service_portvm):
+                elif any(serv in i[-3].lower() or serv in i[-4].lower() for serv in service_portvm):
                     extra_stroka_main_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Порт ВМ')
@@ -3027,8 +3027,6 @@ def project_tr_exist_cl(request, trID):
     type_pass = []
     tag_service = session_tr_id.get('tag_service')
     if pass_job_services:
-        print('pass_job_services')
-        print(pass_job_services)
         if [service for service in pass_job_services if service.startswith('Видеонаблюдение')]:
             type_pass.append('Перенос Видеонаблюдение')
             tag_service.append({'pass_video': None})
@@ -3128,6 +3126,7 @@ def change_serv(request, trID):
                 "Организация ЦКС trunk'ом с простоем",
                 "Организация порта ВЛС trunk'ом с простоем",
                 "Организация порта ВМ trunk'ом с простоем",
+                "Изменение сервиса",
             ]
             types_only_mask = ["Организация доп connected",
                                "Организация доп маршрутизируемой",
@@ -3493,8 +3492,6 @@ class PassVideoFormView(FormView):
 
         tag_service = session_tr_id.get('tag_service')
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
-        print('tag_service')
-        print(tag_service)
         tag_service.append({'data': None})
         #tag_service_index = self.request.session['tag_service_index']
         tag_service_index = session_tr_id.get('tag_service_index')

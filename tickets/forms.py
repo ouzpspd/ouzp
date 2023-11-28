@@ -368,6 +368,7 @@ class ChangeLogShpdForm(forms.Form):
 class ChangeServForm(forms.Form):
     types = [("Организация ШПД trunk'ом", "Организация ШПД trunk'ом"),
              ("Организация ШПД trunk'ом с простоем", "Организация ШПД trunk'ом с простоем"),
+             ("Изменение сервиса", "Изменение сервиса"),
              ("Изменение cхемы организации ШПД", "Изменение cхемы организации ШПД"),
              ("Замена connected на connected", "Замена connected на connected"),
              ("Организация доп connected", "Организация доп connected"),
