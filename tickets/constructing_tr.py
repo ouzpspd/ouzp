@@ -204,7 +204,7 @@ def _new_services(result_services, value_vars):
             name_new_service.add('Хот-спот')
             static_vars = {}
             hidden_vars = {}
-            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс']
+            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
             if any(type in service.lower() for type in types_premium_plus):
                 if logic_csw == True:
                     result_services.append(enviroment_csw(value_vars))
@@ -2473,7 +2473,7 @@ def _change_services(value_vars):
                 elif 'Интернет, DHCP' in change_service:
                     static_vars['указать маску'] = '/32'
             elif new_service_name == 'Хот-спот':
-                types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс']
+                types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
                 premium_plus = any(type in change_service.lower() for type in types_premium_plus)
                 if next(iter(readable_services.keys())) == 'Хот-спот' and not premium_plus:
                     if 'прем' in change_service.lower() and value_vars.get('hotspot_local_wifi'):

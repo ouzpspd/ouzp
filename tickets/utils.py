@@ -352,7 +352,7 @@ def _tag_service_for_new_serv(services_plus_desc):
         elif 'Видеонаблюдение' in services_plus_desc[index_service]:
             tag_service.append({'video': services_plus_desc[index_service]})
         elif 'HotSpot' in services_plus_desc[index_service]:
-            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
+            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
             if any(type in services_plus_desc[index_service].lower() for type in types_premium):
                 premium_plus = True
             else:
