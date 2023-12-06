@@ -463,10 +463,18 @@ def _get_extra_selected_ono(username, password, selected_device, selected_client
         for extra_client in extra_clients:
             contract = extra_client[2]
             contract_id = get_contract_id(username, password, contract)
-            extra_resources = get_contract_resources(username, password, contract_id)
-            for extra_resource in extra_resources:
-                if extra_resource[-2] == selected_device:
-                    extra_selected_ono.append(extra_resource)
+            if isinstance(contract_id, list):
+                for i in contract_id:
+                    real_contract_id = i.get('id')
+                    extra_resources = get_contract_resources(username, password, real_contract_id)
+                    for extra_resource in extra_resources:
+                        if extra_resource[-2] == selected_device:
+                            extra_selected_ono.append(extra_resource)
+            else:
+                extra_resources = get_contract_resources(username, password, contract_id)
+                for extra_resource in extra_resources:
+                    if extra_resource[-2] == selected_device:
+                        extra_selected_ono.append(extra_resource)
     return extra_selected_ono
 
 
