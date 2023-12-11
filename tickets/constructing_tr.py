@@ -2021,7 +2021,7 @@ def get_add_kad(value_vars):
 
 
 def get_new_kad(value_vars):
-    """Данный метод формирует блок ТТР для установки доп. КАД"""
+    """Данный метод формирует блок ТТР для установки нового КАД"""
     result_services = []
     templates = value_vars.get('templates')
     stroka = ' ------'
@@ -2035,9 +2035,9 @@ def get_new_kad(value_vars):
         index = i.strip('pps_')
         if value_vars.get(f'ftth_{index}') and\
                 type_new_model_kad not in ('24-портовый оптогигабитный коммутатор', '48-портовый оптогигабитный коммутатор'):
-            stroka = templates.get("Установка новых КАД на УАД %Название узла связи%")
+            stroka = templates.get("Установка новых КАД на УАД %Название узла связи%< с простоем связи>.")
         else:
-            stroka = templates.get("Установка нового КАД на УАД %Название узла связи%")
+            stroka = templates.get("Установка нового КАД на УАД %Название узла связи%< с простоем связи>.")
         if 'ИБП' in value_vars.get(f'pps_{index}'):
             hidden_vars[', адаптированный для работы с РЭКопитоном'] = ', адаптированный для работы с РЭКопитоном'
             hidden_vars[
@@ -2050,6 +2050,18 @@ def get_new_kad(value_vars):
             hidden_vars[
                 '- По решению ОТПМ организовать резервирование УАД по питанию.'
             ] = '- По решению ОТПМ организовать резервирование УАД по питанию.'
+        if value_vars.get('ppr'):
+            hidden_vars[
+                '- Требуется отключение согласно ППР %ППР% согласовать проведение работ.'
+            ] = '- Требуется отключение согласно ППР %ППР% согласовать проведение работ.'
+            hidden_vars[
+                '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %ППР%.'
+            ] = '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %ППР%.'
+            hidden_vars[
+                '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %ППР%.'
+            ] = '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %ППР%.'
+            hidden_vars[' с простоем связи'] = ' с простоем связи'
+            static_vars['ППР'] = value_vars.get('ppr')
         static_vars['Название узла связи'] = short_readable_node(value_vars.get(f'pps_{index}'))
         static_vars['Название вышестоящего узла связи'] = _readable_node(value_vars.get('pps'))
         static_vars['Название вышестоящего коммутатора'] = value_vars.get(f'uplink_{index}')
@@ -2872,7 +2884,7 @@ def add_kad(value_vars):
 
 
 def new_kad(value_vars):
-    """Данный метод формирует готовое ТР для установки доп. КАД"""
+    """Данный метод формирует готовое ТР для установки нового КАД"""
     result_services, value_vars = get_new_kad(value_vars)
     value_vars.update({'result_services': result_services})
     return result_services, value_vars
