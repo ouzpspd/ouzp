@@ -33,6 +33,12 @@ class SksForm(forms.Form):
                                       widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     sks_router = forms.BooleanField(label='Подключить в марш.', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    sks_vols = forms.BooleanField(label='ВОЛС', required=False,
+                                    widget=forms.CheckboxInput(attrs={'class': 'form-check', 'id': 'id_vols'}))
+    types = [('Конвертеры 100', 'Конвертеры 100'),
+             ('Конвертеры 1000','Конвертеры 1000')]
+    sks_transceiver = forms.CharField(
+                                 widget=forms.Select(choices=types, attrs={'class': 'form-control transceiver'}))
 
 
 class LvsForm(forms.Form):
