@@ -815,8 +815,28 @@ def in_work_ortr(login, password):
 
 def get_sw_config(sw, login, password):
     """Данный метод парсит конфиг коммутатора со stash"""
+    #url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
+    #sw = 'SW144-AR13-23.ekb'
     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+
+    # Подумать над добавлением модели и проверять по модели, там где используется функция модель добавить можно
+    # если для снр делать эту проверку то тратится больше времени на выполнение
+
+    # if req.status_code != 404:
+    #
+    #     url = f'https://stash.itmh.ru/rest/api/latest/projects/NMS/repos/pantera_extrim/commits?followRenames=true&path=backups%2F{sw}-config&until=refs%2Fheads%2Fmaster&start=0&limit=3&avatarSize=32'
+    #
+    #     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    #     print(req.json())
+    #     if req.json().get('values'):
+    #         for i in req.json().get('values'):
+    #             if i.get('author').get('name') == 'net_backup':
+    #                 blob = i.get('id')
+    #                 print(blob)
+    #                 break
+    #         url = f'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/{sw}-config?at={blob}'
+    #         req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
 
     if req.status_code == 404:
         switch_config = None
