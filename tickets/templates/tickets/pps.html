@@ -290,6 +290,18 @@ $(function () {
         $(".add-g").hide();
         $(".kad_name").hide();
         $(".ppr").hide();
+        $(".disable").show();
+        $("#id_disable").change(function() {
+            var dis = $(this).val();
+            console.log(dis)
+            if(this.checked) {
+                $(".ppr").show();
+            }
+            else {
+                $(".ppr").hide();
+            }
+        });
+
         $('#id_get_node').click(function () {
           $(this).find('span').addClass('spinner-border spinner-border-sm');
           // создаем AJAX-вызов

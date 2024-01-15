@@ -16,9 +16,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.views.generic import DetailView, FormView
 
 from tickets.models import TR
-from tickets.views import cache_check
 from .models import OtpmSpp, OtpmTR
-from tickets.utils import flush_session_key
+from tickets.utils import flush_session_key, get_user_credential_cordis
 
 from .forms import OtpmPoolForm, CopperForm, OattrForm, SendSPPForm, ServiceForm, AddressForm
 from .parsing import ckb_parse, get_or_create_otu, for_tr_view, for_spp_view, save_comment, spp_send_to, send_to_mko, send_spp, \
@@ -74,45 +73,37 @@ def filter_otpm_search(search, technologs, group, status):
     return result_search, spp_search, missing
 
 
-def cache_check_view(func):
-    """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
-     если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
-    def wrapper(self, request, *args, **kwargs):
-        # Для CopperFormView пришлось переписать request на self.request, потому что в форме в объекте request
-        # находится форма CopperForm и соответственно никакого user там нет. Вообще проверка авторизации в форме
-        # наверно и ненужна пока там временно составляется шаблон.
-        if not self.request.user.is_authenticated:
-            return redirect(f'login/?next={self.request.path}')
-        user = User.objects.get(username=self.request.user.username)
-        credent = cache.get(user)
-        if credent is None:
-            response = redirect('login_for_service')
-            response['Location'] += '?next={}'.format(self.request.path)
-            return response
-        return func(self, request, *args, **kwargs)
-    return wrapper
+# def cache_check_view(func):
+#     """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
+#      если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
+#     def wrapper(self, request, *args, **kwargs):
+#         # Для CopperFormView пришлось переписать request на self.request, потому что в форме в объекте request
+#         # находится форма CopperForm и соответственно никакого user там нет. Вообще проверка авторизации в форме
+#         # наверно и ненужна пока там временно составляется шаблон.
+#         if not self.request.user.is_authenticated:
+#             return redirect(f'login/?next={self.request.path}')
+#         user = User.objects.get(username=self.request.user.username)
+#         credent = cache.get(user)
+#         if credent is None:
+#             response = redirect('login_for_service')
+#             response['Location'] += '?next={}'.format(self.request.path)
+#             return response
+#         return func(self, request, *args, **kwargs)
+#     return wrapper
 
 
 
 class CredentialMixin:
     def get_credential(self, *args, **kwargs):
         user = User.objects.get(username=self.request.user.username)
-        credent = cache.get(user)
-        username = credent['username']
-        password = credent['password']
-        return username, password
-
-    def redirect_to_login_for_service(self, *args, **kwargs):
-        messages.warning(self.request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(self.request.path)
-        return response
+        username, password = get_user_credential_cordis(user)
+        return (username, password)
 
 
 class OtpmPoolView(CredentialMixin, LoginRequiredMixin, View):
     """Пул задач ОТПМ"""
     login_url = '/login/'
-    @cache_check_view
+
     def get(self, request):
         username, password = super().get_credential(self)
         queryset_user_group = User.objects.filter(
@@ -135,8 +126,8 @@ class OtpmPoolView(CredentialMixin, LoginRequiredMixin, View):
                 context = {'otpmpoolform': form}
 
                 search = in_work_otpm(username, password)
-                if search[0] == 'Access denied':
-                    return super().redirect_to_login_for_service(self)
+                if not isinstance(search, list):
+                    return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
                 technologs = [user.last_name for user in queryset_user_group] if technolog is None else [technolog]
                 output_search, spp_process, missing = filter_otpm_search(search, technologs, group, status)
                 context.update({'search': output_search,
@@ -187,7 +178,7 @@ class CreateSppView(CredentialMixin, View):
         current_spp.save()
         return current_spp
 
-    @cache_check_view
+
     def get(self, request, dID):
         try:
             current_spp = OtpmSpp.objects.get(dID=dID)
@@ -201,7 +192,7 @@ class CreateSppView(CredentialMixin, View):
         spp_params = for_spp_view(username, password, dID)
 
         if spp_params.get('Access denied'):
-            return super().redirect_to_login_for_service(self)
+            return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
         self.create_or_update(spp_params, current_spp)
         return redirect('spp_view_oattr', dID)
 
@@ -240,7 +231,7 @@ class SppView(DetailView):
 
 
 class CreateProjectOtuView(CredentialMixin, View):
-    @cache_check_view
+    #@cache_check_view
     def get(self, request, trID):
         username, password = super().get_credential(self)
         id_otu = get_or_create_otu(username, password, trID)
@@ -251,12 +242,12 @@ class CopperFormView(CredentialMixin, FormView):
     template_name = "oattr/copper.html"
     form_class = CopperForm
 
-    @cache_check_view
-    def dispatch(self, *args, **kwargs):
-        """Используется для проверки credential"""
-        return super().dispatch(*args, **kwargs)
+    # @cache_check_view
+    # def dispatch(self, *args, **kwargs):
+    #     """Используется для проверки credential"""
+    #     return super().dispatch(*args, **kwargs)
 
-    @cache_check_view
+    #@cache_check_view
     def form_valid(self, form):
         username, password = super().get_credential(self)
         value_vars = dict(**form.cleaned_data)
@@ -319,13 +310,9 @@ class CopperFormView(CredentialMixin, FormView):
 
 
 
-
-@cache_check
 def data(request, trID):
     user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
+    username, password = get_user_credential_cordis(user)
     templates = ckb_parse(username, password)
 
     session_tr_id = request.session.get(str(trID), {})
@@ -345,9 +332,7 @@ def data(request, trID):
 
 def tentura(request):
     user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
+    username, password = get_user_credential_cordis(user)
     #get_tentura(username, password)
     tentura = Tentura(username, password, 39203)
     status = tentura.check_active_project_for_user() #connection(username, password, 39203)
@@ -378,9 +363,7 @@ def tentura(request):
 
 def specific(request):
     user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
+    username, password = get_user_credential_cordis(user)
     otu_project_id = 39421 #37859 #39203
     specification = Specification(username, password, otu_project_id)
     cookie = specification.authenticate()
@@ -438,23 +421,19 @@ class CreateTrView(CredentialMixin, View):
         ticket_tr_id = ticket_tr.id     # Временно вернул пока в view.data не переделана на использование tr_id в url
         return ticket_tr_id     # Временно вернул пока в view.data не переделана на использование tr_id в url
 
-    @cache_check_view
+    #@cache_check_view
     def get(self, request, dID, tID, trID):
         username, password = super().get_credential(self)
         tr_params = for_tr_view(username, password, dID, tID, trID)
         if tr_params.get('Access denied'):
-            return super().redirect_to_login_for_service(self)
+            return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
 
         ticket_tr_id = self.create_or_update(dID, tID, trID, tr_params) # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session['ticket_tr_id'] = ticket_tr_id # Временно вернул пока в view.data не переделана на использование tr_id в url
         request.session[self.kwargs['trID']] = {}
-
         session_tr_id = request.session[(self.kwargs['trID'])]
         session_tr_id.update({'action': request.GET.get('action')})
         request.session[(self.kwargs['trID'])] = session_tr_id
-
-
-
         context = dict(**tr_params)
         if request.GET.get('action') == 'add':
             context.update({'dID': dID, 'tID': tID, 'trID': trID, 'action': 'add'})
@@ -470,10 +449,10 @@ class SendSppFormView(CredentialMixin, FormView):
     form_class = SendSPPForm
     success_url = "/"
 
-    @cache_check_view
-    def dispatch(self, *args, **kwargs):
-        """Используется для проверки credential"""
-        return super().dispatch(*args, **kwargs)
+    #@cache_check_view
+    # def dispatch(self, *args, **kwargs):
+    #     """Используется для проверки credential"""
+    #     return super().dispatch(*args, **kwargs)
 
 
     def get_context_data(self, **kwargs):
@@ -492,7 +471,7 @@ class SendSppFormView(CredentialMixin, FormView):
         context['spp_stage'] = spp_stage
         return context
 
-    @cache_check_view
+    #@cache_check_view
     def form_valid(self, form):
         ticket_spp = get_object_or_404(OtpmSpp, dID=self.kwargs['dID'])
         if ticket_spp.projected:
@@ -582,13 +561,10 @@ def saved_data_oattr(request, trID):
         return render(request, 'oattr/saved_data_oattr.html', context)
 
 
-@cache_check
 def save_spp(request):
-    """Данный метод заполняет поля блока ОРТР в СПП готовым ТР"""
+    """Данный метод заполняет поля блока ОТПМ в СПП готовым ТР"""
     user = User.objects.get(username=request.user.username)
-    credent = cache.get(user)
-    username = credent['username']
-    password = credent['password']
+    username, password = get_user_credential_cordis(user)
     ticket_tr_id = request.session.get('ticket_tr_id')
     ticket_tr = OtpmTR.objects.get(id=ticket_tr_id)
     dID = ticket_tr.ticket_k.dID
@@ -596,22 +572,17 @@ def save_spp(request):
     trID = ticket_tr.ticket_tr
     req_check = send_spp_check(username, password, dID, tID, trID)
     if req_check.status_code == 200:
-        send_spp(username, password, ticket_tr)
+        department = 'otpm'
+        send_spp(username, password, ticket_tr, department)
         return redirect(f'https://sss.corp.itmh.ru/dem_tr/dem_begin.php?dID={dID}&tID={tID}&trID={trID}')
-    else:
-        messages.warning(request, 'Нет доступа в ИС Холдинга')
-        response = redirect('login_for_service')
-        response['Location'] += '?next={}'.format(request.path)
-        return response
+    return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
 
 
 class AddressView(CredentialMixin, View):
     """Поиск адресов в СПП"""
-    @cache_check_view
+    #@cache_check_view
     def get(self, request, department, trID):
         username, password = super().get_credential(self)
-        print('department')
-        print(department)
         if department == 'ortr':
             ticket_tr = TR.objects.filter(ticket_tr=trID).last()
         else:
@@ -638,7 +609,7 @@ class AddressView(CredentialMixin, View):
 
 class SelectNodeView(CredentialMixin, View):
     """Выбор узла на адресе для добавления в ТР"""
-    @cache_check_view
+    #@cache_check_view
     def get(self, request, department, trID, aid):
         username, password = super().get_credential(self)
         if department == 'ortr':
@@ -657,7 +628,7 @@ class SelectNodeView(CredentialMixin, View):
 
 class UpdateNodeView(CredentialMixin, View):
     """Выбор узла на адресе для добавления в ТР"""
-    @cache_check_view
+    #@cache_check_view
     def get(self, request, department, trID, vid):
         username, password = super().get_credential(self)
         if department == 'ortr':

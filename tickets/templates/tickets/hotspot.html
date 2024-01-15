@@ -51,6 +51,33 @@
                 </div>
             </div>
         </div>
+        {% elif not premium %}
+        <div class="row">
+            <div class="col-4 mb-3">
+                <div class="form-group">
+                    <label for="{{ hotspotform.exist_hotspot_client.id_for_label }}">Существующий клиент</label>
+                    {{hotspotform.exist_hotspot_client}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4 mb-3">
+                <div class="form-group">
+                    <label for="{{hotspotform.hotspot_points.id_for_label}}">Количество точек</label>
+                    {{hotspotform.hotspot_points}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-3">
+                <div class="form-group">
+                    <label for="{{hotspotform.hotspot_users.id_for_label}}">Количество пользователей</label>
+                    {{hotspotform.hotspot_users}}
+                </div>
+            </div>
+        </div>
+
         {% else %}
         <div class="row">
             <div class="col-4">

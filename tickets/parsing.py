@@ -375,10 +375,6 @@ def parsingByNodename(node_name, login, password):
                      list_ports[i]['Всего портов'], list_ports[i]['Занятых клиентами'], list_ports[i]['Занятых линками'], list_ports[i]['Доступные'], configport_switches[i]])
 
             return list_switches
-    else:
-        list_switches = []
-        list_switches.append('Access denied')
-        return list_switches
 
 
 def ckb_parse(login, password):
@@ -556,13 +552,47 @@ def parsing_config_ports_vgw(href_ports, login, password):
     return contracts
 
 
-def check_contract_phone_exist(login, password, contract_id):
-    """Данный метод получает ID контракта и парсит вкладку Ресурсы в Cordis, проверяет налиличие ресурсов
-    Телефонный номер и возвращает список точек подключения, на которых есть такой ресурс"""
+def get_cis_resources(login, password, contract_id):
+    """Данный метод по id контракта получает данные с вкладки Ресурсы на договоре"""
     url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
     table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
+    return table
+
+from collections import namedtuple
+
+
+def get_cis_vss_camera(login, password, sim, contract_id):
+    """Данный метод по id контракта и id ресурса Управление видеокамерой получает данные о ресурсе"""
+    url = f'https://cis.corp.itmh.ru/mvc/Resource/CardVssCamera?contract={contract_id}&sim={sim.id}'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    stream = soup.find('input', id="primary_stream_url").get('value')
+    match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", stream)
+    ip = match.group(1)
+    summary = soup.find('textarea', id="mem").text.strip()
+    return {'title': sim.title, 'ip': ip, 'summary': summary}
+
+
+def check_contract_video(login, password, table, contract_id):
+    all_a = table.find_all('a')
+    regex = "javascript:EditSIM\('SIM\.vss_camera'\,(\d+)\,(\d+)\,(\d+)\,(\d+)"
+    SimCamera = namedtuple('SimCamera', 'title id')
+    #sims = [[a.get('title'), a.get('href').split(',')[1]] for a in all_a if a.get('href') and 'vss_camera' in a['href']]
+    sims = [SimCamera(a.get('title'), a.get('href').split(',')[1]) for a in all_a if a.get('href') and 'vss_camera' in a['href']]
+    cameras = []
+    for sim in sims:
+        cameras.append(get_cis_vss_camera(login, password, sim, contract_id))
+    return cameras
+
+def check_contract_phone_exist(table):
+    """Данный метод получает ID контракта и парсит вкладку Ресурсы в Cordis, проверяет налиличие ресурсов
+    Телефонный номер и возвращает список точек подключения, на которых есть такой ресурс"""
+    # url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
+    # req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    # soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+    # table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
     rows_td = table.find_all('td')
     pre_phone_address = []
     for index, td in enumerate(rows_td):
@@ -780,17 +810,33 @@ def in_work_ortr(login, password):
                 if lines[index][3][symbol_index].isupper() and lines[index][3][symbol_index-1].islower():
                     lines[index][3] = lines[index][3][:symbol_index]+' '+lines[index][3][symbol_index:]
                     break
-        if lines == []:
-            lines.append('Empty list tickets')
-    else:
-        lines.append('Access denied')
-    return lines
+        return lines
 
 
 def get_sw_config(sw, login, password):
     """Данный метод парсит конфиг коммутатора со stash"""
+    #url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
+    #sw = 'SW144-AR13-23.ekb'
     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+
+    # Подумать над добавлением модели и проверять по модели, там где используется функция модель добавить можно
+    # если для снр делать эту проверку то тратится больше времени на выполнение
+
+    # if req.status_code != 404:
+    #
+    #     url = f'https://stash.itmh.ru/rest/api/latest/projects/NMS/repos/pantera_extrim/commits?followRenames=true&path=backups%2F{sw}-config&until=refs%2Fheads%2Fmaster&start=0&limit=3&avatarSize=32'
+    #
+    #     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    #     print(req.json())
+    #     if req.json().get('values'):
+    #         for i in req.json().get('values'):
+    #             if i.get('author').get('name') == 'net_backup':
+    #                 blob = i.get('id')
+    #                 print(blob)
+    #                 break
+    #         url = f'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/{sw}-config?at={blob}'
+    #         req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
 
     if req.status_code == 404:
         switch_config = None
@@ -864,7 +910,7 @@ def add_links_to_ppr(ppr, link, login, password):
             ports = req.json()
             found_ports = []
             for port in ports:
-                if ppr_port in port['Name']:
+                if f'{ppr_port} ' in port['Name']:
                     found_ports.append(port)
             for found_port in found_ports:
                 url = 'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceObjectAddLink'
@@ -1067,7 +1113,6 @@ def spec_with_cookie(cookie, x_session_id):
     url = 'https://arm.itmh.ru/v3/backend/manager/user-info/'
     req = requests.get(url, verify=False, headers=headers)
     spec_j = req.json()
-    print(spec_j, req.status_code, req.url)
     return req.status_code
 
 def spec(username, password):

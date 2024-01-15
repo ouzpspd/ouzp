@@ -204,7 +204,7 @@ def _new_services(result_services, value_vars):
             name_new_service.add('Хот-спот')
             static_vars = {}
             hidden_vars = {}
-            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс']
+            types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
             if any(type in service.lower() for type in types_premium_plus):
                 if logic_csw == True:
                     result_services.append(enviroment_csw(value_vars))
@@ -230,21 +230,42 @@ def _new_services(result_services, value_vars):
                 else:
                     static_vars['указать название коммутатора'] = value_vars.get('kad')
                 if value_vars.get('exist_hotspot_client') == True:
-                    stroka = templates.get("Организация услуги Хот-спот %Стандарт/Премиум% для существующего клиента.")
+                    static_vars['нового/существующего'] = 'существующего'
+                    hidden_vars[
+                        """- В Cordis на договоре создать ресурс:
+-- Сервис Хот-Спот;
+-- Терминал Хот-Спот;
+-- Сервис авторизации Хот-Спот."""
+                    ] = """- В Cordis на договоре создать ресурс:
+-- Сервис Хот-Спот;
+-- Терминал Хот-Спот;
+-- Сервис авторизации Хот-Спот."""
                 else:
-                    stroka = templates.get("Организация услуги Хот-спот %Стандарт/Премиум% для нового клиента.")
-                if 'прем' in service.lower():
-                    static_vars['Стандарт/Премиум'] = 'Премиум'
-                    static_vars['указать модель станций'] = 'Ubiquiti UniFi'
+                    static_vars['нового/существующего'] = 'нового'
+                    hidden_vars[
+                        """МКО:
+- В Cordis на договоре создать ресурс:
+-- Сервис Хот-Спот;
+-- Терминал Хот-Спот;
+-- Сервис авторизации Хот-Спот."""
+                    ] = """МКО:
+- В Cordis на договоре создать ресурс:
+-- Сервис Хот-Спот;
+-- Терминал Хот-Спот;
+-- Сервис авторизации Хот-Спот."""
+                if value_vars.get('hotspot_local_wifi') is True and logic_csw:
+                    stroka = templates.get("Организация услуги Хот-спот Премиум для %нового/существующего% клиента c локальной сетью WiFi для сотрудников компании.")
                 else:
-                    static_vars['Стандарт/Премиум'] = 'Стандарт'
-                    static_vars['указать модель станций'] = 'D-Link DIR-300'
+                    if 'прем' in service.lower():
+                        stroka = templates.get("Организация услуги Хот-спот Премиум для %нового/существующего% клиента.")
+                    else:
+                        stroka = templates.get("Организация услуги Хот-спот Стандарт для %нового/существующего% клиента.")
                 if sreda == '2' or sreda == '4':
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 static_vars['указать количество станций'] = value_vars.get('hotspot_points')
-                static_vars['ОАТТР/ОТИИ'] = 'ОАТТР'
+
                 static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
 
                 if value_vars.get('spd') == 'РТК':
@@ -545,13 +566,31 @@ def _new_services(result_services, value_vars):
             local_ports = value_vars.get('local_ports')
             static_vars['2-23'] = str(local_ports)
             if value_vars.get('local_type') == 'СКС':
-                stroka = templates.get("Организация СКС на %2-23% {порт}")
+                stroka = templates.get("Организация СКС< по ВОЛС> на %2-23% {порт}")
+                static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 if value_vars.get('sks_poe') == True:
+                    hidden_vars['%ОИПМ/ОИПД% подготовиться к работам:'] = '%ОИПМ/ОИПД% подготовиться к работам:'
+                    hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
                     hidden_vars[
-                        'ОИПД подготовиться к работам:\n- Получить на складе территории PoE-инжектор %указать модель PoE-инжектора% - %указать количество% шт.'] = 'ОИПД подготовиться к работам:\n- Получить на складе территории PoE-инжектор %указать модель PoE-инжектора% - %указать количество% шт.'
+                        '-- PoE-инжектор %указать модель PoE-инжектора% - %указать количество% шт.'] = '-- PoE-инжектор %указать модель PoE-инжектора% - %указать количество% шт.'
+                    static_vars['указать модель PoE-инжектора'] = 'СКАТ PSE-PoE.220AC/15VA'
                 if value_vars.get('sks_router') == True:
                     hidden_vars[
                         '- Подключить %2-23% {организованную} {линию} связи в ^свободный^ ^порт^ маршрутизатора клиента.'] = '- Подключить %2-23% {организованную} {линию} связи в ^свободный^ ^порт^ маршрутизатора клиента.'
+                if value_vars.get('sks_vols') == True:
+                    hidden_vars[' по ВОЛС'] = ' по ВОЛС'
+                    hidden_vars['%ОИПМ/ОИПД% подготовиться к работам:'] = '%ОИПМ/ОИПД% подготовиться к работам:'
+                    hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
+                    hidden_vars['-- %Конвертер А% - %2-23% шт.'] = '-- %Конвертер А% - %2-23% шт.'
+                    hidden_vars['-- %Конвертер Б% - %2-23% шт.'] = '-- %Конвертер Б% - %2-23% шт.'
+                    hidden_vars['- Установить %Конвертер А% и %Конвертер Б%.'] = '- Установить %Конвертер А% и %Конвертер Б%.'
+                    static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                    if value_vars.get('sks_transceiver') == 'Конвертеры 100':
+                        static_vars['Конвертер А'] = '^конвертер^ 1310 нм'
+                        static_vars['Конвертер Б'] = '^конвертер^ 1550 нм'
+                    elif value_vars.get('sks_transceiver') == 'Конвертеры 1000':
+                        static_vars['Конвертер А'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1310 нм'
+                        static_vars['Конвертер Б'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм'
                 static_vars['указать количество'] = str(local_ports)
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 counter_plur = local_ports
@@ -1411,6 +1450,8 @@ def get_need(value_vars):
         elif value_vars.get('type_passage') == 'Перевод на гигабит':
             need.append(
                 f"- расширить полосу сервиса {value_vars.get('name_passage_service')};")
+        elif not value_vars.get('type_passage') and 'Перенос Видеонаблюдение' in value_vars.get('type_pass'):
+            need.append("- перенести сервис Видеонаблюдение;")
     if value_vars.get('new_job_services'):
 
         if len(value_vars.get('name_new_service')) > 1:
@@ -1441,6 +1482,11 @@ def get_need(value_vars):
             else:
                 if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
                     need.append("- изменить cхему организации ШПД;")
+                elif next(iter(type_change_service.keys())) == "Изменение сервиса":
+                    old_service = next(iter(value_vars.get('readable_services')))
+                    change_service = next(iter(type_change_service.values()))
+                    new_service = get_service_name_from_service_plus_desc(change_service)
+                    need.append(f"- изменить услугу {old_service} на услугу {new_service};")
                 elif next(iter(type_change_service.keys())) == "Замена connected на connected":
                     need.append("- заменить существующую connected подсеть на новую;")
                 elif next(iter(type_change_service.keys())) == "Замена connected на connected":
@@ -1993,7 +2039,7 @@ def get_add_kad(value_vars):
 
 
 def get_new_kad(value_vars):
-    """Данный метод формирует блок ТТР для установки доп. КАД"""
+    """Данный метод формирует блок ТТР для установки нового КАД"""
     result_services = []
     templates = value_vars.get('templates')
     stroka = ' ------'
@@ -2007,9 +2053,9 @@ def get_new_kad(value_vars):
         index = i.strip('pps_')
         if value_vars.get(f'ftth_{index}') and\
                 type_new_model_kad not in ('24-портовый оптогигабитный коммутатор', '48-портовый оптогигабитный коммутатор'):
-            stroka = templates.get("Установка новых КАД на УАД %Название узла связи%")
+            stroka = templates.get("Установка новых КАД на УАД %Название узла связи%< с простоем связи>.")
         else:
-            stroka = templates.get("Установка нового КАД на УАД %Название узла связи%")
+            stroka = templates.get("Установка нового КАД на УАД %Название узла связи%< с простоем связи>.")
         if 'ИБП' in value_vars.get(f'pps_{index}'):
             hidden_vars[', адаптированный для работы с РЭКопитоном'] = ', адаптированный для работы с РЭКопитоном'
             hidden_vars[
@@ -2022,6 +2068,18 @@ def get_new_kad(value_vars):
             hidden_vars[
                 '- По решению ОТПМ организовать резервирование УАД по питанию.'
             ] = '- По решению ОТПМ организовать резервирование УАД по питанию.'
+        if value_vars.get('ppr'):
+            hidden_vars[
+                '- Требуется отключение согласно ППР %ППР% согласовать проведение работ.'
+            ] = '- Требуется отключение согласно ППР %ППР% согласовать проведение работ.'
+            hidden_vars[
+                '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %ППР%.'
+            ] = '- Совместно с ОНИТС СПД убедиться в восстановлении связи согласно ППР %ППР%.'
+            hidden_vars[
+                '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %ППР%.'
+            ] = '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %ППР%.'
+            hidden_vars[' с простоем связи'] = ' с простоем связи'
+            static_vars['ППР'] = value_vars.get('ppr')
         static_vars['Название узла связи'] = short_readable_node(value_vars.get(f'pps_{index}'))
         static_vars['Название вышестоящего узла связи'] = _readable_node(value_vars.get('pps'))
         static_vars['Название вышестоящего коммутатора'] = value_vars.get(f'uplink_{index}')
@@ -2388,6 +2446,89 @@ def _change_services(value_vars):
                 static_vars['указать ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
                 stroka = templates.get("Организация услуги порт виртуального маршрутизатора trunk'ом с простоем связи.")
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif next(iter(type_change_service.keys())) == "Изменение сервиса":
+            stroka = templates.get("Изменение сервиса %Название сервиса% на сервис %Название нового сервиса% access'ом")
+            static_vars = {}
+            hidden_vars = {}
+            readable_services = value_vars.get('readable_services')
+            change_service = next(iter(type_change_service.values())) #value_vars.get('change_job_services')[0]
+            new_service_name = get_service_name_from_service_plus_desc(change_service)
+            if new_service_name in ('Порт ВЛС', 'Порт ВМ'):
+                hidden_vars[
+                    '%указать новый сервис%'
+                ] = '%указать новый сервис%'
+                hidden_vars[
+                    '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
+                ] = '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
+                static_vars['указать полосу'] = _get_policer(change_service)
+                all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
+                if all_portvk_in_tr:
+                    service = next(iter(type_change_service.values()))
+                    if all_portvk_in_tr.get(change_service)['new_vk'] == True:
+                        extra_stroka = templates.get("Организация услуги ВЛС")
+                        result_services.append(extra_stroka)
+                        static_vars[
+                            'указать новый сервис'] = f'для ВЛС, организованной по решению выше'
+                    else:
+                        static_vars['указать новый сервис'] = all_portvk_in_tr.get(change_service)["exist_vk"]
+
+                    static_vars['полисером Subinterface/портом подключения'] = all_portvk_in_tr.get(change_service)[
+                        'policer_vk']
+
+
+            elif new_service_name == 'ЦКС':
+                hidden_vars[
+                    '"%указать точку "A"% - %указать точку "B"%"'
+                ] = '"%указать точку "A"% - %указать точку "B"%"'
+                hidden_vars[' с полосой %указать полосу%'] = ' с полосой %указать полосу%'
+                hidden_vars[
+                    '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
+                ] = '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
+                static_vars['указать полосу'] = _get_policer(change_service)
+                all_cks_in_tr = value_vars.get('all_cks_in_tr')
+                if all_cks_in_tr:
+                    static_vars['указать точку "A"'] = all_cks_in_tr.get(change_service)['pointA']
+                    static_vars['указать точку "B"'] = all_cks_in_tr.get(change_service)['pointB']
+                    static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(change_service)['policer_cks']
+
+            elif new_service_name == 'ШПД в Интернет':
+                hidden_vars['использовать подсеть с маской %указать маску%'] = 'использовать подсеть с маской %указать маску%'
+                if 'Интернет, блок Адресов Сети Интернет' in change_service:
+                    if ('29' in mask_service) or (' 8' in mask_service):
+                        static_vars['указать маску'] = '/29'
+                    elif ('28' in mask_service) or ('16' in mask_service):
+                        static_vars['указать маску'] = '/28'
+                    else:
+                        static_vars['указать маску'] = '/30'
+                elif 'Интернет, DHCP' in change_service:
+                    static_vars['указать маску'] = '/32'
+            elif new_service_name == 'Хот-спот':
+                types_premium_plus = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
+                premium_plus = any(type in change_service.lower() for type in types_premium_plus)
+                if next(iter(readable_services.keys())) == 'Хот-спот' and not premium_plus:
+                    if 'прем' in change_service.lower() and value_vars.get('hotspot_local_wifi'):
+                        stroka = templates.get("Изменение услуги Хот-спот Стандарт на услугу Хот-спот Премиум c локальной сетью WiFi для сотрудников компании")
+                    elif 'прем' in change_service.lower():
+                        stroka = templates.get("Изменение услуги Хот-спот Стандарт на услугу Хот-спот Премиум")
+                    else:
+                        stroka = templates.get("Изменение услуги Хот-спот Премиум на услугу Хот-спот Стандарт")
+
+                    static_vars['указать количество станций'] = value_vars.get('hotspot_points')
+                    static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
+                    static_vars['Название коммутатора'] = value_vars.get('selected_device')
+                    selected_port = value_vars.get('selected_ono')[0][-1]
+                    ports_text_fragment = [i for i in value_vars.get('head').split() if f'{selected_port},' in i]
+                    if ports_text_fragment:
+                        ports = ports_text_fragment[0].split(')')[0]
+                        static_vars['Порт коммутатора'] = ports
+                    stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                    counter_plur = int(value_vars.get('hotspot_points'))
+                    stroka = pluralizer_vars(stroka, counter_plur)
+
+            static_vars['Название сервиса'] = next(iter(readable_services.keys()))
+            static_vars['указать сервис'] = f'{next(iter(readable_services.keys()))} {next(iter(readable_services.values()))}'
+            static_vars['Название нового сервиса'] = new_service_name
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
             stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %указать сущ. маску% на подсеть с маской %указать нов. маску%")
             static_vars = {}
@@ -2618,6 +2759,96 @@ def extend_service(value_vars):
     return result_services, result_services_ots, value_vars
 
 
+def passage_video(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    if value_vars.get('result_services_ots'):
+        result_services_ots = value_vars.get('result_services_ots')
+    else:
+        result_services_ots = None
+    templates = value_vars.get('templates')
+    static_vars = {}
+    hidden_vars = {}
+    rep_string = {}
+    camera_names = {k: v for k, v in value_vars.get('pass_video_form').items() if 'camera_name' in k}
+    count_cameras = len(camera_names)
+    rep_string[
+        'camera'] = '%Название Камеры% - порт: %Порт камеры%, новое место установки камеры: %Новое место Камеры%'
+    multi_vars = {rep_string['camera']: []}
+    static_vars['количество камер'] = str(count_cameras)
+    if value_vars.get('pass_video_form').get('change_video_ip') is True:
+        hidden_vars['ОВИТС проведение работ:'] = 'ОВИТС проведение работ:'
+        hidden_vars[
+            '- Произвести настройку ^видеокамер^ и маршрутизатора для предоставления сервиса.'
+        ] = '- Произвести настройку ^видеокамер^ и маршрутизатора для предоставления сервиса.'
+        hidden_vars['- Актуализировать в Cordis адреса видеопотока.'] = '- Актуализировать в Cordis адреса видеопотока.'
+
+    if value_vars.get('pass_video_form').get('poe') == 'Сущ. POE-инжектор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+        ] = '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+
+    elif value_vars.get('pass_video_form').get('poe') == 'Новый POE-инжектор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до маршрутизатора клиента.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+        ] = '- Подключить {организованную} {линию} связи через POE ^инжектор^ в lan-^порт^ маршрутизатора:'
+
+        hidden_vars['ОИПД подготовиться к работам:'] = 'ОИПД подготовиться к работам:'
+        hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
+        hidden_vars[
+            '-- PoE-инжектор %PoE-инжектор% - %указать количество% шт.'
+        ] = '-- PoE-инжектор %PoE-инжектор% - %указать количество% шт.'
+        static_vars['PoE-инжектор'] = 'СКАТ PSE-PoE.220AC/15VA'
+        static_vars['указать количество'] = str(count_cameras)
+
+    elif value_vars.get('pass_video_form').get('poe') == 'Сущ. POE-коммутатор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        ] = '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        hidden_vars[
+            '- Выполнить монтажные работы по переносу и подключению существующего POE-коммутатора.'
+        ] = '- Выполнить монтажные работы по переносу и подключению существующего POE-коммутатора.'
+
+    elif value_vars.get('pass_video_form').get('poe') == 'Новый POE-коммутатор':
+        hidden_vars[
+            '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        ] = '- Организовать %количество камер% ^линию^ от ^камер^ до POE-коммутатора.'
+        hidden_vars[
+            '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        ] = '- Подключить {организованную} {линию} связи в ^порт^ POE-коммутатора:'
+        hidden_vars['ОИПД подготовиться к работам:'] = 'ОИПД подготовиться к работам:'
+        hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
+        hidden_vars['-- POE-коммутатор %POE-коммутатор% - 1 шт.'] = '-- POE-коммутатор %POE-коммутатор% - 1 шт.'
+        if count_cameras < 5:
+            static_vars['POE-коммутатор'] = 'D-Link DES-1005P'
+        else:
+            static_vars[''] = 'Atis PoE-1010-8P'
+    for i in range(count_cameras):
+        static_vars[f'Название Камеры {i}'] = value_vars.get('pass_video_form').get(f'camera_name_{i}')
+        static_vars[f'Порт камеры {i}'] = value_vars.get('pass_video_form').get(f'camera_port_{i}')
+        static_vars[f'Новое место Камеры {i}'] = value_vars.get('pass_video_form').get(f'camera_place_{i}')
+        multi_vars[rep_string['camera']].append(
+                f'"%Название Камеры {i}%" - порт: %Порт камеры {i}%, новое место установки камеры: %Новое место Камеры {i}%')
+
+    static_vars['Перечисление камер'] = ', '.join([f'"{i}"' for i in camera_names.values()])
+    stroka = templates.get('Перенос сервиса Видеонаблюдение')
+    stroka = analyzer(stroka, static_vars, hidden_vars, multi_vars)
+    counter_plur = count_cameras
+    result_services.append(pluralizer_vars(stroka, counter_plur))
+    return result_services, result_services_ots, value_vars
+
+
 def passage_track(value_vars):
     """Данный метод формирует готовое ТР для переноса сервиса с изменением трассы, но без изменения лог. подключения"""
     if value_vars.get('result_services'):
@@ -2671,7 +2902,7 @@ def add_kad(value_vars):
 
 
 def new_kad(value_vars):
-    """Данный метод формирует готовое ТР для установки доп. КАД"""
+    """Данный метод формирует готовое ТР для установки нового КАД"""
     result_services, value_vars = get_new_kad(value_vars)
     value_vars.update({'result_services': result_services})
     return result_services, value_vars

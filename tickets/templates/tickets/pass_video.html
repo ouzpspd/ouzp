@@ -1,0 +1,187 @@
+{% extends 'tickets/nav_ticket.html' %}
+{% block content %}
+{% load custom_filters %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+            <td class="table-light" style="width: 75%">{{pps}}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+
+<div class="container">
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
+
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+  {% if request.user|has_group:"Сотрудники ОУЗП" %}
+    <div class="card mb-2">
+    <div class="card-header" id="headingTwo">
+      <h5 class="mb-0">
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+      </h5>
+    </div>
+    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+    {% endif %}
+</div>
+</div>
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'pass_video' trID %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{form.change_video_ip.id_for_label}}">Изменение IP</label>
+                    {{form.change_video_ip}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group type_new_model_kad">
+                    <label for="{{form.poe.id_for_label}}">POE-оборудование</label>
+                    {{form.poe}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group type_new_model_kad">
+                    <label for="{{form.camera_port_0.id_for_label}}">Порт для камеры</label>
+                    {{form.camera_port_0}}
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="form-group type_new_model_kad">
+                    <label for="{{form.camera_name_0.id_for_label}}">Название камеры</label>
+                    {{form.camera_name_0}}
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="form-group type_new_model_kad">
+                    <label for="{{form.camera_place_0.id_for_label}}">Новое место камеры</label>
+                    {{form.camera_place_0}}
+                </div>
+            </div>
+        </div>
+
+
+        <div id="forms">
+
+        </div>
+
+
+          <div class="row">
+                <div class="col-2">
+                    <button class="btn btn-success btn-block add_item_btn">Добавить</button>
+                </div>
+            </div>
+
+
+        <div class="row mt-3">
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+        </div>
+</div>
+</div>
+
+
+<script>
+    var counter=0
+    $(document).ready(function() {
+
+      $(".add_item_btn").click(function(e){
+          e.preventDefault();
+          counter+=1;
+          console.log(111)
+          $("#forms").append(`<div class="row">
+                            <div class="col-2">
+                                <div class="form-group get_node">
+                                    <input type="text" name="camera_port_${counter}" class="form-control" required="True">
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-group get_node">
+                                    <input type="text" name="camera_name_${counter}" class="form-control" required="True">
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-group get_node">
+                                    <input type="text" name="camera_place_${counter}" class="form-control" required="True">
+                                </div>
+                            </div>
+                            <div class="col-1">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-danger remove_item_btn">
+                                    <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                    <span class="sr-only">Close</span>
+                                    </button>
+                                </div>
+                            </div>
+                            </div>
+                          `);
+
+      });
+
+
+        $(document).on("click",".remove_item_btn",function(e){
+                  e.preventDefault();
+                  let row_item = $(this).parent().parent().parent();
+                  $(row_item).remove();
+              });
+
+
+});
+</script>
+
+
+
+{% endblock %}

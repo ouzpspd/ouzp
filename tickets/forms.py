@@ -33,6 +33,12 @@ class SksForm(forms.Form):
                                       widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     sks_router = forms.BooleanField(label='Подключить в марш.', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    sks_vols = forms.BooleanField(label='ВОЛС', required=False,
+                                    widget=forms.CheckboxInput(attrs={'class': 'form-check', 'id': 'id_vols'}))
+    types = [('Конвертеры 100', 'Конвертеры 100'),
+             ('Конвертеры 1000','Конвертеры 1000')]
+    sks_transceiver = forms.CharField(
+                                 widget=forms.Select(choices=types, attrs={'class': 'form-control transceiver'}))
 
 
 class LvsForm(forms.Form):
@@ -47,6 +53,8 @@ class LvsForm(forms.Form):
 
 class HotspotForm(forms.Form):
     exist_hotspot_client = forms.BooleanField(label='Существующий клиент', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    hotspot_local_wifi = forms.BooleanField(label='С локальной сетью WiFi', required=False,
+                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     hotspot_points = forms.IntegerField(max_value=10, required=False, label='Количество точек', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     hotspot_users = forms.IntegerField(max_value=1000, label='Количество пользователей', widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
@@ -267,6 +275,31 @@ class VideoForm(forms.Form):
                                        help_text='только если 1 или 2 камеры')
 
 
+class PassVideoForm(forms.Form):
+    change_video_ip = forms.BooleanField(label="Изменение IP", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    camera_port_0 = forms.CharField(label='Порт для камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    camera_name_0 = forms.CharField(label='Название камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    camera_place_0 = forms.CharField(label='Новое место камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    types_poe = [
+        ('Сущ. POE-инжектор', 'Сущ. POE-инжектор'),
+        ('Новый POE-инжектор', 'Новый POE-инжектор'),
+        ('Сущ. POE-коммутатор', 'Сущ. POE-коммутатор'),
+        ('Новый POE-коммутатор', 'Новый POE-коммутатор'),
+    ]
+    poe = forms.CharField(label='POE-оборудование',
+                                   widget=forms.Select(choices=types_poe, attrs={'class': 'form-control'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
+
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.CharField()
+
+
 class ContractForm(forms.Form):
     contract =forms.CharField(max_length=150, label='Договор', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
@@ -341,6 +374,7 @@ class ChangeLogShpdForm(forms.Form):
 class ChangeServForm(forms.Form):
     types = [("Организация ШПД trunk'ом", "Организация ШПД trunk'ом"),
              ("Организация ШПД trunk'ом с простоем", "Организация ШПД trunk'ом с простоем"),
+             ("Изменение сервиса", "Изменение сервиса"),
              ("Изменение cхемы организации ШПД", "Изменение cхемы организации ШПД"),
              ("Замена connected на connected", "Замена connected на connected"),
              ("Организация доп connected", "Организация доп connected"),

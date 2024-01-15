@@ -1,5 +1,10 @@
 import re
+import os
+from pathlib import Path
+
 import pymorphy2
+from dotenv import load_dotenv
+
 from .parsing import parsing_config_ports_vgw
 from .parsing import _parsing_id_client_device_by_device_name
 from .parsing import _parsing_config_ports_client_device
@@ -9,6 +14,8 @@ from .parsing import get_sw_config
 
 from collections import OrderedDict
 from django.shortcuts import redirect
+from django.conf import settings
+
 
 
 def add_portconfig_to_list_swiches(list_switches, username, password):
@@ -38,7 +45,23 @@ def add_portconfig_to_list_swiches(list_switches, username, password):
         switches_name = ' или '.join(switch_name)
     return list_switches, switches_name
 
-
+from copy import copy
+def get_ip_from_subset(subset):
+    ip_network = subset.split('/')[0]
+    if subset.endswith('/32'):
+        return (ip_network)
+    mask = subset.split('/')[1]
+    octets = ip_network.split('.')
+    if mask == '30':
+        octets[3] = str(int(octets[3]) + 2)
+        return ('.'.join(octets))
+    elif mask == '29':
+        ip_addresses = []
+        for i in range(5):
+            copy_octets = copy(octets)
+            copy_octets[3] = str(int(copy_octets[3]) + 2 + i)
+            ip_addresses.append('.'.join(copy_octets))
+        return tuple(ip_addresses)
 
 
 
@@ -271,11 +294,38 @@ def trunk_turnoff_shpd_cks_vk_vm(service, types_change_service):
     if types_change_service:
         for type_change_service in types_change_service:
             if next(iter(type_change_service.values())) == service:
-                if "с простоем" in next(iter(type_change_service.keys())):
+                if "Организация ШПД trunk'ом с простоем" == next(iter(type_change_service.keys())):
                     trunk_turnoff_on = True
-                else:
+                elif "Организация ШПД trunk'ом" == next(iter(type_change_service.keys())):
                     trunk_turnoff_off = True
     return trunk_turnoff_on, trunk_turnoff_off
+
+
+def get_service_name_from_service_plus_desc(services_plus_desc):
+    """Получение названия услуги из строки с описанием"""
+    service = None
+    if services_plus_desc.startswith('Телефон'):
+        service = 'Телефон'
+    elif services_plus_desc.startswith('iTV'):
+        service = 'Вебург.ТВ'
+    elif services_plus_desc.startswith('Интернет, DHCP'):
+        service = 'ШПД в Интернет'
+    elif services_plus_desc.startswith('Интернет, блок Адресов Сети Интернет'):
+        service = 'ШПД в Интернет'
+    elif services_plus_desc.startswith('ЦКС'):
+        service = 'ЦКС'
+    elif services_plus_desc.startswith('Порт ВЛС'):
+        service = 'Порт ВЛС'
+    elif services_plus_desc.startswith('Порт ВМ'):
+        service = 'Порт ВМ'
+    elif services_plus_desc.startswith('Видеонаблюдение'):
+        service = 'Видеонаблюдение'
+    elif services_plus_desc.startswith('HotSpot'):
+        service = 'Хот-спот'
+    elif services_plus_desc.startswith('ЛВС'):
+        service = 'ЛВС'
+    return service
+
 
 
 def _tag_service_for_new_serv(services_plus_desc):
@@ -302,7 +352,7 @@ def _tag_service_for_new_serv(services_plus_desc):
         elif 'Видеонаблюдение' in services_plus_desc[index_service]:
             tag_service.append({'video': services_plus_desc[index_service]})
         elif 'HotSpot' in services_plus_desc[index_service]:
-            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +']
+            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
             if any(type in services_plus_desc[index_service].lower() for type in types_premium):
                 premium_plus = True
             else:
@@ -548,25 +598,27 @@ def get_extra_service_port_csw(service_port, switch_config, model):
                 service_port = service_port + f',{key}'
     elif 'SNR' in model or 'Cisco' in model or 'Orion' in model:
         port = service_port
+        vlan = 'no vlan'
         for interface in switch_config.split('!'):
 
             if port+'\n' in interface or port+'\r\n' in interface:
-                regex_interface = 'switchport access vlan (\d+)'
-                match = re.search(regex_interface, interface)
-                if match:
-                    if match.group(1) not in ['1', '4094']:
-                        vlan = match.group(1)
-                    else:
-                        vlan = '(на оборудовании не настроен)'
-                else:
-                    vlan = 'no vlan'
+                regexes = ['switchport access vlan (\d+)', 'switchport trunk native vlan (\d+)']
+                for regex_interface in regexes:
+                    match = re.search(regex_interface, interface)
+                    if match:
+                        if match.group(1) not in ['1', '4094']:
+                            vlan = match.group(1)
+                        else:
+                            vlan = '(на оборудовании не настроен)'
         extra_ports = []
 
         if vlan == '(на оборудовании не настроен)':
             extra_ports.append('(на оборудовании не настроен)')
         elif vlan != 'no vlan':
             for interface in switch_config.split('!'):
-                if f'switchport access vlan {vlan}' in interface and port not in interface:
+                access_command = f'switchport access vlan {vlan}' in interface and port not in interface
+                native_command = f'switchport trunk native vlan {vlan}' in interface and port not in interface
+                if access_command or native_command:
                     regex_port = "nterface (.+)['\n'|'\r\n']"
                     match = re.search(regex_port, interface)
                     extra_port = match.group(1).split('/')[-1].strip()
@@ -824,3 +876,12 @@ def formatted(string):
     """Данный метод удаляет из строки пробелы и точки"""
     string = string.replace(' ', '_').replace('.', '_')
     return string
+
+
+def get_user_credential_cordis(user):
+    if user.groups.filter(name='Менеджеры').exists():
+        return (settings.CORDIS_USER_MKO, settings.CORDIS_PASSWORD_MKO)
+    elif user.groups.filter(name='Сотрудники ОУЗП').exists():
+        return (settings.CORDIS_USER_OUZP_SPD, settings.CORDIS_PASSWORD_OUZP_SPD)
+    elif user.groups.filter(name='Сотрудники ОАТТР').exists():
+        return (settings.CORDIS_USER_OATTR, settings.CORDIS_PASSWORD_OATTR)
