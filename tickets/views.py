@@ -3655,7 +3655,7 @@ def ppr(request, trID):
                 messages.warning(request, 'Для новой ППР должно быть заполнено поле Кратко')
                 return redirect('ppr', trID)
             session_tr_id.update({'title_ppr': title_ppr})
-            name_id_user_cis = get_name_id_user_cis(username, password, user.last_name)
+            name_id_user_cis = get_name_id_user_cis(username, password, 'Салмин Н') #user.last_name
             if isinstance(name_id_user_cis, list):
                 session_tr_id.update({'name_id_user_cis': name_id_user_cis})
                 request.session[trID] = session_tr_id
@@ -3841,6 +3841,7 @@ def add_comment_to_return_ticket(request, dID):    #trID
         addcommentform = AddCommentForm(request.POST)
         if addcommentform.is_valid():
             comment = addcommentform.cleaned_data['comment']
+            comment = comment + f' (Комментарий добавил {user.last_name}.)'
             return_to = addcommentform.cleaned_data['return_to']
             #session_tr_id = request.session[str(trID)]
             #dID = session_tr_id.get('dID')
