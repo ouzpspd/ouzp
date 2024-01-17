@@ -2225,6 +2225,8 @@ def add_spp(request, dID):
     else:
         if current_spp.process == True:
             messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
+            if user.groups.filter(name='Менеджеры').exists():
+                return redirect('mko')
             return redirect('ortr')
         if spp_params['ТР по упрощенной схеме'] is True:
             accept_to_ortr(username, password, dID, spp_params['uID'], spp_params['trDifPeriod'],
@@ -3889,6 +3891,8 @@ def add_comment_to_return_ticket(request, dID):    #trID
                 return redirect('ortr')
     else:
         addcommentform = AddCommentForm()
+        if user.groups.filter(name='Менеджеры').exists():
+            addcommentform.fields['return_to'].widget.choices = [('Вернуть менеджеру', 'Вернуть менеджеру')]
         #session_tr_id = request.session[str(trID)]
         context = {'addcommentform': addcommentform,
                    'ticket_spp_id': ticket_spp_id, #session_tr_id.get('ticket_spp_id'),
