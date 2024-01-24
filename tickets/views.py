@@ -1533,16 +1533,23 @@ def hotspot(request, trID):
 def phone(request, trID):
     """Данный метод отображает html-страничку c формой для заполнения данных по услуге Телефония"""
     if request.method == 'POST':
-        phoneform = PhoneForm(request.POST)
-        if phoneform.is_valid():
-            type_phone = phoneform.cleaned_data['type_phone']
-            vgw = phoneform.cleaned_data['vgw']
-            channel_vgw = phoneform.cleaned_data['channel_vgw']
-            ports_vgw = phoneform.cleaned_data['ports_vgw']
-            type_ip_trunk = phoneform.cleaned_data['type_ip_trunk']
-            form_exist_vgw_model = phoneform.cleaned_data['form_exist_vgw_model']
-            form_exist_vgw_name = phoneform.cleaned_data['form_exist_vgw_name']
-            form_exist_vgw_port = phoneform.cleaned_data['form_exist_vgw_port']
+        form = PhoneForm(request.POST)
+        if form.is_valid():
+            type_phone = form.cleaned_data['type_phone']
+            vgw = form.cleaned_data['vgw']
+            ports_vgw = form.cleaned_data['ports_vgw']
+            type_ip_trunk = form.cleaned_data['type_ip_trunk']
+            form_exist_vgw_model = form.cleaned_data['form_exist_vgw_model']
+            form_exist_vgw_name = form.cleaned_data['form_exist_vgw_name']
+            form_exist_vgw_port = form.cleaned_data['form_exist_vgw_port']
+            data = {**form.cleaned_data}
+            phone_numbers = {k:v for k,v in data.items() if k.startswith('channel_vgw')}
+            channels = {}
+            for number in phone_numbers.values():
+                if number in channels.keys():
+                    channels.update({number: channels[number] + 1})
+                else:
+                    channels.update({number: 1})
 
             session_tr_id = request.session[str(trID)]
             tag_service = session_tr_id.get('tag_service')
@@ -1550,11 +1557,7 @@ def phone(request, trID):
             new_job_services = session_tr_id.get('new_job_services')
             phone_in_pass = session_tr_id.get('phone_in_pass')
             current_index_local = session_tr_id.get('current_index_local')
-            # services_plus_desc = request.session['services_plus_desc']
-            # new_job_services = request.session.get('new_job_services')
-            # phone_in_pass = request.session.get('phone_in_pass')
-            # tag_service = request.session['tag_service']
-            # current_index_local = request.session['current_index_local']
+
             if phone_in_pass and phone_in_pass not in services_plus_desc:
                 services_plus_desc.append(phone_in_pass)
             for index_service in range(len(services_plus_desc)):
@@ -1638,54 +1641,27 @@ def phone(request, trID):
 
             if phone_in_pass and phone_in_pass not in new_job_services:
                 services_plus_desc = [x for x in services_plus_desc if not x.startswith('Телефон')]
-            session_tr_id.update({'services_plus_desc': services_plus_desc, 'vgw': vgw, 'channel_vgw': channel_vgw,
+            session_tr_id.update({'services_plus_desc': services_plus_desc, 'vgw': vgw, 'channels': channels,
                                   'ports_vgw': ports_vgw, 'type_phone': type_phone})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
+        user = User.objects.get(username=request.user.username)
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
         if session_tr_id.get('counter_line_phone'):
             del session_tr_id['counter_line_phone']
         services_plus_desc = session_tr_id.get('services_plus_desc')
         oattr = session_tr_id.get('oattr')
-        if session_tr_id.get('phone_in_pass'):
-            reg_ports_vgw = 'Нет данных'
-            reg_channel_vgw = 'Нет данных'
-            service_vgw = session_tr_id.get('phone_in_pass')
-            if 'ватс' in service_vgw.lower():
-                vats = True
-            else:
-                vats = False
-        else:
-            for service in services_plus_desc:
-                if 'Телефон' in service:
-                    regex_ports_vgw = ['(\d+)-порт', '(\d+) порт', '(\d+)порт']
-                    for regex in regex_ports_vgw:
-                        match_ports_vgw = re.search(regex, service)
-                        if match_ports_vgw:
-                            reg_ports_vgw = match_ports_vgw.group(1)
-                        else:
-                            reg_ports_vgw = 'Нет данных'
-                        break
-                    regex_channel_vgw = ['(\d+)-канал', '(\d+) канал', '(\d+)канал']
-                    for regex in regex_channel_vgw:
-                        match_channel_vgw = re.search(regex, service)
-                        if match_channel_vgw:
-                            reg_channel_vgw = match_channel_vgw.group(1)
-                        else:
-                            reg_channel_vgw = 'Нет данных'
-                        break
-                    service_vgw = service
-                    if 'ватс' in service.lower():
-                        vats = True
-                    else:
-                        vats = False
-                    break
 
-        #tag_service = request.session['tag_service']
         service_name = 'phone'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
+        if 'ватс' in service.lower():
+            vats = True
+            vats_extend = False if 'базов' in service.lower() else True
+        else:
+            vats = False
+            vats_extend = False
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         if request.GET.get('next_page'):
             clear_session_params(
@@ -1708,17 +1684,22 @@ def phone(request, trID):
         else:
             session_tr_id.update({'counter_line_services_before_phone': 0})
         request.session[trID] = session_tr_id
-        phoneform = PhoneForm(initial={
+
+
+
+        form = PhoneForm(initial={
                                 'type_phone': 's',
                                 'vgw': 'Не требуется',
-                                'channel_vgw': reg_channel_vgw,
-                                'ports_vgw': reg_ports_vgw
                             })
+        if user.groups.filter(name='Менеджеры').exists():
+            form.fields['type_phone'].widget.choices = [('s', 'SIP, по логину/паролю'),]
+
         context = {
-            'service_vgw': service_vgw,
+            'service_vgw': service, #service_vgw,
             'vats': vats,
+            'vats_extend': vats_extend,
             'oattr': oattr,
-            'phoneform': phoneform,
+            'form': form,
             'back_link': back_link,
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
@@ -1864,10 +1845,15 @@ def itv(request, trID):
             session_tr_id = request.session[str(trID)]
             services_plus_desc = session_tr_id.get('services_plus_desc')
             tag_service = session_tr_id.get('tag_service')
+            selected_ono = session_tr_id.get('selected_ono')
             new_job_services = session_tr_id.get('new_job_services') if session_tr_id.get('new_job_services') else None
             if not new_job_services and type_itv == 'novlexist':
-                messages.warning(request, 'Нельзя выбрать действующее ШПД, проектирование в нов. точке')
-                return redirect(next(iter(tag_service[0])))
+                messages.warning(request, 'Нельзя выбрать "В vlan действующей услуги ШПД" при проектирование в нов. точке.')
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
+            if len(services_plus_desc) == 1 and type_itv == 'novlexist' and selected_ono[0][-4].endswith('/32'):
+                messages.warning(request, 'В ШПД с маской /32 Вебург.ТВ организовано. ТР не требуется.')
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
+
 
             for index_service in range(len(services_plus_desc)):
                 if 'iTV' in services_plus_desc[index_service]:
@@ -1905,6 +1891,7 @@ def itv(request, trID):
         tag_service = session_tr_id.get('tag_service')
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
+
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
         itvform = ItvForm(initial={'type_itv': 'novl'})

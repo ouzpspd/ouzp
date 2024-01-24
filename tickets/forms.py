@@ -66,17 +66,26 @@ class PhoneForm(forms.Form):
                  ('Eltex TAU-8.IP', 'Eltex TAU-8.IP'), ('Eltex TAU-16.IP', 'Eltex TAU-16.IP'), ('Eltex TAU-24.IP', 'Eltex TAU-24.IP'),
                  ('Eltex TAU-36.IP', 'Eltex TAU-36.IP'), ('Eltex TAU-72.IP', 'Eltex TAU-72.IP'), ('Не требуется', 'Не требуется')]
     vgw = forms.CharField(label='Установка шлюза', widget=forms.Select(choices=types_vgw, attrs={'class': 'form-control'}))
-    channel_vgw = forms.CharField(max_length=11, label='Количество каналов', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    ports_vgw = forms.CharField(max_length=11, required=False, label='Количество портов ВАТС', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    channel_vgw = forms.IntegerField(label='Количество каналов', widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Канальность номера'}))
+    ports_vgw = forms.CharField(required=False, label='Количество портов ВАТС', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     types_ip_trunk = [('Не требуется', 'Не требуется'), ('access', 'access'), ('trunk', 'trunk')]
     type_ip_trunk = forms.CharField(label='Режим порта для IP-транк', required=False,
                                 widget=forms.Select(choices=types_ip_trunk, attrs={'class': 'form-control'}))
-    form_exist_vgw_model = forms.CharField(max_length=100, label='Модель существующего шлюза', required=False,
-                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
-    form_exist_vgw_name = forms.CharField(max_length=100, label='Название существующего шлюза', required=False,
-                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
-    form_exist_vgw_port = forms.CharField(max_length=100, label='Порты существующего шлюза', required=False,
-                                  widget=forms.TextInput(attrs={'class': 'form-control'}))
+    form_exist_vgw_model = forms.CharField(max_length=100, required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Модель сущ. шлюза'}))
+    form_exist_vgw_name = forms.CharField(max_length=100, required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название сущ. шлюза'}))
+    form_exist_vgw_port = forms.CharField(max_length=100, required=False,
+                                  widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Порты сущ. шлюза'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if args:
+            # for view func-based fields locate in args
+            new_fields = set(args[0]) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.IntegerField()
 
 class ItvForm(forms.Form):
     types = [('vl', 'В отдельном vlan'), ('novl', 'В vlan новой услуги ШПД'), ('novlexist', 'В vlan действующей услуги ШПД')]
@@ -291,6 +300,10 @@ class PassVideoForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        print('args')
+        print(args)
+        print('kwargs')
+        print(kwargs)
         if kwargs.get('data'):
             # for view func-based fields locate in args
             new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
