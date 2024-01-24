@@ -400,19 +400,22 @@ def _new_services(result_services, value_vars):
                 result_services.append(pluralizer_vars(stroka, counter_plur))
         elif 'Телефон' in service:
             name_new_service.add('Телефония')
+
             result_services_ots = []
             hidden_vars = {}
             static_vars = {}
             vgw = value_vars.get('vgw')
             ports_vgw = value_vars.get('ports_vgw')
-            channel_vgw = value_vars.get('channel_vgw')
+            phone_lines = sum([int(k) * v for k, v in value_vars.get('channels').items()])
+            vats = True if 'ватс' in service.lower() else False
+            phone_channels_string = construct_phone_channels_string(value_vars, vats)
+            static_vars['тел. номер'] = ", ".join(phone_channels_string)
             if service.endswith('|'):
                 if value_vars.get('type_phone') == 'st':
                     if logic_csw == True:
                         result_services.append(enviroment_csw(value_vars))
                     stroka = templates.get("Подключения по цифровой линии с использованием протокола SIP, тип линии «IP-транк»")
                     static_vars['trunk/access'] = 'trunk' if value_vars.get('type_ip_trunk') == 'trunk' else 'access'
-                    static_vars['указать количество каналов'] = channel_vgw
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif value_vars.get('type_phone') == 'ak':
                     if logic_csw == True:
@@ -447,27 +450,20 @@ def _new_services(result_services, value_vars):
                             static_vars['указать порты тел. шлюза'] = '1'
                         else:
                             static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
-                        static_vars['указать количество каналов'] = channel_vgw
                         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                        regex_counter = 'Организовать (\d+)'
-                        match_counter = re.search(regex_counter, stroka)
-                        counter_plur = int(match_counter.group(1))
+                        counter_plur = int(ports_vgw)
                         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
                     else:
                         stroka = templates.get(
                             "Подключение аналогового телефона с использованием тел.шлюза на стороне клиента")
                         static_vars['указать модель тел. шлюза'] = vgw
-
-                        static_vars['указать количество телефонных линий'] = channel_vgw
-                        static_vars['указать количество каналов'] = channel_vgw
-                        if channel_vgw == '1':
+                        static_vars['указать количество телефонных линий'] = str(phone_lines)
+                        if phone_lines == 1:
                             static_vars['указать порты тел. шлюза'] = '1'
                         else:
-                            static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                            static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
                         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                        regex_counter = 'Организовать (\d+)'
-                        match_counter = re.search(regex_counter, stroka)
-                        counter_plur = int(match_counter.group(1))
+                        counter_plur = phone_lines
                         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
             elif service.endswith('/'):
                 stroka = templates.get("Установка тел. шлюза на ППС")
@@ -490,26 +486,19 @@ def _new_services(result_services, value_vars):
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
                         static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
-                    static_vars['указать количество каналов'] = channel_vgw
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                    regex_counter = 'Организовать (\d+)'
-                    match_counter = re.search(regex_counter, stroka)
-                    counter_plur = int(match_counter.group(1))
+                    counter_plur = int(ports_vgw)
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
                 else:
                     stroka = templates.get("Подключение аналогового телефона с использованием голосового шлюза на ППС")
                     static_vars['идентификатор тел. шлюза'] = 'установленного по решению выше'
-
-                    static_vars['указать количество телефонных линий'] = channel_vgw
-                    static_vars['указать количество каналов'] = channel_vgw
-                    if channel_vgw == '1':
+                    static_vars['указать количество телефонных линий'] = str(phone_lines)
+                    if phone_lines == 1:
                         static_vars['указать порты тел. шлюза'] = '1'
                     else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                    regex_counter = 'Организовать (\d+)'
-                    match_counter = re.search(regex_counter, stroka)
-                    counter_plur = int(match_counter.group(1))
+                    counter_plur = phone_lines
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
             elif service.endswith('\\'):
                 static_vars['указать порты тел. шлюза'] = value_vars.get('form_exist_vgw_port')
@@ -526,25 +515,18 @@ def _new_services(result_services, value_vars):
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
                     static_vars['указать количество портов'] = ports_vgw
-                    static_vars['указать количество каналов'] = channel_vgw
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                    regex_counter = 'Организовать (\d+)'
-                    match_counter = re.search(regex_counter, stroka)
-                    counter_plur = int(match_counter.group(1))
+                    counter_plur = int(ports_vgw)
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
                 else:
                     stroka = templates.get("Подключение аналогового телефона с использованием голосового шлюза на ППС")
                     static_vars['указать узел связи'] = value_vars.get('pps')
-                    static_vars['указать количество телефонных линий'] = channel_vgw
-                    static_vars['указать количество каналов'] = channel_vgw
+                    static_vars['указать количество телефонных линий'] = str(phone_lines)
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-                    regex_counter = 'Организовать (\d+)'
-                    match_counter = re.search(regex_counter, stroka)
-                    counter_plur = int(match_counter.group(1))
+                    counter_plur = int(phone_lines)
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
             else:
                 if 'ватс' in service.lower():
-                    static_vars['указать количество каналов'] = channel_vgw
                     if 'базов' in service.lower():
                         stroka = templates.get("ВАТС Базовая(SIP регистрация через Интернет)")
                         result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
@@ -556,8 +538,6 @@ def _new_services(result_services, value_vars):
                 else:
                     stroka = templates.get(
                         "Подключения по цифровой линии с использованием протокола SIP, тип линии «SIP регистрация через Интернет»")
-
-                    static_vars['указать количество каналов'] = channel_vgw
                     result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif 'ЛВС' in service:
             name_new_service.add('ЛВС')
@@ -1760,7 +1740,8 @@ def _passage_phone_service(result_services, value_vars):
     static_vars = {}
     vgw = value_vars.get('vgw')
     ports_vgw = value_vars.get('ports_vgw')
-    channel_vgw = value_vars.get('channel_vgw')
+    #channel_vgw = value_vars.get('channel_vgw')
+    phone_lines = sum([int(k) * v for k, v in value_vars.get('channels').items()])
     templates = value_vars.get('templates')
     if service.endswith('|'):
         if value_vars.get('type_phone') == 'ak':
@@ -1789,20 +1770,22 @@ def _passage_phone_service(result_services, value_vars):
             static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
             if 'ватс' in service.lower():
                 static_vars['указать количество телефонных линий'] = ports_vgw
+                counter_plur = int(ports_vgw)
                 if ports_vgw == '1':
                     static_vars['указать порты тел. шлюза'] = '1'
                 else:
                     static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
             else:
-                static_vars['указать количество телефонных линий'] = channel_vgw
-                if channel_vgw == '1':
+                static_vars['указать количество телефонных линий'] = str(phone_lines)
+                counter_plur = phone_lines
+                if phone_lines == 1:
                     static_vars['указать порты тел. шлюза'] = '1'
                 else:
-                    static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                    static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-            regex_counter = 'Организовать (\d+)'
-            match_counter = re.search(regex_counter, stroka)
-            counter_plur = int(match_counter.group(1))
+            # regex_counter = 'Организовать (\d+)'
+            # match_counter = re.search(regex_counter, stroka)
+            # counter_plur = int(match_counter.group(1))
             result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     elif service.endswith('/'):
         stroka = templates.get("Установка тел. шлюза на ППС")
@@ -1814,20 +1797,22 @@ def _passage_phone_service(result_services, value_vars):
         static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
         if 'ватс' in service.lower():
             static_vars['указать количество телефонных линий'] = ports_vgw
+            counter_plur = int(ports_vgw)
             if ports_vgw == '1':
                 static_vars['указать порты тел. шлюза'] = '1'
             else:
                 static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
         else:
-            static_vars['указать количество телефонных линий'] = channel_vgw
-            if channel_vgw == '1':
+            static_vars['указать количество телефонных линий'] = str(phone_lines)
+            counter_plur = phone_lines
+            if phone_lines == 1:
                 static_vars['указать порты тел. шлюза'] = '1'
             else:
-                static_vars['указать порты тел. шлюза'] = '1-{}'.format(channel_vgw)
+                static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-        regex_counter = 'Организовать (\d+)'
-        match_counter = re.search(regex_counter, stroka)
-        counter_plur = int(match_counter.group(1))
+        # regex_counter = 'Организовать (\d+)'
+        # match_counter = re.search(regex_counter, stroka)
+        # counter_plur = int(match_counter.group(1))
         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     elif service.endswith('\\'):
         stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
@@ -1837,12 +1822,14 @@ def _passage_phone_service(result_services, value_vars):
         static_vars['идентификатор тел. шлюза'] = value_vars.get('form_exist_vgw_name')
         if 'ватс' in service.lower():
             static_vars['указать количество телефонных линий'] = ports_vgw
+            counter_plur = int(ports_vgw)
         else:
-            static_vars['указать количество телефонных линий'] = channel_vgw
+            static_vars['указать количество телефонных линий'] = str(phone_lines)
+            counter_plur = phone_lines
         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
-        regex_counter = 'Организовать (\d+)'
-        match_counter = re.search(regex_counter, stroka)
-        counter_plur = int(match_counter.group(1))
+        # regex_counter = 'Организовать (\d+)'
+        # match_counter = re.search(regex_counter, stroka)
+        # counter_plur = int(match_counter.group(1))
         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     return result_services, result_services_ots, value_vars
 
@@ -2944,3 +2931,19 @@ def passage_csw_no_install(value_vars):
         pps = value_vars.get('independent_pps')
         value_vars.update({'pps': pps})
     return result_services, result_services_ots, value_vars
+
+def construct_phone_channels_string(value_vars, vats):
+    """Формирование строки с канальностью тел. номера. Для одного номера формат 1-канальный тел. номер. Для
+    нескольких номеров формат 1 2-канальный тел. номер, 2 1-канальных тел. номера"""
+    total = []
+    for channel, number in value_vars.get('channels').items():
+        if vats:
+            stroka = f'{number} {channel}-' + '{канального} тел. {номера}'
+        else:
+            stroka = f'{number} {channel}-' + '{канальный} тел. {номер}'
+        counter_plur = number
+        total.append(pluralizer_vars(stroka, counter_plur))
+    if len(total) == 1 and total[0].startswith('1'):
+        single_number = ' '.join(total[0].split()[1:])
+        total[0] = single_number
+    return total

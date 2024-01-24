@@ -50,59 +50,67 @@
 <form action="{% url 'phone' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
+
         <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.type_phone.id_for_label }}">Тип телефонии</label>
-                    {{phoneform.type_phone}}
+                <div class="form-group sip">
+                    <label for="{{ form.type_phone.id_for_label }}">Тип телефонии</label>
+                    {{form.type_phone}}
                 </div>
             </div>
-            <div class="col-1">
-            </div>
+
+        </div>
+        <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.form_exist_vgw_name.id_for_label }}">Название существующего шлюза</label>
-                    {{phoneform.form_exist_vgw_name}}
+                <div class="form-group vgw">
+                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза</label>
+                    {{form.vgw}}
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.vgw.id_for_label }}">Установка шлюза</label>
-                    {{phoneform.vgw}}
+                <div class="form-group vgw">
+                    {{form.form_exist_vgw_name}}
                 </div>
             </div>
-            <div class="col-1">
-            </div>
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.form_exist_vgw_model.id_for_label }}">Модель существующего шлюза</label>
-                    {{phoneform.form_exist_vgw_model}}
+            <div class="col-3">
+                <div class="form-group vgw">
+                    {{form.form_exist_vgw_model}}
                 </div>
+            </div>
+            <div class="col-3">
+                <div class="form-group vgw">
+                    {{form.form_exist_vgw_port}}
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group vgw">
+                <a class="btn btn-info btn-block" href="{% url 'vgws' trID %}" target ="_blank" role="button">Шлюзы</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-3">
+                <div class="form-group">
+                    <label for="{{ form.channel_vgw.id_for_label }}">Канальность тел. номеров</label>
+                    {{form.channel_vgw}}
+                </div>
+            </div>
+        </div>
+        <div id="forms">
+        </div>
+        <div class="row">
+            <div class="col-2">
+                <button class="btn btn-success btn-block add_item_btn">Добавить</button>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.channel_vgw.id_for_label }}">Количество каналов</label>
-                    {{phoneform.channel_vgw}}
-                </div>
-            </div>
-            <div class="col-1">
-            </div>
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.form_exist_vgw_port.id_for_label }}">Порты существующего шлюза</label>
-                    {{phoneform.form_exist_vgw_port}}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.ports_vgw.id_for_label }}">Количество портов ВАТС</label>
-                    {{phoneform.ports_vgw}}
+                <div class="form-group vats_ports">
+                    <label for="{{ form.ports_vgw.id_for_label }}">Количество портов ВАТС</label>
+                    {{form.ports_vgw}}
                 </div>
             </div>
         </div>
@@ -120,9 +128,7 @@
             </div>
             <div class="col-1">
             </div>
-            <div class="col-4">
-                <a class="btn btn-info btn-block" href="{% url 'vgws' trID %}" target ="_blank" role="button">Шлюзы</a>
-            </div>
+
         </div>
     </div>
 </form>
@@ -140,56 +146,65 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
-                    <label for="{{ phoneform.type_phone.id_for_label }}">Тип телефонии</label>
-                    {{phoneform.type_phone}}
+                    <label for="{{ form.type_phone.id_for_label }}">Тип телефонии</label>
+                    {{form.type_phone}}
                 </div>
             </div>
-            <div class="col-1">
-            </div>
+
+        </div>
+        <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.form_exist_vgw_name.id_for_label }}">Название существующего шлюза</label>
-                    {{phoneform.form_exist_vgw_name}}
+                <div class="form-group vgw">
+                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза</label>
+                    {{form.vgw}}
                 </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group vgw">
+                    {{form.form_exist_vgw_name}}
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="form-group vgw">
+                    {{form.form_exist_vgw_model}}
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="form-group vgw">
+                    {{form.form_exist_vgw_port}}
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group vgw">
+                <a class="btn btn-info btn-block" href="{% url 'vgws' trID %}" target ="_blank" role="button">Шлюзы</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-3">
+                <div class="form-group">
+                    <label for="{{ form.channel_vgw.id_for_label }}">Канальность тел. номеров</label>
+                    {{form.channel_vgw}}
+                </div>
+            </div>
+
+        </div>
+        <div id="forms">
+        </div>
+        <div class="row">
+            <div class="col-2">
+                <button class="btn btn-success btn-block add_item_btn">Добавить</button>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.vgw.id_for_label }}">Установка шлюза</label>
-                    {{phoneform.vgw}}
-                </div>
-            </div>
-            <div class="col-1">
-            </div>
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.form_exist_vgw_model.id_for_label }}">Модель существующего шлюза</label>
-                    {{phoneform.form_exist_vgw_model}}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.channel_vgw.id_for_label }}">Количество каналов</label>
-                    {{phoneform.channel_vgw}}
-                </div>
-            </div>
-            <div class="col-1">
-            </div>
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.form_exist_vgw_port.id_for_label }}">Порты существующего шлюза</label>
-                    {{phoneform.form_exist_vgw_port}}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{ phoneform.types_ip_trunk.id_for_label }}">Режим порта для IP-транк</label>
-                    {{phoneform.type_ip_trunk}}
+                <div class="form-group trunk">
+                    <label for="{{ form.types_ip_trunk.id_for_label }}">Режим порта для IP-транк</label>
+                    {{form.type_ip_trunk}}
                 </div>
             </div>
         </div>
@@ -204,11 +219,7 @@
                     <button type="submit" class="btn btn-primary btn-block">Далее</button>
                 </div>
             </div>
-            <div class="col-1">
-            </div>
-            <div class="col-4">
-                <a class="btn btn-info btn-block" href="{% url 'vgws' trID %}" target ="_blank" role="button">Шлюзы</a>
-            </div>
+
         </div>
     </div>
 </form>
@@ -216,4 +227,93 @@
 </div>
 </div>
 {%endif%}
+
+
+<script>
+
+$(function () {
+    $(".vgw").hide();
+    $(".trunk").hide();
+
+    var vats_extend = "{{vats_extend}}";
+    console.log(vats_extend)
+    if(vats_extend == true) {
+        $(".vats_ports").show();
+    }
+    else {
+        $(".vats_ports").hide();
+    }
+});
+
+$(function () {
+  $("#id_type_phone").change(function() {
+    var val = $(this).val();
+    if(val.includes("a")) {
+        $(".vgw").show();
+        $(".trunk").hide();
+        $(".vats_ports").show();
+    }
+    else if(val.includes("st")) {
+        $(".trunk").show();
+        $(".vgw").hide();
+        $(".vats_ports").hide();
+    }
+    else if(val.includes("s")) {
+        $(".trunk").hide();
+        $(".vgw").hide();
+        var vats_extend = "{{vats_extend}}";
+        if(vats_extend == true) {
+            $(".vats_ports").show();
+        }
+        else {
+            $(".vats_ports").hide();
+        }
+    }
+    else {
+        $(".vgw").hide();
+        $(".trunk").hide();
+    }
+});
+});
+
+var counter=0
+    $(document).ready(function() {
+
+      $(".add_item_btn").click(function(e){
+          e.preventDefault();
+          counter+=1;
+                $("#forms").append(`
+
+                        <div class="row">
+
+
+                            <div class="col-3">
+                                <div class="form-group get_node">
+
+                                    <input type="number" name="channel_vgw_${counter}" class="form-control" required="True" placeholder="Канальность номера">
+                                </div>
+                            </div>
+
+                            <div class="col-1">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-danger remove_item_btn">
+                                    <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                    <span class="sr-only">Close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                          `);
+                          });
+
+      $(document).on("click",".remove_item_btn",function(e){
+          e.preventDefault();
+          let row_item = $(this).parent().parent().parent();
+          $(row_item).remove();
+      });
+    });
+
+</script>
+
 {%endblock%}
