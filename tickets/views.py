@@ -1162,6 +1162,7 @@ def saved_data(request, trID):
             is_exist_ots = bool(ots_field)
             match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
             changable_titles = '\n'.join(match_ortr_field + match_ots_field)
+            spec_button = True if '1. Присоединение к СПД по медной линии связи.' in changable_titles else False
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
             ticket_tr_id = session_tr_id.get('ticket_tr_id')
@@ -1193,7 +1194,7 @@ def saved_data(request, trID):
                 'counter_str_ots': counter_str_ots,
                 'ortrform': ortrform,
                 'not_required_tr': True,
-                'sreda': session_tr_id.get('sreda'),
+                'spec_button': spec_button,
                 'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
                 'dID': ticket_tr.ticket_k.dID, #session_tr_id.get('dID'),
                 'ticket_tr': ticket_tr,
@@ -1228,6 +1229,7 @@ def saved_data(request, trID):
         counter_str_ots = session_tr_id['counter_str_ots']
         result_services_ots = session_tr_id['result_services_ots']
         titles = session_tr_id.get('titles')
+        spec_button = True if '1. Присоединение к СПД по медной линии связи.' in titles else False
         try:
             list_switches = session_tr_id['list_switches']
         except KeyError:
@@ -1250,7 +1252,6 @@ def saved_data(request, trID):
         session_tr_id['ortr_id'] = ortr.id
         request.session[trID] = session_tr_id
         ortrform = OrtrForm(initial={'ortr_field': ortr.ortr, 'ots_field': ortr.ots, 'pps': pps, 'kad': kad})
-
         context = {
             'ticket_k': ticket_k,
             #'services_plus_desc': services_plus_desc,
@@ -1261,7 +1262,7 @@ def saved_data(request, trID):
             'counter_str_ots': counter_str_ots,
             'ortrform': ortrform,
             'not_required_tr': True,
-            'sreda': session_tr_id.get('sreda'),
+            'spec_button': spec_button,
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'ticket_tr': ticket_tr,
             'dID': ticket_tr.ticket_k.dID,   #session_tr_id.get('dID'),
