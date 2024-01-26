@@ -1229,7 +1229,9 @@ def saved_data(request, trID):
         counter_str_ots = session_tr_id['counter_str_ots']
         result_services_ots = session_tr_id['result_services_ots']
         titles = session_tr_id.get('titles')
-        spec_button = True if '1. Присоединение к СПД по медной линии связи.' in titles else False
+        spec_button = False
+        if titles and '1. Присоединение к СПД по медной линии связи.' in titles:
+            spec_button = True
         try:
             list_switches = session_tr_id['list_switches']
         except KeyError:
