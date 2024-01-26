@@ -204,7 +204,7 @@
                     <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
-              {% if ticket_tr.ticket_k.simplified_tr %}
+              {% if ticket_tr.ticket_k.simplified_tr and sreda == '1' %}
               <div class="col-2">
                 <div class="form-group">
                     <a class="btn btn-outline-info btn-block" href="{% url 'specification' ticket_tr.ticket_tr %}" target ="_blank" role="button">Спецификация</a>
@@ -278,7 +278,7 @@
                     <a class="btn btn-outline-info btn-block" href="{% url 'send_to_spp' ticket_tr.ticket_tr %}" target ="_blank" role="button">Отправить</a>
                 </div>
             </div>
-              {% if ticket_tr.ticket_k.simplified_tr %}
+              {% if ticket_tr.ticket_k.simplified_tr and sreda == '1' %}
               <div class="col-2">
                 <div class="form-group">
                     <a class="btn btn-outline-info btn-block" href="{% url 'specification' ticket_tr.ticket_tr %}" target ="_blank" role="button">Спецификация</a>
