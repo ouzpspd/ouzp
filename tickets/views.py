@@ -452,9 +452,17 @@ def project_tr(request, dID, tID, trID):
         if spd == 'РТК':
             if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
                 tag_service.pop()
+            elif tag_service[-1] == {'data': None} and counter_line_services > 0:
+                tag_service.pop()
             tag_service.append({'rtk': None})
+        elif spd == 'ППМ':
+            if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}]:
+                tag_service.pop()
+            tag_service.append({'data': None})
         elif spd == 'Комтехцентр':
             if tag_service[-1] == {'rtk': None}:
+                tag_service.pop()
+            elif tag_service[-1] == {'data': None} and counter_line_services > 0:
                 tag_service.pop()
             #sreda = request.session['sreda']
             if sreda == '1':
@@ -2033,8 +2041,16 @@ def portvk(request, trID):
             return response
     else:
         service_name = 'portvk'
-        request, service, prev_page, index = backward_page_service(request, trID, service_name)
         session_tr_id = request.session[str(trID)]
+        ticket_tr_id = session_tr_id.get('ticket_tr_id')
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
+        spd = session_tr_id.get('spd')
+        if spd == 'РТК':
+            messages.warning(request, 'Порт ВЛС через РТК не предоставляется.')
+            return redirect('spp_view_save', ticket_tr.ticket_k.dID, ticket_tr.ticket_k.id)
+
+        request, service, prev_page, index = backward_page_service(request, trID, service_name)
+
         tag_service = session_tr_id.get('tag_service')
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         #request.session['current_service'] = service
@@ -2181,9 +2197,9 @@ def add_spp(request, dID):
     spp_params = for_spp_view(username, password, dID)
     if spp_params.get('Access denied') == 'Access denied':
         return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
-    elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
-        messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
-        return redirect('mko')
+    # elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
+    #     messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
+    #     return redirect('mko')
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
@@ -3388,6 +3404,9 @@ def pass_serv(request, trID):
                             # if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
                             #     tag_service.pop()
                             tag_service.append({'rtk': None})
+                        elif spd == 'ППМ':
+
+                            tag_service = append_change_log_shpd(session_tr_id)
                         elif spd == 'Комтехцентр':
                             # if tag_service[-1] == {'rtk': None}:
                             #     tag_service.pop()
@@ -4166,24 +4185,24 @@ class MkoView(UserPassesTestMixin, LoginRequiredMixin, CredentialMixin, View):
 
     def get(self, request):
         username, password = super().get_credential(self)
-
         user = User.objects.get(username=request.user.username)
-        # username, password = get_user_credential_cordis(user)
         search = in_work_ortr(username, password)
-
-        # fio = check_fio(username, password)
-        # if not user.last_name in fio:
-        #     messages.warning(request, 'Фамилия И.О. не соответствуют данным СПП. Обратитесь к администратору')
-        #     return redirect('private_page')
-
-        #spp_proc = SPP.objects.filter(process=True, client__startswith="Тест")
-        spp_proc = SPP.objects.filter(process=True, user=user)
+        spp_proc = SPP.objects.filter(process=True)
         list_spp_proc = list(spp_proc.values_list('ticket_k', flat=True))
         if not isinstance(search[0], str):
-            search = [i for i in search if i[0] not in list_spp_proc and i[5]==user.last_name]   #i[2].startswith('Тест') and i[6] == 'Отправлена в ОРТР'
+            unhandled_managers_ticket = [i for i in search if i[0] not in list_spp_proc and i[5]==user.last_name]
+            handled_managers_ticket = [i for i in search if i[0] in list_spp_proc and i[5] == user.last_name]
+            handled_by_all = []
+            if handled_managers_ticket:
+                for i in handled_managers_ticket:
+                    entity = SPP.objects.get(process=True, ticket_k=i[0])
+                    handled_by_all.append(entity)
+            handled_by_manager = SPP.objects.filter(process=True, user=user)
+            spp_process = set(handled_by_all + list(handled_by_manager))
         else:
-            search = None
-        return render(request, 'tickets/mko.html', {'search': search, 'spp_process': spp_proc})
+            unhandled_managers_ticket = None
+            spp_process = SPP.objects.filter(process=True, user=user)
+        return render(request, 'tickets/mko.html', {'search': unhandled_managers_ticket, 'spp_process': spp_process})
 
 
 class CreateSpecificationView(CredentialMixin, View):

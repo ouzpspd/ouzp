@@ -66,9 +66,13 @@
 
             </td>
             <td>
-                {% comment %}{% if ticket.user.username == user.username%}{% endcomment %}
+                {% if ticket.user.username == user.username%}
                 <a class="btn btn-outline-info custom" href="{% url 'spp_view_save' ticket.dID ticket.id %}" role="button">Перейти к заявке</a>
-                {% comment %}{% endif %}{% endcomment %}
+                {% else %}
+
+                <button type="button" class="btn btn-outline-success custom" disabled>В работе ОУЗП СПД</button>
+                {% endif %}
+
             </td>
 
         </tr>

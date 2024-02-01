@@ -4,10 +4,53 @@ from .utils import _readable_node
 from .utils import _separate_services_and_subnet_dhcp
 
 
-def _get_rtk_vars(value_vars):
+# def _get_ppm_vars(value_vars, service):
+#     add_hidden_vars = {}
+#     add_static_vars = {}
+#     if value_vars.get('spd') == 'ППМ':
+#         add_hidden_vars[
+#             '- Способ выдачи тега vlan в порт подключения клиента в access.'] = \
+#             '- Способ выдачи тега vlan в порт подключения клиента в access.'
+#         add_hidden_vars[
+#             """- В стык %оператор% выдать vlan tag'ом."""] = \
+#             """- В стык %оператор% выдать vlan tag'ом."""
+#         add_hidden_vars[
+#             '- Добавить на ресурсе в Cordis информацию: "Последняя миля через %оператор%. Заявка СПП: %Заявка СПП%".'] = \
+#             '- Добавить на ресурсе в Cordis информацию: "Последняя миля через %оператор%. Заявка СПП: %Заявка СПП%".'
+#         add_hidden_vars[
+#             """- Порт-конфиг в Cordis собрать на порт виртуального коммутатора."""] = \
+#             """- Порт-конфиг в Cordis собрать на порт виртуального коммутатора."""
+#         add_static_vars['оператор'] = 'ООО "Пред-последняя миля"'
+#         add_static_vars['Заявка СПП'] = value_vars.get('ticket_k')
+#         if 'Интернет, DHCP' in service:
+#             add_hidden_vars[
+#                 """- Тег влан на стыке определить по адресу точки подключения клиента."""] = \
+#                 """- Тег влан на стыке определить по адресу точки подключения клиента."""
+#     return add_hidden_vars, add_static_vars
+
+def _get_pm_vars(value_vars):
     add_hidden_vars = {}
     add_static_vars = {}
-    if value_vars.get('spd') == 'РТК':
+    if value_vars.get('spd') == 'ППМ':
+        add_hidden_vars[
+            '- Способ выдачи тега vlan в порт подключения клиента в access.'] = \
+            '- Способ выдачи тега vlan в порт подключения клиента в access.'
+        add_hidden_vars[
+            """- В стык %оператор% выдать vlan tag'ом."""] = \
+            """- В стык %оператор% выдать vlan tag'ом."""
+        add_hidden_vars[
+            '- Добавить на ресурсе в Cordis информацию: "Последняя миля через %оператор%. Заявка СПП: %Заявка СПП%".'] = \
+            '- Добавить на ресурсе в Cordis информацию: "Последняя миля через %оператор%. Заявка СПП: %Заявка СПП%".'
+        add_hidden_vars[
+            """- Порт-конфиг в Cordis собрать на порт виртуального коммутатора."""] = \
+            """- Порт-конфиг в Cordis собрать на порт виртуального коммутатора."""
+        add_static_vars['оператор'] = 'ООО "Пред-последняя миля"'
+        add_static_vars['Заявка СПП'] = value_vars.get('ticket_k')
+        add_hidden_vars[' СПД'] = ' СПД %оператор%'
+        add_hidden_vars['от %указать название коммутатора%'] = 'через последнюю милю стороннего оператора'
+
+
+    elif value_vars.get('spd') == 'РТК':
         add_hidden_vars['- Зарезервирован тег vlan %vlan%.'] = '- Зарезервирован тег vlan %vlan%.'
         add_hidden_vars[
             '- Способ выдачи тега vlan в порт подключения клиента в access.'] = \
@@ -17,16 +60,27 @@ def _get_rtk_vars(value_vars):
             """- В стык ПАО "Ростелеком" выдать vlan %vlan% tag'ом."""
         if value_vars.get('rtk_form').get('type_pm') == 'ПМ':
             add_hidden_vars[
-                '- Добавить на ресурсе в Cordis информацию: "Последняя миля через ПАО "Ростелеком". Заявка СПП: %Заявка СПП%".'] = \
-                '- Добавить на ресурсе в Cordis информацию: "Последняя миля через ПАО "Ростелеком". Заявка СПП: %Заявка СПП%".'
+                '- Добавить на ресурсе в Cordis информацию: "Последняя миля через %оператор%. Заявка СПП: %Заявка СПП%".'] = \
+                '- Добавить на ресурсе в Cordis информацию: "Последняя миля через %оператор%. Заявка СПП: %Заявка СПП%".'
+            add_static_vars['оператор'] = 'ПАО "Ростелеком"'
         else:
             add_hidden_vars[
                 '- Добавить на ресурсе в Cordis информацию: "B2B FVNO РТ. Заявка СПП: %Заявка СПП%".'] = \
                 '- Добавить на ресурсе в Cordis информацию: "B2B FVNO РТ. Заявка СПП: %Заявка СПП%".'
         add_static_vars['vlan'] = value_vars.get('rtk_form').get('vlan')
         add_static_vars['Заявка СПП'] = value_vars.get('ticket_k')
+        add_hidden_vars[' СПД'] = ' СПД %оператор%'
+        add_hidden_vars['от %указать название коммутатора%'] = 'через последнюю милю стороннего оператора'
+        
     else:
         add_hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+        add_hidden_vars[
+            """- Настроить порт подключения клиента для предоставления сервиса. Vlan для услуги "Хот-спот Премиум +" выдать в порт подключения %access'ом (native vlan) / trunk%."""] = \
+            """- Настроить порт подключения клиента для предоставления сервиса. Vlan для услуги "Хот-спот Премиум +" выдать в порт подключения %access'ом (native vlan) / trunk%."""
+
+        add_hidden_vars[' СПД'] = ' СПД'
+        add_hidden_vars['от %указать название коммутатора%'] = 'от %указать название коммутатора%'
+
     return add_hidden_vars, add_static_vars
 
 def _new_services(result_services, value_vars):
@@ -48,7 +102,14 @@ def _new_services(result_services, value_vars):
             hidden_vars = {}
             stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
             static_vars['указать маску'] = '/32'
-            hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+            #hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+            if value_vars.get('spd') == 'ППМ':
+                hidden_vars[
+                    """- Тег влан на стыке определить по адресу точки подключения клиента."""] = \
+                    """- Тег влан на стыке определить по адресу точки подключения клиента."""
+            add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+            static_vars.update(add_static_vars)
+            hidden_vars.update(add_hidden_vars)
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
             if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['router_shpd']:
@@ -72,9 +133,12 @@ def _new_services(result_services, value_vars):
                 static_vars['указать маску'] = '/30'
             all_shpd_in_tr = value_vars.get('all_shpd_in_tr')
             if all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'access':
-                add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
                 static_vars.update(add_static_vars)
                 hidden_vars.update(add_hidden_vars)
+                # add_hidden_vars, add_static_vars = _get_ppm_vars(value_vars, service)
+                # static_vars.update(add_static_vars)
+                # hidden_vars.update(add_hidden_vars)
                 stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             elif all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'trunk':
@@ -139,7 +203,7 @@ def _new_services(result_services, value_vars):
                 static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
                 static_vars['указать полосу'] = _get_policer(service)
                 if all_cks_in_tr.get(service)['type_cks'] == 'access':
-                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
+                    add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
                     static_vars.update(add_static_vars)
                     hidden_vars.update(add_hidden_vars)
                     stroka = templates.get("Организация услуги ЦКС Etherline access'ом.")
@@ -166,6 +230,9 @@ def _new_services(result_services, value_vars):
                 static_vars['указать полосу'] = _get_policer(service)
                 static_vars['полисером на Subinterface/на порту подключения'] = all_portvk_in_tr.get(service)['policer_vk']
                 if all_portvk_in_tr.get(service)['type_portvk'] == 'access':
+                    add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+                    static_vars.update(add_static_vars)
+                    hidden_vars.update(add_hidden_vars)
                     stroka = templates.get("Организация услуги порт ВЛС access'ом.")
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif all_portvk_in_tr.get(service)['type_portvk'] == 'trunk':
@@ -195,6 +262,9 @@ def _new_services(result_services, value_vars):
                     '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'] = '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'
 
             if value_vars.get('type_portvm') == 'access':
+                add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+                static_vars.update(add_static_vars)
+                hidden_vars.update(add_hidden_vars)
                 stroka = templates.get("Организация услуги порт виртуального маршрутизатора access'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             elif value_vars.get('type_portvm') == 'trunk':
@@ -210,13 +280,12 @@ def _new_services(result_services, value_vars):
                     result_services.append(enviroment_csw(value_vars))
                 static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
                 static_vars["access'ом (native vlan) / trunk"] = "access'ом"
-                if value_vars.get('spd') == 'РТК':
-                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
-                    static_vars.update(add_static_vars)
-                    hidden_vars.update(add_hidden_vars)
-                else:
-                    hidden_vars["""- Настроить порт подключения клиента для предоставления сервиса. Vlan для услуги "Хот-спот Премиум +" выдать в порт подключения %access'ом (native vlan) / trunk%."""] = \
-                    """- Настроить порт подключения клиента для предоставления сервиса. Vlan для услуги "Хот-спот Премиум +" выдать в порт подключения %access'ом (native vlan) / trunk%."""
+
+                add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+                static_vars.update(add_static_vars)
+                hidden_vars.update(add_hidden_vars)
+
+
                 if value_vars.get('exist_hotspot_client') == True:
                     stroka = templates.get("Организация услуги Хот-спот Премиум + для существующего клиента.")
                 else:
@@ -268,15 +337,9 @@ def _new_services(result_services, value_vars):
 
                 static_vars['указать количество клиентов'] = value_vars.get('hotspot_users')
 
-                if value_vars.get('spd') == 'РТК':
-                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
-                    static_vars.update(add_static_vars)
-                    hidden_vars.update(add_hidden_vars)
-                    hidden_vars['СПД'] = 'СПД ПАО "Ростелеком"'
-                    hidden_vars['от %указать название коммутатора%'] = 'через последнюю милю стороннего оператора'
-                else:
-                    hidden_vars['СПД'] = 'СПД'
-                    hidden_vars['от %указать название коммутатора%'] = 'от %указать название коммутатора%'
+                add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+                static_vars.update(add_static_vars)
+                hidden_vars.update(add_hidden_vars)
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 regex_counter = 'беспроводных станций: (\d+)'
                 match_counter = re.search(regex_counter, stroka)
@@ -620,6 +683,24 @@ def enviroment_csw(value_vars):
         static_vars['ОИПМ/ОИПД'] = 'ОИПД'
     return analyzer_vars(stroka, static_vars, hidden_vars)
 
+
+def ppm_enviroment(value_vars):
+    if value_vars.get('result_services'):
+        result_services = value_vars.get('result_services')
+    else:
+        result_services = []
+    templates = value_vars.get('templates')
+    static_vars = {}
+    hidden_vars = {}
+    static_vars['оператор'] = 'ООО "Пред-последняя миля"'
+    static_vars['указать узел связи'] = 'РУА ЕКБ Чкалова 135/а П1 Э1 (пристрой)'
+    static_vars['указать название коммутатора'] = 'AR03-25.ekb'
+    static_vars['указать порт коммутатора'] = 'Te7/3'
+    stroka = templates.get("Присоединение к СПД через последнюю милю стороннего оператора %оператор%.")
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    value_vars.update({'kad': 'AR03-25.ekb', 'pps': 'ЕКБ Чкалова 135/а П1 Э1 (пристрой), РУА'})
+    return result_services, value_vars
+
 def rtk_enviroment(value_vars):
     if value_vars.get('result_services'):
         result_services = value_vars.get('result_services')
@@ -629,7 +710,12 @@ def rtk_enviroment(value_vars):
     static_vars = {}
     hidden_vars = {}
     if value_vars.get('rtk_form').get('type_pm') == 'ПМ':
-        stroka = templates.get("Присоединение к СПД через последнюю милю стороннего оператора.")
+        static_vars['оператор'] = 'ПАО "Ростелеком"'
+        static_vars['указать узел связи'] = 'РУА ЕКБ Автоматики переулок 1 стр.В3 П1 Э2 (аппаратная)'
+        static_vars['указать название коммутатора'] = 'AR113-37.ekb'
+        static_vars['указать порт коммутатора'] = 'Te8/1'
+        stroka = templates.get("Присоединение к СПД через последнюю милю стороннего оператора %оператор%.")
+        #stroka = templates.get("Присоединение к СПД через последнюю милю стороннего оператора.")
     elif value_vars.get('rtk_form').get('type_pm') == 'FVNO Медь':
         static_vars['IP коммутатора'] = value_vars.get('rtk_form').get('switch_ip')
         static_vars['Порт коммутатора'] = value_vars.get('rtk_form').get('switch_port')
@@ -665,7 +751,7 @@ def rtk_enviroment(value_vars):
             '- Установить на стороне клиента конвертер SNR-CVT-1000SFP mini с модулем SFP WDM, дальность до 20км (14dB), 1550 нм;'
         stroka = templates.get("Присоединение к СПД по схеме FVNO.FTTH")
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
-    value_vars.update({'kad': 'AR113-37.ekb', 'pps': 'РУА ЕКБ Автоматики переулок 1 стр.В3 П1 Э2 (аппаратная)'})
+    value_vars.update({'kad': 'AR113-37.ekb', 'pps': 'ЕКБ Автоматики переулок 1 стр.В3 П1 Э2 (аппаратная), РУА'})
     return result_services, value_vars
 
 def _new_enviroment(value_vars):
@@ -1518,6 +1604,10 @@ def _passage_services(result_services, value_vars):
                     hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
                     hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
                     static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
+                    if value_vars.get('change_log_shpd') == 'Новая подсеть /32' and value_vars.get('spd') == 'ППМ':
+                        hidden_vars[
+                            '- Тег влан на стыке определить по адресу точки подключения клиента.'
+                        ] = '- Тег влан на стыке определить по адресу точки подключения клиента.'
                 if 'ЦКС' in ', '.join(services):
                     hidden_vars[
                         '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером Subinterface/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ ЦКС %полисером Subinterface/портом подключения%.'
@@ -1530,10 +1620,9 @@ def _passage_services(result_services, value_vars):
                     hidden_vars[
                         '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ %указать название сервиса% %полисером на SVI/портом подключения%.'] = '- Ограничить скорость и настроить маркировку трафика для ^сервиса^ порт ВМ %полисером на SVI/портом подключения%.'
                     static_vars['полисером на SVI/портом подключения'] = value_vars.get('extend_policer_vm')
-                if value_vars.get('spd') == 'РТК':
-                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
-                    static_vars.update(add_static_vars)
-                    hidden_vars.update(add_hidden_vars)
+                add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+                static_vars.update(add_static_vars)
+                hidden_vars.update(add_hidden_vars)
             else:
                 services = []
                 for key, value in readable_services.items():
@@ -1600,15 +1689,19 @@ def _passage_services(result_services, value_vars):
                         hidden_vars['- После смены реквизитов:'] = '- После смены реквизитов:'
                         hidden_vars['- разобрать ресурс %указать существующий ресурс% на договоре.'] = '- разобрать ресурс %указать существующий ресурс% на договоре.'
                         static_vars['указать существующий ресурс'] = value_vars.get('selected_ono')[0][-4]
+                        if value_vars.get('change_log_shpd') == 'Новая подсеть /32' and value_vars.get('spd') == 'ППМ':
+                            hidden_vars[
+                                '- Тег влан на стыке определить по адресу точки подключения клиента.'
+                            ] = '- Тег влан на стыке определить по адресу точки подключения клиента.'
                     else:
                         static_vars['указать сервис'] = ', '.join(services)
                 else:
                     static_vars['указать сервис'] = ', '.join(services)
 
-                if value_vars.get('spd') == 'РТК':
-                    add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
-                    static_vars.update(add_static_vars)
-                    hidden_vars.update(add_hidden_vars)
+                
+                add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+                static_vars.update(add_static_vars)
+                hidden_vars.update(add_hidden_vars)
             else:
                 static_vars['указать сервис'] = ', '.join(services)
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
@@ -1673,11 +1766,13 @@ def _passage_services(result_services, value_vars):
             static_vars['указать существующий ресурс'] = ', '.join(service_shpd_change)
         static_vars['указать сервис'] = ', '.join(services)
         static_vars['указать название сервиса'] = ', '.join(readable_services.keys())
+        
+            
+        add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
+        static_vars.update(add_static_vars)
+        hidden_vars.update(add_hidden_vars)
         if value_vars.get('spd') == 'РТК':
             static_vars['указать узел связи'] = 'ПМ РТК'
-            add_hidden_vars, add_static_vars = _get_rtk_vars(value_vars)
-            static_vars.update(add_static_vars)
-            hidden_vars.update(add_hidden_vars)
         else:
             static_vars['указать узел связи'] = _readable_node(value_vars.get('pps'))
         static_vars['указать существующий КАД'] = value_vars.get('head').split('\n')[4].split()[2]
@@ -1963,6 +2058,9 @@ def get_add_kad(value_vars):
                 ] = '- Переключить существующий линк %линк/договор% из порта %Порт линк/договора% существующего коммутатора' + \
                     ' в свободный гигабитный порт установленного коммутатора. Использовать оптический ' + \
                     'передатчик[ SFP WDM, дальность до 20км (12dB), 1310 нм]. [Передатчик SFP переключить из существующего КАД.]'
+            hidden_vars[
+                '- Сменить логическое подключение %линк/договор% с КАД %Название КАД% порт %Порт линк/договора% на проектируемый КАД.'
+            ] = '- Сменить логическое подключение %линк/договор% с КАД %Название КАД% порт %Порт линк/договора% на проектируемый КАД.'
             static_vars['линк/договор'] = value_vars.get('disabled_link')
             if 'Cisco' not in model:
                 hidden_vars[
@@ -2611,6 +2709,8 @@ def client_new(value_vars):
     """Данный метод формирует готовое ТР для нового присоединения и новых услуг"""
     if value_vars.get('spd') == 'РТК':
         result_services, value_vars = rtk_enviroment(value_vars)
+    elif value_vars.get('spd') == 'ППМ':
+        result_services, value_vars = ppm_enviroment(value_vars)
     else:
         result_services, value_vars = _new_enviroment(value_vars)
     result_services, result_services_ots, value_vars = _new_services(result_services, value_vars)
@@ -2683,9 +2783,10 @@ def passage_services(value_vars):
     if (value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перенос точки подключения') and value_vars.get('change_log') != 'Порт и КАД не меняется':
         if value_vars.get('spd') == 'РТК':
             result_services, value_vars = rtk_enviroment(value_vars)
+        elif value_vars.get('spd') == 'ППМ':
+            result_services, value_vars = ppm_enviroment(value_vars)
         else:
             result_services, value_vars = _new_enviroment(value_vars)
-        #result_services, value_vars = _new_enviroment(value_vars)
     elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') != 'Порт и КАД не меняется':
         if value_vars.get('spd') == 'РТК':
             result_services, value_vars = rtk_enviroment(value_vars)
