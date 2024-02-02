@@ -2197,9 +2197,9 @@ def add_spp(request, dID):
     spp_params = for_spp_view(username, password, dID)
     if spp_params.get('Access denied') == 'Access denied':
         return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
-    # elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
-    #     messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
-    #     return redirect('mko')
+    elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
+        messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
+        return redirect('mko')
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
