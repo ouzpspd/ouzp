@@ -32,8 +32,51 @@
     {% csrf_token %}
     <div class="container">
         <div class="row">
-            <div class="col-4">
-            {{ localform.as_p }}
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{localform.local_type.id_for_label}}">Тип ЛВС</label>
+                    {{localform.local_type}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{localform.local_ports.id_for_label}}">Количество портов</label>
+                    {{localform.local_ports}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{localform.local_socket_need.id_for_label}}">Требуются розетки RJ-45</label>
+                    {{localform.local_socket_need}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group socket">
+                    <label for="{{localform.local_socket.id_for_label}}">Количество розеток</label>
+                    {{localform.local_socket}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{localform.local_cable_channel_need.id_for_label}}">Требуется кабель-канал</label>
+                    {{localform.local_cable_channel_need}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group cable_channel">
+                    <label for="{{localform.local_cable_channel.id_for_label}}">Длина кабель-канала (метров)</label>
+                    {{localform.local_cable_channel}}
+                </div>
             </div>
         </div>
         <div class="row">
@@ -55,7 +98,41 @@
 </div>
 
 
+<script>
 
+$(function () {
+    $(".cable_channel").hide();
+    $(".socket").hide();
+});
+
+$(function () {
+  $("#id_local_socket_need").change(function() {
+    var val = $(this).val();
+    if(this.checked) {
+        $(".socket").show();
+    }
+    else {
+        $(".socket").hide();
+        $("#id_local_socket").val("");
+    }
+});
+});
+
+$(function () {
+  $("#id_local_cable_channel_need").change(function() {
+    var val = $(this).val();
+    if(this.checked) {
+        $(".cable_channel").show();
+    }
+
+    else {
+        $(".cable_channel").hide();
+        $("#id_local_cable_channel").val("");
+    }
+});
+});
+
+</script>
 
 
 {% endblock %}

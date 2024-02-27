@@ -1,5 +1,6 @@
 {% extends 'tickets/nav_ticket.html' %}
 {% block content %}
+{% load custom_filters %}
 
 <div class="container">
     <div class="row">
@@ -34,19 +35,12 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
-                    <label for="{{sksform.sks_poe.id_for_label}}">PoE-инжектор</label>
-                    {{sksform.sks_poe}}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label for="{{sksform.sks_router.id_for_label}}">Подключить в маршрутизатор</label>
+                    <label for="{{sksform.sks_router.id_for_label}}">Подключить порты ЛВС в маршрутизатор</label>
                     {{sksform.sks_router}}
                 </div>
             </div>
         </div>
+        {% if request.user|has_group:"Сотрудники ОУЗП" %}
         <div class="row">
             <div class="col-4">
                 <div class="form-group vols">
@@ -55,6 +49,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
         <div class="row">
             <div class="col-4">
                 <div class="form-group transceiver">

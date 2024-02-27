@@ -7,7 +7,7 @@ from django.views.generic import DetailView, FormView, ListView
 from urllib3.exceptions import NewConnectionError
 
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
-from oattr.parsing import get_or_create_otu, Tentura, Specification
+from oattr.parsing import get_or_create_otu, Tentura, Specification, BundleSpecItems, get_specication_resources
 from .models import TR, SPP, OrtrTR
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
@@ -956,10 +956,11 @@ def data(request, trID):
         value_vars.update({key: value})
     ticket_tr_id = session_tr_id.get('ticket_tr_id')
     ticket_tr = TR.objects.get(id=ticket_tr_id)
+    decision_otpm = ticket_tr.oattr
     type_ticket = ticket_tr.ticket_k.type_ticket
     ticket_k = ticket_tr.ticket_k.ticket_k
     evaluative_tr = ticket_tr.ticket_k.evaluative_tr
-    value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k})
+    value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm})
     readable_services = value_vars.get('readable_services')
 
 
@@ -1148,21 +1149,24 @@ def unsaved_data(request):
 
 def saved_data(request, trID):
     """Данный метод отображает редактируемую html-страничку готового ТР"""
+    spec_button = False
+    session_tr_id = request.session[str(trID)]
+    titles = session_tr_id.get('titles')
+    ticket_tr_id = session_tr_id.get('ticket_tr_id')
+    ticket_tr = TR.objects.get(id=ticket_tr_id)
+    if ticket_tr.ticket_k.simplified_tr:
+        resources = get_specication_resources(session_tr_id)
+        spec_button = resources.get('spec_button')
+        pps_resources = resources.get('pps_resources')
+        csp_resources = resources.get('csp_resources')
+        session_tr_id['pps_resources'] = pps_resources
+        session_tr_id['csp_resources'] = csp_resources
     if request.method == 'POST':
         ortrform = OrtrForm(request.POST)
         if ortrform.is_valid():
-            session_tr_id = request.session[str(trID)]
-            services_plus_desc = session_tr_id.get('services_plus_desc')
-            oattr = session_tr_id.get('oattr')
             result_services_ots = session_tr_id.get('result_services_ots')
-            # try:
-            #     list_switches = request.session['list_switches']
-            # except KeyError:
-            #     list_switches = None
             list_switches = session_tr_id.get('list_switches') if session_tr_id.get('list_switches') else None
-
-            now = datetime.datetime.now()
-
+            #now = datetime.datetime.now()
             ortr_field = ortrform.cleaned_data['ortr_field']
             ots_field = ortrform.cleaned_data['ots_field']
             regex = '\n(.+)\r\n-{5,}\r\n'
@@ -1170,11 +1174,9 @@ def saved_data(request, trID):
             is_exist_ots = bool(ots_field)
             match_ots_field = re.findall(regex, ots_field) if is_exist_ots else []
             changable_titles = '\n'.join(match_ortr_field + match_ots_field)
-            spec_button = True if '1. Присоединение к СПД по медной линии связи.' in changable_titles else False
             pps = ortrform.cleaned_data['pps']
             kad = ortrform.cleaned_data['kad']
-            ticket_tr_id = session_tr_id.get('ticket_tr_id')
-            ticket_tr = TR.objects.get(id=ticket_tr_id)
+
             ticket_k = ticket_tr.ticket_k
             ticket_tr.pps = pps
             ticket_tr.kad = kad
@@ -1194,8 +1196,6 @@ def saved_data(request, trID):
 
             context = {
                 'ticket_k': ticket_k,
-                #'services_plus_desc': services_plus_desc,
-                #'oattr': oattr,
                 'result_services_ots': result_services_ots,
                 'list_switches': list_switches,
                 'counter_str_ortr': counter_str_ortr,
@@ -1223,10 +1223,6 @@ def saved_data(request, trID):
             return render(request, 'tickets/saved_data.html', context)
 
     else:
-        session_tr_id = request.session[str(trID)]
-
-        #services_plus_desc = session_tr_id['services_plus_desc']
-        #oattr = session_tr_id['oattr']
         kad = session_tr_id['kad']
         if kad == 'Не требуется':
             pps = 'Не требуется'
@@ -1236,10 +1232,6 @@ def saved_data(request, trID):
         counter_str_ortr = session_tr_id['counter_str_ortr']
         counter_str_ots = session_tr_id['counter_str_ots']
         result_services_ots = session_tr_id['result_services_ots']
-        titles = session_tr_id.get('titles')
-        spec_button = False
-        if titles and '1. Присоединение к СПД по медной линии связи.' in titles:
-            spec_button = True
         try:
             list_switches = session_tr_id['list_switches']
         except KeyError:
@@ -1264,8 +1256,6 @@ def saved_data(request, trID):
         ortrform = OrtrForm(initial={'ortr_field': ortr.ortr, 'ots_field': ortr.ots, 'pps': pps, 'kad': kad})
         context = {
             'ticket_k': ticket_k,
-            #'services_plus_desc': services_plus_desc,
-            #'oattr': oattr,
             'result_services_ots': result_services_ots,
             'list_switches': list_switches,
             'counter_str_ortr': counter_str_ortr,
@@ -1734,10 +1724,6 @@ def local(request, trID):
             service = session_tr_id.get('current_service')
             services_plus_desc = session_tr_id.get('services_plus_desc')
             new_job_services = session_tr_id.get('new_job_services')
-            # current_index_local = request.session['current_index_local']
-            # service = request.session['current_service']
-            # services_plus_desc = request.session['services_plus_desc']
-            # new_job_services = request.session.get('new_job_services')
             if local_type == 'СКС':
                 if service not in services_plus_desc:
                     if new_job_services:
@@ -1771,6 +1757,7 @@ def local(request, trID):
                 response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                 return response
     else:
+        user = User.objects.get(username=request.user.username)
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
         service_name = 'local'
@@ -1780,6 +1767,8 @@ def local(request, trID):
         session_tr_id.update({'current_service': service, 'current_index_local': index + 1})
         request.session[trID] = session_tr_id
         localform = LocalForm()
+        if user.groups.filter(name='Менеджеры').exists():
+            localform.fields['local_type'].widget.choices = [('СКС', 'СКС'), ('ЛВС', 'ЛВС')]
         context = {
             'service_lvs': service,
             'localform': localform,
@@ -1854,17 +1843,22 @@ def itv(request, trID):
         if itvform.is_valid():
             type_itv = itvform.cleaned_data['type_itv']
             cnt_itv = itvform.cleaned_data['cnt_itv']
+            need_line_itv = itvform.cleaned_data['need_line_itv']
             router_itv = itvform.cleaned_data['router_itv']
             session_tr_id = request.session[str(trID)]
             services_plus_desc = session_tr_id.get('services_plus_desc')
             tag_service = session_tr_id.get('tag_service')
             selected_ono = session_tr_id.get('selected_ono')
-            new_job_services = session_tr_id.get('new_job_services') if session_tr_id.get('new_job_services') else None
+            new_job_services = session_tr_id.get('new_job_services')# if session_tr_id.get('new_job_services') else None
             if not new_job_services and type_itv == 'novlexist':
                 messages.warning(request, 'Нельзя выбрать "В vlan действующей услуги ШПД" при проектирование в нов. точке.')
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
-            if len(services_plus_desc) == 1 and type_itv == 'novlexist' and selected_ono[0][-4].endswith('/32'):
+            if len(services_plus_desc) == 1 and type_itv == 'novlexist' and selected_ono[0][-4].endswith('/32') and need_line_itv is False:
                 messages.warning(request, 'В ШПД с маской /32 Вебург.ТВ организовано. ТР не требуется.')
+                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
+            shpd_exist = [serv for serv in services_plus_desc if serv.startswith('Интернет,')]
+            if not shpd_exist and type_itv == 'novl':
+                messages.warning(request, 'Для Вебург.ТВ в vlan новой услуги ШПД требуется услуга ШПД в перечне услуг.')
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
 
 
@@ -1894,11 +1888,12 @@ def itv(request, trID):
                         if session_tr_id.get('counter_line_itv'):
                             del session_tr_id['counter_line_itv']
             session_tr_id.update({'new_job_services': new_job_services, 'services_plus_desc': services_plus_desc,
-                                  'type_itv': type_itv, 'cnt_itv': cnt_itv, 'router_itv': router_itv})
+                                  'type_itv': type_itv, 'cnt_itv': cnt_itv, 'router_itv': router_itv,
+                                  'need_line_itv': need_line_itv})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
-
+        user = User.objects.get(username=request.user.username)
         service_name = 'itv'
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
@@ -1907,7 +1902,15 @@ def itv(request, trID):
 
         session_tr_id.update({'current_service': service})
         request.session[trID] = session_tr_id
-        itvform = ItvForm(initial={'type_itv': 'novl'})
+
+
+        itvform = ItvForm()
+        if user.groups.filter(name='Менеджеры').exists():
+            type_tr = session_tr_id.get('type_tr')
+            if type_tr == 'Нов. точка':
+                itvform.fields['type_itv'].widget.choices = [('novl', 'В vlan новой услуги ШПД'),]
+            elif type_tr == 'Сущ. точка':
+                itvform.fields['type_itv'].widget.choices = [('novlexist', 'В vlan действующей услуги ШПД'),]
         return render(request, 'tickets/itv.html', {
             'itvform': itvform,
             'service_itv': service,
@@ -4223,45 +4226,24 @@ class CreateSpecificationView(CredentialMixin, View):
             return redirect(f'https://arm.itmh.ru/v3/spec/{id_otu}')
         tentura = Tentura(username, password, id_otu)
         status_project = tentura.check_active_project_for_user()
+        session_tr_id = request.session[str(trID)]
+        pps_resources = session_tr_id.get('pps_resources')
+        csp_resources = session_tr_id.get('csp_resources')
+        if pps_resources:
+            result = tentura.get_id_node_by_name({'Name': ticket_tr.pps})
+            if result.get('result'):
+                id_node_tentura = int(result.get('result'))
 
+            project_context = tentura.get_project_context()
+            gis_object = tentura.get_gis_object_by_id_node(id_node_tentura, project_context)
+            tentura.add_node(gis_object)
+            specification.set_resources(cookie, id_node_tentura, pps_resources, update=False)
 
-        # if status_project.get('error'):
-        #     redirect()
-        result = tentura.get_id_node_by_name({'Name': ticket_tr.pps})
-        if result.get('result'):
-            id_node_tentura = int(result.get('result'))
-
-        project_context = tentura.get_project_context()
-        gis_object = tentura.get_gis_object_by_id_node(id_node_tentura, project_context)
-
-        result = tentura.get_id_address_connection_point(ticket_tr.aid)
-        id_address = result.get('result')
-
-        id_csp_tentura = tentura.add_csp(id_address, ticket_tr.connection_point)
-        #print(id_csp_tentura)
-
-        result = tentura.add_node(gis_object)
-        #print(result)
-
-        #id_csp_tentura = 131124
-
-
-
-        csp_resources = [
-            {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
-        ]
-        specification.set_resources(cookie, id_csp_tentura, csp_resources, update=False)
-        pps_resources = [
-            {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1},
-            {'Name': '# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90},
-            {'Name': 'Выезд автомобиля В2В ВОЛС', 'Amount': 1},
-            {'Name': 'Присоединение B2B UTP', 'Amount': 1},
-            #{'Name': '# [СПП] [Шлюз Cisco 1760 для 24 канального номера]', 'Amount': 1}
-        ]
-
-        #id_node_tentura = 2268
-        specification.set_resources(cookie, id_node_tentura, pps_resources, update=False)
-
+        if csp_resources:
+            result = tentura.get_id_address_connection_point(ticket_tr.aid)
+            id_address = result.get('result')
+            id_csp_tentura = tentura.add_csp(id_address, ticket_tr.connection_point)
+            specification.set_resources(cookie, id_csp_tentura, csp_resources, update=False)
         return redirect(f'https://arm.itmh.ru/v3/spec/{id_otu}')
 
 

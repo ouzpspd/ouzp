@@ -1,5 +1,5 @@
 import datetime
-
+import copy
 import requests
 import re
 import random
@@ -990,3 +990,146 @@ def get_tentura(login, password):
                       data=json.dumps(active_project)) # data_create_csp
     print(req.status_code)
     print(req.json())
+
+
+class TemplateSpecItem:
+    """Класс содержащий позиции спецификации и их начальное количество"""
+    def __init__(self):
+        self.ride = {'Name': 'Выезд автомобиля В2В ВОЛС', 'Amount': 1, 'StartAmount': 1}
+        self.connect_to_pps = {'Name': 'Присоединение B2B UTP', 'Amount': 1, 'StartAmount': 1}
+        self.pps_rj45 = {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 1, 'StartAmount': 1}
+        self.pps_copper_cable = {'Name': '# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 90,
+                                 'StartAmount': 90}
+        self.lvs_mount = {'Name': 'Монтаж 1 линии ЛВС от оборудования клиента', 'Amount': 1, 'StartAmount': 1}
+        self.lvs_rj45 = {'Name': "# [СПП] [Коннектор RJ-45 (одножильный)]", 'Amount': 2, 'StartAmount': 2}
+        self.lvs_cabel = {'Name': '# [СПП] [Кабель UTP кат.5е 2 пары (внутренний)]', 'Amount': 30,
+             'StartAmount': 30}
+        self.lvs_cabel_channel = {'Name': '# [СПП] [Кабель-канал 40х40мм]', 'Amount': 1,
+                          'StartAmount': 1}
+        self.lvs_mount_cabel_channel = {'Name': 'Монтаж кабель-канала', 'Amount': 1,
+                                  'StartAmount': 1}
+        self.lvs_socket = {'Name': '# [СПП] [Розетка RJ-45 1 местная]', 'Amount': 1,
+                          'StartAmount': 1}
+        self.lvs_patch_cord = {'Name': '# [СПП] [Патч-корд UTP кат.5e RJ-45 3.0м]', 'Amount': 1,
+                           'StartAmount': 1}
+        self.lvs_mount_socket = {'Name': 'Монтаж розетки RJ-45 на территории клиента (1 порт)', 'Amount': 1,
+                                 'StartAmount': 1}
+
+
+class BundleSpecItems:
+    """Класс формирующий наборы позиций для объектов спецификации(ППС, ЦСП) на основе заголовков сформированного ТР"""
+    def __init__(self, titles, stb_lines, lvs_lines, sockets, cable_channel):
+        self.titles = titles
+        self.stb_lines = stb_lines
+        self.lvs_lines = lvs_lines
+        self.sockets = sockets
+        self.cable_channel = cable_channel
+        self.template = TemplateSpecItem()
+        self.pps_resources = {}
+        self.csp_resources = {}
+
+    def add_copper_line(self, items):
+        """Метод добавляет позиции спецификации на основе заголовка медная линия"""
+        for res in items:
+            if self.pps_resources.get(res.get('Name')) and res == self.template.pps_rj45:
+                amount = self.pps_resources.get(res.get('Name')).get('Amount')
+                self.pps_resources[res.get('Name')]['Amount'] = amount + res.get('StartAmount')
+                self.csp_resources[res.get('Name')]['Amount'] = amount + res.get('StartAmount')
+
+            elif res == self.template.pps_rj45:
+                self.pps_resources.update({res.get('Name'): copy.copy(res)})
+                self.csp_resources.update({res.get('Name'): copy.copy(res)})
+
+
+            elif self.pps_resources.get(res.get('Name')) and res not in [self.template.ride, self.template.connect_to_pps]:
+                amount = self.pps_resources.get(res.get('Name')).get('Amount')
+                self.pps_resources[res.get('Name')]['Amount'] = amount + res.get('StartAmount')
+
+            else:
+                self.pps_resources.update({
+                    res.get('Name'): copy.copy(res)
+                })
+
+    def add_lvs_line(self, items, lines):
+        """Метод добавляет позиции общие для всех линий ЛВС на основе заголовка организация СКС"""
+        for res in items:
+            if res == self.template.ride and self.pps_resources.get(res.get('Name')):
+                continue
+
+            elif res == self.template.ride:
+                self.csp_resources.update({res.get('Name'): res})
+
+            elif self.csp_resources.get(res.get('Name')) and res != self.template.ride:
+                amount = self.csp_resources.get(res.get('Name')).get('Amount')
+                self.csp_resources[res.get('Name')]['Amount'] = res.get('StartAmount') * lines + amount
+
+            else:
+                self.csp_resources.update({res.get('Name'): copy.copy(res)})
+                self.csp_resources[res.get('Name')]['Amount'] = res.get('StartAmount') * lines
+
+    def add_extra_lvs_items(self, items):
+        """Метод добавляет доп. позиции, указанные пользователем на странице ЛВС"""
+        for res in items:
+            if self.sockets and res in [self.template.lvs_mount_socket, self.template.lvs_patch_cord]:
+                self.csp_resources.update({res.get('Name'): copy.copy(res)})
+                self.csp_resources[res.get('Name')]['Amount'] = res.get('StartAmount') * self.sockets
+
+            elif self.sockets and res == self.template.lvs_socket:
+                self.csp_resources.update({res.get('Name'): copy.copy(res)})
+                self.csp_resources[res.get('Name')]['Amount'] = res.get('StartAmount') * self.sockets
+                amount = self.csp_resources[self.template.lvs_rj45.get('Name')]['Amount']
+                self.csp_resources[self.template.lvs_rj45.get('Name')]['Amount'] = amount - self.sockets
+
+            elif self.cable_channel and res in [self.template.lvs_cabel_channel, self.template.lvs_mount_cabel_channel]:
+                self.csp_resources.update({res.get('Name'): copy.copy(res)})
+                self.csp_resources[res.get('Name')]['Amount'] = res.get('StartAmount') * self.cable_channel
+
+    def find_resources(self):
+        """Метод проходится по всем заголовкам ТР и вызывает соответствующие методы"""
+        for title in self.titles.split('\n'):
+            if "Присоединение к СПД по медной линии связи" in title:
+                items = [self.template.ride, self.template.connect_to_pps, self.template.pps_copper_cable,
+                         self.template.pps_rj45]
+                self.add_copper_line(items)
+            elif "Организация СКС для Вебург.ТВ" in title:
+                items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
+                self.add_lvs_line(items, self.stb_lines)
+            elif "Организация СКС на" in title or "Организация ЛВС" in title:
+                items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
+                self.add_lvs_line(items, self.lvs_lines)
+                items = [self.template.lvs_socket, self.template.lvs_mount_socket, self.template.lvs_patch_cord,
+                         self.template.lvs_mount_cabel_channel, self.template.lvs_cabel_channel]
+                self.add_extra_lvs_items(items)
+
+    def is_exist_resources(self):
+        """Метод проверяет наличие добавляемых позиций в спецификацию"""
+        if self.pps_resources or self.csp_resources:
+            return True
+        return False
+
+    def get_pps_resources(self):
+        """Метод возвращает набор позиций спецификации для объекта ППС"""
+        # for i in self.pps_resources.values():
+        #     del i['StartAmount']
+        # return [resource for resource in self.csp_resources.values()]
+        return [{k:v for k,v in resource.items() if k != 'StartAmount'} for resource in self.pps_resources.values()]
+
+    def get_csp_resources(self):
+        """Метод возвращает набор позиций спецификации для объекта ЦСП"""
+        return [{k: v for k, v in resource.items() if k != 'StartAmount'} for resource in self.csp_resources.values()]
+
+
+def get_specication_resources(session_tr_id):
+    titles = session_tr_id.get('titles')
+    lvs_lines = session_tr_id.get('local_ports')
+    stb_lines = session_tr_id.get('cnt_itv') if session_tr_id.get('need_line_itv') is True else None
+    sockets = session_tr_id.get('local_socket') if session_tr_id.get('local_socket_need') is True else None
+    cable_channel = session_tr_id.get('local_cable_channel') if session_tr_id.get('local_cable_channel_need') is True else None
+    bundle = BundleSpecItems(titles, stb_lines, lvs_lines, sockets, cable_channel)
+    bundle.find_resources()
+    spec_button = bundle.is_exist_resources()
+    pps_resources = bundle.get_pps_resources()
+    print(pps_resources)
+    csp_resources = bundle.get_csp_resources()
+    print(csp_resources)
+    return {'spec_button': spec_button, 'pps_resources':pps_resources, 'csp_resources': csp_resources}
