@@ -26,11 +26,17 @@ class LocalForm(forms.Form):
     local_type = forms.CharField(label='Тип ЛВС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     local_ports = forms.IntegerField(max_value=24, label='Количество портов',
                                    widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    local_socket_need = forms.BooleanField(label='Требуются розетки RJ-45', required=False,
+                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    local_socket = forms.IntegerField(max_value=24, label='Количество розеток', required=False,
+                                     widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    local_cable_channel_need = forms.BooleanField(label='Требуется кабель-канал', required=False,
+                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    local_cable_channel = forms.IntegerField(max_value=10000, label='Длина кабель-канала (метров)', required=False,
+                                     widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
 
 class SksForm(forms.Form):
-    sks_poe = forms.BooleanField(label='PoE-инжектор', required=False,
-                                      widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     sks_router = forms.BooleanField(label='Подключить в марш.', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     sks_vols = forms.BooleanField(label='ВОЛС', required=False,
@@ -42,7 +48,7 @@ class SksForm(forms.Form):
 
 
 class LvsForm(forms.Form):
-    lvs_busy = forms.BooleanField(label='Все порты заняты', required=False,
+    lvs_busy = forms.BooleanField(label='Все порты маршрутизатора заняты', required=False,
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('TP-Link TL-SG105 V4', 'TP-Link TL-SG105 V4'), ('TP-Link TL-SG108 V4', 'TP-Link TL-SG108 V4'),
              ('ZYXEL GS1200-5', 'ZYXEL GS1200-5'), ('ZYXEL GS1200-8', 'ZYXEL GS1200-8'),
@@ -88,10 +94,12 @@ class PhoneForm(forms.Form):
                 self.fields[f'{field}'] = forms.IntegerField()
 
 class ItvForm(forms.Form):
-    types = [('vl', 'В отдельном vlan'), ('novl', 'В vlan новой услуги ШПД'), ('novlexist', 'В vlan действующей услуги ШПД')]
+    types = [('novl', 'В vlan новой услуги ШПД'), ('novlexist', 'В vlan действующей услуги ШПД'), ('vl', 'В отдельном vlan')]
     type_itv = forms.CharField(label='Тип ITV', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    cnt_itv = forms.IntegerField(max_value=20, label='Количество приставок',
+    cnt_itv = forms.IntegerField(max_value=4, label='Количество приставок',
                                         widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    need_line_itv = forms.BooleanField(label='Монтаж линий', required=False,
+                                           widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     router_itv = forms.BooleanField(label='Маршрутизатор для иТВ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 

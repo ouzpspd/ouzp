@@ -31,11 +31,41 @@
                 <form action="{% url 'itv' trID %}" method="post">
                     {% csrf_token %}
                     <div class="container">
+
                         <div class="row">
-                            <div class="col-4">
-                            {{ itvform.as_p }}
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="{{itvform.type_itv.id_for_label}}">Тип ITV</label>
+                                    {{itvform.type_itv}}
+                                </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-4 mb-1">
+                                <div class="form-group mount">
+                                    <label for="{{itvform.need_line_itv.id_for_label}}">Монтаж линий до приставок</label>
+                                    {{itvform.need_line_itv}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="{{itvform.cnt_itv.id_for_label}}">Количество приставок</label>
+                                    {{itvform.cnt_itv}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4 mb-1">
+                                <div class="form-group router">
+                                    <label for="{{itvform.router_itv.id_for_label}}">Маршрутизатор для иТВ</label>
+                                    {{itvform.router_itv}}
+                                </div>
+                            </div>
+                        </div>
+
+
                         <div class="row">
                             <div class="col-2">
                                 <div class="form-group">
@@ -54,6 +84,28 @@
     </div>
 </div>
 
+<script>
+
+$(function () {
+    $(".router").hide();
+});
+
+$(function () {
+  $("#id_type_itv").change(function() {
+    var val = $(this).val();
+    if(val === "vl") {
+        $(".mount").hide();
+        $(".router").show();
+    }
+
+    else {
+        $(".mount").show();
+        $(".router").hide();
+    }
+});
+});
+
+</script>
 
 
 {%endblock%}
