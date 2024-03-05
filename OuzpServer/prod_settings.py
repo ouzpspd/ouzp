@@ -46,6 +46,13 @@ DATABASES = {
     }
 }
 
+DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
+DBBACKUP_STORAGE_OPTIONS = {'location': '/mnt/backup'}
+DBBACKUP_CONNECTOR_MAPPING = {
+    'django.db.backends.postgresql_psycopg2':'dbbackup.db.postgresql.PgDumpConnector',
+}
+DBBACKUP_CLEANUP_KEEP = 2
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
