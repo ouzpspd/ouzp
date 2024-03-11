@@ -1086,20 +1086,21 @@ class BundleSpecItems:
 
     def find_resources(self):
         """Метод проходится по всем заголовкам ТР и вызывает соответствующие методы"""
-        for title in self.titles.split('\n'):
-            if "Присоединение к СПД по медной линии связи" in title:
-                items = [self.template.ride, self.template.connect_to_pps, self.template.pps_copper_cable,
-                         self.template.pps_rj45]
-                self.add_copper_line(items)
-            elif "Организация СКС для Вебург.ТВ" in title:
-                items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
-                self.add_lvs_line(items, self.stb_lines)
-            elif "Организация СКС на" in title or "Организация ЛВС" in title:
-                items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
-                self.add_lvs_line(items, self.lvs_lines)
-                items = [self.template.lvs_socket, self.template.lvs_mount_socket, self.template.lvs_patch_cord,
-                         self.template.lvs_mount_cabel_channel, self.template.lvs_cabel_channel]
-                self.add_extra_lvs_items(items)
+        if self.titles:
+            for title in self.titles.split('\n'):
+                if "Присоединение к СПД по медной линии связи" in title:
+                    items = [self.template.ride, self.template.connect_to_pps, self.template.pps_copper_cable,
+                             self.template.pps_rj45]
+                    self.add_copper_line(items)
+                elif "Организация СКС для Вебург.ТВ" in title:
+                    items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
+                    self.add_lvs_line(items, self.stb_lines)
+                elif "Организация СКС на" in title or "Организация ЛВС" in title:
+                    items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
+                    self.add_lvs_line(items, self.lvs_lines)
+                    items = [self.template.lvs_socket, self.template.lvs_mount_socket, self.template.lvs_patch_cord,
+                             self.template.lvs_mount_cabel_channel, self.template.lvs_cabel_channel]
+                    self.add_extra_lvs_items(items)
 
     def is_exist_resources(self):
         """Метод проверяет наличие добавляемых позиций в спецификацию"""
@@ -1129,7 +1130,5 @@ def get_specication_resources(session_tr_id):
     bundle.find_resources()
     spec_button = bundle.is_exist_resources()
     pps_resources = bundle.get_pps_resources()
-    print(pps_resources)
     csp_resources = bundle.get_csp_resources()
-    print(csp_resources)
     return {'spec_button': spec_button, 'pps_resources':pps_resources, 'csp_resources': csp_resources}
