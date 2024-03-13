@@ -985,6 +985,237 @@ def add_tr_to_last_created_ppr(login, password, authorname, authorid, title_ppr,
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
 
+class Cordis:
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def __connection(self, url):
+        req = requests.get(url, verify=False, auth=HTTPBasicAuth(self.username, self.password))
+        if req.status_code == 200:
+            return req.content.decode('utf-8')
+
+    def get_ppr_page(self, id_ppr):
+        url = f'https://cis.corp.itmh.ru/mvc/demand?id={id_ppr}'
+        return self.__connection(url)
+
+    def get_ppr_victims_page(self, id_ppr):
+        url = f'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceVictimClientList?demand={id_ppr}'
+        return self.__connection(url)
+
+
+class PprParse:
+    def __init__(self, html):
+        self.html = html
+        self.resources = []
+        self.victims = []
+        self.devices = []
+        self.links = []
+        self.ip_changed = False
+        self.b2b_affected = False
+        self.b2c_affected = False
+
+    def __parse(self):
+        return BeautifulSoup(self.html, "html.parser")
+
+    def parse(self):
+        self.parse_devices()
+        self.parse_links()
+        self.parse_resources()
+        self.parse_victims()
+        self.parse_checkbox_ip_changed()
+        self.parse_checkbox_b2b()
+        self.parse_checkbox_b2c()
+
+    def get_devices(self):
+        return self.devices
+
+    def get_resources(self):
+        return self.resources
+
+    def get_links(self):
+        return self.links
+
+    def get_victims(self):
+        return self.victims
+
+    def get_b2b_affected(self):
+        return self.b2b_affected
+
+    def get_b2c_affected(self):
+        return self.b2c_affected
+
+    def get_ip_changed(self):
+        return self.ip_changed
+
+    def parse_checkbox_b2b(self):
+        soup = self.__parse()
+        self.b2b_affected = True if soup.find('input', id='IsCorporateAffected').get('checked') else False
+
+    def parse_checkbox_b2c(self):
+        soup = self.__parse()
+        self.b2c_affected = True if soup.find('input', id='IsPrivateAffected').get('checked') else False
+
+    def parse_checkbox_ip_changed(self):
+        soup = self.__parse()
+        self.ip_changed = True if soup.find('input', id='IsIpChanged').get('checked') else False
+
+    def parse_devices(self):
+        soup = self.__parse()
+        trs = soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
+        for tr in trs:
+            self.devices.append(tr.find_all('td'))
+        self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,4)][::-1] for tds in self.devices]
+        fields = ['name', 'address', 'model']
+        Device = namedtuple('Device', fields)
+        self.devices = [Device(*device) for device in self.devices]
+        #marks = Marks(90, 85, 95, 100)
+
+    def parse_resources(self):
+        soup = self.__parse()
+        header = soup.find("h3", text="Объекты ППР: ресурсы клиентов")
+        trs = header.find_next('table').find_all('tr')[1:]
+        for tr in trs:
+            self.resources.append(tr.find_all('td')[1:-1])
+        self.resources = [[td.text for td in tds] for tds in self.resources]
+        fields = ['contract', 'client_name', 'resource_type', 'resource_name', 'bundle', 'device_name', 'port']
+        Resource = namedtuple('Resource', fields)
+        self.resources = [Resource(*resource) for resource in self.resources]
+
+    def parse_links(self):
+        soup = self.__parse()
+        header = soup.find_all("h3", string="Объекты ППР: линки")[0]
+        trs = header.find_next('table').find_all('tr')[1:]
+        for tr in trs:
+            self.links.append(tr.find_all('td')[1:-2])
+        self.links = [[td.text.strip() for td in tds] for tds in self.links]
+
+
+    def parse_victims(self):
+        soup = self.__parse()
+        header = soup.find("h2", string="B2B")
+        trs = header.find_next('table').find_all('tr')[1:]
+        for tr in trs:
+            self.victims.append(tr.find_all('td'))
+        self.victims = [[td.text for index, td in enumerate(tds) if index not in (2,4)] for tds in self.victims]
+        fields = ['contract', 'client_name', 'resource_type', 'resource_name', 'bundle', 'device_name', 'port']
+        Victim = namedtuple('Victim', fields)
+        self.victims = [Victim(*victim) for victim in self.victims]
+
+
+
+
+class PprCheck:
+    def __init__(self, devices, resources, victims, b2b_affected, b2c_affected, ip_changed):
+        self.messages = []
+        self.devices = devices
+        self.resources = resources
+        self.victims = victims
+        self.b2b_affected = b2b_affected
+        self.b2c_affected = b2c_affected
+        self.ip_changed = ip_changed
+
+    def check_exist_resources_in_victims(self):
+        not_added = [resource for resource in self.resources if resource not in self.victims]
+        if not_added:
+            self.messages.append(f'Обнаружен сбой. сервисы добавленные вручную {not_added} не попали в список клиентов')
+
+    def check_b2b_affected(self):
+        if not self.b2b_affected:
+            self.messages.append('Не установлена галочка B2B в поле "Тип клиента". Проверьте, что простой для B2B клиентов действительно не планируется.')
+
+    def check_b2c_affected(self):
+        if not self.b2c_affected:
+            self.messages.append('Не установлена галочка B2C в поле "Тип клиента". Проверьте, что простой для B2C клиентов действительно не планируется.')
+
+    def check_ip_changed(self):
+        if self.ip_changed:
+            self.messages.append('Внимание! Установлена галочка в поле "Смена IP адресов B2C/B2B c DHCP". Ожидается смена логики.')
+
+    def check_vgw_ip_changed(self):
+        expected = [
+            'SIP', 'AP-GS1002',	'AP200B', 'AP1000',	'AP1100', '1760', '2801', 'DVG-2016S', 'DVG-2032S',	'DVG-5004S',
+			'DVG-5004Sc1', 'DVG-5008S',	'DVG-5008SG', 'DVG-5402SP',	'RG-1404G',	'TAU-2M.IP', 'TAU-8.IP','TAU-16.IP',
+			'TAU-24.IP', 'VC-115-2', 'VC-110-2', 'VC-220', 'VC-130-2'
+        ]
+        if self.ip_changed:
+            unexpected = [device.name for device in self.devices if device.model not in expected and device.name.startswith('VGW')]
+            if unexpected:
+                self.messages.append(
+                    f'Необходимо добавить в ТР требование привлечь DIR.I8.3.3 для сопровождения работ по смене адресации оборудования {", ".join(unexpected)}'
+                )
+
+    def check_wfc_wfh_ip_changed(self):
+        if self.ip_changed:
+            wfc = [device.name for device in self.devices if device.name.startswith('WFC') or device.name.startswith('WFH')]
+            if wfc:
+                self.messages.append(
+                    f'Необходимо привлечь DIR.I8.5.1 для проектирования ТР по смене адресации оборудования {", ".join(wfc)}'
+                )
+
+    def check_old_scheme(self):
+        old_scheme = []
+        not_sign = ['DA', 'BB', 'inet', 'Inet']
+
+        for r in self.victims:
+            if r.resource_type == 'IP-адрес или подсеть' and '/32' in r.resource_name:
+                if not any(_ in r.bundle for _ in not_sign):
+                    old_scheme.append(r)
+        if old_scheme:
+            self.messages.append(
+                f'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов {old_scheme}'
+            )
+
+    def check_offices(self):
+        office_devices = [d for d in self.devices if 'Офис Планеты' in d.address]
+        if office_devices:
+            self.messages.append(
+                f'Обнаружено Оборудование в УС Офис Планеты'
+            )
+        office_stik = [v for v in self.victims if 'Физический стык для организации L2 каналов до офисов' in v.resource_name]
+        if office_stik:
+            self.messages.append(
+                f'Обнаружен физический стык для организации L2 каналов до офисов. Адреса офисов смотри в Реестр. Присоединение офисов Холдинга через РТ'
+            )
+
+    def check_itr(self):
+        itr_devices = set([d for d in self.devices if 'ИНД. ТР' in d.address])
+        if itr_devices:
+            self.messages.append(
+                f'Необходимо учесть в ТР особенности ИТР на УС '
+            )
+        itr_victims = [v for v in self.victims if 'ИНД. ТР' in v.resource_name]
+        if itr_victims:
+            self.messages.append(
+                f'Необходимо учесть в ТР особенности ИТР для ресурсов '
+            )
+
+    def check_rent_vols(self):
+        rent_victims = set([v.client_name for v in self.victims if 'Предоставление в аренду оптического волокна' in v.resource_name])
+        if rent_victims:
+            self.messages.append(
+                f'Необходимо согласовать порядок проверки восстановления связи с клиентами {", ".join(rent_victims)}'
+            )
+
+
+    def all_check(self):
+        self.check_exist_resources_in_victims()
+        self.check_b2b_affected()
+        self.check_b2c_affected()
+        self.check_ip_changed()
+        self.check_vgw_ip_changed()
+        self.check_wfc_wfh_ip_changed()
+        self.check_old_scheme()
+        self.check_offices()
+        self.check_itr()
+        self.check_rent_vols()
+
+    def get_result(self):
+        self.all_check()
+        return '</b>'.join(self.messages)
+
+
+
 def save_to_otpm(login, password, dID, comment, uid, trdifperiod, trcuratorphone):
     """Данный метод выполняет запрос в СПП на сохранение комментария"""
     url = 'https://sss.corp.itmh.ru/dem_tr/dem_adv.php'

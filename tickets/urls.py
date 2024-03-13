@@ -84,6 +84,7 @@ urlpatterns = [
     path('specification/<int:trID>/', CreateSpecificationView.as_view(), name='specification'),
     path('pps/<int:trID>/', PpsFormView.as_view(), name='pps'),
     path('spec_objects/<int:trID>/', spec_objects, name='spec_objects'),
+    path('ppr_check/<int:id_ppr>/', ppr_check, name='ppr_check'),
 
 
 
