@@ -4306,6 +4306,21 @@ def add_tr(request, dID, tID, trID):
     ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
     return redirect('sppdata', trID)
 
+import time
+
+def ppr_test_check(request):
+    context ={}
+    return render(request, 'tickets/ppr_check.html', context)
+
+def ppr_test_get_page_check(request):
+    id_ppr = 7840941
+    user = User.objects.get(username=request.user.username)
+    username, password = get_user_credential_cordis(user)
+    cordis = Cordis(username, password)
+    ppr_page = cordis.get_ppr_page(id_ppr)
+    #ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
+    response = {'result': ppr_page}
+    return JsonResponse(response)
 
 def ppr_check(request, id_ppr):
     user = User.objects.get(username=request.user.username)
@@ -4317,21 +4332,20 @@ def ppr_check(request, id_ppr):
 
     #context = {'my_message': ppr_
     # page + '\n\n\n\n' + ppr_page_victims}
-    ppr_parse = PprParse(pages)
-    ppr_parse.parse()
+    ppr = PprParse(pages)
+    ppr.parse()
 
-    devices = ppr_parse.get_devices()
-    resources = ppr_parse.get_resources()
-    links = ppr_parse.get_links()
-    victims = ppr_parse.get_victims()
-    b2b_affected = ppr_parse.get_b2b_affected()
-    b2c_affected = ppr_parse.get_b2c_affected()
-    ip_changed = ppr_parse.get_ip_changed()
+    # devices = ppr_parse.get_devices()
+    # resources = ppr_parse.get_resources()
+    # links = ppr_parse.get_links()
+    # victims = ppr_parse.get_victims()
+    # b2b_affected = ppr_parse.get_b2b_affected()
+    # b2c_affected = ppr_parse.get_b2c_affected()
+    # ip_changed = ppr_parse.get_ip_changed()
     #victims = [['Z - 0978', 'ООО "СП-Компьютер"', 'IP-адрес или подсеть', '212.49.115.89/32', 'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/1'], ['Z - 0978', 'ООО "СП-Компьютер"', 'Etherline', 'Вайнера 15 - Вайнера 19 VC:10007 100 Мбит/с', 'AR13-23.ekb - 1383 - Z-0978-CKS-Vajnera15-Vajnera19_', 'SW008-AR13-23.ekb', 'Ethernet1/0/9']]
 
-
-    ppr_check = PprCheck(devices, resources, victims, b2b_affected, b2c_affected, ip_changed)
-    result = ppr_check.get_result()
+    ppr_check = PprCheck(ppr)#devices, resources, victims, b2b_affected, b2c_affected, ip_changed)
+    result = ppr_check.check()
 
     context = {'my_message': result}
     return render(request, 'base.html', context)

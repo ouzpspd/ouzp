@@ -1006,7 +1006,7 @@ class Cordis:
 
 class PprParse:
     def __init__(self, html):
-        self.html = html
+        self.soup = BeautifulSoup(html, "html.parser")
         self.resources = []
         self.victims = []
         self.devices = []
@@ -1014,9 +1014,6 @@ class PprParse:
         self.ip_changed = False
         self.b2b_affected = False
         self.b2c_affected = False
-
-    def __parse(self):
-        return BeautifulSoup(self.html, "html.parser")
 
     def parse(self):
         self.parse_devices()
@@ -1049,31 +1046,25 @@ class PprParse:
         return self.ip_changed
 
     def parse_checkbox_b2b(self):
-        soup = self.__parse()
-        self.b2b_affected = True if soup.find('input', id='IsCorporateAffected').get('checked') else False
+        self.b2b_affected = True #if self.soup.find('input', id='IsCorporateAffected').get('checked') else False
 
     def parse_checkbox_b2c(self):
-        soup = self.__parse()
-        self.b2c_affected = True if soup.find('input', id='IsPrivateAffected').get('checked') else False
+        self.b2c_affected = True #if self.soup.find('input', id='IsPrivateAffected').get('checked') else False
 
     def parse_checkbox_ip_changed(self):
-        soup = self.__parse()
-        self.ip_changed = True if soup.find('input', id='IsIpChanged').get('checked') else False
+        self.ip_changed = True # if self.soup.find('input', id='IsIpChanged').get('checked') else False
 
     def parse_devices(self):
-        soup = self.__parse()
-        trs = soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
+        trs = self.soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
         for tr in trs:
             self.devices.append(tr.find_all('td'))
         self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,4)][::-1] for tds in self.devices]
         fields = ['name', 'address', 'model']
         Device = namedtuple('Device', fields)
         self.devices = [Device(*device) for device in self.devices]
-        #marks = Marks(90, 85, 95, 100)
 
     def parse_resources(self):
-        soup = self.__parse()
-        header = soup.find("h3", text="Объекты ППР: ресурсы клиентов")
+        header = self.soup.find("h3", text="Объекты ППР: ресурсы клиентов")
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
             self.resources.append(tr.find_all('td')[1:-1])
@@ -1083,17 +1074,14 @@ class PprParse:
         self.resources = [Resource(*resource) for resource in self.resources]
 
     def parse_links(self):
-        soup = self.__parse()
-        header = soup.find_all("h3", string="Объекты ППР: линки")[0]
+        header = self.soup.find_all("h3", string="Объекты ППР: линки")[0]
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
             self.links.append(tr.find_all('td')[1:-2])
         self.links = [[td.text.strip() for td in tds] for tds in self.links]
 
-
     def parse_victims(self):
-        soup = self.__parse()
-        header = soup.find("h2", string="B2B")
+        header = self.soup.find("h2", string="B2B")
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
             self.victims.append(tr.find_all('td'))
@@ -1106,19 +1094,26 @@ class PprParse:
 
 
 class PprCheck:
-    def __init__(self, devices, resources, victims, b2b_affected, b2c_affected, ip_changed):
+    def __init__(self, ppr): #devices, resources, victims, b2b_affected, b2c_affected, ip_changed):
         self.messages = []
-        self.devices = devices
-        self.resources = resources
-        self.victims = victims
-        self.b2b_affected = b2b_affected
-        self.b2c_affected = b2c_affected
-        self.ip_changed = ip_changed
+        # self.devices = devices
+        # self.resources = resources
+        # self.victims = victims
+        # self.b2b_affected = b2b_affected
+        # self.b2c_affected = b2c_affected
+        # self.ip_changed = ip_changed
+        self.devices = ppr.get_devices()
+        self.resources = ppr.get_resources()
+        self.victims = ppr.get_victims()
+        self.b2b_affected = ppr.get_b2b_affected()
+        self.b2c_affected = ppr.get_b2c_affected()
+        self.ip_changed = ppr.get_ip_changed()
+        self.links = ppr.get_links()
 
     def check_exist_resources_in_victims(self):
-        not_added = [resource for resource in self.resources if resource not in self.victims]
+        not_added = [r.resource_name for r in self.resources if r not in self.victims]
         if not_added:
-            self.messages.append(f'Обнаружен сбой. сервисы добавленные вручную {not_added} не попали в список клиентов')
+            self.messages.append(f'Обнаружен сбой. Cервисы добавленные вручную {", ".join(not_added)} не попали в список клиентов.')
 
     def check_b2b_affected(self):
         if not self.b2b_affected:
@@ -1155,7 +1150,7 @@ class PprCheck:
 
     def check_old_scheme(self):
         old_scheme = []
-        not_sign = ['DA', 'BB', 'inet', 'Inet']
+        not_sign = ['DA', 'BB']
 
         for r in self.victims:
             if r.resource_type == 'IP-адрес или подсеть' and '/32' in r.resource_name:
@@ -1191,14 +1186,71 @@ class PprCheck:
             )
 
     def check_rent_vols(self):
-        rent_victims = set([v.client_name for v in self.victims if 'Предоставление в аренду оптического волокна' in v.resource_name])
-        if rent_victims:
+        service = 'Предоставление в аренду оптического волокна'
+        victims = set([v.client_name for v in self.victims if service in v.resource_type])
+        if victims:
             self.messages.append(
-                f'Необходимо согласовать порядок проверки восстановления связи с клиентами {", ".join(rent_victims)}'
+                f'Обнаружен сервис "{service}". Необходимо согласовать порядок проверки восстановления связи с клиентами {", ".join(victims)}'
+            )
+
+    def check_stand_dir8(self):
+        service = 'Тестовый стенд DIR.I8'
+        victims = set([v for v in self.victims if service in v.resource_name])
+        if victims:
+            self.messages.append(
+                f'Обнаружен сервис "{service}". Исполнителю работ необходимо проинформировать "DIR.I8.3.2" '+
+                ' о запланированных работах, отдельного согласования не требуется.'
+            )
+
+    def check_stik_getting_services_from_parther(self):
+        service = 'Физический стык для получения сервисов от партнера'
+        victims = set([v for v in self.victims if service in v.resource_name])
+        if victims:
+            self.messages.append(
+                f'Обнаружен сервис "{service}". Необходимо привлечь "DIR.I8.3.3" для проектирования ТР'+
+                ' по вводу/выводу из эксплуатации стыков.'
+            )
+
+    def check_stik_fvno(self):
+        service = 'Физический стык. FVNO'
+        victims = set([v for v in self.victims if service in v.resource_name])
+        if victims:
+            self.messages.append(
+                f'Обнаружен сервис "{service}". Исполнителю работ необходимо проинформировать "Ростелеком" о'+
+                ' работах на стыке. При простое на стыке (оба порта EtherChannel) для информирования клиентов '+
+                'необходимо добавить в ППР линки от портов АМ, на которых организован данный стык.'
+            )
+
+    def check_l2_channel_between_am(self):
+        service = 'для обратного FVNO'
+        victims = set([v for v in self.victims if service in v.resource_name])
+        if victims:
+            self.messages.append(
+                f'Обнаружен сервис "L2-канал между АМ на РУА {service}". Необходимо выполнить эскалацию руководству'+
+                ' для согласования порядка вывода L2-канала и корректного информирования Ростелеком о простое. При'+
+                ' простое на L2-канале для информирования клиентов необходимо добавить в ППР линки от портов АМ, на'+
+                ' которых организована заколка для обратного FVNO между АМ.'
+            )
+
+    def check_b2b_etherchannel(self):
+        service = 'B2B. EtherChannel'
+        victims = set([v for v in self.victims if service in v.resource_name])
+        if victims:
+            self.messages.append(
+                f'Обнаружен сервис "{service}". При необходимости учесть в ТР информирование менеджера клиента о'+
+                ' простое на одном из портов EtherChannel'
+            )
+
+    def check_icc_dpi(self):
+        icc = [d.name for d in self.devices if d.name.startswith('ICC')]
+        if icc:
+            self.messages.append(
+                f'Обнаружен "Конвертер MOXA для удаленного управления DPI". Исполнителю работ необходимо'+
+                ' проинформировать "DIR.I8.3.2" о запланированных работах, отдельного согласования не требуется.'
             )
 
 
-    def all_check(self):
+    def perform_checks(self):
         self.check_exist_resources_in_victims()
         self.check_b2b_affected()
         self.check_b2c_affected()
@@ -1209,10 +1261,16 @@ class PprCheck:
         self.check_offices()
         self.check_itr()
         self.check_rent_vols()
+        self.check_stand_dir8()
+        self.check_stik_getting_services_from_parther()
+        self.check_stik_fvno()
+        self.check_l2_channel_between_am()
+        self.check_b2b_etherchannel()
+        self.check_icc_dpi()
 
-    def get_result(self):
-        self.all_check()
-        return '</b>'.join(self.messages)
+    def check(self):
+        self.perform_checks()
+        return '\n'.join(self.messages)
 
 
 
