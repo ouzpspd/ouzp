@@ -237,7 +237,7 @@ $(function () {
 
     var vats_extend = "{{vats_extend}}";
     console.log(vats_extend)
-    if(vats_extend == true) {
+    if(vats_extend) {
         $(".vats_ports").show();
     }
     else {
@@ -262,7 +262,7 @@ $(function () {
         $(".trunk").hide();
         $(".vgw").hide();
         var vats_extend = "{{vats_extend}}";
-        if(vats_extend == true) {
+        if(vats_extend) {
             $(".vats_ports").show();
         }
         else {
