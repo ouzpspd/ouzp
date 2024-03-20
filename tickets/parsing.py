@@ -490,12 +490,14 @@ def _parsing_model_and_node_client_device_by_device_name(name, login, password):
     data['Name'] = name
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
     if req.status_code == 200:
+        model = None
+        node = None
         soup = BeautifulSoup(req.json()['data'], "html.parser")
         table = soup.find('div', {"class": "t-grid-content"})
-        row_tr = table.find('tr')
-        model = row_tr.contents[1].text
-        node = row_tr.find('a', {"class": "netswitch-nodeName"}).text
-        node = ' '.join(node.split())
+        for td in table.find_all('td'):
+            if td.text.strip() == name:
+                model = td.next_sibling.text.strip()
+                node = td.next_sibling.next_sibling.text.strip()
         return model, node
 
 
@@ -1263,13 +1265,22 @@ def get_uplink_data(chain_device, username, password):
 
 
 def parsing_stu_switch(chain_device, username, password):
+    details_url = None
     url = 'https://cis.corp.itmh.ru/stu/Switch/Search'
     data = {'Name': chain_device, 'IncludeDeleted': 'false'}
     req = requests.post(url, verify=False, auth=(username, password), data=data)
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-        details = [a['href'] for a in soup.find_all('a') if '/stu/Switch/Details/' in a['href']][0]
-        req = requests.get('https://cis.corp.itmh.ru' + details, verify=False, auth=(username, password))
+        details = [a['href'] for a in soup.find_all('a') if '/stu/Switch/Details/' in a['href']]
+        if len(details) > 1:
+            all_a = soup.find_all('a')
+            model, node = _parsing_model_and_node_client_device_by_device_name(chain_device, username, password)
+            for index, a in enumerate(all_a):
+                if '/stu/Switch/Details/' in a['href'] and all_a[index - 1].text == node:
+                    details_url = a['href']
+        else:
+            details_url = details[0]
+        req = requests.get('https://cis.corp.itmh.ru' + details_url, verify=False, auth=(username, password))
         if req.status_code == 200:
             return req.content.decode('utf-8')
 
