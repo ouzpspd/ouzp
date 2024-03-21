@@ -2,464 +2,173 @@
 
 {% block content %}
 
-<table class="mooo small">
-			<thead>
-				<tr>
-					<th>Номер</th>
-					<th>Название</th>
-					<th>Класс </th>
-					<th>Тип услуги</th>
-				    <th>Точка подключения</th>
 
-					<th>Название ресурса</th>
-					<th>Бандл</th>
-					<th>Коммутатор предоставления услуги</th>
-					<th>Порт на коммутаторе</th>
-				</tr>
-			</thead>
-			<tbody>
-            </tbody>
-</table>
+
+<div class="container">
+	<div class="card mb-2">
+            <h5 class="card-header">Параметры</h5>
+          <div class="card-body">
+					<div class="row mt-3">
+                        <div class="col-4">
+                                <div class="form-group get_node">
+                                    <button class="btn btn-info btn-block" id="id_get_node" type="button">
+                                      <span class="" role="status" aria-hidden="true"></span>
+                                        <span class="sr-only">Lo...</span>
+                                        Проверить ППР
+                                    </button>
+
+                                </div>
+                            </div>
+                    </div>
+			  		<div id="forms">
+                    </div>
+		  </div>
+	</div>
+</div>
 
 
 <script>
-
 $(function () {
 
-    fi = $("*").contents();
-    console.log(0);
-    console.log(fi.find(".mooo small"));
+	$('#id_get_node').click(function () {
+          $(this).find('span').addClass('spinner-border spinner-border-sm');
+          // создаем AJAX-вызов
+          $.ajax({
+              url: "{% url 'ppr_test_get_page_check' %}",
+              // если успешно, то
+              success: function (response) {
+                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  if (response.error) {
+                      alert(response.error);
+                      $('#id_username').removeClass('is-valid').addClass('is-invalid');
+                      $('#id_username').after('<div class="invalid-feedback d-block" id="usernameError">This username is not available!</div>')
+                  }
 
+                  else {
+                      $("#forms").children().remove();
+                      console.log(response.result)
+
+                      var dict = response.result
+                      var result = response.result
+
+                      for (let [key, value] of Object.entries(dict)) {
+
+
+                      if (key.includes("table_resource")) {
+                      	console.log(111)
+                      	var message = dict[key].messages;
+                      	var set = dict[key].set;
+                      	var row = 0
+
+
+						$("#forms").append(`
+
+						${message}
+						<a class="but_${key}" id="button_${key}">(показать)</a>
+
+
+						<table class="table table-striped" id="${key}">
+						<thead>
+							<tr>
+								<th style="font-size:80%;">Номер договора</th>
+								<th style="font-size:80%;">ФИО/Название</th>
+								<th style="font-size:80%;">Тип</th>
+								<th style="font-size:80%;">Ресурс</th>
+								<th style="font-size:80%;">Бандл</th>
+								<th style="font-size:80%;">Коммутатор</th>
+								<th style="font-size:80%;">Порт</th>
+							</tr>
+						</thead>
+						<tbody>
+						</tbody>
+						</table>
+						`);
+						console.log($("#"+key).find('tbody'))
+						for (let row = 0; row < set.length; row++) {
+						$("#"+key).find('tbody').append(`
+						<tr>
+							<td style="font-size:80%;">${set[row][0]}</td>
+							<td style="font-size:80%;">${set[row][1]}</td>
+							<td style="font-size:80%;">"${set[row][2]}"</td>
+							<td style="font-size:80%;">"${set[row][3]}"</td>
+							<td style="font-size:80%;">"${set[row][4]}"</td>
+							<td style="font-size:80%;">"${set[row][5]}"</td>
+							<td style="font-size:80%;">"${set[row][6]}"</td>
+						</tr>
+                          `);
+						}
+                      }
+                      else if (key.includes("table_device")) {
+
+                      	console.log(111)
+                      	var message = dict[key].messages;
+                      	var set = dict[key].set;
+                      	var row = 0
+						$("#forms").append(`
+						${message}
+						<a class="but_${key}" id="button_${key}"> (показать)</a><br >
+						<table class="table table-striped" id="${key}">
+						<thead>
+							<tr>
+								<th style="font-size:80%;">Коммутатор</th>
+								<th style="font-size:80%;">Узел связи</th>
+								<th style="font-size:80%;">Модель устройства</th>
+							</tr>
+						</thead>
+						<tbody>
+						</tbody>
+						</table>
+						`);
+						console.log($("#"+key).find('tbody'))
+						for (let row = 0; row < set.length; row++) {
+						$("#"+key).find('tbody').append(`
+							<tr>
+								<td style="font-size:80%;">${set[row][0]}</td>
+								<td style="font-size:80%;">${set[row][1]}</td>
+								<td style="font-size:80%;">"${set[row][2]}"</td>
+							</tr>
+							  `);
+						}
+
+					}
+					else {
+					    console.log(111)
+                      	var message = dict[key].messages;
+						$("#forms").append(`
+						<p>${message}</p>
+
+						`);
+					}
+
+					$('#forms').on('click', '.but_'+key, function() {
+					console.log($('#'+key))
+					if ($('#'+key).css('display') == 'none') {
+                        $('#'+key).show();
+                        $(this).text('(скрыть)');
+                    }
+                    else {
+                        $('#'+key).hide();
+                        $(this).text('(показать)');
+                    }
+					});
+
+                    }
+					$('.table').css("display","none");
+				}
+              },
+              error: function (response) {
+                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  alert("Не удалось получить объекты Спецификации.");
+
+              }
+          });
+          return false;
+        });
 });
 
-(function() {
-    // Load the script
-    var script = document.createElement("SCRIPT");
-    //script.src = 'https://ajax.googleapis.com/ajax/libs/jquery/1.12.1/jquery.min.js';
-    script.src = 'https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js';
-	script.type = 'text/javascript';
-    script.onload = function() {
-        var $ = window.jQuery;
-		(function() {
-			var script = document.createElement("SCRIPT");
-			script.src = 'https://code.jquery.com/ui/1.12.1/jquery-ui.min.js';
-			//script.src = 'https://code.jquery.com/ui/1.8.0/jquery-ui.min.js';
-			script.type = 'text/javascript';
-			script.onload = function() {
-				if (window.parent.frames[0] ) {
-					f = $("*",window.parent.frames[0].document).contents();
-				} else {
-					f = $("*").contents();
-				}
-				analysis();
-
-			};
-			document.getElementsByTagName("head")[0].appendChild(script);
-		})();
-    };
-    document.getElementsByTagName("head")[0].appendChild(script);
-})();
 
 
 
-function analysis() {
-
-	var element = document.createElement('div');
-	$(element).attr("id","top");
-	$(element).css("display","none");
-	$(element).css("border","1px solid red");
-	$(element).append('<h2>Учесть в ТР</h2><font color="red" class="ajax-update-loading"><b>Загрузка </b><img src="https://cis.corp.itmh.ru/Content/images/ajax-loader.gif"></font><ol id="analysis"></ol>');
-
-	f.find('#CrashClientList').remove();
-	f.find('#top').remove();
-	f.find('div#CrashLinks').unwrap();
-
-	f.find('#demand_wrapper').prepend(element).closest('html').scrollTop(0);
-	f.find('h3:contains(Объекты ППР: линки) ~ table').first().wrap( "<div id='CrashLinks'></div>" );
-
-
-
-	load();
-
-	f.find('#top').show("blind",1000);
-}
-
-function findElsems (id, searchStr, minElsems, exc) {
-	/*Поиск по тексту, пока не удаляю, ниже тестируется вариант с regexp
-	if (  f.find('div#'+id+' td').is(':contains('+searchStr+')') ) {
-		var elems = f.find('div#'+id+' td:contains('+searchStr+')').closest('tr');
-		if (exc) {
-			exc = ':contains(' + exc.join( '),:contains(' ) + ')';
-			elems = elems.not(exc);
-		}
-		elems = elems.find(' td:contains('+searchStr+')');
-		if ( elems.length < minElsems ) return false;
-
-		return elems;
-	} else {
-		return false;
-	}
-	*/
-
-	//Поиск с regexp
-	$.extend($.expr[':'],{
-	  containsRegex: function(a,i,m){
-		var regreg =  /^\/((?:\\\/|[^\/])+)\/([mig]{0,3})$/,
-		reg = regreg.exec(m[3]);
-		return reg ? RegExp(reg[1], reg[2]).test($.trim(a.innerHTML)) : false;
-	  }
-	});
-
-
-	//добавляем слеши тут, чтобы не править все старые запросы ниже
-	searchStr = '/'+searchStr+'/';
-
-	//Ищем элементы
-	if (  f.find('div#'+id+' td').is(':containsRegex('+searchStr+')') ) {
-		var elems = f.find('div#'+id+' td:containsRegex('+searchStr+')').closest('tr');
-		if (exc) {
-			exc = ':contains(' + exc.join( '),:contains(' ) + ')';
-			elems = elems.not(exc);
-		}
-		elems = elems.find(' td:containsRegex('+searchStr+')');
-		if ( elems.length < minElsems ) return false;
-
-		return elems;
-	} else {
-		return false;
-	}
-
-
-}
-
-function getElemsTable (min, elems) {
-	if ( elems.length < min ) return false;
-	return $('<tbody></tbody>')
-		.append( elems.first().closest('table').find('tr').first().clone().prop('disabled', true) )
-		.append( elems.closest('tr').clone().show().prop('disabled', true) )
-}
-
-function addTable(targ, elems) {
-	f.find('#'+targ)
-		.append( $('<table class="nice small"></table>').append( elems ) );
-}
-
-function addMsg(targ, id, msg) {
-	f.find('#'+targ).append(
-			$('<li>'+msg+'<font id="button_'+id+'" color="blue"> (показать).</font><div id="'+id+'" style="display: none;"></div></li>')
-			)
-	f.find('#button_'+id).on('click', function(e){
-			e.preventDefault();
-			var
-				$this = $(this),
-				content = f.find('#'+id);
-			if(!$this.hasClass('trigger')){
-				$this.addClass('trigger');
-				$this.html(' (cкрыть):');
-				content.show("blind",1000);
-			} else {
-				$this.removeClass('trigger');
-				$this.html(' (показать).');
-				content.hide("blind",1000);
-			}
-		});
-}
-
-//Поиск в Link, Device, ClientList или DeviceAndClientList
-function searchInDeviceOrClientList(where, searchStr, targId, insertId, minElsems, insertMsg, exc) {
-	var deviceElems = false;
-	var clientListElem = false;
-	var linkElem = false;
-
-	if ( where === 'Device' || where === 'DeviceAndClientList' )  deviceElems = findElsems( 'CrashDeviceDivContent', searchStr, minElsems, exc);
-	if ( where === 'ClientList' || where === 'DeviceAndClientList' ) clientListElem =  findElsems( 'CrashClientList', searchStr, minElsems, exc);
-	if ( where === 'Link' ) linkElem = findElsems( 'CrashLinks', searchStr, minElsems, exc);
-
-	if ( deviceElems || clientListElem || linkElem) {
-		addMsg(targId, insertId, insertMsg);
-		if ( deviceElems ) addTable(insertId, getElemsTable(minElsems, deviceElems) ) ;
-		if ( clientListElem ) addTable(insertId, getElemsTable(minElsems, clientListElem) ) ;
-		if ( linkElem ) addTable(insertId, getElemsTable(minElsems, linkElem) ) ;
-	}
-}
-
-function load(){
-	$.ajax( {
-		//Качаем список клиентов
-		url:"{% url 'ppr_test_get_page_check' %}",
-		success: function(response) {
-			//если успешно скачался список клиентов то подклеиваем его скрытым в HTML и начинаем выполнять проверки
-			console.log(1)
-			console.log(response.result)
-			console.log(2)
-			fi = response.result.contents();
-			console.log(fi)
-			f.find('#top').append('<div id="CrashClientList" style="display: none;"></div>');
-			f.find('#CrashClientList').html(response.result);
-
-
-			/////////////////////////////////////////////////////////////////////////
-			//Проверки
-			/////////////////////////////////////////////////////////////////////////
-
-			//Проверка, что добавленные вручную ресурсы присутствуют в Списке Клиентов
-			if ( f.find('h3:contains(Объекты ППР: ресурсы клиентов) ~ table i:contains(Отдельные ресурсы клиентов не затронуты)').length === 0 ) {
-				var clientResources = f.find('h3:contains(Объекты ППР: ресурсы клиентов) ~ table').first().find('tr').clone();
-
-				clientResources = clientResources.filter(function( index ) {
-					if (index === 0) return true;
-					return f.find('div#CrashClientList td:contains("' + $( this ).find('td').eq(1).text() +'") ~ td:contains("' + $( this ).find('td').eq(3).text() +'") ~ td:contains("' + $( this ).find('td').eq(4).text() +'") ~ td:contains("' + $( this ).find('td').eq(5).text().split(';')[0] +'")').length === 0
-				});
-				if (clientResources.length > 1 ) {
-					addMsg(
-						'analysis',
-						'checkRes',
-						 '<font color="red"><b>Внимание! Обнаружен сбой.</b></font> В ' + f.find('a:contains("Список клиентов")').get(0).outerHTML + ' не попали сервисы добавленные вручную как <b>Объекты ППР: ресурсы клиентов</b>'
-					);
-					addTable(
-						'checkRes',
-						getElemsTable( 1, clientResources)
-					);
-				}
-			}
-
-			//Проверка галочек B2B/B2C
-			function checkClientType( clientType ) {
-				if ( f.find('div#demand_wrapper td:contains("Тип клиента") ~ td li:contains("'+clientType+'") input:checkbox').is(':not(:checked)') ) {
-					f.find('#analysis').append( $('<li><font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>'+clientType+'</b>" в поле "<b>Тип клиента</b>". <br>Проверьте, что простой для '+clientType+' клиентов действительно не планируется.</li>') );
-				}
-			}
-			checkClientType('B2B');
-			checkClientType('B2C');
-
-			//Стоит галочка Смена IP адресов B2C/B2B c DHCP
-			if ( f.find('div#demand_wrapper td:contains("Смена IP адресов B2C/B2B c DHCP")').next('td').find('input:checkbox').is(":checked") ) {
-				f.find('#analysis').append( $('<li><font color="red"><b>Внимание!</b> </font>Установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Ожидается смена логики.<ul id="ip"></ul></li>') );
-
-				//VGW
-				searchInDeviceOrClientList(
-					where = 'Device',
-					searchStr = 'VGW',
-					targId = 'ip',
-					insertId = 'vgw',
-					minElsems = 1,
-					insertMsg = 'Необходимо добавить в ТР требование привлечь <b>DIR.I8.3.3</b> для сопровождения работ по смене адресации оборудования',
-					exc = [
-						'SIP',
-						'AP-GS1002',
-						'AP200B',
-						'AP1000',
-						'AP1100',
-						'1760',
-						'2801',
-						'DVG-2016S',
-						'DVG-2032S',
-						'DVG-5004S',
-						'DVG-5004Sc1',
-						'DVG-5008S',
-						'DVG-5008SG',
-						'DVG-5402SP',
-						'RG-1404G',
-						'TAU-2M.IP',
-						'TAU-8.IP',
-						'TAU-16.IP',
-						'TAU-24.IP',
-						'VC-115-2',
-						'VC-110-2',
-						'VC-220',
-						'VC-130-2'
-					]
-				);
-
-				//WFC
-				searchInDeviceOrClientList(
-					where = 'Device',
-					searchStr = 'WFC',
-					targId = 'ip',
-					insertId = 'wfc',
-					minElsems = 1,
-					insertMsg = 'Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР по смене адресации оборудования'
-				);
-				//WFH
-				searchInDeviceOrClientList(
-					where = 'Device',
-					searchStr = 'WFH',
-					targId = 'ip',
-					insertId = 'wfh',
-					minElsems = 1,
-					insertMsg = 'Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР по смене адресации оборудования'
-				);
-				//Старая схема B2B IP-адрес с маской /32
-				if (  f.find('div#CrashClientList td').is(':contains(IP-адрес или подсеть) ~ td:contains(/32)') ) {
-					addMsg(
-						'ip',
-						'oldIP',
-						 'Обнаружен сервис "<b>IP-адрес или подсеть</b> с маской <b>/32</b>"<ul><li>Возможно необходимо инициировать смену реквизитов <b>старой схемы ШПД в общем влан</b> для клиентов'
-					);
-					addTable(
-						'oldIP',
-						getElemsTable( 1, f.find('div#CrashClientList td:contains(IP-адрес или подсеть) ~ td:contains(/32)'))
-					);
-				}
-			} else {
-				//Не стоит галочка Смена IP адресов B2C/B2B c DHCP
-				f.find('#analysis').append( $('<li><font color="red"><b>Внимание!</b></font> Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>".<br> Проверьте, что смена логического подключения действительно не потребуется.</li>') );
-			}
-
-			//Офисы
-			if (findElsems( 'CrashDeviceDivContent', 'Офис ITMH', 1) || findElsems( 'CrashClientList', 'Физический стык для организации L2 каналов до офисов', 1)) {
-			f.find('#analysis').append( $('<li>Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР с учетом простоя связи на оборудовании Офис ITMH.<ul id="office"></ul></li>') );
-				//Офис ITMH
-				searchInDeviceOrClientList(
-					where = 'Device',
-					searchStr = 'Офис ITMH',
-					targId = 'office',
-					insertId = 'office_device',
-					minElsems = 1,
-					insertMsg = 'Обнаружено <b>Оборудование в УС (Офис ITMH)</b>'
-				);
-				//Физический стык для организации L2 каналов до офисов
-				searchInDeviceOrClientList(
-					where = 'ClientList',
-					searchStr = 'Физический стык для организации L2 каналов до офисов',
-					targId = 'office',
-					insertId = 'stik_office',
-					minElsems = 1,
-					insertMsg = 'Обнаружен <a href="https://ckb.itmh.ru/x/bTFGHg" target="_blank"><b>'+searchStr+'</b></a>. Адреса офисов смотри в <a href="https://ckb.itmh.ru/x/nW3CHQ" target="_blank">Реестр. Присоединение офисов Холдинга через РТ</a>'
-				);
-			}
-			//ИНД. ТР
-			searchInDeviceOrClientList(
-				where = 'DeviceAndClientList',
-				searchStr = 'ИНД. ТР',
-				targId = 'analysis',
-				insertId = 'indtr',
-				minElsems = 1,
-				insertMsg = 'Необходимо учесть в ТР особенности схемы организации <a href="https://ckb.itmh.ru/pages/viewpage.action?pageId=81494995" target="_blank">Индивидуального технического решения СПД</a> <b>(ИНД. ТР)</b>'
-			);
-			//Предоставление в аренду оптического волокна
-			searchInDeviceOrClientList(
-				where = 'ClientList',
-				searchStr = 'Предоставление в аренду оптического волокна',
-				targId = 'analysis',
-				insertId = 'arenda',
-				minElsems = 1,
-				insertMsg = 'Обнаружен сервис "<b>'+searchStr+'</b>".<ul><li>Необходимо согласовать порядок проверки восстановления связи с клиентами'
-			);
-
-			//Тестовый стенд DIR.I8
-			//Поис выполняется только по фразе "Тестовый стенд DIR.I8"
-			searchInDeviceOrClientList(
-				where = 'ClientList',
-				searchStr = 'Тестовый стенд DIR.I8',
-				targId = 'analysis',
-				insertId = 'stend_dir8',
-				minElsems = 1,
-				insertMsg = 'Обнаружен сервис "<a href="https://ckb.itmh.ru/x/9iavG" target="_blank"><b>'+searchStr+'</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>DIR.I8.3.2</b>" о запланированных работах, отдельного согласования не требуется'
-			);
-
-			//Физический стык для получения сервисов от оператора
-			searchInDeviceOrClientList(
-				where = 'ClientList',
-				searchStr = 'Физический стык для получения сервисов от партнера',
-				targId = 'analysis',
-				insertId = 'stik',
-				minElsems = 1,
-				insertMsg = 'Обнаружен сервис "<b>'+searchStr+'</b>".<ul><li>Необходимо привлечь <b>DIR.I8.3.3</b> для проектирования ТР по вводу/выводу из эксплуатации стыков'
-			);
-			//Физический стык FVNO
-			//Поис выполняется только по фразе "Физический стык. FVNO"
-			searchInDeviceOrClientList(
-				where = 'ClientList',
-				searchStr = 'Физический стык. FVNO',
-				targId = 'analysis',
-				insertId = 'fvno',
-				minElsems = 1,
-				insertMsg = 'Обнаружен сервис "<a href="https://ckb.itmh.ru/x/SDYwH" target="_blank"><b>'+searchStr+'</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>Ростелеком</b>" о работах на стыке.</li><li>При простое на стыке (оба порта EtherChannel) для информирования клиентов необходимо добавить в ППР линки от портов АМ, на которых организован данный стык</li>'
-			);
-
-			//L2-канал между АМ на РУА для обратного FVNO Екатеринбург Пионерский 1000 Мбит/с
-			searchInDeviceOrClientList(
-				where = 'ClientList',
-				searchStr = 'L2-канал.*для обратного FVNO',
-				targId = 'analysis',
-				insertId = 'reverse_fvno',
-				minElsems = 1,
-				insertMsg = 'Обнаружен сервис "<a href="https://ckb.itmh.ru/x/SDYwH" target="_blank"><b>L2-канал между АМ на РУА для обратного FVNO</b></a>".<ul><li>Необходимо выполнить эскалацию руководству для согласования порядка вывода L2-канала и корректного информирования Ростелеком о простое.</li><li>При простое на L2-канале для информирования клиентов необходимо добавить в ППР линки от портов АМ, на которых организована заколка для обратного FVNO между АМ</li>'
-			);
-
-			//Присоединение клиента B2B по технологии EtherChannel
-			//Поис выполняется только по фразе "B2B по технологии EtherChannel"
-			searchInDeviceOrClientList(
-				where = 'ClientList',
-				searchStr = 'B2B. EtherChannel',
-				targId = 'analysis',
-				insertId = 'Prisoedinenie',
-				minElsems = 1,
-				insertMsg = 'Обнаружен сервис "<b>'+searchStr+'</b>".<ul><li>При необходимости учесть в ТР информирование менеджера клиента о <b>простое на одном из портов EtherChannel</b>'
-			);
-
-
-			//проверка корректности добавления линков КПА с резервирование по EtherChannel
-			//Ищем IAS в линках, далее находим для них коммутаторы
-			linksIAS = [];
-			IASswithLink = false;
-			f.find('div#CrashLinks tr td:nth-child(3):contains("IAS")').each(function() { linksIAS.push($( this ).prop("innerText").split(" ")[0]); });
-			if ( linksIAS.length > 0 ) { IASswithLink = f.find('div#CrashDeviceDivContent').find('td:contains(' + linksIAS.join( '),td:contains(' ) + ')'); }
-			//Ищем IAS в коммутаторах, далее находим линки для которых нет IAS
-			deviceIAS = [];
-			LinkwithoutIAS = false;
-			f.find('div#CrashDeviceDivContent td:contains("IAS")').each(function() { deviceIAS.push($( this ).prop("innerText")); });
-			if ( deviceIAS.length > 0 ) { LinkwithoutIAS = f.find('div#CrashLinks td:nth-child(3):contains("IAS")').not(':contains(' + deviceIAS.join( '),:contains(' ) + ')'); }
-			else { LinkwithoutIAS = f.find('div#CrashLinks td:nth-child(3):contains("IAS")'); }
-			//Отображаем найденное
-			if ( ( IASswithLink.length > 0 ) || ( LinkwithoutIAS.length > 0 ) ) {
-				f.find('#analysis').append( $('<li>Обнаружено "<b>устройство КПА</b>":<ul id="IAS"></ul></li>') );
-				//Линки с КПА
-				if ( IASswithLink.length > 0 ) {
-					addMsg(
-						'IAS',
-						'IASswithLink',
-						'В ППР добавлены КПА вместе с линками. Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
-					);
-					addTable(
-						'IASswithLink',
-						getElemsTable( 1, IASswithLink.closest('tr'))
-					);
-				}
-				//Линки без КПА
-				if ( LinkwithoutIAS.length > 0 ) {
-					addMsg(
-						'IAS',
-						'IASwithoutLinks',
-						'В ППР добавлены линки без КПА. Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
-					);
-					addTable(
-						'IASwithoutLinks',
-						getElemsTable( 1, LinkwithoutIAS.closest('tr'))
-					);
-				}
-			}
-
-			//Поиск ICCxxx-DPI
-			searchInDeviceOrClientList(
-				where = 'Device',
-				searchStr = 'ICC\\d+-DPI',
-				targId = 'analysis',
-				insertId = 'icc-dpi',
-				minElsems = 1,
-				insertMsg = 'Обнаружен "<a href="https://ckb.itmh.ru/x/6wS-HQ" target="_blank"><b>Конвертер MOXA для удаленного управления DPI</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>DIR.I8.3.2</b>" о запланированных работах, отдельного согласования не требуется'
-			);
-
-
-			//Завершение работы скрипта
-			f.find('#top').css("border","2px solid green");
-			f.find('#demand_wrapper').closest('html').scrollTop(0);
-			f.find('.ajax-update-loading').hide("blind");
-			f.find('#top').css("border","2px solid green");
-		}
-	});
-}
 
 </script>
 

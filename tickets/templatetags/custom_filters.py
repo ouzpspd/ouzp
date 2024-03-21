@@ -42,3 +42,9 @@ def duration(td):
 
     return f'{days_str}{hours_str}:{minutes_str}:{seconds_str}'
 
+@register.filter
+def get_item(dictionary, key):
+    """В словаре с несколькими вложенностями поиск по названию ключей
+    {{общий словарь|get_item:ключ первого уровня|get_item:ключ следующего уровня}}"""
+    return dictionary.get(key)
+

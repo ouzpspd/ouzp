@@ -4309,17 +4309,57 @@ def add_tr(request, dID, tID, trID):
 import time
 
 def ppr_test_check(request):
-    context ={}
+    # id_ppr = 7840941
+    # user = User.objects.get(username=request.user.username)
+    # username, password = get_user_credential_cordis(user)
+    # cordis = Cordis(username, password)
+    # ppr_page = cordis.get_ppr_page(id_ppr)
+    # ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
+    # pages = ppr_page + ppr_page_victims
+    # ppr = PprParse(pages)
+    # ppr.parse()
+    # ppr_check = PprCheck(ppr)
+    # result = ppr_check.check()
+
+    # result = {'table_resource_old_scheme': {'set': [
+    #     ['Z - 0978', 'ООО "СП-Компьютер"', 'IP-адрес или подсеть', '212.49.115.89/32', 'R13 - 45 - Lenina.24/8',
+    #      'SW008-AR13-23.ekb', 'Ethernet1/0/1'],
+    #     ['КК-ОП-ИТ-00108619', 'ООО "Средураллифт"', 'IP-адрес или подсеть', '212.49.120.186/32',
+    #      'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/8']],
+    #                                'messages': 'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов:',
+    #                                'type': 'resource'}}
+    # context = {'result': result}
+    context = {}
     return render(request, 'tickets/ppr_check.html', context)
+    #return render(request, 'tickets/ppr_check_2.html', context)
+
+import time
 
 def ppr_test_get_page_check(request):
-    id_ppr = 7840941
+    id_ppr = 3208789#7840941
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
+
     cordis = Cordis(username, password)
     ppr_page = cordis.get_ppr_page(id_ppr)
-    #ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
-    response = {'result': ppr_page}
+    ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
+    pages = ppr_page + ppr_page_victims
+
+    #response = {'result': ppr_page}
+    ppr = PprParse(pages)
+    ppr.parse()
+    ppr_check = PprCheck(ppr)
+    result = ppr_check.check()
+
+
+    # result = {'table_resource_old_scheme': {'set': [
+    #     ['Z - 0978', 'ООО "СП-Компьютер"', 'IP-адрес или подсеть', '212.49.115.89/32', 'R13 - 45 - Lenina.24/8',
+    #      'SW008-AR13-23.ekb', 'Ethernet1/0/1'],
+    #     ['КК-ОП-ИТ-00108619', 'ООО "Средураллифт"', 'IP-адрес или подсеть', '212.49.120.186/32',
+    #      'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/8']],
+    #                                'messages': 'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов:',
+    #                                'type': 'resource'}}
+    response = {'result': result}
     return JsonResponse(response)
 
 def ppr_check(request, id_ppr):
