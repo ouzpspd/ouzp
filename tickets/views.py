@@ -4335,21 +4335,25 @@ def ppr_test_check(request):
 
 import time
 
-def ppr_test_get_page_check(request):
-    id_ppr = 3208789#7840941
+def ppr_test_get_page_check(request, id_ppr):
+    #id_ppr = 3208789#7840941
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
 
+    t1 = time.time()
     cordis = Cordis(username, password)
     ppr_page = cordis.get_ppr_page(id_ppr)
     ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
     pages = ppr_page + ppr_page_victims
+    t2 = time.time()
+    print('cordis ', t2-t1)
 
-    #response = {'result': ppr_page}
     ppr = PprParse(pages)
     ppr.parse()
+
     ppr_check = PprCheck(ppr)
     result = ppr_check.check()
+
 
 
     # result = {'table_resource_old_scheme': {'set': [
@@ -4357,7 +4361,7 @@ def ppr_test_get_page_check(request):
     #      'SW008-AR13-23.ekb', 'Ethernet1/0/1'],
     #     ['КК-ОП-ИТ-00108619', 'ООО "Средураллифт"', 'IP-адрес или подсеть', '212.49.120.186/32',
     #      'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/8']],
-    #                                'messages': 'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов:',
+    #                                'messages': 'Обнаружен сервис "<b>IP-адрес или подсеть</b> с маской <b>/32</b>"<li>Возможно необходимо инициировать смену реквизитов <b>старой схемы ШПД в общем влан</b> для клиентов',
     #                                'type': 'resource'}}
     response = {'result': result}
     return JsonResponse(response)

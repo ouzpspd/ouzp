@@ -86,7 +86,7 @@ urlpatterns = [
     path('spec_objects/<int:trID>/', spec_objects, name='spec_objects'),
     path('ppr_check/<int:id_ppr>/', ppr_check, name='ppr_check'),
     path('ppr_test_check/', ppr_test_check, name='ppr_test_check'),
-    path('ppr_test_get_page_check/', ppr_test_get_page_check, name='ppr_test_get_page_check'),
+    path('ppr_test_get_page_check/<int:id_ppr>/', ppr_test_get_page_check, name='ppr_test_get_page_check'),
 
 
 

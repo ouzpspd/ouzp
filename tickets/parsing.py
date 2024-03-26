@@ -1048,13 +1048,13 @@ class PprParse:
         return self.ip_changed
 
     def parse_checkbox_b2b(self):
-        self.b2b_affected = True #if self.soup.find('input', id='IsCorporateAffected').get('checked') else False
+        self.b2b_affected = True if self.soup.find('input', id='IsCorporateAffected').get('checked') else False
 
     def parse_checkbox_b2c(self):
-        self.b2c_affected = True #if self.soup.find('input', id='IsPrivateAffected').get('checked') else False
+        self.b2c_affected = True if self.soup.find('input', id='IsPrivateAffected').get('checked') else False
 
     def parse_checkbox_ip_changed(self):
-        self.ip_changed = True # if self.soup.find('input', id='IsIpChanged').get('checked') else False
+        self.ip_changed = True if self.soup.find('input', id='IsIpChanged').get('checked') else False
 
     def parse_devices(self):
         trs = self.soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
@@ -1096,15 +1096,9 @@ class PprParse:
 
 
 class PprCheck:
-    def __init__(self, ppr): #devices, resources, victims, b2b_affected, b2c_affected, ip_changed):
+    def __init__(self, ppr):
         self.messages = []
         self.data = {}
-        # self.devices = devices
-        # self.resources = resources
-        # self.victims = victims
-        # self.b2b_affected = b2b_affected
-        # self.b2c_affected = b2c_affected
-        # self.ip_changed = ip_changed
         self.devices = ppr.get_devices()
         self.resources = ppr.get_resources()
         self.victims = ppr.get_victims()
@@ -1114,21 +1108,17 @@ class PprCheck:
         self.links = ppr.get_links()
 
     def check_exist_resources_in_victims(self):
-        #not_added = [r.resource_name for r in self.resources if r not in self.victims]
         not_added = [r for r in self.resources if r not in self.victims]
         if not_added:
-            #self.messages.append(f'Обнаружен сбой. Cервисы добавленные вручную {", ".join(not_added)} не попали в список клиентов.')
             self.data.update({
                 'table_resource_resources_in_victims': {
-                    'messages': '<font color="red"><b>Внимание! Обнаружен сбой.</b></font> В "Список клиентов" не попали сервисы добавленные вручную как <b>Объекты ППР: ресурсы клиентов</b>',
-                    #'messages': 'Внимание! Обнаружен сбой',
+                    'messages': '<font color="red"><b>Внимание! Обнаружен сбой.</b></font> <ul><li>В "Список клиентов" не попали сервисы добавленные вручную как <b>Объекты ППР: ресурсы клиентов</b>',
                     'set': not_added
                 }
             })
 
     def check_b2b_affected(self):
         if not self.b2b_affected:
-            #self.messages.append('Не установлена галочка B2B в поле "Тип клиента". Проверьте, что простой для B2B клиентов действительно не планируется.')
             self.data.update({
                 'b2b_affected': {
                     'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2B</b>" в поле "<b>Тип клиента</b>". <br>Проверьте, что простой для B2B клиентов действительно не планируется.',
@@ -1138,7 +1128,6 @@ class PprCheck:
 
     def check_b2c_affected(self):
         if not self.b2c_affected:
-            #self.messages.append('Не установлена галочка B2C в поле "Тип клиента". Проверьте, что простой для B2C клиентов действительно не планируется.')
             self.data.update({
                 'b2c_affected': {
                     'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2C</b>" в поле "<b>Тип клиента</b>". <br>Проверьте, что простой для B2C клиентов действительно не планируется.',
@@ -1148,10 +1137,9 @@ class PprCheck:
 
     def check_ip_changed(self):
         if self.ip_changed:
-            #self.messages.append('Внимание! Установлена галочка в поле "Смена IP адресов B2C/B2B c DHCP". Ожидается смена логики.')
             self.data.update({
                 'ip_changed': {
-                    'messages': '<li><font color="red"><b>Внимание!</b> </font>Установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Ожидается смена логики.<ul id="ip"></ul></li>',
+                    'messages': '<font color="red"><b>Внимание!</b> </font>Установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Ожидается смена логики.',
                     'set': None
                 }
             })
@@ -1165,26 +1153,23 @@ class PprCheck:
         if self.ip_changed:
             unexpected = [device for device in self.devices if device.model not in expected and device.name.startswith('VGW')]
             if unexpected:
-                # self.messages.append(
-                #     f'Необходимо добавить в ТР требование привлечь DIR.I8.3.3 для сопровождения работ по смене адресации оборудования {", ".join(unexpected)}'
-                # )
                 self.data.update({
                     'table_device_vgw_ip_changed': {
-                        'set': [list(r) for r in unexpected],
-                        'messages': 'Необходимо добавить в ТР требование привлечь <b>DIR.I8.3.3</b> для сопровождения работ по смене адресации оборудования',
-                        'type': 'device'
-
-
+                        'set': unexpected,
+                        'messages': '<ul><li>Необходимо добавить в ТР требование привлечь <b>DIR.I8.3.3</b> для сопровождения работ по смене адресации оборудования',
                     }
                 })
 
     def check_wfc_wfh_ip_changed(self):
         if self.ip_changed:
-            wfc = [device.name for device in self.devices if device.name.startswith('WFC') or device.name.startswith('WFH')]
+            wfc = [d for d in self.devices if d.name.startswith('WFC') or d.name.startswith('WFH')]
             if wfc:
-                self.messages.append(
-                    f'Необходимо привлечь DIR.I8.5.1 для проектирования ТР по смене адресации оборудования {", ".join(wfc)}'
-                )
+                self.data.update({
+                    'table_device_wfc_wfh_ip_changed': {
+                        'set': wfc,
+                        'messages': '<ul><li>Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР по смене адресации оборудования',
+                    }
+                })
 
     def check_old_scheme(self):
         old_scheme = []
@@ -1195,107 +1180,142 @@ class PprCheck:
                 if not any(_ in r.bundle for _ in not_sign):
                     old_scheme.append(r)
         if old_scheme:
-            # self.messages.append(
-            #     f'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов {old_scheme}'
-            # )
-            fields = ['contract', 'client_name', 'resource_type', 'resource_name', 'bundle', 'device_name', 'port']
             self.data.update({
                 'table_resource_old_scheme': {
-                    'set': [list(r) for r in old_scheme],
-                    'messages': 'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов:',
-                    'type': 'resource'
-                    #'text': [[r.contract, r.client_name] for r in old_scheme]
-
+                    'set': old_scheme,
+                    'messages': '<ul><li><font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>IP-адрес или подсеть</b> с маской <b>/32</b>" Возможно необходимо инициировать смену реквизитов <b>старой схемы ШПД в общем влан</b> для клиентов',
                 }
             })
 
     def check_offices(self):
         office_devices = [d for d in self.devices if 'Офис Планеты' in d.address]
+        office_stik = [v for v in self.victims if
+                       'Физический стык для организации L2 каналов до офисов' in v.resource_name]
+        if office_devices or office_stik:
+            self.data.update({
+                'office': {
+                    'set': None,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР с учетом простоя связи на оборудовании Офис ITMH.',
+                }
+            })
         if office_devices:
-            self.messages.append(
-                f'Обнаружено Оборудование в УС Офис Планеты'
-            )
-        office_stik = [v for v in self.victims if 'Физический стык для организации L2 каналов до офисов' in v.resource_name]
+            self.data.update({
+                'table_device_office_devices': {
+                    'set': office_devices,
+                    'messages': '<ul><li>Обнаружено <b>Оборудование в УС (Офис Планеты)</b>',
+                }
+            })
+
         if office_stik:
-            self.messages.append(
-                f'Обнаружен физический стык для организации L2 каналов до офисов. Адреса офисов смотри в Реестр. Присоединение офисов Холдинга через РТ'
-            )
+            self.data.update({
+                'table_resource_office_stik': {
+                    'set': office_stik,
+                    'messages': '<ul><li>Обнаружен <a href="https://ckb.itmh.ru/x/bTFGHg" target="_blank"><b>Физический стык для организации L2 каналов до офисов</b></a>. Адреса офисов смотри в <a href="https://ckb.itmh.ru/x/nW3CHQ" target="_blank">Реестр. Присоединение офисов Холдинга через РТ</a>',
+                }
+            })
 
     def check_itr(self):
-        itr_devices = set([d for d in self.devices if 'ИНД. ТР' in d.address])
-        if itr_devices:
-            self.messages.append(
-                f'Необходимо учесть в ТР особенности ИТР на УС '
-            )
+        itr_devices = [d for d in self.devices if 'ИНД. ТР' in d.address]
         itr_victims = [v for v in self.victims if 'ИНД. ТР' in v.resource_name]
+
+        if itr_devices or itr_victims:
+            self.data.update({
+                'itr': {
+                    'set': None,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Необходимо учесть в ТР особенности схемы организации <a href="https://ckb.itmh.ru/pages/viewpage.action?pageId=81494995" target="_blank">Индивидуального технического решения СПД</a> <b>(ИНД. ТР)</b>',
+                }
+            })
+
+        if itr_devices:
+            self.data.update({
+                'table_device_itr_devices': {
+                    'set': itr_devices,
+                    'messages': '<ul><li>Обнаружено <b>ИНД. ТР</b> на УС',
+                }
+            })
         if itr_victims:
-            self.messages.append(
-                f'Необходимо учесть в ТР особенности ИТР для ресурсов '
-            )
+            self.data.update({
+                'table_resource_itr_victims': {
+                    'set': itr_victims,
+                    'messages': '<ul><li>Обнаружено <b>ИНД. ТР</b> у клиентов',
+                }
+            })
 
     def check_rent_vols(self):
         service = 'Предоставление в аренду оптического волокна'
-        victims = set([v.client_name for v in self.victims if service in v.resource_type])
+        victims = [v for v in self.victims if service in v.resource_type]
         if victims:
-            self.messages.append(
-                f'Обнаружен сервис "{service}". Необходимо согласовать порядок проверки восстановления связи с клиентами {", ".join(victims)}'
-            )
+            self.data.update({
+                'table_resource_rent_vols': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>'+service+'</b>".<ul><li>Необходимо согласовать порядок проверки восстановления связи с клиентами',
+                }
+            })
 
     def check_stand_dir8(self):
         service = 'Тестовый стенд DIR.I8'
-        victims = set([v for v in self.victims if service in v.resource_name])
+        victims = [v for v in self.victims if service in v.resource_name]
         if victims:
-            self.messages.append(
-                f'Обнаружен сервис "{service}". Исполнителю работ необходимо проинформировать "DIR.I8.3.2" '+
-                ' о запланированных работах, отдельного согласования не требуется.'
-            )
+            self.data.update({
+                'table_resource_stand_dir8': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<a href="https://ckb.itmh.ru/x/9iavG" target="_blank"><b>'+service+'</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>DIR.I8.3.2</b>" о запланированных работах, отдельного согласования не требуется',
+                }
+            })
 
     def check_stik_getting_services_from_parther(self):
         service = 'Физический стык для получения сервисов от партнера'
-        victims = set([v for v in self.victims if service in v.resource_name])
+        victims = [v for v in self.victims if service in v.resource_name]
         if victims:
-            self.messages.append(
-                f'Обнаружен сервис "{service}". Необходимо привлечь "DIR.I8.3.3" для проектирования ТР'+
-                ' по вводу/выводу из эксплуатации стыков.'
-            )
+            self.data.update({
+                'table_resource_stik_getting_services_from_parther': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>'+service+'</b>".<ul><li>Необходимо привлечь <b>DIR.I8.3.3</b> для проектирования ТР по вводу/выводу из эксплуатации стыков'
+                }
+            })
 
     def check_stik_fvno(self):
         service = 'Физический стык. FVNO'
-        victims = set([v for v in self.victims if service in v.resource_name])
+        victims = [v for v in self.victims if service in v.resource_name]
         if victims:
-            self.messages.append(
-                f'Обнаружен сервис "{service}". Исполнителю работ необходимо проинформировать "Ростелеком" о'+
-                ' работах на стыке. При простое на стыке (оба порта EtherChannel) для информирования клиентов '+
-                'необходимо добавить в ППР линки от портов АМ, на которых организован данный стык.'
-            )
+            self.data.update({
+                'table_resource_stik_fvno': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<a href="https://ckb.itmh.ru/x/SDYwH" target="_blank"><b>'+service+'</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>Ростелеком</b>" о работах на стыке.</li><li>При простое на стыке (оба порта EtherChannel) для информирования клиентов необходимо добавить в ППР линки от портов АМ, на которых организован данный стык'
+                }
+            })
 
     def check_l2_channel_between_am(self):
         service = 'для обратного FVNO'
-        victims = set([v for v in self.victims if service in v.resource_name])
+        victims = [v for v in self.victims if service in v.resource_name]
         if victims:
-            self.messages.append(
-                f'Обнаружен сервис "L2-канал между АМ на РУА {service}". Необходимо выполнить эскалацию руководству'+
-                ' для согласования порядка вывода L2-канала и корректного информирования Ростелеком о простое. При'+
-                ' простое на L2-канале для информирования клиентов необходимо добавить в ППР линки от портов АМ, на'+
-                ' которых организована заколка для обратного FVNO между АМ.'
-            )
+            self.data.update({
+                'table_resource_l2_channel_between_am': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<a href="https://ckb.itmh.ru/x/SDYwH" target="_blank"><b>L2-канал между АМ на РУА для обратного FVNO</b></a>".<ul><li>Необходимо выполнить эскалацию руководству для согласования порядка вывода L2-канала и корректного информирования Ростелеком о простое.</li><li>При простое на L2-канале для информирования клиентов необходимо добавить в ППР линки от портов АМ, на которых организована заколка для обратного FVNO между АМ'
+                }
+            })
 
     def check_b2b_etherchannel(self):
         service = 'B2B. EtherChannel'
-        victims = set([v for v in self.victims if service in v.resource_name])
+        victims = [v for v in self.victims if service in v.resource_name]
         if victims:
-            self.messages.append(
-                f'Обнаружен сервис "{service}". При необходимости учесть в ТР информирование менеджера клиента о'+
-                ' простое на одном из портов EtherChannel'
-            )
+            self.data.update({
+                'table_resource_b2b_etherchannel': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>'+service+'</b>".<ul><li>При необходимости учесть в ТР информирование менеджера клиента о <b>простое на одном из портов EtherChannel</b>'
+                }
+            })
 
     def check_icc_dpi(self):
-        icc = [d.name for d in self.devices if d.name.startswith('ICC')]
+        icc = [d for d in self.devices if d.name.startswith('ICC')]
         if icc:
-            self.messages.append(
-                f'Обнаружен "Конвертер MOXA для удаленного управления DPI". Исполнителю работ необходимо'+
-                ' проинформировать "DIR.I8.3.2" о запланированных работах, отдельного согласования не требуется.'
-            )
+            self.data.update({
+                'table_device_icc_dpi': {
+                    'set': icc,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен "<a href="https://ckb.itmh.ru/x/6wS-HQ" target="_blank"><b>Конвертер MOXA для удаленного управления DPI</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>DIR.I8.3.2</b>" о запланированных работах, отдельного согласования не требуется'
+                }
+            })
 
 
     def perform_checks(self):
@@ -1304,17 +1324,17 @@ class PprCheck:
         self.check_b2c_affected()
         self.check_ip_changed()
         self.check_vgw_ip_changed()
-        # self.check_wfc_wfh_ip_changed()
+        self.check_wfc_wfh_ip_changed()
         self.check_old_scheme()
-        # self.check_offices()
-        # self.check_itr()
-        # self.check_rent_vols()
-        # self.check_stand_dir8()
-        # self.check_stik_getting_services_from_parther()
-        # self.check_stik_fvno()
-        # self.check_l2_channel_between_am()
-        # self.check_b2b_etherchannel()
-        # self.check_icc_dpi()
+        self.check_offices()
+        self.check_itr()
+        self.check_rent_vols()
+        self.check_stand_dir8()
+        self.check_stik_getting_services_from_parther()
+        self.check_stik_fvno()
+        self.check_l2_channel_between_am()
+        self.check_b2b_etherchannel()
+        self.check_icc_dpi()
 
     def check(self):
         self.perform_checks()

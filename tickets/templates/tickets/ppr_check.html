@@ -8,8 +8,15 @@
 	<div class="card mb-2">
             <h5 class="card-header">Параметры</h5>
           <div class="card-body">
-					<div class="row mt-3">
-                        <div class="col-4">
+              <div class="row">
+                <div class="col-3">
+                    <div class="form-group">
+                        <input type="text" id="id_ppr" class="form-control" placeholder="ППР">
+                    </div>
+                </div>
+              </div>
+					<div class="row">
+                        <div class="col-3">
                                 <div class="form-group get_node">
                                     <button class="btn btn-info btn-block" id="id_get_node" type="button">
                                       <span class="" role="status" aria-hidden="true"></span>
@@ -32,125 +39,132 @@ $(function () {
 
 	$('#id_get_node').click(function () {
           $(this).find('span').addClass('spinner-border spinner-border-sm');
+
+          console.log(999)
+          var ppr = Number($("#id_ppr").val().trim().replace("#",""))
+          console.log(88)
+          console.log(ppr)
+          var url_mask = "{% url 'ppr_test_get_page_check' id_ppr=12345 %}".replace(/12345/, ppr.toString());
           // создаем AJAX-вызов
           $.ajax({
-              url: "{% url 'ppr_test_get_page_check' %}",
+
+              url: url_mask,
               // если успешно, то
               success: function (response) {
                   $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
                   if (response.error) {
                       alert(response.error);
-                      $('#id_username').removeClass('is-valid').addClass('is-invalid');
-                      $('#id_username').after('<div class="invalid-feedback d-block" id="usernameError">This username is not available!</div>')
                   }
 
                   else {
-                      $("#forms").children().remove();
-                      console.log(response.result)
+                      //удаляем html если был предыдущий запрос
+                      $("#forms").empty();
+                      //$("#forms").html("");
+
+                      //удаляем Event Listeners если был предыдущий запрос
+                      $("div#forms").off();
+
+                      console.log('form')
+                      console.log($("#forms"))
 
                       var dict = response.result
                       var result = response.result
 
-                      for (let [key, value] of Object.entries(dict)) {
+                      for (let [check_name, check_value] of Object.entries(dict)) {
 
 
-                      if (key.includes("table_resource")) {
-                      	console.log(111)
-                      	var message = dict[key].messages;
-                      	var set = dict[key].set;
-                      	var row = 0
+                          if (check_name.includes("table_resource")) {
+                            console.log(111)
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
 
 
-						$("#forms").append(`
+                            $("#forms").append(`
 
-						${message}
-						<a class="but_${key}" id="button_${key}">(показать)</a>
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}">(показать)</a></li></ul>
 
 
-						<table class="table table-striped" id="${key}">
-						<thead>
-							<tr>
-								<th style="font-size:80%;">Номер договора</th>
-								<th style="font-size:80%;">ФИО/Название</th>
-								<th style="font-size:80%;">Тип</th>
-								<th style="font-size:80%;">Ресурс</th>
-								<th style="font-size:80%;">Бандл</th>
-								<th style="font-size:80%;">Коммутатор</th>
-								<th style="font-size:80%;">Порт</th>
-							</tr>
-						</thead>
-						<tbody>
-						</tbody>
-						</table>
-						`);
-						console.log($("#"+key).find('tbody'))
-						for (let row = 0; row < set.length; row++) {
-						$("#"+key).find('tbody').append(`
-						<tr>
-							<td style="font-size:80%;">${set[row][0]}</td>
-							<td style="font-size:80%;">${set[row][1]}</td>
-							<td style="font-size:80%;">"${set[row][2]}"</td>
-							<td style="font-size:80%;">"${set[row][3]}"</td>
-							<td style="font-size:80%;">"${set[row][4]}"</td>
-							<td style="font-size:80%;">"${set[row][5]}"</td>
-							<td style="font-size:80%;">"${set[row][6]}"</td>
-						</tr>
-                          `);
-						}
-                      }
-                      else if (key.includes("table_device")) {
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Номер договора</th>
+                                    <th style="font-size:80%;">ФИО/Название</th>
+                                    <th style="font-size:80%;">Тип</th>
+                                    <th style="font-size:80%;">Ресурс</th>
+                                    <th style="font-size:80%;">Бандл</th>
+                                    <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Порт</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                            <tr>
+                                <td style="font-size:80%;">${set[row][0]}</td>
+                                <td style="font-size:80%;">${set[row][1]}</td>
+                                <td style="font-size:80%;">${set[row][2]}</td>
+                                <td style="font-size:80%;">${set[row][3]}</td>
+                                <td style="font-size:80%;">${set[row][4]}</td>
+                                <td style="font-size:80%;">${set[row][5]}</td>
+                                <td style="font-size:80%;">${set[row][6]}</td>
+                            </tr>
+                              `);
+                            }
+                          }
+                          else if (check_name.includes("table_device")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+                            $("#forms").append(`
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Узел связи</th>
+                                    <th style="font-size:80%;">Модель устройства</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            console.log($("#"+check_name).find('tbody'))
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                                <tr>
+                                    <td style="font-size:80%;">${set[row][0]}</td>
+                                    <td style="font-size:80%;">${set[row][1]}</td>
+                                    <td style="font-size:80%;">${set[row][2]}</td>
+                                </tr>
+                                  `);
+                            }
 
-                      	console.log(111)
-                      	var message = dict[key].messages;
-                      	var set = dict[key].set;
-                      	var row = 0
-						$("#forms").append(`
-						${message}
-						<a class="but_${key}" id="button_${key}"> (показать)</a><br >
-						<table class="table table-striped" id="${key}">
-						<thead>
-							<tr>
-								<th style="font-size:80%;">Коммутатор</th>
-								<th style="font-size:80%;">Узел связи</th>
-								<th style="font-size:80%;">Модель устройства</th>
-							</tr>
-						</thead>
-						<tbody>
-						</tbody>
-						</table>
-						`);
-						console.log($("#"+key).find('tbody'))
-						for (let row = 0; row < set.length; row++) {
-						$("#"+key).find('tbody').append(`
-							<tr>
-								<td style="font-size:80%;">${set[row][0]}</td>
-								<td style="font-size:80%;">${set[row][1]}</td>
-								<td style="font-size:80%;">"${set[row][2]}"</td>
-							</tr>
-							  `);
-						}
+                        }
+                        else {
+                            var message = dict[check_name].messages;
+                            $("#forms").append(`
+                            <p>${message}</p>
 
-					}
-					else {
-					    console.log(111)
-                      	var message = dict[key].messages;
-						$("#forms").append(`
-						<p>${message}</p>
+                            `);
+                        }
 
-						`);
-					}
-
-					$('#forms').on('click', '.but_'+key, function() {
-					console.log($('#'+key))
-					if ($('#'+key).css('display') == 'none') {
-                        $('#'+key).show();
-                        $(this).text('(скрыть)');
-                    }
-                    else {
-                        $('#'+key).hide();
-                        $(this).text('(показать)');
-                    }
-					});
+                        $('#forms').on('click', '.but_'+check_name, function() {
+                            if ($('#'+check_name).css('display') == 'none') {
+                                $('#'+check_name).show();
+                                $(this).text('(скрыть)');
+                            }
+                            else {
+                                $('#'+check_name).hide();
+                                $(this).text('(показать)');
+                            }
+                        });
 
                     }
 					$('.table').css("display","none");
@@ -158,7 +172,7 @@ $(function () {
               },
               error: function (response) {
                   $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
-                  alert("Не удалось получить объекты Спецификации.");
+                  alert("Не удалось получить объекты ППР.");
 
               }
           });
