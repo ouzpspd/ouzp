@@ -3672,7 +3672,7 @@ def ppr(request, trID):
                 messages.warning(request, 'Должна быть выбрана либо новая либо существующая ППР')
                 return redirect('ppr', trID)
             elif exist_ppr:
-                session_tr_id.update({'exist_ppr': exist_ppr})
+                session_tr_id.update({'exist_ppr': exist_ppr.strip('#')})
                 request.session[trID] = session_tr_id
                 return redirect('add_resources_to_ppr', trID)
             if title_ppr == '':
@@ -3786,23 +3786,15 @@ def add_resources_to_ppr(request, trID):
             services = get_services(ppr_resources)
             links = get_links(ppr_resources)
             ppr = int(session_tr_id.get('exist_ppr'))
+            results = []
             for service in services:
                 result = add_res_to_ppr(ppr, service, username, password)
-                if result[0] == 'added':
-                    messages.success(request, f'{result[1]} добавлено в ППР')
-                elif result[0] == 'error':
-                    messages.warning(request, f'{result[1]} не удалось добавить в ППР')
-                elif result[0] == 'Более одного контракта':
-                    messages.warning(request, f'Более одного контракта {result[1]}, не удалось добавить в ППР')
-
+                results.append(result)
             for link in links:
                 result = add_links_to_ppr(ppr, link, username, password)
-                if result[0] == 'added':
-                    messages.success(request, f'{result[1]} добавлено в ППР')
-                elif result[0] == 'error':
-                    messages.warning(request, f'{result[1]} не удалось добавить в ППР')
-                elif result[0] == 'не оказалось в списке коммутаторов':
-                    messages.warning(request, f'{result[1]} не оказалось в списке коммутаторов, не удалось добавить в ППР')
+                results.append(result)
+            session_tr_id.update({'added_resources_to_ppr': results})
+            request.session[str(trID)] = session_tr_id
             return redirect('ppr_result', trID)
 
     else:
@@ -3820,12 +3812,14 @@ def ppr_result(request, trID):
     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
     session_tr_id = request.session[str(trID)]
     exist_ppr = session_tr_id.get('exist_ppr')
+    resources = session_tr_id.get('added_resources_to_ppr')
     next_link = f'https://cis.corp.itmh.ru/index.aspx?demand={exist_ppr}'
     if trID == 1:
         del request.session[str(trID)]
     context = {
         'next_link': next_link,
         'exist_ppr': exist_ppr,
+        'resources': resources,
         'trID': trID
     }
     return render(request, 'tickets/ppr_result.html', context)
@@ -4313,6 +4307,32 @@ def add_tr(request, dID, tID, trID):
     ticket_spp_id = ticket_spp.id
     ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
     return redirect('sppdata', trID)
+
+import time
+
+def ppr_check(request):
+    context = {}
+    return render(request, 'tickets/ppr_check.html', context)
+
+
+import time
+
+def perform_ppr_check(request, id_ppr):
+    user = User.objects.get(username=request.user.username)
+    username, password = get_user_credential_cordis(user)
+    cordis = Cordis(username, password)
+    ppr_page = cordis.get_ppr_page(id_ppr)
+    ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
+    pages = ppr_page + ppr_page_victims
+
+    ppr = PprParse(pages)
+    ppr.parse()
+
+    ppr_check = PprCheck(ppr)
+    result = ppr_check.check()
+
+    response = {'result': result}
+    return JsonResponse(response)
 
 
 

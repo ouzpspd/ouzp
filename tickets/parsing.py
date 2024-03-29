@@ -893,9 +893,10 @@ def add_res_to_ppr(ppr, service, login, password):
                 data = {'demand': ppr, 'sim': resource['SimId']}
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
                 if req.status_code == 200:
-                    return ('added', disable_resource)
-                return ('error', disable_resource)
-    return ('Более одного контракта', contract_list)
+                    return 'added', disable_resource, 'Добавлен в ППР'
+                return 'error', disable_resource, 'Не добавлен в ППР. Ошибка при добавлении'
+        return 'not_found', disable_resource, 'Не добавлен в ППР. Не найден на договоре'
+    return 'not_found', disable_resource, 'Не добавлен в ППР. Возможные контракты '+', '.join([r.get('Name') for r in contract_list])
 
 
 def add_links_to_ppr(ppr, link, login, password):
@@ -920,9 +921,9 @@ def add_links_to_ppr(ppr, link, login, password):
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
                 if f'{sw} [<span class="port_name">{ppr_port}</span>]' in req.content.decode('utf-8'):
-                    return ('added', disable_resource)
-            return ('error', disable_resource)
-    return ('не оказалось в списке коммутаторов', sw)
+                    return 'added', disable_resource, 'добавлен в ППР'
+            return 'error', disable_resource, 'не добавлен в ППР'
+    return 'не оказалось в списке коммутаторов', sw, 'не добавлен в ППР, не найден в списке коммутаторов'
 
 
 def search_last_created_ppr(login, password, authorname, authorid):
@@ -985,6 +986,398 @@ def add_tr_to_last_created_ppr(login, password, authorname, authorid, title_ppr,
             'Priority': '3',
             }
     req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+
+
+class Cordis:
+    """Класс для обращения к Cordis"""
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def __connection(self, url):
+        req = requests.get(url, verify=False, auth=HTTPBasicAuth(self.username, self.password))
+        if req.status_code == 200:
+            return req.content.decode('utf-8')
+
+    def get_ppr_page(self, id_ppr):
+        url = f'https://cis.corp.itmh.ru/mvc/demand?id={id_ppr}'
+        return self.__connection(url)
+
+    def get_ppr_victims_page(self, id_ppr):
+        url = f'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceVictimClientList?demand={id_ppr}'
+        return self.__connection(url)
+
+
+class PprParse:
+    """Класс принимает html-страниы ППР, Список клиентов ппр и парсит значения в таблицах"""
+    def __init__(self, html):
+        self.soup = BeautifulSoup(html, "html.parser")
+        self.resources = []
+        self.victims = []
+        self.devices = []
+        self.links = []
+        self.ip_changed = False
+        self.b2b_affected = False
+        self.b2c_affected = False
+
+    def parse(self):
+        self.parse_devices()
+        self.parse_links()
+        self.parse_resources()
+        self.parse_victims()
+        self.parse_checkbox_ip_changed()
+        self.parse_checkbox_b2b()
+        self.parse_checkbox_b2c()
+
+    def get_devices(self):
+        return self.devices
+
+    def get_resources(self):
+        return self.resources
+
+    def get_links(self):
+        return self.links
+
+    def get_victims(self):
+        return self.victims
+
+    def get_b2b_affected(self):
+        return self.b2b_affected
+
+    def get_b2c_affected(self):
+        return self.b2c_affected
+
+    def get_ip_changed(self):
+        return self.ip_changed
+
+    def parse_checkbox_b2b(self):
+        self.b2b_affected = True if self.soup.find('input', id='IsCorporateAffected').get('checked') else False
+
+    def parse_checkbox_b2c(self):
+        self.b2c_affected = True if self.soup.find('input', id='IsPrivateAffected').get('checked') else False
+
+    def parse_checkbox_ip_changed(self):
+        self.ip_changed = True if self.soup.find('input', id='IsIpChanged').get('checked') else False
+
+    def parse_devices(self):
+        trs = self.soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
+        for tr in trs:
+            self.devices.append(tr.find_all('td'))
+        self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,3,4)][::-1] for tds in self.devices]
+        fields = ['name', 'address', 'az', 'model']
+        Device = namedtuple('Device', fields)
+        self.devices = [Device(*device) for device in self.devices]
+
+    def parse_resources(self):
+        header = self.soup.find("h3", text="Объекты ППР: ресурсы клиентов")
+        trs = header.find_next('table').find_all('tr')[1:]
+        for tr in trs:
+            self.resources.append(tr.find_all('td')[1:-1])
+        self.resources = [[td.text for td in tds] for tds in self.resources]
+        fields = ['contract', 'client_name', 'resource_type', 'resource_name', 'bundle', 'device_name', 'port']
+        Resource = namedtuple('Resource', fields)
+        self.resources = [Resource(*resource) for resource in self.resources]
+
+    def parse_links(self):
+        header = self.soup.find_all("h3", string="Объекты ППР: линки")[0]
+        trs = header.find_next('table').find_all('tr')[1:]
+        for tr in trs:
+            self.links.append(tr.find_all('td')[1:-1])
+        self.links = [[td.text.strip() for td in tds] for tds in self.links]
+
+    def parse_victims(self):
+        header = self.soup.find("h2", string="B2B")
+        trs = header.find_next('table').find_all('tr')[1:]
+        for tr in trs:
+            self.victims.append(tr.find_all('td'))
+        #self.victims = [[td.text for index, td in enumerate(tds) if index not in (2,4)] for tds in self.victims]
+        self.victims = [[td.text for td in tds] for tds in self.victims]
+        fields = ['contract', 'client_name', 'client_class', 'resource_type', 'point', 'resource_name', 'bundle',
+                  'device_name', 'port']
+        Victim = namedtuple('Victim', fields)
+        self.victims = [Victim(*victim) for victim in self.victims]
+
+
+class PprCheck:
+    """Класс принимает распарсенные данные ППР и выполняет необходимые проверки"""
+    def __init__(self, ppr):
+        self.messages = []
+        self.data = {}
+        self.devices = ppr.get_devices()
+        self.resources = ppr.get_resources()
+        self.victims = ppr.get_victims()
+        self.b2b_affected = ppr.get_b2b_affected()
+        self.b2c_affected = ppr.get_b2c_affected()
+        self.ip_changed = ppr.get_ip_changed()
+        self.links = ppr.get_links()
+
+    def check_exist_resources_in_victims(self):
+        #not_added = [r for r in self.resources if r not in self.victims]
+        victim_names = [res.resource_name for res in self.victims]
+        not_added = [r for r in self.resources if r.resource_name not in victim_names]
+        if not_added:
+            self.data.update({
+                'table_not_resource_in_victims': {
+                    'messages': '<font color="red"><b>Внимание! Обнаружен сбой.</b></font> <ul><li>В "Список клиентов" не попали сервисы добавленные вручную как <b>Объекты ППР: ресурсы клиентов</b>',
+                    'set': not_added
+                }
+            })
+
+    def check_b2b_affected(self):
+        if not self.b2b_affected:
+            self.data.update({
+                'b2b_affected': {
+                    'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2B</b>" в поле "<b>Тип клиента</b>". <ul><li>Проверьте, что простой для B2B клиентов действительно не планируется.',
+                    'set': None
+                }
+            })
+
+    def check_b2c_affected(self):
+        if not self.b2c_affected:
+            self.data.update({
+                'b2c_affected': {
+                    'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2C</b>" в поле "<b>Тип клиента</b>". <ul><li>Проверьте, что простой для B2C клиентов действительно не планируется.',
+                    'set': None
+                }
+            })
+
+    def check_ip_changed(self):
+        if self.ip_changed:
+            self.data.update({
+                'ip_changed': {
+                    'messages': '<font color="red"><b>Внимание!</b> </font>Установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Ожидается смена логики.',
+                    'set': None
+                }
+            })
+        else:
+            self.data.update({
+                'ip_not_changed': {
+                    'messages': '<font color="red"><b>Внимание!</b> </font>Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Проверьте, что смена логического подключения действительно не потребуется.',
+                    'set': None
+                }
+            })
+
+    def check_vgw_ip_changed(self):
+        expected = [
+            'SIP', 'AP-GS1002',	'AP200B', 'AP1000',	'AP1100', '1760', '2801', 'DVG-2016S', 'DVG-2032S',	'DVG-5004S',
+			'DVG-5004Sc1', 'DVG-5008S',	'DVG-5008SG', 'DVG-5402SP',	'RG-1404G',	'TAU-2M.IP', 'TAU-8.IP','TAU-16.IP',
+			'TAU-24.IP', 'VC-115-2', 'VC-110-2', 'VC-220', 'VC-130-2'
+        ]
+        if self.ip_changed:
+            unexpected = [device for device in self.devices if device.model not in expected and device.name.startswith('VGW')]
+            if unexpected:
+                self.data.update({
+                    'table_device_vgw_ip_changed': {
+                        'set': unexpected,
+                        'messages': '<ul><li>Необходимо добавить в ТР требование привлечь <b>DIR.I8.3.3</b> для сопровождения работ по смене адресации оборудования',
+                    }
+                })
+
+    def check_wfc_wfh_ip_changed(self):
+        if self.ip_changed:
+            wfc = [d for d in self.devices if d.name.startswith('WFC') or d.name.startswith('WFH')]
+            if wfc:
+                self.data.update({
+                    'table_device_wfc_wfh_ip_changed': {
+                        'set': wfc,
+                        'messages': '<ul><li>Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР по смене адресации оборудования',
+                    }
+                })
+
+    def check_old_scheme(self):
+        old_scheme = []
+        not_sign = ['DA', 'BB']
+
+        for r in self.victims:
+            if r.resource_type == 'IP-адрес или подсеть' and '/32' in r.resource_name:
+                if not any(_ in r.bundle for _ in not_sign):
+                    old_scheme.append(r)
+        if old_scheme:
+            self.data.update({
+                'table_resource_old_scheme': {
+                    'set': old_scheme,
+                    'messages': '<ul><li><font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>IP-адрес или подсеть</b> с маской <b>/32</b>" Возможно необходимо инициировать смену реквизитов <b>старой схемы ШПД в общем влан</b> для клиентов',
+                }
+            })
+
+    def check_offices(self):
+        office_devices = [d for d in self.devices if 'Офис Планеты' in d.address]
+        office_stik = [v for v in self.victims if
+                       'Физический стык для организации L2 каналов до офисов' in v.resource_name]
+        if office_devices or office_stik:
+            self.data.update({
+                'office': {
+                    'set': None,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Необходимо привлечь <b>DIR.I8.5.1</b> для проектирования ТР с учетом простоя связи на оборудовании Офис ITMH.',
+                }
+            })
+        if office_devices:
+            self.data.update({
+                'table_device_office_devices': {
+                    'set': office_devices,
+                    'messages': '<ul><li>Обнаружено <b>Оборудование в УС (Офис Планеты)</b>',
+                }
+            })
+
+        if office_stik:
+            self.data.update({
+                'table_resource_office_stik': {
+                    'set': office_stik,
+                    'messages': '<ul><li>Обнаружен <a href="https://ckb.itmh.ru/x/bTFGHg" target="_blank"><b>Физический стык для организации L2 каналов до офисов</b></a>. Адреса офисов смотри в <a href="https://ckb.itmh.ru/x/nW3CHQ" target="_blank">Реестр. Присоединение офисов Холдинга через РТ</a>',
+                }
+            })
+
+    def check_itr(self):
+        itr_devices = [d for d in self.devices if 'ИНД. ТР' in d.address]
+        itr_victims = [v for v in self.victims if 'ИНД. ТР' in v.resource_name]
+
+        if itr_devices or itr_victims:
+            self.data.update({
+                'itr': {
+                    'set': None,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Необходимо учесть в ТР особенности схемы организации <a href="https://ckb.itmh.ru/pages/viewpage.action?pageId=81494995" target="_blank">Индивидуального технического решения СПД</a> <b>(ИНД. ТР)</b>',
+                }
+            })
+
+        if itr_devices:
+            self.data.update({
+                'table_device_itr_devices': {
+                    'set': itr_devices,
+                    'messages': '<ul><li>Обнаружено <b>ИНД. ТР</b> на УС',
+                }
+            })
+        if itr_victims:
+            self.data.update({
+                'table_resource_itr_victims': {
+                    'set': itr_victims,
+                    'messages': '<ul><li>Обнаружено <b>ИНД. ТР</b> у клиентов',
+                }
+            })
+
+    def check_rent_vols(self):
+        service = 'Предоставление в аренду оптического волокна'
+        victims = [v for v in self.victims if service in v.resource_type]
+        if victims:
+            self.data.update({
+                'table_resource_rent_vols': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>'+service+'</b>".<ul><li>Необходимо согласовать порядок проверки восстановления связи с клиентами',
+                }
+            })
+
+    def check_stand_dir8(self):
+        service = 'Тестовый стенд DIR.I8'
+        victims = [v for v in self.victims if service in v.resource_name]
+        if victims:
+            self.data.update({
+                'table_resource_stand_dir8': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<a href="https://ckb.itmh.ru/x/9iavG" target="_blank"><b>'+service+'</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>DIR.I8.3.2</b>" о запланированных работах, отдельного согласования не требуется',
+                }
+            })
+
+    def check_stik_getting_services_from_parther(self):
+        service = 'Физический стык для получения сервисов от партнера'
+        victims = [v for v in self.victims if service in v.resource_name]
+        if victims:
+            self.data.update({
+                'table_resource_stik_getting_services_from_parther': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>'+service+'</b>".<ul><li>Необходимо привлечь <b>DIR.I8.3.3</b> для проектирования ТР по вводу/выводу из эксплуатации стыков'
+                }
+            })
+
+    def check_stik_fvno(self):
+        service = 'Физический стык. FVNO'
+        victims = [v for v in self.victims if service in v.resource_name]
+        if victims:
+            self.data.update({
+                'table_resource_stik_fvno': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<a href="https://ckb.itmh.ru/x/SDYwH" target="_blank"><b>'+service+'</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>Ростелеком</b>" о работах на стыке.</li><li>При простое на стыке (оба порта EtherChannel) для информирования клиентов необходимо добавить в ППР линки от портов АМ, на которых организован данный стык'
+                }
+            })
+
+    def check_l2_channel_between_am(self):
+        service = 'для обратного FVNO'
+        victims = [v for v in self.victims if service in v.resource_name]
+        if victims:
+            self.data.update({
+                'table_resource_l2_channel_between_am': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<a href="https://ckb.itmh.ru/x/SDYwH" target="_blank"><b>L2-канал между АМ на РУА для обратного FVNO</b></a>".<ul><li>Необходимо выполнить эскалацию руководству для согласования порядка вывода L2-канала и корректного информирования Ростелеком о простое.</li><li>При простое на L2-канале для информирования клиентов необходимо добавить в ППР линки от портов АМ, на которых организована заколка для обратного FVNO между АМ'
+                }
+            })
+
+    def check_b2b_etherchannel(self):
+        service = 'B2B. EtherChannel'
+        victims = [v for v in self.victims if service in v.resource_name]
+        if victims:
+            self.data.update({
+                'table_resource_b2b_etherchannel': {
+                    'set': victims,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен сервис "<b>'+service+'</b>".<ul><li>При необходимости учесть в ТР информирование менеджера клиента о <b>простое на одном из портов EtherChannel</b>'
+                }
+            })
+
+    def check_icc_dpi(self):
+        icc = [d for d in self.devices if d.name.startswith('ICC')]
+        if icc:
+            self.data.update({
+                'table_device_icc_dpi': {
+                    'set': icc,
+                    'messages': '<font color="red"><b>Внимание!</b></font> Обнаружен "<a href="https://ckb.itmh.ru/x/6wS-HQ" target="_blank"><b>Конвертер MOXA для удаленного управления DPI</b></a>".<ul><li><b>Исполнителю работ</b> необходимо проинформировать "<b>DIR.I8.3.2</b>" о запланированных работах, отдельного согласования не требуется'
+                }
+            })
+
+    def check_ias(self):
+        devices_ias = [d.name for d in self.devices if d.name.startswith('IAS')]
+        exist_ias = [d for d in self.links if d and d[1].startswith('IAS') and d[1].split()[0] in devices_ias]
+        not_exist_ias = [d for d in self.links if d and d[1].startswith('IAS') and d[1].split()[0] not in devices_ias]
+        if exist_ias:
+            self.data.update({
+                'table_links_exist_ias': {
+                    'set': exist_ias,
+                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены КПА вместе с линками. Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
+                }
+            })
+        if not_exist_ias:
+            self.data.update({
+                'table_links_not_exist_ias': {
+                    'set': not_exist_ias,
+                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены линки без КПА. Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
+                }
+            })
+
+    def perform_checks(self):
+        self.check_exist_resources_in_victims()
+        self.check_b2b_affected()
+        self.check_b2c_affected()
+        self.check_ip_changed()
+        self.check_vgw_ip_changed()
+        self.check_wfc_wfh_ip_changed()
+        self.check_old_scheme()
+        self.check_offices()
+        self.check_itr()
+        self.check_rent_vols()
+        self.check_stand_dir8()
+        self.check_stik_getting_services_from_parther()
+        self.check_stik_fvno()
+        self.check_l2_channel_between_am()
+        self.check_b2b_etherchannel()
+        self.check_icc_dpi()
+        self.check_ias()
+
+    def check(self):
+        self.perform_checks()
+        if not self.data:
+            self.data.update({
+                'good': {
+                    'set': None,
+                    'messages': 'Особенностей в ППР не обнаружено.',
+                }
+            })
+        return self.data
 
 
 def save_to_otpm(login, password, dID, comment, uid, trdifperiod, trcuratorphone):

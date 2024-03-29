@@ -48,11 +48,14 @@ class UserRegistrationForm(UserCreationForm):
             oattr_group = Group.objects.get(name='Сотрудники ОАТТР')
             oattr_group.user_set.add(user)
         elif 'Инженер-технолог ОУЗП СПД' in str(self.cleaned_data.get('hold_position')):
-            mko_group = Group.objects.get(name='Сотрудники ОУЗП')
-            mko_group.user_set.add(user)
+            ouzp_group = Group.objects.get(name='Сотрудники ОУЗП')
+            ouzp_group.user_set.add(user)
         elif 'Менеджер' in str(self.cleaned_data.get('hold_position')):
             mko_group = Group.objects.get(name='Менеджеры')
             mko_group.user_set.add(user)
+        elif 'Инженер-технолог ОУПМ СПД' in str(self.cleaned_data.get('hold_position')):
+            oupm_group = Group.objects.get(name='Сотрудники ОУПМ')
+            oupm_group.user_set.add(user)
         user.save()
         return user
 

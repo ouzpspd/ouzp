@@ -6,6 +6,16 @@
 <li class="nav-item">
   <a class="nav-link" href="{% url 'mko' %}">Пул заявок</a>
 </li>
+{% elif request.user|has_group:"Сотрудники ОУПМ" %}
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Утилиты
+    </a>
+    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'ppr_check' %}">ППР проверка</a>
+    </div>
+</li>
+
 {% elif request.user|has_group:"Сотрудники ОУЗП" %}
 <li class="nav-item">
   <a class="nav-link" href="{% url 'ortr' %}">Пул заявок</a>
@@ -19,7 +29,8 @@
   </a>
   <div class="dropdown-menu" aria-labelledby="navbarDropdown">
     <a class="dropdown-item" href="{% url 'get_title_tr' %}">Формирование заголовка</a>
-      <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР</a>
+      <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР добавление ресурсов</a>
+      <a class="dropdown-item" href="{% url 'ppr_check' %}" target ="_blank">ППР проверка</a>
   </div>
 </li>
 
@@ -40,6 +51,9 @@
 {% block content %}
 {% load custom_filters %}
 
+{% if request.user|has_group:"Сотрудники ОУПМ" %}
+
+{% else %}
 <div class="container">
     <div class="row">
         <div class="col-12">
@@ -146,7 +160,7 @@
 </div>
 
 
-
+{% endif %}
 
 
 {% endblock %}
