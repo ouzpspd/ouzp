@@ -893,9 +893,10 @@ def add_res_to_ppr(ppr, service, login, password):
                 data = {'demand': ppr, 'sim': resource['SimId']}
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
                 if req.status_code == 200:
-                    return ('added', disable_resource)
-                return ('error', disable_resource)
-    return ('Более одного контракта', contract_list)
+                    return 'added', disable_resource, 'Добавлен в ППР'
+                return 'error', disable_resource, 'Не добавлен в ППР. Ошибка при добавлении'
+        return 'not_found', disable_resource, 'Не добавлен в ППР. Не найден на договоре'
+    return 'not_found', disable_resource, 'Не добавлен в ППР. Возможные контракты '+', '.join([r.get('Name') for r in contract_list])
 
 
 def add_links_to_ppr(ppr, link, login, password):
@@ -920,9 +921,9 @@ def add_links_to_ppr(ppr, link, login, password):
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
                 if f'{sw} [<span class="port_name">{ppr_port}</span>]' in req.content.decode('utf-8'):
-                    return ('added', disable_resource)
-            return ('error', disable_resource)
-    return ('не оказалось в списке коммутаторов', sw)
+                    return 'added', disable_resource, 'добавлен в ППР'
+            return 'error', disable_resource, 'не добавлен в ППР'
+    return 'не оказалось в списке коммутаторов', sw, 'не добавлен в ППР, не найден в списке коммутаторов'
 
 
 def search_last_created_ppr(login, password, authorname, authorid):
@@ -988,6 +989,7 @@ def add_tr_to_last_created_ppr(login, password, authorname, authorid, title_ppr,
 
 
 class Cordis:
+    """Класс для обращения к Cordis"""
     def __init__(self, username, password):
         self.username = username
         self.password = password
@@ -1007,6 +1009,7 @@ class Cordis:
 
 
 class PprParse:
+    """Класс принимает html-страниы ППР, Список клиентов ппр и парсит значения в таблицах"""
     def __init__(self, html):
         self.soup = BeautifulSoup(html, "html.parser")
         self.resources = []
@@ -1060,8 +1063,8 @@ class PprParse:
         trs = self.soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
         for tr in trs:
             self.devices.append(tr.find_all('td'))
-        self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,4)][::-1] for tds in self.devices]
-        fields = ['name', 'address', 'model']
+        self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,3,4)][::-1] for tds in self.devices]
+        fields = ['name', 'address', 'az', 'model']
         Device = namedtuple('Device', fields)
         self.devices = [Device(*device) for device in self.devices]
 
@@ -1079,7 +1082,7 @@ class PprParse:
         header = self.soup.find_all("h3", string="Объекты ППР: линки")[0]
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
-            self.links.append(tr.find_all('td')[1:-2])
+            self.links.append(tr.find_all('td')[1:-1])
         self.links = [[td.text.strip() for td in tds] for tds in self.links]
 
     def parse_victims(self):
@@ -1087,15 +1090,16 @@ class PprParse:
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
             self.victims.append(tr.find_all('td'))
-        self.victims = [[td.text for index, td in enumerate(tds) if index not in (2,4)] for tds in self.victims]
-        fields = ['contract', 'client_name', 'resource_type', 'resource_name', 'bundle', 'device_name', 'port']
+        #self.victims = [[td.text for index, td in enumerate(tds) if index not in (2,4)] for tds in self.victims]
+        self.victims = [[td.text for td in tds] for tds in self.victims]
+        fields = ['contract', 'client_name', 'client_class', 'resource_type', 'point', 'resource_name', 'bundle',
+                  'device_name', 'port']
         Victim = namedtuple('Victim', fields)
         self.victims = [Victim(*victim) for victim in self.victims]
 
 
-
-
 class PprCheck:
+    """Класс принимает распарсенные данные ППР и выполняет необходимые проверки"""
     def __init__(self, ppr):
         self.messages = []
         self.data = {}
@@ -1108,10 +1112,12 @@ class PprCheck:
         self.links = ppr.get_links()
 
     def check_exist_resources_in_victims(self):
-        not_added = [r for r in self.resources if r not in self.victims]
+        #not_added = [r for r in self.resources if r not in self.victims]
+        victim_names = [res.resource_name for res in self.victims]
+        not_added = [r for r in self.resources if r.resource_name not in victim_names]
         if not_added:
             self.data.update({
-                'table_resource_resources_in_victims': {
+                'table_not_resource_in_victims': {
                     'messages': '<font color="red"><b>Внимание! Обнаружен сбой.</b></font> <ul><li>В "Список клиентов" не попали сервисы добавленные вручную как <b>Объекты ППР: ресурсы клиентов</b>',
                     'set': not_added
                 }
@@ -1121,7 +1127,7 @@ class PprCheck:
         if not self.b2b_affected:
             self.data.update({
                 'b2b_affected': {
-                    'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2B</b>" в поле "<b>Тип клиента</b>". <br>Проверьте, что простой для B2B клиентов действительно не планируется.',
+                    'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2B</b>" в поле "<b>Тип клиента</b>". <ul><li>Проверьте, что простой для B2B клиентов действительно не планируется.',
                     'set': None
                 }
             })
@@ -1130,7 +1136,7 @@ class PprCheck:
         if not self.b2c_affected:
             self.data.update({
                 'b2c_affected': {
-                    'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2C</b>" в поле "<b>Тип клиента</b>". <br>Проверьте, что простой для B2C клиентов действительно не планируется.',
+                    'messages': '<font color="red"><b>Внимание!</b></font> Не установлена галочка "<b>B2C</b>" в поле "<b>Тип клиента</b>". <ul><li>Проверьте, что простой для B2C клиентов действительно не планируется.',
                     'set': None
                 }
             })
@@ -1140,6 +1146,13 @@ class PprCheck:
             self.data.update({
                 'ip_changed': {
                     'messages': '<font color="red"><b>Внимание!</b> </font>Установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Ожидается смена логики.',
+                    'set': None
+                }
+            })
+        else:
+            self.data.update({
+                'ip_not_changed': {
+                    'messages': '<font color="red"><b>Внимание!</b> </font>Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Проверьте, что смена логического подключения действительно не потребуется.',
                     'set': None
                 }
             })
@@ -1317,6 +1330,24 @@ class PprCheck:
                 }
             })
 
+    def check_ias(self):
+        devices_ias = [d.name for d in self.devices if d.name.startswith('IAS')]
+        exist_ias = [d for d in self.links if d and d[1].startswith('IAS') and d[1].split()[0] in devices_ias]
+        not_exist_ias = [d for d in self.links if d and d[1].startswith('IAS') and d[1].split()[0] not in devices_ias]
+        if exist_ias:
+            self.data.update({
+                'table_links_exist_ias': {
+                    'set': exist_ias,
+                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены КПА вместе с линками. Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
+                }
+            })
+        if not_exist_ias:
+            self.data.update({
+                'table_links_not_exist_ias': {
+                    'set': not_exist_ias,
+                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены линки без КПА. Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
+                }
+            })
 
     def perform_checks(self):
         self.check_exist_resources_in_victims()
@@ -1335,12 +1366,18 @@ class PprCheck:
         self.check_l2_channel_between_am()
         self.check_b2b_etherchannel()
         self.check_icc_dpi()
+        self.check_ias()
 
     def check(self):
         self.perform_checks()
-        #return '\n'.join(self.messages)
+        if not self.data:
+            self.data.update({
+                'good': {
+                    'set': None,
+                    'messages': 'Особенностей в ППР не обнаружено.',
+                }
+            })
         return self.data
-
 
 
 def save_to_otpm(login, password, dID, comment, uid, trdifperiod, trcuratorphone):

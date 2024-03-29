@@ -17,8 +17,8 @@
               </div>
 					<div class="row">
                         <div class="col-3">
-                                <div class="form-group get_node">
-                                    <button class="btn btn-info btn-block" id="id_get_node" type="button">
+                                <div class="form-group get_ppr">
+                                    <button class="btn btn-info btn-block" id="id_get_ppr" type="button">
                                       <span class="" role="status" aria-hidden="true"></span>
                                         <span class="sr-only">Lo...</span>
                                         Проверить ППР
@@ -37,21 +37,18 @@
 <script>
 $(function () {
 
-	$('#id_get_node').click(function () {
+	$('#id_get_ppr').click(function () {
           $(this).find('span').addClass('spinner-border spinner-border-sm');
 
-          console.log(999)
           var ppr = Number($("#id_ppr").val().trim().replace("#",""))
-          console.log(88)
-          console.log(ppr)
-          var url_mask = "{% url 'ppr_test_get_page_check' id_ppr=12345 %}".replace(/12345/, ppr.toString());
+          var url_mask = "{% url 'perform_ppr_check' id_ppr=12345 %}".replace(/12345/, ppr.toString());
           // создаем AJAX-вызов
           $.ajax({
 
               url: url_mask,
               // если успешно, то
               success: function (response) {
-                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  $('#id_get_ppr').find('span').removeClass('spinner-border spinner-border-sm');
                   if (response.error) {
                       alert(response.error);
                   }
@@ -64,9 +61,6 @@ $(function () {
                       //удаляем Event Listeners если был предыдущий запрос
                       $("div#forms").off();
 
-                      console.log('form')
-                      console.log($("#forms"))
-
                       var dict = response.result
                       var result = response.result
 
@@ -74,7 +68,6 @@ $(function () {
 
 
                           if (check_name.includes("table_resource")) {
-                            console.log(111)
                             var message = dict[check_name].messages;
                             var set = dict[check_name].set;
                             var row = 0
@@ -91,7 +84,9 @@ $(function () {
                                 <tr>
                                     <th style="font-size:80%;">Номер договора</th>
                                     <th style="font-size:80%;">ФИО/Название</th>
+                                    <th style="font-size:80%;">Класс</th>
                                     <th style="font-size:80%;">Тип</th>
+                                    <th style="font-size:80%;">Точка подключения</th>
                                     <th style="font-size:80%;">Ресурс</th>
                                     <th style="font-size:80%;">Бандл</th>
                                     <th style="font-size:80%;">Коммутатор</th>
@@ -112,10 +107,51 @@ $(function () {
                                 <td style="font-size:80%;">${set[row][4]}</td>
                                 <td style="font-size:80%;">${set[row][5]}</td>
                                 <td style="font-size:80%;">${set[row][6]}</td>
+                                <td style="font-size:80%;">${set[row][7]}</td>
+                                <td style="font-size:80%;">${set[row][8]}</td>
                             </tr>
                               `);
                             }
                           }
+
+                          else if (check_name.includes("table_not_resource")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+                            $("#forms").append(`
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Номер договора</th>
+                                    <th style="font-size:80%;">ФИО/Название</th>
+                                    <th style="font-size:80%;">Тип</th>
+                                    <th style="font-size:80%;">Ресурс</th>
+                                    <th style="font-size:80%;">Бандл</th>
+                                    <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Порт</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                                <tr>
+                                    <td style="font-size:80%;">${set[row][0]}</td>
+                                    <td style="font-size:80%;">${set[row][1]}</td>
+                                    <td style="font-size:80%;">${set[row][2]}</td>
+                                    <td style="font-size:80%;">${set[row][3]}</td>
+                                    <td style="font-size:80%;">${set[row][4]}</td>
+                                    <td style="font-size:80%;">${set[row][5]}</td>
+                                    <td style="font-size:80%;">${set[row][6]}</td>
+                                </tr>
+                                  `);
+                            }
+                          }
+
                           else if (check_name.includes("table_device")) {
                             var message = dict[check_name].messages;
                             var set = dict[check_name].set;
@@ -127,6 +163,7 @@ $(function () {
                             <thead>
                                 <tr>
                                     <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Дополнительно</th>
                                     <th style="font-size:80%;">Узел связи</th>
                                     <th style="font-size:80%;">Модель устройства</th>
                                 </tr>
@@ -135,7 +172,38 @@ $(function () {
                             </tbody>
                             </table>
                             `);
-                            console.log($("#"+check_name).find('tbody'))
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                                <tr>
+                                    <td style="font-size:80%;">${set[row][0]}</td>
+                                    <td style="font-size:80%;">${set[row][1]}</td>
+                                    <td style="font-size:80%;">${set[row][2]}</td>
+                                    <td style="font-size:80%;">${set[row][3]}</td>
+                                </tr>
+                                  `);
+                            }
+
+                        }
+
+                        else if (check_name.includes("table_links")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+                            $("#forms").append(`
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Коммутатор [Порт] 1</th>
+                                    <th style="font-size:80%;">Коммутатор [Порт] 2</th>
+                                    <th style="font-size:80%;">Тип линка</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
                             for (let row = 0; row < set.length; row++) {
                             $("#"+check_name).find('tbody').append(`
                                 <tr>
@@ -147,6 +215,7 @@ $(function () {
                             }
 
                         }
+
                         else {
                             var message = dict[check_name].messages;
                             $("#forms").append(`
@@ -171,7 +240,7 @@ $(function () {
 				}
               },
               error: function (response) {
-                  $('#id_get_node').find('span').removeClass('spinner-border spinner-border-sm');
+                  $('#id_get_ppr').find('span').removeClass('spinner-border spinner-border-sm');
                   alert("Не удалось получить объекты ППР.");
 
               }

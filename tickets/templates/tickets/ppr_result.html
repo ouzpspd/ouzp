@@ -13,8 +13,285 @@
     </div>
 </div>
 {% endif %}
+<div class="container">
+<table class="table table-sm" id="resource">
+              <thead>
+                <tr>
+                  <th scope="col">Ресурс</th>
+                  <th scope="col">Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for resource in resources %}
+                <tr>
+                    {%if resource.0 == 'added'%}
+                    <td class="table-success">{{resource.1}}</td>
+                    <td class="table-success">{{resource.2}}</td>
+                    {%elif resource.0 == 'error'%}
+                    <td class="table-danger">{{resource.1}}</td>
+                    <td class="table-danger">{{resource.2}}</td>
+                    {%else%}
+                    <td class="table-warning">{{resource.1}}</td>
+                    <td class="table-warning">{{resource.2}}</td>
+                    {%endif%}
+                </tr>
+              {% endfor %}
 
-<h3>#{{exist_ppr}}</h3>
-<a class="btn btn-secondary" href="{{next_link}}" target ="_blank" role="button">Открыть ППР</a>
+              </tbody>
+            </table>
+</div>
+
+
+<div class="container">
+
+	<div class="card mb-2">
+        <h5 class="card-header">Параметры</h5>
+        <div class="card-body">
+
+            <div class="row">
+
+              <div class="col-3">
+                <div class="form-group">
+                    <a class="btn btn-info btn-block" href="{{next_link}}" target ="_blank" role="button">Открыть ППР</a>
+                </div>
+              </div>
+
+                <div class="col-3">
+                    <div class="form-group get_ppr">
+                        <button class="btn btn-info btn-block" id="id_ppr" type="button">
+                          <span class="" role="status" aria-hidden="true"></span>
+                            <span class="sr-only">Lo...</span>
+                            Проверить ППР
+                        </button>
+
+                    </div>
+                </div>
+
+            </div>
+            <div id="forms">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+$(function () {
+
+	$('#id_ppr').click(function () {
+          $(this).find('span').addClass('spinner-border spinner-border-sm');
+          var url_mask = "{% url 'perform_ppr_check' exist_ppr %}";
+          // создаем AJAX-вызов
+          $.ajax({
+
+              url: url_mask,
+              // если успешно, то
+              success: function (response) {
+                  $('#id_ppr').find('span').removeClass('spinner-border spinner-border-sm');
+                  if (response.error) {
+                      alert(response.error);
+                  }
+
+                  else {
+                      //удаляем html если был предыдущий запрос
+                      $("#forms").empty();
+                      //$("#forms").html("");
+
+                      //удаляем Event Listeners если был предыдущий запрос
+                      $("div#forms").off();
+
+                      var dict = response.result
+                      var result = response.result
+
+                      for (let [check_name, check_value] of Object.entries(dict)) {
+
+
+                          if (check_name.includes("table_resource")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+
+
+                            $("#forms").append(`
+
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}">(показать)</a></li></ul>
+
+
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Номер договора</th>
+                                    <th style="font-size:80%;">ФИО/Название</th>
+                                    <th style="font-size:80%;">Класс</th>
+                                    <th style="font-size:80%;">Тип</th>
+                                    <th style="font-size:80%;">Точка подключения</th>
+                                    <th style="font-size:80%;">Ресурс</th>
+                                    <th style="font-size:80%;">Бандл</th>
+                                    <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Порт</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                            <tr>
+                                <td style="font-size:80%;">${set[row][0]}</td>
+                                <td style="font-size:80%;">${set[row][1]}</td>
+                                <td style="font-size:80%;">${set[row][2]}</td>
+                                <td style="font-size:80%;">${set[row][3]}</td>
+                                <td style="font-size:80%;">${set[row][4]}</td>
+                                <td style="font-size:80%;">${set[row][5]}</td>
+                                <td style="font-size:80%;">${set[row][6]}</td>
+                                <td style="font-size:80%;">${set[row][7]}</td>
+                                <td style="font-size:80%;">${set[row][8]}</td>
+                            </tr>
+                              `);
+                            }
+                          }
+
+                          else if (check_name.includes("table_not_resource")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+                            $("#forms").append(`
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Номер договора</th>
+                                    <th style="font-size:80%;">ФИО/Название</th>
+                                    <th style="font-size:80%;">Тип</th>
+                                    <th style="font-size:80%;">Ресурс</th>
+                                    <th style="font-size:80%;">Бандл</th>
+                                    <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Порт</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                                <tr>
+                                    <td style="font-size:80%;">${set[row][0]}</td>
+                                    <td style="font-size:80%;">${set[row][1]}</td>
+                                    <td style="font-size:80%;">${set[row][2]}</td>
+                                    <td style="font-size:80%;">${set[row][3]}</td>
+                                    <td style="font-size:80%;">${set[row][4]}</td>
+                                    <td style="font-size:80%;">${set[row][5]}</td>
+                                    <td style="font-size:80%;">${set[row][6]}</td>
+                                </tr>
+                                  `);
+                            }
+                          }
+
+                          else if (check_name.includes("table_device")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+                            $("#forms").append(`
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Коммутатор</th>
+                                    <th style="font-size:80%;">Дополнительно</th>
+                                    <th style="font-size:80%;">Узел связи</th>
+                                    <th style="font-size:80%;">Модель устройства</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                                <tr>
+                                    <td style="font-size:80%;">${set[row][0]}</td>
+                                    <td style="font-size:80%;">${set[row][1]}</td>
+                                    <td style="font-size:80%;">${set[row][2]}</td>
+                                    <td style="font-size:80%;">${set[row][3]}</td>
+                                </tr>
+                                  `);
+                            }
+
+                        }
+
+                        else if (check_name.includes("table_links")) {
+                            var message = dict[check_name].messages;
+                            var set = dict[check_name].set;
+                            var row = 0
+                            $("#forms").append(`
+                            ${message}
+                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <table class="table table-striped" id="${check_name}">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:80%;">Коммутатор [Порт] 1</th>
+                                    <th style="font-size:80%;">Коммутатор [Порт] 2</th>
+                                    <th style="font-size:80%;">Тип линка</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            </table>
+                            `);
+                            for (let row = 0; row < set.length; row++) {
+                            $("#"+check_name).find('tbody').append(`
+                                <tr>
+                                    <td style="font-size:80%;">${set[row][0]}</td>
+                                    <td style="font-size:80%;">${set[row][1]}</td>
+                                    <td style="font-size:80%;">${set[row][2]}</td>
+                                </tr>
+                                  `);
+                            }
+
+                        }
+
+                        else {
+                            var message = dict[check_name].messages;
+                            $("#forms").append(`
+                            <p>${message}</p>
+
+                            `);
+                        }
+
+                        $('#forms').on('click', '.but_'+check_name, function() {
+                            if ($('#'+check_name).css('display') == 'none') {
+                                $('#'+check_name).show();
+                                $(this).text('(скрыть)');
+                            }
+                            else {
+                                $('#'+check_name).hide();
+                                $(this).text('(показать)');
+                            }
+                        });
+
+                    }
+					$('.table-striped').css("display","none");
+				}
+              },
+              error: function (response) {
+                  $('#id_ppr').find('span').removeClass('spinner-border spinner-border-sm');
+                  alert("Не удалось получить объекты ППР.");
+
+              }
+          });
+          return false;
+        });
+});
+
+
+
+
+
+</script>
 
 {%endblock%}

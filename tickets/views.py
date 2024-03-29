@@ -3664,7 +3664,7 @@ def ppr(request, trID):
                 messages.warning(request, 'Должна быть выбрана либо новая либо существующая ППР')
                 return redirect('ppr', trID)
             elif exist_ppr:
-                session_tr_id.update({'exist_ppr': exist_ppr})
+                session_tr_id.update({'exist_ppr': exist_ppr.strip('#')})
                 request.session[trID] = session_tr_id
                 return redirect('add_resources_to_ppr', trID)
             if title_ppr == '':
@@ -3778,23 +3778,15 @@ def add_resources_to_ppr(request, trID):
             services = get_services(ppr_resources)
             links = get_links(ppr_resources)
             ppr = int(session_tr_id.get('exist_ppr'))
+            results = []
             for service in services:
                 result = add_res_to_ppr(ppr, service, username, password)
-                if result[0] == 'added':
-                    messages.success(request, f'{result[1]} добавлено в ППР')
-                elif result[0] == 'error':
-                    messages.warning(request, f'{result[1]} не удалось добавить в ППР')
-                elif result[0] == 'Более одного контракта':
-                    messages.warning(request, f'Более одного контракта {result[1]}, не удалось добавить в ППР')
-
+                results.append(result)
             for link in links:
                 result = add_links_to_ppr(ppr, link, username, password)
-                if result[0] == 'added':
-                    messages.success(request, f'{result[1]} добавлено в ППР')
-                elif result[0] == 'error':
-                    messages.warning(request, f'{result[1]} не удалось добавить в ППР')
-                elif result[0] == 'не оказалось в списке коммутаторов':
-                    messages.warning(request, f'{result[1]} не оказалось в списке коммутаторов, не удалось добавить в ППР')
+                results.append(result)
+            session_tr_id.update({'added_resources_to_ppr': results})
+            request.session[str(trID)] = session_tr_id
             return redirect('ppr_result', trID)
 
     else:
@@ -3812,12 +3804,14 @@ def ppr_result(request, trID):
     """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
     session_tr_id = request.session[str(trID)]
     exist_ppr = session_tr_id.get('exist_ppr')
+    resources = session_tr_id.get('added_resources_to_ppr')
     next_link = f'https://cis.corp.itmh.ru/index.aspx?demand={exist_ppr}'
     if trID == 1:
         del request.session[str(trID)]
     context = {
         'next_link': next_link,
         'exist_ppr': exist_ppr,
+        'resources': resources,
         'trID': trID
     }
     return render(request, 'tickets/ppr_result.html', context)
@@ -4308,45 +4302,20 @@ def add_tr(request, dID, tID, trID):
 
 import time
 
-def ppr_test_check(request):
-    # id_ppr = 7840941
-    # user = User.objects.get(username=request.user.username)
-    # username, password = get_user_credential_cordis(user)
-    # cordis = Cordis(username, password)
-    # ppr_page = cordis.get_ppr_page(id_ppr)
-    # ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
-    # pages = ppr_page + ppr_page_victims
-    # ppr = PprParse(pages)
-    # ppr.parse()
-    # ppr_check = PprCheck(ppr)
-    # result = ppr_check.check()
-
-    # result = {'table_resource_old_scheme': {'set': [
-    #     ['Z - 0978', 'ООО "СП-Компьютер"', 'IP-адрес или подсеть', '212.49.115.89/32', 'R13 - 45 - Lenina.24/8',
-    #      'SW008-AR13-23.ekb', 'Ethernet1/0/1'],
-    #     ['КК-ОП-ИТ-00108619', 'ООО "Средураллифт"', 'IP-адрес или подсеть', '212.49.120.186/32',
-    #      'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/8']],
-    #                                'messages': 'необходимо инициировать смену реквизитов старой схемы ШПД в общем влан для клиентов:',
-    #                                'type': 'resource'}}
-    # context = {'result': result}
+def ppr_check(request):
     context = {}
     return render(request, 'tickets/ppr_check.html', context)
-    #return render(request, 'tickets/ppr_check_2.html', context)
+
 
 import time
 
-def ppr_test_get_page_check(request, id_ppr):
-    #id_ppr = 3208789#7840941
+def perform_ppr_check(request, id_ppr):
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-
-    t1 = time.time()
     cordis = Cordis(username, password)
     ppr_page = cordis.get_ppr_page(id_ppr)
     ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
     pages = ppr_page + ppr_page_victims
-    t2 = time.time()
-    print('cordis ', t2-t1)
 
     ppr = PprParse(pages)
     ppr.parse()
@@ -4354,45 +4323,9 @@ def ppr_test_get_page_check(request, id_ppr):
     ppr_check = PprCheck(ppr)
     result = ppr_check.check()
 
-
-
-    # result = {'table_resource_old_scheme': {'set': [
-    #     ['Z - 0978', 'ООО "СП-Компьютер"', 'IP-адрес или подсеть', '212.49.115.89/32', 'R13 - 45 - Lenina.24/8',
-    #      'SW008-AR13-23.ekb', 'Ethernet1/0/1'],
-    #     ['КК-ОП-ИТ-00108619', 'ООО "Средураллифт"', 'IP-адрес или подсеть', '212.49.120.186/32',
-    #      'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/8']],
-    #                                'messages': 'Обнаружен сервис "<b>IP-адрес или подсеть</b> с маской <b>/32</b>"<li>Возможно необходимо инициировать смену реквизитов <b>старой схемы ШПД в общем влан</b> для клиентов',
-    #                                'type': 'resource'}}
     response = {'result': result}
     return JsonResponse(response)
 
-def ppr_check(request, id_ppr):
-    user = User.objects.get(username=request.user.username)
-    username, password = get_user_credential_cordis(user)
-    cordis = Cordis(username, password)
-    ppr_page = cordis.get_ppr_page(id_ppr)
-    ppr_page_victims = cordis.get_ppr_victims_page(id_ppr)
-    pages = ppr_page + ppr_page_victims
-
-    #context = {'my_message': ppr_
-    # page + '\n\n\n\n' + ppr_page_victims}
-    ppr = PprParse(pages)
-    ppr.parse()
-
-    # devices = ppr_parse.get_devices()
-    # resources = ppr_parse.get_resources()
-    # links = ppr_parse.get_links()
-    # victims = ppr_parse.get_victims()
-    # b2b_affected = ppr_parse.get_b2b_affected()
-    # b2c_affected = ppr_parse.get_b2c_affected()
-    # ip_changed = ppr_parse.get_ip_changed()
-    #victims = [['Z - 0978', 'ООО "СП-Компьютер"', 'IP-адрес или подсеть', '212.49.115.89/32', 'R13 - 45 - Lenina.24/8', 'SW008-AR13-23.ekb', 'Ethernet1/0/1'], ['Z - 0978', 'ООО "СП-Компьютер"', 'Etherline', 'Вайнера 15 - Вайнера 19 VC:10007 100 Мбит/с', 'AR13-23.ekb - 1383 - Z-0978-CKS-Vajnera15-Vajnera19_', 'SW008-AR13-23.ekb', 'Ethernet1/0/9']]
-
-    ppr_check = PprCheck(ppr)#devices, resources, victims, b2b_affected, b2c_affected, ip_changed)
-    result = ppr_check.check()
-
-    context = {'my_message': result}
-    return render(request, 'base.html', context)
 
 
 def static_formset(request):

@@ -2612,8 +2612,8 @@ def _change_services(value_vars):
 
             elif new_service_name == 'ШПД в Интернет':
                 hidden_vars['использовать подсеть с маской %указать маску%'] = 'использовать подсеть с маской %указать маску%'
-                mask_service = next(iter(type_change_service.values()))
                 if 'Интернет, блок Адресов Сети Интернет' in change_service:
+                    mask_service = next(iter(type_change_service.values()))
                     if ('29' in mask_service) or (' 8' in mask_service):
                         static_vars['указать маску'] = '/29'
                     elif ('28' in mask_service) or ('16' in mask_service):
