@@ -921,9 +921,9 @@ def add_links_to_ppr(ppr, link, login, password):
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
 
                 if f'{sw} [<span class="port_name">{ppr_port}</span>]' in req.content.decode('utf-8'):
-                    return 'added', disable_resource, 'добавлен в ППР'
-            return 'error', disable_resource, 'не добавлен в ППР'
-    return 'не оказалось в списке коммутаторов', sw, 'не добавлен в ППР, не найден в списке коммутаторов'
+                    return 'added', disable_resource, 'Добавлен в ППР'
+            return 'error', disable_resource, 'Не добавлен в ППР'
+    return 'не оказалось в списке коммутаторов', sw, 'Не добавлен в ППР, не найден в списке коммутаторов'
 
 
 def search_last_created_ppr(login, password, authorname, authorid):
@@ -1073,7 +1073,7 @@ class PprParse:
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
             self.resources.append(tr.find_all('td')[1:-1])
-        self.resources = [[td.text for td in tds] for tds in self.resources]
+        self.resources = [[td.text for td in tds] for tds in self.resources if tds]
         fields = ['contract', 'client_name', 'resource_type', 'resource_name', 'bundle', 'device_name', 'port']
         Resource = namedtuple('Resource', fields)
         self.resources = [Resource(*resource) for resource in self.resources]
@@ -1090,7 +1090,6 @@ class PprParse:
         trs = header.find_next('table').find_all('tr')[1:]
         for tr in trs:
             self.victims.append(tr.find_all('td'))
-        #self.victims = [[td.text for index, td in enumerate(tds) if index not in (2,4)] for tds in self.victims]
         self.victims = [[td.text for td in tds] for tds in self.victims]
         fields = ['contract', 'client_name', 'client_class', 'resource_type', 'point', 'resource_name', 'bundle',
                   'device_name', 'port']
