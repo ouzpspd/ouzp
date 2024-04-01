@@ -1059,7 +1059,7 @@ class PprParse:
         for tr in trs:
             self.devices.append(tr.find_all('td'))
         self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,3,4)][::-1] for tds in self.devices]
-        fields = ['name', 'address', 'az', 'model']
+        fields = ['name', 'az', 'address', 'model']
         Device = namedtuple('Device', fields)
         self.devices = [Device(*device) for device in self.devices]
 
@@ -1146,7 +1146,7 @@ class PprCheck:
         else:
             self.data.update({
                 'ip_not_changed': {
-                    'messages': '<font color="red"><b>Внимание!</b> </font>Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Проверьте, что смена логического подключения действительно не потребуется.',
+                    'messages': '<font color="red"><b>Внимание!</b> </font>Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". <ul><li>Проверьте, что смена логического подключения действительно не потребуется.',
                     'set': None
                 }
             })
@@ -1332,14 +1332,14 @@ class PprCheck:
             self.data.update({
                 'table_links_exist_ias': {
                     'set': exist_ias,
-                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены КПА вместе с линками. Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
+                    'messages': '<font color="red"><b>Внимание!</b></font> В ППР добавлены КПА вместе с линками. <ul><li>Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
                 }
             })
         if not_exist_ias:
             self.data.update({
                 'table_links_not_exist_ias': {
                     'set': not_exist_ias,
-                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены линки без КПА. Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
+                    'messages': '<font color="red"><b>Внимание!</b></font> В ППР добавлены линки без КПА. <ul><li>Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
                 }
             })
 
