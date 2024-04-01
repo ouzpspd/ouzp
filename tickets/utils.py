@@ -25,7 +25,7 @@ def add_portconfig_to_list_swiches(list_switches, username, password):
         if list_switches[i][-1] == '-':
             pass
         else:
-            switch_config = get_sw_config(list_switches[i][0], username, password)
+            switch_config = get_sw_config(list_switches[i][0], list_switches[i][1], username, password)
             if switch_config:
                 switch_ports_var = get_vlan_4094_and_description(switch_config, list_switches[i][1])
                 if switch_ports_var:
