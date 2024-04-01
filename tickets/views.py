@@ -2794,7 +2794,7 @@ def head(request, trID):
     if selected_ono[0][-2].startswith('CSW'):
         old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
                                                                                        password)
-        switch_config = get_sw_config(selected_ono[0][-2], username, password)
+        switch_config = get_sw_config(selected_ono[0][-2], old_model_csw, username, password)
 
         session_tr_id.update({'old_model_csw': old_model_csw, 'node_csw': node_csw})
 

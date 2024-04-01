@@ -815,34 +815,29 @@ def in_work_ortr(login, password):
         return lines
 
 
-def get_sw_config(sw, login, password):
+def get_sw_config(sw, model, login, password):
     """Данный метод парсит конфиг коммутатора со stash"""
     #url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
     #sw = 'SW144-AR13-23.ekb'
+    switch_config = None
+    if model.startswith('3COM'):
+        return switch_config
+
     url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
 
-    # Подумать над добавлением модели и проверять по модели, там где используется функция модель добавить можно
-    # если для снр делать эту проверку то тратится больше времени на выполнение
-
-    # if req.status_code != 404:
-    #
-    #     url = f'https://stash.itmh.ru/rest/api/latest/projects/NMS/repos/pantera_extrim/commits?followRenames=true&path=backups%2F{sw}-config&until=refs%2Fheads%2Fmaster&start=0&limit=3&avatarSize=32'
-    #
-    #     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    #     print(req.json())
-    #     if req.json().get('values'):
-    #         for i in req.json().get('values'):
-    #             if i.get('author').get('name') == 'net_backup':
-    #                 blob = i.get('id')
-    #                 print(blob)
-    #                 break
-    #         url = f'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/{sw}-config?at={blob}'
-    #         req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-
-    if req.status_code == 404:
-        switch_config = None
-    else:
+    if req.status_code == 200 and model.startswith('Cisco'):
+        url = f'https://stash.itmh.ru/rest/api/latest/projects/NMS/repos/pantera_extrim/commits?followRenames=true&path=backups%2F{sw}-config&until=refs%2Fheads%2Fmaster&start=0&limit=3&avatarSize=32'
+        req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+        if req.json().get('values'):
+            for i in req.json().get('values'):
+                if i.get('author').get('name') == 'net_backup':
+                    blob = i.get('id')
+                    break
+            url = f'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/{sw}-config?at={blob}'
+            req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+            switch_config = req.content.decode('utf-8')
+    elif req.status_code == 200:
         switch_config = req.content.decode('utf-8')
     return switch_config
 
@@ -1064,7 +1059,7 @@ class PprParse:
         for tr in trs:
             self.devices.append(tr.find_all('td'))
         self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,3,4)][::-1] for tds in self.devices]
-        fields = ['name', 'address', 'az', 'model']
+        fields = ['name', 'az', 'address', 'model']
         Device = namedtuple('Device', fields)
         self.devices = [Device(*device) for device in self.devices]
 
@@ -1151,7 +1146,7 @@ class PprCheck:
         else:
             self.data.update({
                 'ip_not_changed': {
-                    'messages': '<font color="red"><b>Внимание!</b> </font>Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". Проверьте, что смена логического подключения действительно не потребуется.',
+                    'messages': '<font color="red"><b>Внимание!</b> </font>Не установлена галочка в поле "<b>Смена IP адресов B2C/B2B c DHCP</b>". <ul><li>Проверьте, что смена логического подключения действительно не потребуется.',
                     'set': None
                 }
             })
@@ -1337,14 +1332,14 @@ class PprCheck:
             self.data.update({
                 'table_links_exist_ias': {
                     'set': exist_ias,
-                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены КПА вместе с линками. Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
+                    'messages': '<font color="red"><b>Внимание!</b></font> В ППР добавлены КПА вместе с линками. <ul><li>Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
                 }
             })
         if not_exist_ias:
             self.data.update({
                 'table_links_not_exist_ias': {
                     'set': not_exist_ias,
-                    'messages': '<font color="red"><b>Внимание!</b></font> <ul><li>В ППР добавлены линки без КПА. Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
+                    'messages': '<font color="red"><b>Внимание!</b></font> В ППР добавлены линки без КПА. <ul><li>Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
                 }
             })
 
