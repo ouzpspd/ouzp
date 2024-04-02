@@ -1035,7 +1035,7 @@ def data(request, trID):
             else:
                 result_services_ots = None
 
-    if value_vars.get('type_tr') == 'Нов. точка':
+    if value_vars.get('type_tr') == 'Коммерческое' and value_vars.get('con_point') == 'Нов. точка':
         result_services, result_services_ots, value_vars = client_new(value_vars)
 
     if value_vars.get('type_tr') == 'ПТО':
@@ -1906,10 +1906,11 @@ def itv(request, trID):
 
         itvform = ItvForm()
         if user.groups.filter(name='Менеджеры').exists():
-            type_tr = session_tr_id.get('type_tr')
-            if type_tr == 'Нов. точка':
+            #type_tr = session_tr_id.get('type_tr')
+            con_point = session_tr_id.get('con_point')
+            if con_point == 'Нов. точка':
                 itvform.fields['type_itv'].widget.choices = [('novl', 'В vlan новой услуги ШПД'),]
-            elif type_tr == 'Сущ. точка':
+            elif con_point == 'Сущ. точка':
                 itvform.fields['type_itv'].widget.choices = [('novlexist', 'В vlan действующей услуги ШПД'),]
         return render(request, 'tickets/itv.html', {
             'itvform': itvform,
@@ -4234,7 +4235,7 @@ class CreateSpecificationView(CredentialMixin, View):
 
 
 def sppdata(request, trID):
-    """Данный метод отображает html-страничку с данными о ТР для новой точки подключения"""
+    """Данный метод отображает html-страничку с данными о типе ТР, Точке подключения, СПД"""
     if request.method == 'POST':
         form = SppDataForm(request.POST)
         if form.is_valid():
@@ -4243,6 +4244,7 @@ def sppdata(request, trID):
             tag_service_index.append(index)
             spd = form.cleaned_data['spd']
             type_tr = form.cleaned_data['type_tr']
+            con_point = form.cleaned_data['con_point']
             session_tr_id = request.session[str(trID)]
             session_tr_id.update({'tag_service_index': tag_service_index})
 
@@ -4251,7 +4253,7 @@ def sppdata(request, trID):
             if [service for service in ticket_tr.services if 'Интернет, DHCP' in service] and spd == 'РТК':
                 messages.warning(request, 'Интернет, DHCP через РТК не предоставляется.')
                 return redirect('spp_view_save', ticket_tr.ticket_k.dID, ticket_tr.ticket_k.id)
-            session_tr_id.update({'spd': spd, 'type_tr': type_tr})
+            session_tr_id.update({'spd': spd, 'type_tr': type_tr, 'con_point': con_point})
             if type_tr == 'Не требуется':
                 session_tr_id.update({
                     'services_plus_desc': ticket_tr.services, 'oattr': ticket_tr.oattr,
@@ -4260,9 +4262,9 @@ def sppdata(request, trID):
                 request.session[trID] = session_tr_id
                 return redirect('data', trID)
             request.session[trID] = session_tr_id
-            if type_tr == 'Нов. точка':
+            if type_tr == 'Коммерческое' and con_point == 'Нов. точка':
                 return redirect('project_tr', ticket_tr.ticket_k.dID, ticket_tr.ticket_cp, trID)
-            if type_tr == 'Сущ. точка':
+            if type_tr == 'Коммерческое' and con_point == 'Сущ. точка':
                 return redirect('get_resources', trID)
             if type_tr == 'ПТО':
                 return redirect('pps', trID)
@@ -4272,20 +4274,16 @@ def sppdata(request, trID):
         form = SppDataForm()
         if user.groups.filter(name='Менеджеры').exists():
             form.fields['spd'].widget.choices = [('Комтехцентр', 'Комтехцентр'),]
-            form.fields['type_tr'].widget.choices = [('Нов. точка', 'Новая точка'),]
-        #tag_service = request.session['tag_service']
-        visible = True #if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}] else False
-        #ticket_tr_id = request.session.get('ticket_tr_id')
+            form.fields['con_point'].widget.choices = [('Нов. точка', 'Новая точка'),]
+            form.fields['type_tr'].widget.choices = [('Коммерческое', 'Коммерческое'), ]
         ticket_tr = TR.objects.filter(ticket_tr=trID).last()
-        request.session[trID] = {'ticket_spp_id': ticket_tr.ticket_k.id, 'ticket_tr_id': ticket_tr.id, #'cp': cp,
+        request.session[trID] = {'ticket_spp_id': ticket_tr.ticket_k.id, 'ticket_tr_id': ticket_tr.id,
                                  'technical_solution': trID}
-        #request.session['cp'] = cp
         context = {
             'ticket_spp_id': ticket_tr.ticket_k.id,
             'dID': ticket_tr.ticket_k.dID,
             'ticket_tr': ticket_tr,
             'form': form,
-            'visible': visible,
         }
         return render(request, 'tickets/sppdata.html', context)
 

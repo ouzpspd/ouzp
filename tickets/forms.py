@@ -505,12 +505,18 @@ class SppDataForm(forms.Form):
         ('ППМ', 'ООО "Пред-последняя миля"'),
     ]
     types_tr = [
-        ('Нов. точка', 'Новая точка'),
-        ('Сущ. точка', 'Существующая точка'),
+        # ('Нов. точка', 'Новая точка'),
+        # ('Сущ. точка', 'Существующая точка'),
+        ('Коммерческое', 'Коммерческое'),
         ('ПТО', 'ПТО'),
         ('Не требуется', 'Не требуется'),
     ]
+    con_points = [
+        ('Нов. точка', 'Новая точка'),
+        ('Сущ. точка', 'Существующая точка'),
+    ]
     type_tr = forms.CharField(widget=forms.Select(choices=types_tr, attrs={'class': 'form-control'}))
+    con_point = forms.CharField(widget=forms.Select(choices=con_points, attrs={'class': 'form-control'}))
     spd = forms.CharField(widget=forms.Select(choices=types_spd, attrs={'class': 'form-control'}))
 
 class PpsForm(forms.Form):

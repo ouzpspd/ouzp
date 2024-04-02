@@ -87,7 +87,15 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group spd">
+                            <div class="form-group com">
+                                <label for="{{form.con_point.id_for_label}}">Точка подключения:</label>
+                                {{form.con_point}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group com">
                                 <label for="{{form.spd.id_for_label}}">СПД:</label>
                                 {{form.spd}}
                             </div>
@@ -110,12 +118,15 @@
 <script>
 
 $(function () {
-    let visible = "{{visible}}";
-    console.log(visible)
-    if(visible == "False") {
-        console.log(1)
-        $(".spd").hide();
+  $("#id_type_tr").change(function() {
+    var val = $(this).val();
+    if(val === "ПТО" || val === "Не требуется") {
+        $(".com").hide();
     }
+    else {
+        $(".com").show();
+    }
+});
 });
 </script>
 
