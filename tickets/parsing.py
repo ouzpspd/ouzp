@@ -29,40 +29,45 @@ def check_fio(login, password):
 
 
 def _counter_line_services(services_plus_desc):
-    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД и в той услуге,
-     где требуется линия добавляется спец. символ. Метод возвращает количество требуемых линий"""
-    hotspot_points = None
-    for index_service in range(len(services_plus_desc)):
-        if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            replace_index = services_plus_desc[index_service]
-            services_plus_desc.remove(replace_index)
-            services_plus_desc.insert(0, replace_index)
-        elif 'Интернет, DHCP' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            replace_index = services_plus_desc[index_service]
-            services_plus_desc.remove(replace_index)
-            services_plus_desc.insert(0, replace_index)
-        elif 'ЦКС' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'Порт ВЛС' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'Порт ВМ' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-        elif 'HotSpot' in services_plus_desc[index_service]:
-            services_plus_desc[index_service] += '|'
-            regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
-            for regex in regex_hotspot_point:
-                match_hotspot_point = re.search(regex, services_plus_desc[index_service])
-                if match_hotspot_point:
-                    hotspot_points = match_hotspot_point.group(1)
-                    break
+    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД.
+     Метод возвращает количество требуемых линий"""
+    # hotspot_points = None
+    # for index_service in range(len(services_plus_desc)):
+    #     if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
+    #         services_plus_desc[index_service] += '|'
+    #         replace_index = services_plus_desc[index_service]
+    #         services_plus_desc.remove(replace_index)
+    #         services_plus_desc.insert(0, replace_index)
+    #     elif 'Интернет, DHCP' in services_plus_desc[index_service]:
+    #         services_plus_desc[index_service] += '|'
+    #         replace_index = services_plus_desc[index_service]
+    #         services_plus_desc.remove(replace_index)
+    #         services_plus_desc.insert(0, replace_index)
+    #     elif 'ЦКС' in services_plus_desc[index_service]:
+    #         services_plus_desc[index_service] += '|'
+    #     elif 'Порт ВЛС' in services_plus_desc[index_service]:
+    #         services_plus_desc[index_service] += '|'
+    #     elif 'Порт ВМ' in services_plus_desc[index_service]:
+    #         services_plus_desc[index_service] += '|'
+    #     elif 'HotSpot' in services_plus_desc[index_service]:
+    #         services_plus_desc[index_service] += '|'
+    #         regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
+    #         for regex in regex_hotspot_point:
+    #             match_hotspot_point = re.search(regex, services_plus_desc[index_service])
+    #             if match_hotspot_point:
+    #                 hotspot_points = match_hotspot_point.group(1)
+    #                 break
     counter_line_services = 0
-    for i in services_plus_desc:
-        while i.endswith('|'):
-            counter_line_services += 1
-            i = i[:-1]
-    return counter_line_services, hotspot_points, services_plus_desc
+    line_services = ('Интернет', 'ЦКС', 'Порт ВЛС', 'Порт ВМ', 'HotSpot')
+    for service in line_services:
+        counter_line_services += len([serv for serv in services_plus_desc if serv.startswith(service)])
+    print(counter_line_services)
+    # counter_line_services = 0
+    # for i in services_plus_desc:
+    #     while i.endswith('|'):
+    #         counter_line_services += 1
+    #         i = i[:-1]
+    return counter_line_services #, hotspot_points, services_plus_desc
 
 
 def get_rtk_initial(username, password, line_data):

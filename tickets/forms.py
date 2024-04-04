@@ -72,7 +72,7 @@ class PhoneForm(forms.Form):
                  ('Eltex TAU-8.IP', 'Eltex TAU-8.IP'), ('Eltex TAU-16.IP', 'Eltex TAU-16.IP'), ('Eltex TAU-24.IP', 'Eltex TAU-24.IP'),
                  ('Eltex TAU-36.IP', 'Eltex TAU-36.IP'), ('Eltex TAU-72.IP', 'Eltex TAU-72.IP'), ('Не требуется', 'Не требуется')]
     vgw = forms.CharField(label='Установка шлюза', widget=forms.Select(choices=types_vgw, attrs={'class': 'form-control'}))
-    channel_vgw = forms.IntegerField(label='Количество каналов', widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Канальность номера'}))
+    channel_vgw = forms.IntegerField(label='Количество каналов', widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Канальность'}))
     ports_vgw = forms.CharField(required=False, label='Количество портов ВАТС', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     types_ip_trunk = [('Не требуется', 'Не требуется'), ('access', 'access'), ('trunk', 'trunk')]
     type_ip_trunk = forms.CharField(label='Режим порта для IP-транк', required=False,
@@ -94,7 +94,9 @@ class PhoneForm(forms.Form):
                 self.fields[f'{field}'] = forms.IntegerField()
 
 class ItvForm(forms.Form):
-    types = [('novl', 'В vlan новой услуги ШПД'), ('novlexist', 'В vlan действующей услуги ШПД'), ('vl', 'В отдельном vlan')]
+    types = [('novl', 'В vlan организуемой услуги ШПД'),
+             ('novlexist', 'В vlan действующей услуги ШПД'),
+             ('vl', 'В vlan индивидуальном')]
     type_itv = forms.CharField(label='Тип ITV', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     cnt_itv = forms.IntegerField(max_value=4, label='Количество приставок',
                                         widget=forms.NumberInput(attrs={'class': 'form-control'}))
