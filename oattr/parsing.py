@@ -1125,7 +1125,9 @@ def get_specication_resources(session_tr_id):
     lvs_lines = session_tr_id.get('local_ports')
     stb_lines = session_tr_id.get('cnt_itv') if session_tr_id.get('need_line_itv') is True else None
     sockets = session_tr_id.get('local_socket') if session_tr_id.get('local_socket_need') is True else None
-    cable_channel = session_tr_id.get('local_cable_channel') if session_tr_id.get('local_cable_channel_need') is True else None
+    cable_channel = None
+    if session_tr_id.get('local_type') and 'business' in session_tr_id.get('local_type'):
+        cable_channel = session_tr_id.get('local_cable_channel')
     bundle = BundleSpecItems(titles, stb_lines, lvs_lines, sockets, cable_channel)
     bundle.find_resources()
     spec_button = bundle.is_exist_resources()

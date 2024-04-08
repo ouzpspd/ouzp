@@ -635,46 +635,54 @@ def _new_services(result_services, value_vars):
             hidden_vars = {}
             local_ports = value_vars.get('local_ports')
             static_vars['1-23'] = str(local_ports)
-            if value_vars.get('local_type') == 'СКС':
+            if value_vars.get('local_type') in ('sks_standart', 'sks_business'): # == 'СКС':
                 stroka = templates.get("Организация СКС< для Вебург.ТВ>< по ВОЛС> на %1-23% {порт}")
                 static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 if value_vars.get('decision_otpm'):
                     hidden_vars[' согласно решению ОТПМ'] = ' согласно решению ОТПМ'
-                if value_vars.get('sks_router') and value_vars.get('sks_vols'):
-                    hidden_vars[
-                        '- Организовать %1-23% {медную} {линию} связи от %оборудование клиента% до места установки маршрутизатора.'
-                    ] = '- Организовать %1-23% ВОЛС от %оборудование клиента% до места установки маршрутизатора.'
-                    static_vars['оборудование клиента'] = 'оборудование клиента'
-                elif value_vars.get('sks_router'):
+                if value_vars.get('sks_router'):
                     hidden_vars[
                         '- Организовать %1-23% {медную} {линию} связи от %оборудование клиента% до места установки маршрутизатора.'
                     ] = '- Организовать %1-23% {медную} {линию} связи от %оборудование клиента% до места установки маршрутизатора.'
                     static_vars['оборудование клиента'] = 'оборудование клиента'
-                if value_vars.get('sks_vols') == True:
-                    hidden_vars[' по ВОЛС'] = ' по ВОЛС'
-                    hidden_vars['%ОИПМ/ОИПД% подготовиться к работам:'] = '%ОИПМ/ОИПД% подготовиться к работам:'
-                    hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
-                    hidden_vars['-- %Конвертер А% - %1-23% шт.'] = '-- %Конвертер А% - %1-23% шт.'
-                    hidden_vars['-- %Конвертер Б% - %1-23% шт.'] = '-- %Конвертер Б% - %1-23% шт.'
-                    hidden_vars['- Установить %Конвертер А% и %Конвертер Б%.'] = '- Установить %Конвертер А% и %Конвертер Б%.'
-                    static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
-                    if value_vars.get('sks_transceiver') == 'Конвертеры 100':
-                        static_vars['Конвертер А'] = '^конвертер^ 1310 нм'
-                        static_vars['Конвертер Б'] = '^конвертер^ 1550 нм'
-                    elif value_vars.get('sks_transceiver') == 'Конвертеры 1000':
-                        static_vars['Конвертер А'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1310 нм'
-                        static_vars['Конвертер Б'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм'
-                if not value_vars.get('sks_vols') and value_vars.get('local_socket'):
+                if value_vars.get('local_socket'):
                     hidden_vars[' и розеток'] = ' и {розеток}'
                 static_vars['указать количество'] = str(local_ports)
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 counter_plur = local_ports
                 result_services.append(pluralizer_vars(stroka, counter_plur))
-            else:
+            elif value_vars.get('local_type') == 'sks_vols':
+                stroka = templates.get("Организация СКС< для Вебург.ТВ>< по ВОЛС> на %1-23% {порт}")
+                if value_vars.get('decision_otpm'):
+                    hidden_vars[' согласно решению ОТПМ'] = ' согласно решению ОТПМ'
+                if value_vars.get('sks_router'):
+                    hidden_vars[
+                        '- Организовать %1-23% {медную} {линию} связи от %оборудование клиента% до места установки маршрутизатора.'
+                    ] = '- Организовать %1-23% ВОЛС от %оборудование клиента% до места установки маршрутизатора.'
+                    static_vars['оборудование клиента'] = 'оборудование клиента'
+                hidden_vars[' по ВОЛС'] = ' по ВОЛС'
+                hidden_vars['%ОИПМ/ОИПД% подготовиться к работам:'] = '%ОИПМ/ОИПД% подготовиться к работам:'
+                hidden_vars['- Получить на складе территории:'] = '- Получить на складе территории:'
+                hidden_vars['-- %Конвертер А% - %1-23% шт.'] = '-- %Конвертер А% - %1-23% шт.'
+                hidden_vars['-- %Конвертер Б% - %1-23% шт.'] = '-- %Конвертер Б% - %1-23% шт.'
+                hidden_vars[
+                    '- Установить %Конвертер А% и %Конвертер Б%.'] = '- Установить %Конвертер А% и %Конвертер Б%.'
+                static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
+                if value_vars.get('sks_transceiver') == 'Конвертеры 100':
+                    static_vars['Конвертер А'] = '^конвертер^ 1310 нм'
+                    static_vars['Конвертер Б'] = '^конвертер^ 1550 нм'
+                elif value_vars.get('sks_transceiver') == 'Конвертеры 1000':
+                    static_vars['Конвертер А'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1310 нм'
+                    static_vars['Конвертер Б'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм'
+                static_vars['указать количество'] = str(local_ports)
+                stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                counter_plur = local_ports
+                result_services.append(pluralizer_vars(stroka, counter_plur))
+            elif value_vars.get('local_type') in ('lvs_standart', 'lvs_business'):
                 stroka = templates.get("Организация ЛВС на %1-23% {порт}")
                 if value_vars.get('local_socket'):
                     hidden_vars[' и розеток'] = ' и {розеток}'
-                if value_vars.get('lvs_busy') == True:
+                if value_vars.get('lvs_busy') is True:
                     hidden_vars[
                         'МКО:\n- В связи с тем, что у клиента все порты на маршрутизаторе заняты необходимо с клиентом согласовать перерыв связи по одному из подключенных устройств к маршрутизатору.\nВо время проведения работ данная линия будет переключена из маршрутизатора клиента в проектируемый коммутатор.'] = 'МКО:\n- В связи с тем, что у клиента все порты на маршрутизаторе заняты необходимо с клиентом согласовать перерыв связи по одному из подключенных устройств к маршрутизатору.\nВо время проведения работ данная линия будет переключена из маршрутизатора клиента в проектируемый коммутатор.\n'
                     hidden_vars[

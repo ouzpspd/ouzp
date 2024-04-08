@@ -54,7 +54,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group sip">
-                    <label for="{{ form.type_phone.id_for_label }}">Тип телефонии</label>
+                    <label for="{{ form.type_phone.id_for_label }}">Тип телефонии:</label>
                     {{form.type_phone}}
                 </div>
             </div>
@@ -63,7 +63,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group vgw">
-                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза</label>
+                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза:</label>
                     {{form.vgw}}
                 </div>
             </div>
@@ -93,23 +93,33 @@
 
         <div class="row">
             <div class="col-3">
-                <div class="form-group">
-                    <label for="{{ form.channel_vgw.id_for_label }}">Канальность тел. номеров</label>
-                    {{form.channel_vgw}}
-                </div>
+                <p>Канальность тел. номеров:</p>
             </div>
         </div>
+        <div class="row">
+                <div class="col-9">
+                <div class="form-group row">
+
+                    <label for="{{ form.channel_vgw.id_for_label}}" class="col-form-label">Тел. номер 1:</label>
+                    <div class="col-3">
+                    {{form.channel_vgw}}
+                    </div>
+
+                </div>
+                </div>
+        </div>
+
         <div id="forms">
         </div>
         <div class="row">
-            <div class="col-2">
-                <button class="btn btn-success btn-block add_item_btn">Добавить</button>
+            <div class="col-4">
+                <button class="btn btn-success btn-block add_item_btn">Добавить тел. номер</button>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
                 <div class="form-group vats_ports">
-                    <label for="{{ form.ports_vgw.id_for_label }}">Количество портов ВАТС</label>
+                    <label for="{{ form.ports_vgw.id_for_label }}">Количество портов ВАТС:</label>
                     {{form.ports_vgw}}
                 </div>
             </div>
@@ -118,12 +128,12 @@
         <div class="row mt-3">
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Вернуться</a>
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
                 </div>
             </div>
             <div class="col-2">
                 <div class="form-group">
-                    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
                 </div>
             </div>
             <div class="col-1">
@@ -146,7 +156,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
-                    <label for="{{ form.type_phone.id_for_label }}">Тип телефонии</label>
+                    <label for="{{ form.type_phone.id_for_label }}">Тип телефонии:</label>
                     {{form.type_phone}}
                 </div>
             </div>
@@ -155,7 +165,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group vgw">
-                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза</label>
+                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза:</label>
                     {{form.vgw}}
                 </div>
             </div>
@@ -183,27 +193,37 @@
                 </div>
             </div>
         </div>
-
         <div class="row">
             <div class="col-3">
-                <div class="form-group">
-                    <label for="{{ form.channel_vgw.id_for_label }}">Канальность тел. номеров</label>
-                    {{form.channel_vgw}}
-                </div>
+                <p>Канальность тел. номеров:</p>
             </div>
+        </div>
+        <div class="row">
+                <div class="col-9">
+                <div class="form-group row">
+
+                    <label for="{{ form.channel_vgw.id_for_label}}" class="col-form-label">Тел. номер 1:</label>
+                    <div class="col-3">
+                    {{form.channel_vgw}}
+                    </div>
+
+                </div>
+                </div>
+
+
 
         </div>
         <div id="forms">
         </div>
         <div class="row">
-            <div class="col-2">
-                <button class="btn btn-success btn-block add_item_btn">Добавить</button>
+            <div class="col-4">
+                <button class="btn btn-success btn-block add_item_btn">Добавить тел. номер</button>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
                 <div class="form-group trunk">
-                    <label for="{{ form.types_ip_trunk.id_for_label }}">Режим порта для IP-транк</label>
+                    <label for="{{ form.types_ip_trunk.id_for_label }}">Режим порта для IP-транк:</label>
                     {{form.type_ip_trunk}}
                 </div>
             </div>
@@ -286,22 +306,20 @@ var counter=0
 
                         <div class="row">
 
+                            <div class="col-9">
+                            <div class="form-group row get_node">
 
-                            <div class="col-3">
-                                <div class="form-group get_node">
-
-                                    <input type="number" name="channel_vgw_${counter}" class="form-control" required="True" placeholder="Канальность номера">
+                                <label for="{{ form.channel_vgw.id_for_label}}" class="col-form-label">Тел. номер ${counter+1}:</label>
+                                <div class="col-3">
+                                <input type="number" name="channel_vgw_${counter}" class="form-control" required="True" placeholder="Канальность">
                                 </div>
-                            </div>
-
-                            <div class="col-1">
-                                <div class="form-group get_node">
-                                    <button class="btn btn-danger remove_item_btn">
+                                <button class="btn btn-danger remove_item_btn">
                                     <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
                                     <span class="sr-only">Close</span>
                                     </button>
-                                </div>
                             </div>
+                            </div>
+
                         </div>
 
                           `);
