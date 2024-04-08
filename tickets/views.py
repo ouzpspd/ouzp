@@ -10,8 +10,7 @@ from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from oattr.parsing import get_or_create_otu, Tentura, Specification, BundleSpecItems, get_specication_resources
 from .models import TR, SPP, OrtrTR
 from .forms import LinkForm, HotspotForm, PhoneForm, ItvForm, ShpdForm, \
-    VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LvsForm, LocalForm, \
-    SksForm, \
+    VolsForm, CopperForm, WirelessForm, CswForm, CksForm, PortVKForm, PortVMForm, VideoForm, LocalForm, \
     OrtrForm, ContractForm, ListResourcesForm, \
     PassServForm, ChangeServForm, ChangeParamsForm, ListJobsForm, ChangeLogShpdForm, \
     TemplatesHiddenForm, TemplatesStaticForm, ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
@@ -1719,42 +1718,20 @@ def local(request, trID):
             session_tr_id = request.session[str(trID)]
             session_tr_id.update({**localform.cleaned_data})
             tag_service = session_tr_id.get('tag_service')
-            current_index_local = session_tr_id.get('current_index_local')
             service = session_tr_id.get('current_service')
             services_plus_desc = session_tr_id.get('services_plus_desc')
             new_job_services = session_tr_id.get('new_job_services')
-            if local_type == 'СКС':
-                if service not in services_plus_desc:
-                    if new_job_services:
-                        new_job_services.append(service)
-                    services_plus_desc.append(service)
-                if {'lvs': service} in tag_service:
-                    tag_service.remove({'lvs': service})
-                if {'sks': service} not in tag_service:
-                    tag_service.insert(current_index_local + 1, {'sks': service})
-                response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
-                return response
-            elif local_type == 'ЛВС':
-                if service not in services_plus_desc:
-                    if new_job_services:
-                        new_job_services.append(service)
-                    services_plus_desc.append(service)
-                if {'sks': service} in tag_service:
-                    tag_service.remove({'sks': service})
-                if {'lvs': service} not in tag_service:
-                    tag_service.insert(current_index_local + 1, {'lvs': service})
-                response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
-                return response
-            else:
-                if {'lvs': service} in tag_service:
-                    tag_service.remove({'lvs': service})
-                if {'sks': service} in tag_service:
-                    tag_service.remove({'sks': service})
+            if local_type == 'Под видеонаблюдение':
                 if new_job_services:
                     new_job_services[:] = [x for x in new_job_services if not x.startswith('ЛВС')]
                 services_plus_desc[:] = [x for x in services_plus_desc if not x.startswith('ЛВС')]
-                response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
-                return response
+            else:
+                if service not in services_plus_desc:
+                    if new_job_services:
+                        new_job_services.append(service)
+                    services_plus_desc.append(service)
+            response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
+            return response
     else:
         user = User.objects.get(username=request.user.username)
         session_tr_id = request.session[str(trID)]
@@ -1767,7 +1744,12 @@ def local(request, trID):
         request.session[trID] = session_tr_id
         localform = LocalForm()
         if user.groups.filter(name='Менеджеры').exists():
-            localform.fields['local_type'].widget.choices = [('СКС', 'СКС'), ('ЛВС', 'ЛВС')]
+            localform.fields['local_type'].widget.choices = [
+                ('sks_standart', 'СКС Стандарт (без использования кабель-канала)'),
+                ('sks_business', 'СКС Бизнес (с использованием кабель-канала)'),
+                ('lvs_standart', 'ЛВС Стандарт (без использования кабель-канала)'),
+                ('lvs_business', 'ЛВС Бизнес (с использованием кабель-канала)'),
+            ]
         context = {
             'service_lvs': service,
             'localform': localform,
@@ -1777,62 +1759,6 @@ def local(request, trID):
             'trID': trID
         }
         return render(request, 'tickets/local.html', context)
-
-
-def sks(request, trID):
-    """Данный метод отображает html-страничку c формой для заполнения данных по услуге СКС"""
-    if request.method == 'POST':
-        sksform = SksForm(request.POST)
-        if sksform.is_valid():
-            session_tr_id = request.session[str(trID)]
-            tag_service = session_tr_id.get('tag_service')
-            session_tr_id.update({**sksform.cleaned_data})
-            response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
-            return response
-    else:
-        session_tr_id = request.session[str(trID)]
-        tag_service = session_tr_id.get('tag_service')
-        service_name = 'sks'
-        request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
-        sksform = SksForm()
-        context = {
-            'service_lvs': service,
-            'sksform': sksform,
-            'back_link': back_link,
-            'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-            'dID': session_tr_id.get('dID'),
-            'trID': trID
-        }
-        return render(request, 'tickets/sks.html', context)
-
-
-def lvs(request, trID):
-    """Данный метод отображает html-страничку c формой для заполнения данных по услуге ЛВС"""
-    if request.method == 'POST':
-        lvsform = LvsForm(request.POST)
-        if lvsform.is_valid():
-            session_tr_id = request.session[str(trID)]
-            tag_service = session_tr_id.get('tag_service')
-            session_tr_id.update({**lvsform.cleaned_data})
-            response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
-            return response
-    else:
-        session_tr_id = request.session[str(trID)]
-        tag_service = session_tr_id.get('tag_service')
-        service_name = 'lvs'
-        request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
-        lvsform = LvsForm()
-        context = {
-            'service_lvs': service,
-            'lvsform': lvsform,
-            'back_link': back_link,
-            'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-            'dID': session_tr_id.get('dID'),
-            'trID': trID
-        }
-        return render(request, 'tickets/lvs.html', context)
 
 
 def itv(request, trID):
@@ -1905,7 +1831,6 @@ def itv(request, trID):
 
         itvform = ItvForm()
         if user.groups.filter(name='Менеджеры').exists():
-            #type_tr = session_tr_id.get('type_tr')
             con_point = session_tr_id.get('con_point')
             if con_point == 'Нов. точка':
                 itvform.fields['type_itv'].widget.choices = [('novl', 'В vlan организуемой услуги ШПД'),]
@@ -1994,7 +1919,6 @@ def shpd(request, trID):
     else:
         service_name = 'shpd'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
-        print(service)
         session_tr_id = request.session[str(trID)]
         types_change_service = session_tr_id.get('types_change_service')
         tag_service = session_tr_id.get('tag_service')

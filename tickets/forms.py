@@ -22,39 +22,43 @@ class LinkForm(forms.Form):
 
 
 class LocalForm(forms.Form):
-    types = [('СКС', 'СКС'), ('ЛВС', 'ЛВС'), ('Под видеонаблюдение', 'Под видеонаблюдение')]
+    types = [('sks_standart', 'СКС Стандарт (без использования кабель-канала)'),
+              ('sks_business', 'СКС Бизнес (с использованием кабель-канала)'),
+              ('lvs_standart', 'ЛВС Стандарт (без использования кабель-канала)'),
+              ('lvs_business', 'ЛВС Бизнес (с использованием кабель-канала)'),
+              ('sks_vols', 'СКС Стандарт оптический'),
+             ('Под видеонаблюдение', 'СКС отдельно от видеонаблюдения не требуется',
+              )]
     local_type = forms.CharField(label='Тип ЛВС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    local_ports = forms.IntegerField(max_value=24, label='Количество портов',
+    local_ports = forms.IntegerField(max_value=24, label='Количество портов', required=False,
                                    widget=forms.NumberInput(attrs={'class': 'form-control'}))
+
     local_socket_need = forms.BooleanField(label='Требуются розетки RJ-45', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     local_socket = forms.IntegerField(max_value=24, label='Количество розеток', required=False,
                                      widget=forms.NumberInput(attrs={'class': 'form-control'}))
-    local_cable_channel_need = forms.BooleanField(label='Требуется кабель-канал', required=False,
-                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+
     local_cable_channel = forms.IntegerField(max_value=10000, label='Длина кабель-канала (метров)', required=False,
-                                     widget=forms.NumberInput(attrs={'class': 'form-control'}))
+                                             widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
-
-class SksForm(forms.Form):
-    sks_router = forms.BooleanField(label='Подключить в марш.', required=False,
-                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    sks_vols = forms.BooleanField(label='ВОЛС', required=False,
-                                    widget=forms.CheckboxInput(attrs={'class': 'form-check', 'id': 'id_vols'}))
-    types = [('Конвертеры 100', 'Конвертеры 100'),
-             ('Конвертеры 1000','Конвертеры 1000')]
-    sks_transceiver = forms.CharField(
-                                 widget=forms.Select(choices=types, attrs={'class': 'form-control transceiver'}))
-
-
-class LvsForm(forms.Form):
-    lvs_busy = forms.BooleanField(label='Все порты маршрутизатора заняты', required=False,
+    sks_router = forms.BooleanField(label='Подключить линии в маршрутизатор', required=False,
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    types = [('TP-Link TL-SG105 V4', 'TP-Link TL-SG105 V4'), ('TP-Link TL-SG108 V4', 'TP-Link TL-SG108 V4'),
-             ('ZYXEL GS1200-5', 'ZYXEL GS1200-5'), ('ZYXEL GS1200-8', 'ZYXEL GS1200-8'),
-             ('D-link DGS-1100-16/B', 'D-link DGS-1100-16/B'), ('D-link DGS-1100-24/B', 'D-link DGS-1100-24/B')]
-    lvs_switch = forms.CharField(label='Коммутатор', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
+    types_transceiver = [('Конвертеры 100', 'Конвертеры 100 Мбит/с'),
+             ('Конвертеры 1000', 'Конвертеры 1 Гбит/с')]
+    sks_transceiver = forms.CharField(
+        widget=forms.Select(choices=types_transceiver, attrs={'class': 'form-control transceiver'}))
+
+    lvs_busy = forms.BooleanField(label='Все порты маршрутизатора заняты', required=False,
+                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    types = [('TP-Link TL-SG105 V4', 'TP-Link TL-SG105 (5 портов)'),
+             ('TP-Link TL-SG108 V4', 'TP-Link TL-SG108 (8 портов)'),
+             ('ZYXEL GS1200-5', 'ZYXEL GS1200-5 (5 портов)'),
+             ('ZYXEL GS1200-8', 'ZYXEL GS1200-8 (8 портов)'),
+             ('D-link DGS-1100-16/B', 'D-link DGS-1100-16 (16 портов)'),
+             ('D-link DGS-1100-24/B', 'D-link DGS-1100-24 (24 порта)')]
+    lvs_switch = forms.CharField(label='Коммутатор',
+                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 
 class HotspotForm(forms.Form):
