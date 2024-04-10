@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
+<html style="font-size:0.85rem">
 
 
 <div class="container">
@@ -63,10 +63,17 @@ $(function () {
 
                       var dict = response.result
                       var result = response.result
+                      var warning = 0
 
                       for (let [check_name, check_value] of Object.entries(dict)) {
 
-
+                          var message = dict[check_name].messages;
+                          if (!message.startsWith('<ul><li>')){
+                            warning += 1
+                            $("#forms").append(`
+                            ${warning}.
+                            `);
+                           }
                           if (check_name.includes("table_resource")) {
                             var message = dict[check_name].messages;
                             var set = dict[check_name].set;
@@ -76,7 +83,7 @@ $(function () {
                             $("#forms").append(`
 
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}">(показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue">(показать)</a></li></ul>
 
 
                             <table class="table table-striped" id="${check_name}">
@@ -120,7 +127,7 @@ $(function () {
                             var row = 0
                             $("#forms").append(`
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue">(показать)</a></li></ul>
                             <table class="table table-striped" id="${check_name}">
                             <thead>
                                 <tr>
@@ -158,7 +165,7 @@ $(function () {
                             var row = 0
                             $("#forms").append(`
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue">(показать)</a></li></ul>
                             <table class="table table-striped" id="${check_name}">
                             <thead>
                                 <tr>
@@ -191,7 +198,7 @@ $(function () {
                             var row = 0
                             $("#forms").append(`
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue">(показать)</a></li></ul>
                             <table class="table table-striped" id="${check_name}">
                             <thead>
                                 <tr>
@@ -219,7 +226,7 @@ $(function () {
                         else {
                             var message = dict[check_name].messages;
                             $("#forms").append(`
-                            <p>${message}</p>
+                            ${message}
 
                             `);
                         }
@@ -228,10 +235,12 @@ $(function () {
                             if ($('#'+check_name).css('display') == 'none') {
                                 $('#'+check_name).show();
                                 $(this).text('(скрыть)');
+                                $(this).css('color', 'blue');
                             }
                             else {
                                 $('#'+check_name).hide();
                                 $(this).text('(показать)');
+                                $(this).css('color', 'blue');
                             }
                         });
 
