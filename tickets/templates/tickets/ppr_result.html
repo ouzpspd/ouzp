@@ -80,6 +80,7 @@ $(function () {
 
 	$('#id_ppr').click(function () {
           $(this).find('span').addClass('spinner-border spinner-border-sm');
+          $(this).prop('disabled', true);
           var url_mask = "{% url 'perform_ppr_check' exist_ppr %}";
           // создаем AJAX-вызов
           $.ajax({
@@ -88,6 +89,7 @@ $(function () {
               // если успешно, то
               success: function (response) {
                   $('#id_ppr').find('span').removeClass('spinner-border spinner-border-sm');
+                  $('#id_get_ppr').prop('disabled', false);
                   if (response.error) {
                       alert(response.error);
                   }
@@ -102,9 +104,16 @@ $(function () {
 
                       var dict = response.result
                       var result = response.result
+                      var warning = 0
 
                       for (let [check_name, check_value] of Object.entries(dict)) {
-
+                          var message = dict[check_name].messages;
+                          if (!message.startsWith('<ul><li>')){
+                            warning += 1
+                            $("#forms").append(`
+                            ${warning}.
+                            `);
+                           }
 
                           if (check_name.includes("table_resource")) {
                             var message = dict[check_name].messages;
@@ -115,7 +124,7 @@ $(function () {
                             $("#forms").append(`
 
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}">(показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue">(показать)</a></li></ul>
 
 
                             <table class="table table-striped" id="${check_name}">
@@ -159,7 +168,7 @@ $(function () {
                             var row = 0
                             $("#forms").append(`
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue"> (показать)</a></li></ul>
                             <table class="table table-striped" id="${check_name}">
                             <thead>
                                 <tr>
@@ -197,7 +206,7 @@ $(function () {
                             var row = 0
                             $("#forms").append(`
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue"> (показать)</a></li></ul>
                             <table class="table table-striped" id="${check_name}">
                             <thead>
                                 <tr>
@@ -214,10 +223,10 @@ $(function () {
                             for (let row = 0; row < set.length; row++) {
                             $("#"+check_name).find('tbody').append(`
                                 <tr>
-                                    <td style="font-size:80%;">${set[row][0]}</td>
-                                    <td style="font-size:80%;">${set[row][1]}</td>
-                                    <td style="font-size:80%;">${set[row][2]}</td>
-                                    <td style="font-size:80%;">${set[row][3]}</td>
+                                    <td style="font-size:80%;"><a class="text-dark" href="${set[row][0]}">${set[row][1]}</a></td>
+                                    <td style="font-size:80%;"><a class="text-dark" href="${set[row][2]}">${set[row][3]}</a></td>
+                                    <td style="font-size:80%;">${set[row][4]}</td>
+                                    <td style="font-size:80%;">${set[row][5]}</td>
                                 </tr>
                                   `);
                             }
@@ -230,7 +239,7 @@ $(function () {
                             var row = 0
                             $("#forms").append(`
                             ${message}
-                            <a class="but_${check_name} buk" id="button_${check_name}"> (показать)</a></li></ul>
+                            <a class="but_${check_name} buk" id="button_${check_name}" style="color:blue"> (показать)</a></li></ul>
                             <table class="table table-striped" id="${check_name}">
                             <thead>
                                 <tr>
@@ -258,8 +267,7 @@ $(function () {
                         else {
                             var message = dict[check_name].messages;
                             $("#forms").append(`
-                            <p>${message}</p>
-
+                            ${message}
                             `);
                         }
 
@@ -267,10 +275,12 @@ $(function () {
                             if ($('#'+check_name).css('display') == 'none') {
                                 $('#'+check_name).show();
                                 $(this).text('(скрыть)');
+                                $(this).css('color', 'blue');
                             }
                             else {
                                 $('#'+check_name).hide();
                                 $(this).text('(показать)');
+                                $(this).css('color', 'blue');
                             }
                         });
 

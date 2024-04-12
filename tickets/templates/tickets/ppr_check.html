@@ -39,6 +39,7 @@ $(function () {
 
 	$('#id_get_ppr').click(function () {
           $(this).find('span').addClass('spinner-border spinner-border-sm');
+          $(this).prop('disabled', true);
 
           var ppr = Number($("#id_ppr").val().trim().replace("#",""))
           var url_mask = "{% url 'perform_ppr_check' id_ppr=12345 %}".replace(/12345/, ppr.toString());
@@ -49,6 +50,7 @@ $(function () {
               // если успешно, то
               success: function (response) {
                   $('#id_get_ppr').find('span').removeClass('spinner-border spinner-border-sm');
+                  $('#id_get_ppr').prop('disabled', false);
                   if (response.error) {
                       alert(response.error);
                   }
@@ -182,10 +184,11 @@ $(function () {
                             for (let row = 0; row < set.length; row++) {
                             $("#"+check_name).find('tbody').append(`
                                 <tr>
-                                    <td style="font-size:80%;">${set[row][0]}</td>
-                                    <td style="font-size:80%;">${set[row][1]}</td>
-                                    <td style="font-size:80%;">${set[row][2]}</td>
-                                    <td style="font-size:80%;">${set[row][3]}</td>
+                                    <td style="font-size:80%;"><a class="text-dark" href="${set[row][0]}">${set[row][1]}</a></td>
+                                    <td style="font-size:80%;"><a class="text-dark" href="${set[row][2]}">${set[row][3]}</a></td>
+
+                                    <td style="font-size:80%;">${set[row][4]}</td>
+                                    <td style="font-size:80%;">${set[row][5]}</td>
                                 </tr>
                                   `);
                             }
