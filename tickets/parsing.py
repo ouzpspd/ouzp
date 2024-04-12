@@ -896,10 +896,19 @@ class PprParse:
 
     def parse_devices(self):
         trs = self.soup.find('div', id="CrashDeviceDivContent").find('table').find_all('tr')[1:]
+        all_td = []
         for tr in trs:
-            self.devices.append(tr.find_all('td'))
-        self.devices = [[td.text for index, td in enumerate(tds[::-1]) if index in (1,2,3,4)][::-1] for tds in self.devices]
-        fields = ['name', 'az', 'address', 'model']
+            all_td.append(tr.find_all('td'))
+        for tds in all_td:
+            temp = []
+            for index, td in enumerate(tds[::-1]):
+                if index in (1, 2, 3, 4):
+                    temp.append(td.text)
+                    if td.find('a'):
+                        temp.append(td.find('a').get('href'))
+            self.devices.append(temp[::-1])
+
+        fields = ['name_link', 'name', 'az_link', 'az', 'address', 'model']
         Device = namedtuple('Device', fields)
         self.devices = [Device(*device) for device in self.devices]
 
@@ -946,7 +955,6 @@ class PprCheck:
         self.links = ppr.get_links()
 
     def check_exist_resources_in_victims(self):
-        #not_added = [r for r in self.resources if r not in self.victims]
         victim_names = [res.resource_name for res in self.victims]
         not_added = [r for r in self.resources if r.resource_name not in victim_names]
         if not_added:
@@ -1165,21 +1173,31 @@ class PprCheck:
             })
 
     def check_ias(self):
+        links_ias = [d[1].split()[0] for d in self.links if d and d[1].startswith('IAS')]
+        exist_ias = [d for d in self.devices if d.name.startswith('IAS') and d.name in links_ias]
+
         devices_ias = [d.name for d in self.devices if d.name.startswith('IAS')]
-        exist_ias = [d for d in self.links if d and d[1].startswith('IAS') and d[1].split()[0] in devices_ias]
         not_exist_ias = [d for d in self.links if d and d[1].startswith('IAS') and d[1].split()[0] not in devices_ias]
+        if exist_ias or not_exist_ias:
+            self.data.update({
+                'ias': {
+                    'set': None,
+                    'messages': 'Обнаружено <b>устройство КПА</b>:',
+                }
+            })
+
         if exist_ias:
             self.data.update({
-                'table_links_exist_ias': {
+                'table_device_exist_ias': {
                     'set': exist_ias,
-                    'messages': 'В ППР добавлены КПА вместе с линками. <ul><li>Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
+                    'messages': '<ul><li>В ППР добавлены КПА вместе с линками. Необходимо проверить, что отсутствует резервный рабочий линк и ожидается отключение КПА'
                 }
             })
         if not_exist_ias:
             self.data.update({
                 'table_links_not_exist_ias': {
                     'set': not_exist_ias,
-                    'messages': 'В ППР добавлены линки без КПА. <ul><li>Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
+                    'messages': '<ul><li>В ППР добавлены линки без КПА. Необходимо проверить, что присутствует резервный рабочий линк и отключение КПА не ожидается'
                 }
             })
 
