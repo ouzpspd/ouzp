@@ -3069,6 +3069,7 @@ def change_serv(request, trID):
             types_only_mask = ["Организация доп connected",
                                "Организация доп маршрутизируемой",
                                "Замена connected на connected",
+                               "Замена IP",
                                "Изменение cхемы организации ШПД",
                                ]
             tag_service = session_tr_id.get('tag_service')
@@ -3160,6 +3161,7 @@ def change_params_serv(request, trID):
                 only_mask = True
             if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
                 routed = True
+            parent_subnet = True if next(iter(types_change_service[i].keys())) == "Замена IP" else False
 
         changeparamsform = ChangeParamsForm()
         context = {
@@ -3167,6 +3169,7 @@ def change_params_serv(request, trID):
             'changeparamsform': changeparamsform,
             'only_mask': only_mask,
             'routed': routed,
+            'parent_subnet': parent_subnet,
             'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),

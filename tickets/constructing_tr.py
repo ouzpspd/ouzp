@@ -1590,6 +1590,8 @@ def get_need(value_vars):
             else:
                 if next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
                     need.append("- изменить cхему организации ШПД;")
+                elif next(iter(type_change_service.keys())) == "Замена IP":
+                    need.append("- изменить IP адрес;")
                 elif next(iter(type_change_service.keys())) == "Изменение сервиса":
                     old_service = next(iter(value_vars.get('readable_services')))
                     change_service = next(iter(type_change_service.values()))
@@ -2665,6 +2667,22 @@ def _change_services(value_vars):
             static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
             static_vars['изменится/не изменится'] = 'не изменится'
+            result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif next(iter(type_change_service.keys())) == "Замена IP":
+            stroka = templates.get("Замена IP адреса с маской %указать сущ. маску% на подсеть с маской %указать сущ. маску%")
+            static_vars = {}
+            hidden_vars = {}
+            static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
+            static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
+            static_vars['родительская сеть'] = value_vars.get('parent_subnet')
+            if value_vars.get('selected_ono')[0][4][-3:] != '/32':
+                hidden_vars[
+                    '-- Актуализировать номер договора в КБЗ на странице учета адресации;'
+                ] = '-- Актуализировать номер договора в КБЗ на странице учета адресации;'
+            if value_vars.get('ip_ban') is True:
+                hidden_vars[
+                    '-- Перенести ресурс %указать ресурс на договоре% на договор К-76884 (Договор для ip-адресов ЧК);'
+                ] = '-- Перенести ресурс %указать ресурс на договоре% на договор К-76884 (Договор для ip-адресов ЧК);'
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Замена connected на connected":
             stroka = templates.get("Замена существующей connected подсети на connected подсеть с %большей/меньшей% маской")

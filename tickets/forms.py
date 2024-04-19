@@ -403,6 +403,7 @@ class ChangeServForm(forms.Form):
              ("Организация ШПД trunk'ом с простоем", "Организация ШПД trunk'ом с простоем"),
              ("Изменение сервиса", "Изменение сервиса"),
              ("Изменение cхемы организации ШПД", "Изменение cхемы организации ШПД"),
+             ("Замена IP", "Замена IP"),
              ("Замена connected на connected", "Замена connected на connected"),
              ("Организация доп connected", "Организация доп connected"),
              ("Организация доп маршрутизируемой", "Организация доп маршрутизируемой"),
@@ -428,6 +429,13 @@ class ChangeParamsForm(forms.Form):
                                 label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
     routed_vrf = forms.CharField(max_length=50, required=False,
                                  label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
+                  ('существующей родительской подсети', 'Существующая родительская подсеть'),
+                  ]
+    parent_subnet = forms.CharField(label='Родительская сеть', required=False,
+                               widget=forms.Select(choices=types_mask, attrs={'class': 'form-control'}))
+    ip_ban = forms.BooleanField(label="Причина блокировка в интернете", required=False,
+                                         widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 
 class SearchTicketsForm(forms.Form):
