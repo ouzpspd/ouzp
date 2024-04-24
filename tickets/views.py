@@ -984,6 +984,8 @@ def data(request, trID):
             result_services, result_services_ots, value_vars = extend_service(value_vars)
         elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется':
             result_services, result_services_ots, value_vars = passage_track(value_vars)
+        elif value_vars.get('type_passage') == 'Восстановление трассы' and value_vars.get('change_log') == 'Порт и КАД не меняется':
+            result_services, result_services_ots, value_vars = restore_track(value_vars)
         elif value_vars.get('type_passage') == 'Перенос точки подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется' and value_vars.get('selected_ono')[0][-2].startswith('CSW'):
             result_services, result_services_ots, value_vars = passage_csw_no_install(value_vars)
         else:
@@ -3077,6 +3079,7 @@ def change_serv(request, trID):
             types_only_mask = ["Организация доп connected",
                                "Организация доп маршрутизируемой",
                                "Замена connected на connected",
+                               "Замена IP",
                                "Изменение cхемы организации ШПД",
                                ]
             tag_service = session_tr_id.get('tag_service')
@@ -3168,6 +3171,7 @@ def change_params_serv(request, trID):
                 only_mask = True
             if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
                 routed = True
+            parent_subnet = True if next(iter(types_change_service[i].keys())) == "Замена IP" else False
 
         changeparamsform = ChangeParamsForm()
         context = {
@@ -3175,6 +3179,7 @@ def change_params_serv(request, trID):
             'changeparamsform': changeparamsform,
             'only_mask': only_mask,
             'routed': routed,
+            'parent_subnet': parent_subnet,
             'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'dID': session_tr_id.get('dID'),
@@ -3983,18 +3988,16 @@ class RtkFormView(FormView, CredentialMixin):
         context = super().get_context_data(**kwargs)
         prev_page, index = backward_page(self.request, self.kwargs['trID'])
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        # tag_service = self.request.session['tag_service']
-        # ticket_tr_id = self.request.session['ticket_tr_id']
         tag_service = session_tr_id.get('tag_service')
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         ticket_k = ticket_tr.ticket_k
-        #oattr = self.request.session['oattr']
         oattr = session_tr_id.get('oattr')
-        if oattr and "_Кабинет" in oattr:
-            form = context['form']
-            rtk_models = get_gottlieb(form['switch_ip'].initial)
-            context['rtk_models'] = rtk_models
+        # Временно не используется т.к. креденшалы пока не валидны
+        # if oattr and "_Кабинет" in oattr:
+        #     form = context['form']
+        #     rtk_models = get_gottlieb(form['switch_ip'].initial)
+        #     context['rtk_models'] = rtk_models
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': self.kwargs["trID"]}) + f'?next_page={prev_page}&index={index}'
         context['back_link'] = back_link
         context['oattr'] = oattr

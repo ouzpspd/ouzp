@@ -824,6 +824,8 @@ def get_services(file):
         else:
             break
     for disable_resource in disable_list:
+        if '-->' in disable_resource:
+            disable_resource = disable_resource.split('-->')[0]
         if ', IP-адрес или подсеть;' in disable_resource:
             contract, ppr_resource = disable_resource.strip().strip('"').split(', IP-адрес или подсеть;')
             services.append((contract, ppr_resource, disable_resource.strip('"')))
@@ -859,9 +861,11 @@ def get_links(file):
             break
     for disable_resource in disable_list:
         if '-->' in disable_resource:
-            sw = disable_resource.split('-->')[0].split(',')[-2].strip()
-            port = disable_resource.split('-->')[0].split(',')[-1].strip()
-            links.append((sw, port, disable_resource))
+            link_data = disable_resource.split('-->')[0]
+            if link_data and 'AR' in link_data:
+                sw = link_data.split(',')[-2].strip()
+                port = link_data.split(',')[-1].strip()
+                links.append((sw, port, disable_resource))
         elif ' - ' in disable_resource:
             parts_link = disable_resource.split(' - ')
             if 'AR' in parts_link[0] and 'AR' in parts_link[1]:

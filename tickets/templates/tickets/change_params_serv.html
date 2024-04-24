@@ -49,6 +49,23 @@
                 </div>
             </div>
         </div>
+        {% elif parent_subnet %}
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.ip_ban.id_for_label }}">Причина блокировка в интернете</label>
+                    {{changeparamsform.ip_ban}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ changeparamsform.parent_subnet.id_for_label }}">Родительская подсеть</label>
+                    {{changeparamsform.parent_subnet}}
+                </div>
+            </div>
+        </div>
         {% elif routed %}
         <div class="row">
             <div class="col-4">

@@ -44,8 +44,11 @@ class LocalForm(forms.Form):
     sks_router = forms.BooleanField(label='Подключить линии в маршрутизатор', required=False,
                                     widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
-    types_transceiver = [('Конвертеры 100', 'Конвертеры 100 Мбит/с'),
-             ('Конвертеры 1000', 'Конвертеры 1 Гбит/с')]
+    types_transceiver = [
+        ('Конвертеры 100', 'Конвертеры 100 Мбит/с'),
+        ('Конвертеры 1000', 'Конвертеры 1 Гбит/с'),
+        ('SFP', 'SFP WDM, до 20 км')
+    ]
     sks_transceiver = forms.CharField(
         widget=forms.Select(choices=types_transceiver, attrs={'class': 'form-control transceiver'}))
 
@@ -250,7 +253,7 @@ class CksForm(forms.Form):
     pointB = forms.CharField(label='Точка B', widget=forms.TextInput(attrs={'class': 'form-control'}))
     type_police = [('полисером Subinterface', 'полисером Subinterface'), ('портом подключения', 'портом подключения'), ('не требуется', 'не требуется')]
     policer_cks = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
-    types = [('access', 'access'), ('trunk', 'trunk')]
+    types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
     type_cks = forms.CharField(label='Режим порта', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
@@ -262,7 +265,7 @@ class PortVKForm(forms.Form):
     exist_vk = forms.CharField(label='Cуществующая ВЛС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     type_police = [('полисером на Subinterface', 'полисером на Subinterface'), ('на порту подключения', 'на порту подключения'), ('не требуется', 'не требуется')]
     policer_vk = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
-    types = [('access', 'access'), ('trunk', 'trunk')]
+    types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
     type_portvk = forms.CharField(label='Режим порта', required=False,
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
@@ -375,6 +378,7 @@ class PassServForm(forms.Form):
         ('Перенос сервиса в новую точку', 'Перенос сервиса в новую точку'),
         ('Перенос точки подключения', 'Перенос точки подключения'),
         ('Перенос логического подключения', 'Перенос трассы/логического подключения'),
+        ('Восстановление трассы', 'Восстановление трассы'),
         ('Перевод на гигабит', 'Расширение сервиса'),
     ]
     type_passage = forms.CharField(label='Варианты переноса',
@@ -403,6 +407,7 @@ class ChangeServForm(forms.Form):
              ("Организация ШПД trunk'ом с простоем", "Организация ШПД trunk'ом с простоем"),
              ("Изменение сервиса", "Изменение сервиса"),
              ("Изменение cхемы организации ШПД", "Изменение cхемы организации ШПД"),
+             ("Замена IP", "Замена IP"),
              ("Замена connected на connected", "Замена connected на connected"),
              ("Организация доп connected", "Организация доп connected"),
              ("Организация доп маршрутизируемой", "Организация доп маршрутизируемой"),
@@ -428,6 +433,13 @@ class ChangeParamsForm(forms.Form):
                                 label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
     routed_vrf = forms.CharField(max_length=50, required=False,
                                  label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
+                  ('существующей родительской подсети', 'Существующая родительская подсеть'),
+                  ]
+    parent_subnet = forms.CharField(label='Родительская сеть', required=False,
+                               widget=forms.Select(choices=types_mask, attrs={'class': 'form-control'}))
+    ip_ban = forms.BooleanField(label="Причина блокировка в интернете", required=False,
+                                         widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
 
 
 class SearchTicketsForm(forms.Form):
