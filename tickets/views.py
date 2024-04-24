@@ -3980,18 +3980,16 @@ class RtkFormView(FormView, CredentialMixin):
         context = super().get_context_data(**kwargs)
         prev_page, index = backward_page(self.request, self.kwargs['trID'])
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        # tag_service = self.request.session['tag_service']
-        # ticket_tr_id = self.request.session['ticket_tr_id']
         tag_service = session_tr_id.get('tag_service')
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         ticket_k = ticket_tr.ticket_k
-        #oattr = self.request.session['oattr']
         oattr = session_tr_id.get('oattr')
-        if oattr and "_Кабинет" in oattr:
-            form = context['form']
-            rtk_models = get_gottlieb(form['switch_ip'].initial)
-            context['rtk_models'] = rtk_models
+        # Временно не используется т.к. креденшалы пока не валидны
+        # if oattr and "_Кабинет" in oattr:
+        #     form = context['form']
+        #     rtk_models = get_gottlieb(form['switch_ip'].initial)
+        #     context['rtk_models'] = rtk_models
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': self.kwargs["trID"]}) + f'?next_page={prev_page}&index={index}'
         context['back_link'] = back_link
         context['oattr'] = oattr
