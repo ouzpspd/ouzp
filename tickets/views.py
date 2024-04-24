@@ -984,6 +984,8 @@ def data(request, trID):
             result_services, result_services_ots, value_vars = extend_service(value_vars)
         elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется':
             result_services, result_services_ots, value_vars = passage_track(value_vars)
+        elif value_vars.get('type_passage') == 'Восстановление трассы' and value_vars.get('change_log') == 'Порт и КАД не меняется':
+            result_services, result_services_ots, value_vars = restore_track(value_vars)
         elif value_vars.get('type_passage') == 'Перенос точки подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется' and value_vars.get('selected_ono')[0][-2].startswith('CSW'):
             result_services, result_services_ots, value_vars = passage_csw_no_install(value_vars)
         else:
