@@ -33,44 +33,42 @@
 <form action="{% url 'hotspot' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
-        {% if premium_plus %}
+
         <div class="row">
-            <div class="col-4 mb-3">
+            <div class="col-4">
                 <div class="form-group">
-                    <label for="{{ hotspotform.exist_hotspot_client.id_for_label }}">Существующий клиент</label>
+                    <label for="{{ hotspotform.type_hotspot.id_for_label }}">Тип:</label>
+                    {{hotspotform.type_hotspot}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ hotspotform.exist_hotspot_client.id_for_label }}">Существующий контракт:</label>
                     {{hotspotform.exist_hotspot_client}}
                 </div>
             </div>
         </div>
-
         <div class="row">
-            <div class="col-4 mb-3">
-                <div class="form-group">
-                    <label for="{{hotspotform.hotspot_users.id_for_label}}">Количество пользователей</label>
-                    {{hotspotform.hotspot_users}}
+            <div class="col-4">
+                <div class="form-group local_wifi">
+                    <label for="{{ hotspotform.hotspot_local_wifi.id_for_label }}">С локальной сетью WiFi:</label>
+                    {{hotspotform.hotspot_local_wifi}}
                 </div>
             </div>
         </div>
-        {% elif not premium %}
         <div class="row">
-            <div class="col-4 mb-3">
-                <div class="form-group">
-                    <label for="{{ hotspotform.exist_hotspot_client.id_for_label }}">Существующий клиент</label>
-                    {{hotspotform.exist_hotspot_client}}
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-4 mb-3">
-                <div class="form-group">
+            <div class="col-4">
+                <div class="form-group points">
                     <label for="{{hotspotform.hotspot_points.id_for_label}}">Количество точек</label>
                     {{hotspotform.hotspot_points}}
                 </div>
             </div>
         </div>
+
         <div class="row">
-            <div class="col-4 mb-3">
+            <div class="col-4">
                 <div class="form-group">
                     <label for="{{hotspotform.hotspot_users.id_for_label}}">Количество пользователей</label>
                     {{hotspotform.hotspot_users}}
@@ -78,13 +76,6 @@
             </div>
         </div>
 
-        {% else %}
-        <div class="row">
-            <div class="col-4">
-            {{ hotspotform.as_p }}
-            </div>
-        </div>
-        {% endif %}
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
@@ -104,5 +95,32 @@
     </div>
 </div>
 
+<script>
+$(function () {
+    $(".local_wifi").hide();
+});
+
+$(function () {
+  $("#id_type_hotspot").change(function() {
+    var val = $(this).val();
+    if(val === "Хот-спот Премиум") {
+        $(".local_wifi").show();
+        $(".points").show();
+    }
+    else if(val === "Хот-спот Премиум +") {
+            $(".local_wifi").hide();
+            $(".points").hide();
+            $("#id_hotspot_local_wifi").prop("checked", false);
+        }
+    else {
+        $(".local_wifi").hide();
+        $(".points").show();
+        $("#id_hotspot_local_wifi").prop("checked", false);
+
+    }
+});
+});
+
+</script>
 
 {%endblock%}

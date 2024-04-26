@@ -39,6 +39,14 @@
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col">
+                <div class="breadcrumb video alert-success">
+                    <p class="breadcrumb-item"><b>Подсказка.</b> СКС отдельно от видеонаблюдения не требуется.</p>
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group ports">
@@ -100,7 +108,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group lvs">
-                    <label for="{{localform.lvs_switch.id_for_label}}">Установка коммутатора:</label>
+                    <label for="{{localform.lvs_switch.id_for_label}}">Модель коммутатора:</label>
                     {{localform.lvs_switch}}
                 </div>
             </div>
@@ -140,6 +148,7 @@ $(function () {
     $(".sks_transceiver").hide();
     $(".lvs").hide();
     $(".sks_router").show();
+    $(".video").hide();
 });
 
 $(function () {
@@ -151,6 +160,7 @@ $(function () {
         $(".cable_channel").show();
         $(".sks_transceiver").hide();
         $(".socket_need").show();
+        $(".video").hide();
         if(val.includes("lvs")) {
             $(".lvs").show();
             $(".sks_router").hide();
@@ -171,6 +181,7 @@ $(function () {
         $(".socket_need").hide();
         $(".lvs").hide();
         $(".sks_router").hide();
+        $(".video").hide();
     }
     else if(val.includes("standart")) {
         $("#id_local_ports").prop("required", true);
@@ -180,6 +191,7 @@ $(function () {
         $(".cable_channel").hide();
         $(".socket").hide();
         $(".socket_need").show();
+        $(".video").hide();
         if(val.includes("lvs")) {
             $(".lvs").show();
             $(".sks_router").hide();
@@ -201,6 +213,7 @@ $(function () {
         $(".sks_router").hide();
         $(".ports").hide();
         $("#id_local_ports").prop("required", false);
+        $(".video").show();
     }
 });
 });

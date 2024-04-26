@@ -27,7 +27,7 @@ class LocalForm(forms.Form):
               ('lvs_standart', 'ЛВС Стандарт (без использования кабель-канала)'),
               ('lvs_business', 'ЛВС Бизнес (с использованием кабель-канала)'),
               ('sks_vols', 'СКС Стандарт оптический'),
-             ('Под видеонаблюдение', 'СКС отдельно от видеонаблюдения не требуется',
+             ('Под видеонаблюдение', 'СКС для видеонаблюдения',
               )]
     local_type = forms.CharField(label='Тип ЛВС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     local_ports = forms.IntegerField(max_value=24, label='Количество портов', required=False,
@@ -65,6 +65,11 @@ class LocalForm(forms.Form):
 
 
 class HotspotForm(forms.Form):
+    types = [('Хот-спот Стандарт', 'Хот-спот Стандарт'),
+             ('Хот-спот Премиум', 'Хот-спот Премиум'),
+             ('Хот-спот Премиум +', 'Хот-спот Премиум +')]
+    type_hotspot = forms.CharField(
+        widget=forms.Select(choices=types, attrs={'class': 'form-control transceiver'}))
     exist_hotspot_client = forms.BooleanField(label='Существующий клиент', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     hotspot_local_wifi = forms.BooleanField(label='С локальной сетью WiFi', required=False,
                                               widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -229,13 +234,13 @@ class ShpdForm(forms.Form):
 
 class ExtendServiceForm(forms.Form):
     type_police_cks_vk = [
-        ('полисером Subinterface', 'полисером Subinterface'),
-        ('портом подключения', 'портом подключения'),
-        ('не требуется', 'не требуется')]
+        ('полисером Subinterface', 'Subinterface'),
+        ('портом подключения', 'Порт коммутатора'),
+        ('не требуется', 'Не требуется')]
     type_police_vm = [
-        ('полисером на SVI', 'полисером на SVI'),
-        ('портом подключения', 'портом подключения'),
-        ('не требуется', 'не требуется')]
+        ('полисером на SVI', 'SVI'),
+        ('портом подключения', 'Порт коммутатора'),
+        ('не требуется', 'Не требуется')]
     types = [
         ('10 Мбит/с', '10 Мбит/с'),
         ('100 Мбит/с', '100 Мбит/с'),
@@ -251,7 +256,7 @@ class ExtendServiceForm(forms.Form):
 class CksForm(forms.Form):
     pointA = forms.CharField(label='Точка A', widget=forms.TextInput(attrs={'class': 'form-control'}))
     pointB = forms.CharField(label='Точка B', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    type_police = [('полисером Subinterface', 'полисером Subinterface'), ('портом подключения', 'портом подключения'), ('не требуется', 'не требуется')]
+    type_police = [('полисером Subinterface', 'Subinterface'), ('портом подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
     policer_cks = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
     type_cks = forms.CharField(label='Режим порта', required=False,
@@ -263,7 +268,7 @@ class CksForm(forms.Form):
 class PortVKForm(forms.Form):
     new_vk = forms.BooleanField(label='Новая ВЛС', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     exist_vk = forms.CharField(label='Cуществующая ВЛС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    type_police = [('полисером на Subinterface', 'полисером на Subinterface'), ('на порту подключения', 'на порту подключения'), ('не требуется', 'не требуется')]
+    type_police = [('полисером на Subinterface', 'Subinterface'), ('на порту подключения', 'Порт подключения'), ('не требуется', 'Не требуется')]
     policer_vk = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
     type_portvk = forms.CharField(label='Режим порта', required=False,
@@ -275,7 +280,7 @@ class PortVKForm(forms.Form):
 class PortVMForm(forms.Form):
     new_vm = forms.BooleanField(label='Новый ВМ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     exist_vm = forms.CharField(label='Cуществующий ВМ', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    type_police = [('полисером на SVI', 'полисером на SVI'), ('на порту подключения', 'на порту подключения'), ('не требуется', 'не требуется')]
+    type_police = [('полисером на SVI', 'SVI'), ('на порту подключения', 'Порт подключения'), ('не требуется', 'Не требуется')]
     policer_vm = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     vm_inet = forms.BooleanField(required=False, label='С доступом в Интернет', widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('access', 'access'), ('trunk', 'trunk')]

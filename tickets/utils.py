@@ -333,8 +333,6 @@ def _tag_service_for_new_serv(services_plus_desc):
     необходимо пройти пользователю. Также определяет для услиги Хот-спот количество пользователей и принадлежность
     к услуге премиум+"""
     tag_service = []
-    hotspot_users = None
-    premium_plus = None
     for index_service in range(len(services_plus_desc)):
         if 'Телефон' in services_plus_desc[index_service]:
             tag_service.append({'phone': services_plus_desc[index_service]})
@@ -352,23 +350,10 @@ def _tag_service_for_new_serv(services_plus_desc):
         elif 'Видеонаблюдение' in services_plus_desc[index_service]:
             tag_service.append({'video': services_plus_desc[index_service]})
         elif 'HotSpot' in services_plus_desc[index_service]:
-            types_premium = ['премиум +', 'премиум+', 'прем+', 'прем +', 'премиум плюс', 'прем плюс']
-            if any(type in services_plus_desc[index_service].lower() for type in types_premium):
-                premium_plus = True
-            else:
-                premium_plus = False
-
-            regex_hotspot_users = ['(\d+)посетит', '(\d+) посетит', '(\d+) польз', '(\d+)польз', '(\d+)чел',
-                                   '(\d+) чел']
-            for regex in regex_hotspot_users:
-                match_hotspot_users = re.search(regex, services_plus_desc[index_service])
-                if match_hotspot_users:
-                    hotspot_users = match_hotspot_users.group(1)
-                    break
             tag_service.append({'hotspot': services_plus_desc[index_service]})
         elif 'ЛВС' in services_plus_desc[index_service]:
             tag_service.append({'local': services_plus_desc[index_service]})
-    return tag_service, hotspot_users, premium_plus
+    return tag_service
 
 
 def _replace_wda_wds(device):
