@@ -118,7 +118,7 @@ def change_password(request):
         form = PasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
-            update_session_auth_hash(request, user)  # Important!
+            update_session_auth_hash(request, user)
             messages.success(request, 'Ваш пароль обновлен!')
             return redirect('change_password')
         else:
@@ -142,83 +142,6 @@ def private_page(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return render(request, 'tickets/private_page.html', {'page_obj': page_obj})
-
-
-# def login_for_service(request):
-#     """Данный метод перенаправляет на страницу Авторизация в ИС Холдинга. Метод используется для получения данных от пользователя
-#      для авторизации в ИС Холдинга. После получения данных, проверяет, что логин и пароль не содержат русских символов и добавляет
-#       логин с паролем в redis(задает время хранения в параметре timeout) и перенаправляет на страницу, с которой пришел запрос"""
-#     if request.method == 'POST':
-#         authform = AuthForServiceForm(request.POST)
-#         if authform.is_valid():
-#             username = authform.cleaned_data['username']
-#             password = authform.cleaned_data['password']
-#             if re.search(r'[а-яА-Я]', username) or re.search(r'[а-яА-Я]', password):
-#                 messages.warning(request, 'Введен русский язык')
-#                 response = redirect('login_for_service')
-#                 if 'next' in request.GET:
-#                     response['Location'] += f'?next={request.GET["next"]}'
-#                 return response
-#
-#             try:
-#                 req = requests.get('https://sss.corp.itmh.ru/menu.php', verify=False, auth=(username, password))
-#             except requests.exceptions.ConnectionError:
-#                 messages.warning(request, 'ИС СПП не отвечает')
-#                 response = redirect('login_for_service')
-#                 if 'next' in request.GET:
-#                     response['Location'] += f'?next={request.GET["next"]}'
-#                 return response
-#             if req.status_code == 200:
-#                 user = User.objects.get(username=request.user.username)
-#                 credent = dict()
-#                 credent.update({'username': username})
-#                 credent.update({'password': password})
-#                 cache.set(user, credent, timeout=32400)
-#
-#                 if 'next' in request.GET:
-#                     return redirect(request.GET['next'])
-#                 return redirect('/')
-#             messages.warning(request, 'Введены неверные логин/пароль для доступа в ИС Холдинга')
-#             response = redirect('login_for_service')
-#             if 'next' in request.GET:
-#                 response['Location'] += f'?next={request.GET["next"]}'
-#             return response
-#     else:
-#         authform = AuthForServiceForm()
-#     return render(request, 'tickets/login_is.html', {'form': authform})
-
-
-
-# def cache_check(func):
-#     """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
-#      если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
-#     def wrapper(request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return redirect('login/?next=%s' % (request.path))
-#         user = User.objects.get(username=request.user.username)
-#         credent = cache.get(user)
-#         if credent == None:
-#             response = redirect('login_for_service')
-#             response['Location'] += '?next={}'.format(request.path)
-#             return response
-#         return func(request, *args, **kwargs)
-#     return wrapper
-
-
-# def cache_check_view(func):
-#     """Данный декоратор осуществляет проверку, что пользователь авторизован в АРМ, и в redis есть его логин/пароль,
-#      если данных нет, то перенаправляет на страницу Авторизация в ИС Холдинга"""
-#     def wrapper(self, request, *args, **kwargs):
-#         if not self.request.user.is_authenticated:
-#             return redirect('login/?next=%s' % (self.request.path))
-#         user = User.objects.get(username=self.request.user.username)
-#         credent = cache.get(user)
-#         if credent == None:
-#             response = redirect('login_for_service')
-#             response['Location'] += '?next={}'.format(self.request.path)
-#             return response
-#         return func(self, request, *args, **kwargs)
-#     return wrapper
 
 
 def group_check_ouzp(user):
@@ -299,16 +222,9 @@ def commercial(request):
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
     search = in_work_ortr(username, password)
-    if not isinstance(search, list): #search[0] == 'Access denied':
+    if not isinstance(search, list):
         return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
-    # if search[0] == 'Access denied':
-    #     messages.warning(request, 'Нет доступа в ИС Холдинга')
-    #     response = redirect('login_for_service')
-    #     response['Location'] += '?next={}'.format(request.path)
-    #     return response
-
     list_search = []
-    #if type(search[0]) != str:
     search[:] = [x for x in search if 'ПТО' not in x[0]]
     for i in search:
         if 'ПТО' not in i[0]:
@@ -322,9 +238,6 @@ def commercial(request):
         for index_j in range(len(list_search)):
             if i in list_search[index_j]:
                 list_search_rem.append(index_j)
-    # if len(search) == 0 or search[0] == 'Empty list tickets':
-    #     search = None
-    # else:
     search[:] = [x for i, x in enumerate(search) if i not in list_search_rem]
     spp_process = SPP.objects.filter(process=True).filter(type_ticket='Коммерческая')
     return render(request, 'tickets/ortr.html', {'search': search, 'com_search': True, 'spp_process': spp_process})
@@ -421,8 +334,7 @@ def project_tr(request, dID, tID, trID):
     manager = ticket_tr.ticket_k.manager
     technolog = ticket_tr.ticket_k.technolog
     task_otpm = ticket_tr.ticket_k.task_otpm
-    counter_line_services = _counter_line_services(services_plus_desc) #, hotspot_points, services_plus_desc =
-    #request.session['services_plus_desc'] = services_plus_desc  # здесь сервисы модифицированы со знаками |
+    counter_line_services = _counter_line_services(services_plus_desc)
     cks_points = []
     for point in des_tr:
         if next(iter(point.keys())).startswith('г.'):
@@ -430,17 +342,16 @@ def project_tr(request, dID, tID, trID):
 
     sreda = get_oattr_sreda(oattr) if oattr else '1'
 
-    tag_service, hotspot_users, premium_plus = _tag_service_for_new_serv(services_plus_desc)
+    tag_service = _tag_service_for_new_serv(services_plus_desc)
     tag_service.insert(0, {'sppdata': None})
 
     session_tr_id = request.session[str(trID)]
-    session_tr_id.update({'services_plus_desc': services_plus_desc})  # здесь сервисы модифицированы со знаками |
+    session_tr_id.update({'services_plus_desc': services_plus_desc})
     session_tr_id.update({'counter_line_services': counter_line_services,
                           'counter_line_services_initial':counter_line_services, 'pps': pps, 'turnoff': turnoff,
                           'sreda': sreda, 'cks_points': cks_points, 'address': address, 'oattr': oattr, 'client': client,
                           'manager': manager, 'technolog': technolog, 'task_otpm': task_otpm, 'tID': tID,
-                          'dID': dID, 'hotspot_users': hotspot_users, # 'hotspot_points': hotspot_points,
-                          'premium_plus': premium_plus})
+                          'dID': dID,})
 
     spd = session_tr_id.get('spd')
     if counter_line_services == 0:
@@ -463,7 +374,6 @@ def project_tr(request, dID, tID, trID):
                 tag_service.pop()
             elif tag_service[-1] == {'data': None} and counter_line_services > 0:
                 tag_service.pop()
-            #sreda = request.session['sreda']
             if sreda == '1':
                 tag_service.append({'copper': None})
             elif sreda == '2' or sreda == '4':
@@ -471,9 +381,6 @@ def project_tr(request, dID, tID, trID):
             elif sreda == '3':
                 tag_service.append({'wireless': None})
 
-    #request.session['tag_service'] = tag_service
-    #session_tr_id.update({'tag_service': tag_service})
-    # request.session[trID] = session_tr_id
     response = get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
     return response
 
@@ -485,8 +392,6 @@ def copper(request, trID):
         if copperform.is_valid():
             correct_sreda = copperform.cleaned_data['correct_sreda']
             session_tr_id = request.session[str(trID)]
-            # sreda = request.session['sreda']
-            # tag_service = request.session['tag_service']
             sreda = session_tr_id.get('sreda')
             tag_service = session_tr_id.get('tag_service')
             if correct_sreda == sreda:
@@ -507,7 +412,7 @@ def copper(request, trID):
 
                 if logic_csw == True:
                     tag_service.append({'csw': None})
-                    response = get_response_with_get_params(request, tag_service, session_tr_id, trID)    #request
+                    response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                     return response
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
                     tag_service.append({'csw': None})
@@ -536,16 +441,12 @@ def copper(request, trID):
                 elif correct_sreda == '2' or correct_sreda == '4':
                     tag_service.pop()
                     tag_service.append({'vols': None})
-                #request.session['sreda'] = correct_sreda
                 session_tr_id.update({'sreda': correct_sreda})
                 response = get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
                 return response
     else:
         user = User.objects.get(username=request.user.username)
         username, password = get_user_credential_cordis(user)
-        # pps = request.session['pps']
-        # services_plus_desc = request.session['services_plus_desc']
-        # tag_service = request.session['tag_service']
         prev_page, index = backward_page(request, trID)
         session_tr_id = request.session[str(trID)]
         pps = session_tr_id.get('pps')
@@ -563,8 +464,6 @@ def copper(request, trID):
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
 
         list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
-
-        #request.session['list_switches'] = list_switches
         session_tr_id.update({'list_switches': list_switches})
         request.session[trID] = session_tr_id
         copperform = CopperForm(initial={'correct_sreda': '1', 'kad': switches_name, 'port': 'свободный'})
@@ -642,14 +541,12 @@ def vols(request, trID):
 
                 if logic_csw == True:
                     device_client = device_client.replace('клиентское оборудование', 'клиентский коммутатор')
-                    #request.session['device_client'] = device_client
                     session_tr_id.update({'device_client': device_client})
                     tag_service.append({'csw': None})
                     response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                     return response
                 elif logic_change_csw == True and logic_change_gi_csw == True or logic_change_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
-                    #request.session['device_client'] = device_client
                     session_tr_id.update({'device_client': device_client})
                     if type_pass:
                         if 'Организация/Изменение, СПД' in type_pass and 'Перенос, СПД' not in type_pass:
@@ -660,21 +557,18 @@ def vols(request, trID):
                 elif logic_replace_csw == True and logic_change_gi_csw == True or logic_replace_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
                     session_tr_id.update({'device_client': device_client})
-                    #request.session['device_client'] = device_client
                     if type_pass:
                         tag_service.append({'csw': None})
                         response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                         return response
                 elif logic_change_gi_csw == True:
                     device_client = device_client.replace(' в клиентское оборудование', '')
-                    #request.session['device_client'] = device_client
                     session_tr_id.update({'device_client': device_client})
                     if type_pass:
                         tag_service.append({'csw': None})
                         response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                         return response
                 else:
-                    #request.session['device_client'] = device_client
                     tag_service.append({'data': None})
                     response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                     return response
@@ -691,7 +585,6 @@ def vols(request, trID):
                 elif correct_sreda == '4':
                     tag_service.pop()
                     tag_service.append({'vols': None})
-                #request.session['sreda'] = correct_sreda
                 session_tr_id.update({'sreda': correct_sreda})
                 response = get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
                 return response
@@ -743,7 +636,6 @@ def vols(request, trID):
             'turnoff': session_tr_id.get('turnoff'),
             'dID': session_tr_id.get('dID'),
             'ticket_tr': ticket_tr,
-            # 'tID': tID,
             'trID': trID,
             'volsform': volsform,
             'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
@@ -1060,7 +952,6 @@ def data(request, trID):
     if value_vars.get('type_pass'):
         titles = _titles(result_services, result_services_ots)
         titles = ''.join(titles)
-        #request.session['titles'] = titles
         session_tr_id.update({'titles': titles})
         result_services = '\n\n\n'.join(result_services)
         if evaluative_tr:
@@ -1076,7 +967,6 @@ def data(request, trID):
     else:
         titles = _titles(result_services, result_services_ots)
         titles = ''.join(titles)
-        #request.session['titles'] = titles
         session_tr_id.update({'titles': titles})
         result_services = '\n\n\n'.join(result_services)
         if evaluative_tr:
@@ -1094,13 +984,6 @@ def data(request, trID):
         else:
             result_services_ots = userlastname + ' ' + now + '\n\n' + result_services_ots
         counter_str_ots = result_services_ots.count('\n')
-
-    # request.session['kad'] = value_vars.get('kad') if value_vars.get('kad') else 'Не требуется'
-    # request.session['pps'] = value_vars.get('pps') if value_vars.get('pps') else 'Не требуется'
-    # request.session['result_services'] = result_services
-    # request.session['counter_str_ortr'] = counter_str_ortr
-    # request.session['result_services_ots'] = result_services_ots
-    # request.session['counter_str_ots'] = counter_str_ots
     session_tr_id.update({'kad': value_vars.get('kad') if value_vars.get('kad') else 'Не требуется',
                           'pps': value_vars.get('pps') if value_vars.get('pps') else 'Не требуется',
                           'result_services': result_services,
@@ -1167,7 +1050,6 @@ def saved_data(request, trID):
         if ortrform.is_valid():
             result_services_ots = session_tr_id.get('result_services_ots')
             list_switches = session_tr_id.get('list_switches') if session_tr_id.get('list_switches') else None
-            #now = datetime.datetime.now()
             ortr_field = ortrform.cleaned_data['ortr_field']
             ots_field = ortrform.cleaned_data['ots_field']
             regex = '\n(.+)\r\n-{5,}\r\n'
@@ -1205,7 +1087,7 @@ def saved_data(request, trID):
                 'not_required_tr': True,
                 'spec_button': spec_button,
                 'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-                'dID': ticket_tr.ticket_k.dID, #session_tr_id.get('dID'),
+                'dID': ticket_tr.ticket_k.dID,
                 'ticket_tr': ticket_tr,
                 'trID': trID
             }
@@ -1266,7 +1148,7 @@ def saved_data(request, trID):
             'spec_button': spec_button,
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'ticket_tr': ticket_tr,
-            'dID': ticket_tr.ticket_k.dID,   #session_tr_id.get('dID'),
+            'dID': ticket_tr.ticket_k.dID,
             'trID': trID
         }
 
@@ -1329,8 +1211,6 @@ def edit_tr(request, dID, ticket_spp_id, trID):
             return render(request, 'tickets/edit_tr.html', context)
     else:
         session_tr_id = request.session[str(trID)]
-        # ticket_spp_id = session_tr_id.get('ticket_spp_id')
-        # dID = session_tr_id.get('dID')
         ticket_spp = SPP.objects.get(dID=dID, id=ticket_spp_id)
         ticket_tr = ticket_spp.children.filter(ticket_tr=trID)[0]
         session_tr_id.update({'ticket_tr_id': ticket_tr.id})
@@ -1490,6 +1370,7 @@ def hotspot(request, trID):
     if request.method == 'POST':
         hotspotform = HotspotForm(request.POST)
         if hotspotform.is_valid():
+            type_hotspot = hotspotform.cleaned_data['type_hotspot']
             hotspot_points = hotspotform.cleaned_data['hotspot_points']
             hotspot_users = hotspotform.cleaned_data['hotspot_users']
             exist_hotspot_client = hotspotform.cleaned_data['exist_hotspot_client']
@@ -1498,16 +1379,11 @@ def hotspot(request, trID):
             tag_service = session_tr_id.get('tag_service')
             services_plus_desc = session_tr_id.get('services_plus_desc')
             if hotspot_points:
-                for index_service in range(len(services_plus_desc)):
-                    if 'HotSpot' in services_plus_desc[index_service]:
-                        services_plus_desc[index_service] = services_plus_desc[index_service].strip('|')
-                        for i in range(int(hotspot_points)):
-                            services_plus_desc[index_service] += '|'
                 counter_line_hotspot = hotspot_points-1
                 session_tr_id.update({'counter_line_hotspot': counter_line_hotspot})
             session_tr_id.update({'services_plus_desc': services_plus_desc, 'hotspot_points': str(hotspot_points),
                                   'hotspot_users': str(hotspot_users), 'exist_hotspot_client': exist_hotspot_client,
-                                  'hotspot_local_wifi': hotspot_local_wifi})
+                                  'hotspot_local_wifi': hotspot_local_wifi, 'type_hotspot': type_hotspot})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
@@ -1581,10 +1457,6 @@ def phone(request, trID):
                                 phone_in_pass += '|'
                             session_tr_id.update({'phone_in_pass': phone_in_pass})
                         else:
-                            # try:
-                            #     counter_line_services = session_tr_id.get('counter_line_services')
-                            # except KeyError:
-                            #     counter_line_services = 0
                             if type_phone == 'st':
                                 session_tr_id.update({'type_ip_trunk': type_ip_trunk})
                                 if type_ip_trunk == 'trunk':
@@ -1596,18 +1468,12 @@ def phone(request, trID):
                         sreda = session_tr_id.get('sreda')
                         if sreda == '2' or sreda == '4':
                             if {'vols': None} not in tag_service:
-                            #     pass
-                            # else:
                                 tag_service.insert(current_index_local + 1, {'vols': None})
                         elif sreda == '3':
                             if {'wireless': None} not in tag_service:
-                            #     pass
-                            # else:
                                 tag_service.insert(current_index_local + 1, {'wireless': None})
                         elif sreda == '1':
                             if {'copper': None} not in tag_service:
-                            #     pass
-                            # else:
                                 tag_service.insert(current_index_local + 1, {'copper': None})
                         if {'data': None} in tag_service:
                             tag_service.remove({'data': None})
@@ -1624,8 +1490,6 @@ def phone(request, trID):
                         services_plus_desc[index_service] = services_plus_desc[index_service].strip('\/|')
                         services_plus_desc[index_service] += '/'
                         if {'copper': None} not in tag_service:
-                        #     pass
-                        # else:
                             tag_service.insert(current_index_local + 1, {'copper': None})
                     elif type_phone == 'ab':
                         if new_job_services:
@@ -1681,7 +1545,6 @@ def phone(request, trID):
                 'phone_in_pass'
             )
         session_tr_id.update({'current_service': service, 'current_index_local': index + 1})
-        #request.session['current_index_local'] = index + 1
         counter_line_services = session_tr_id.get('counter_line_services')
         if counter_line_services:
             session_tr_id.update({'counter_line_services_before_phone': counter_line_services})
@@ -1693,12 +1556,12 @@ def phone(request, trID):
 
         form = PhoneForm(initial={
                                 'type_phone': 's',
-                                'vgw': 'Не требуется',
+                                #'vgw': 'Не требуется',
                             })
         if user.groups.filter(name='Менеджеры').exists():
             form.fields['type_phone'].widget.choices = [('s', 'SIP, по логину/паролю'),]
         context = {
-            'service_vgw': service, #service_vgw,
+            'service_vgw': service,
             'vats': vats,
             'vats_extend': vats_extend,
             'oattr': oattr,
@@ -1776,7 +1639,7 @@ def itv(request, trID):
             services_plus_desc = session_tr_id.get('services_plus_desc')
             tag_service = session_tr_id.get('tag_service')
             selected_ono = session_tr_id.get('selected_ono')
-            new_job_services = session_tr_id.get('new_job_services')# if session_tr_id.get('new_job_services') else None
+            new_job_services = session_tr_id.get('new_job_services')
             if not new_job_services and type_itv == 'novlexist':
                 messages.warning(request, 'Нельзя выбрать "В vlan действующей услуги ШПД" при проектирование в новой точке.')
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
@@ -1861,10 +1724,6 @@ def cks(request, trID):
             session_tr_id = request.session[str(trID)]
             if type_cks and type_cks == 'trunk':
                 session_tr_id.update({'counter_line_services': 1})
-            # try:
-            #     all_cks_in_tr = request.session['all_cks_in_tr']
-            # except KeyError:
-            #     all_cks_in_tr = dict()
             all_cks_in_tr = session_tr_id.get('all_cks_in_tr') if session_tr_id.get('all_cks_in_tr') else dict()
             service = session_tr_id.get('current_service')
             tag_service = session_tr_id.get('tag_service')
@@ -1949,7 +1808,7 @@ def portvk(request, trID):
     if request.method == 'POST':
         portvkform = PortVKForm(request.POST)
         if portvkform.is_valid():
-            new_vk = portvkform.cleaned_data['new_vk']
+            type_vk = portvkform.cleaned_data['type_vk']
             exist_vk = '"{}"'.format(portvkform.cleaned_data['exist_vk'])
             policer_vk = portvkform.cleaned_data['policer_vk']
             type_portvk = portvkform.cleaned_data['type_portvk']
@@ -1957,19 +1816,16 @@ def portvk(request, trID):
             session_tr_id = request.session[str(trID)]
             if type_portvk == 'trunk':
                 session_tr_id.update({'counter_line_services': 1})
-            # try:
-            #     all_portvk_in_tr = request.session['all_portvk_in_tr']
-            # except KeyError:
-            #     all_portvk_in_tr = dict()
             all_portvk_in_tr = session_tr_id.get('all_portvk_in_tr') if session_tr_id.get('all_portvk_in_tr') else dict()
             service = session_tr_id.get('current_service')
-            all_portvk_in_tr.update({service:{'new_vk': new_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk,
+            all_portvk_in_tr.update({service:{'type_vk': type_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk,
                                               'type_portvk': type_portvk, 'exist_service': exist_service}})
             session_tr_id.update({'all_portvk_in_tr': all_portvk_in_tr})
             tag_service = session_tr_id.get('tag_service')
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
+        mess = '(<a href="https://ckb.itmh.ru/x/gQdaH" target ="_blank">смотри документ</a>, раздел "Схема. ЦКС между'
         service_name = 'portvk'
         session_tr_id = request.session[str(trID)]
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
@@ -1983,7 +1839,6 @@ def portvk(request, trID):
 
         tag_service = session_tr_id.get('tag_service')
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
-        #request.session['current_service'] = service
         session_tr_id.update({'current_service': service})
         types_change_service = session_tr_id.get('types_change_service')
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
@@ -2006,7 +1861,7 @@ def portvm(request, trID):
     if request.method == 'POST':
         portvmform = PortVMForm(request.POST)
         if portvmform.is_valid():
-            new_vm = portvmform.cleaned_data['new_vm']
+            type_vm = portvmform.cleaned_data['type_vm']
             exist_vm = '"{}"'.format(portvmform.cleaned_data['exist_vm'])
             policer_vm = portvmform.cleaned_data['policer_vm']
             vm_inet = portvmform.cleaned_data['vm_inet']
@@ -2015,14 +1870,8 @@ def portvm(request, trID):
             session_tr_id = request.session[str(trID)]
             if type_portvm == 'trunk':
                 session_tr_id.update({'counter_line_services': 1})
-            session_tr_id.update({'policer_vm': policer_vm, 'new_vm': new_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
+            session_tr_id.update({'policer_vm': policer_vm, 'type_vm': type_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
                                   'type_portvm': type_portvm, 'exist_service_vm': exist_service_vm})
-            # request.session['policer_vm'] = policer_vm
-            # request.session['new_vm'] = new_vm
-            # request.session['exist_vm'] = exist_vm
-            # request.session['vm_inet'] = vm_inet
-            # request.session['type_portvm'] = type_portvm
-            # request.session['exist_service_vm'] = exist_service_vm
             tag_service = session_tr_id.get('tag_service')
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
@@ -2111,7 +1960,6 @@ def get_resources(request, trID):
                     session_tr_id.update({'phone_address': phone_address})
                 session_tr_id.update({'ono': ono, 'contract': contract})
                 request.session[trID] = session_tr_id
-                #request.session['contract'] = contract
                 return redirect('resources_formset', trID)
     else:
         contractform = ContractForm()
@@ -2463,55 +2311,6 @@ def job_formset(request, trID):
     oattr = ticket_tr.oattr
     pps = ticket_tr.pps
     services = splice_services(ticket_tr.services)
-    # services_con = []
-    # for service in services:
-    #     if service.startswith('Телефон'):
-    #         if len(services_con) != 0:
-    #             for i in range(len(services_con)):
-    #                 if services_con[i].startswith('Телефон'):
-    #                     services_con[i] = services_con[i] +' '+ service[len('Телефон'):]
-    #                     break
-    #                 else:
-    #                     if i == len(services_con)-1:
-    #                         services_con.append(service)
-    #         else:
-    #             services_con.append(service)
-    #     elif service.startswith('ЛВС'):
-    #         if len(services_con) != 0:
-    #             for i in range(len(services_con)):
-    #                 if services_con[i].startswith('ЛВС'):
-    #                     services_con[i] = services_con[i] +' '+ service[len('ЛВС'):]
-    #                     break
-    #                 else:
-    #                     if i == len(services_con)-1:
-    #                         services_con.append(service)
-    #         else:
-    #             services_con.append(service)
-    #     elif service.startswith('Видеонаблюдение'):
-    #         if len(services_con) != 0:
-    #             for i in range(len(services_con)):
-    #                 if services_con[i].startswith('Видеонаблюдение'):
-    #                     services_con[i] = services_con[i] +' '+ service[len('Видеонаблюдение'):]
-    #                     break
-    #                 else:
-    #                     if i == len(services_con) - 1:
-    #                         services_con.append(service)
-    #         else:
-    #             services_con.append(service)
-    #     elif service.startswith('HotSpot'):
-    #         if len(services_con) != 0:
-    #             for i in range(len(services_con)):
-    #                 if services_con[i].startswith('HotSpot'):
-    #                     services_con[i] = services_con[i] +' '+ service[len('HotSpot'):]
-    #                     break
-    #                 else:
-    #                     if i == len(services_con) - 1:
-    #                         services_con.append(service)
-    #         else:
-    #             services_con.append(service)
-    #     else:
-    #         services_con.append(service)
-    # services = services_con
 
     ListJobsFormSet = formset_factory(ListJobsForm, extra=len(services))
     if request.method == 'POST':
@@ -2954,21 +2753,8 @@ def project_tr_exist_cl(request, trID):
     if oattr:
         session_tr_id.update({'oattr': oattr})
         sreda = get_oattr_sreda(oattr)
-        # wireless_temp = ['БС ', 'радио', 'радиоканал', 'антенну']
-        # ftth_temp = ['Alpha', 'ОК-1']
-        # vols_temp = ['ОВ', 'ОК', 'ВОЛС', 'волокно', 'ОР ', 'ОР№', 'сущ.ОМ', 'оптическ']
-        # if any(wl in oattr for wl in wireless_temp) and (not 'ОК' in oattr):
-        #     sreda = '3'
-        # elif any(ft in oattr for ft in ftth_temp) and (not 'ОК-16' in oattr):
-        #     sreda = '4'
-        # elif any(vo in oattr for vo in vols_temp):
-        #     sreda = '2'
-        # else:
-        #     sreda = '1'
     else:
-        #request.session['oattr'] = None
         sreda = '1'
-        #request.session['sreda'] = '1'
     new_job_services = session_tr_id.get('new_job_services')
     pass_job_services = session_tr_id.get('pass_job_services')
     change_job_services = session_tr_id.get('change_job_services')
@@ -2987,28 +2773,16 @@ def project_tr_exist_cl(request, trID):
 
     if new_job_services:
         type_pass.append('Организация/Изменение, СПД')
-        counter_line_services = _counter_line_services(new_job_services) #, hotspot_points, services_plus_desc
-        #new_job_services = services_plus_desc
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(new_job_services)
+        counter_line_services = _counter_line_services(new_job_services)
+        tags = _tag_service_for_new_serv(new_job_services)
         for tag in tags:
             tag_service.append(tag)
-        #session_tr_id.update({'new_job_services': new_job_services})
         if change_job_services:
             type_pass.append('Изменение, не СПД')
-            tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
+            tags = _tag_service_for_new_serv(change_job_services)
             for tag in tags:
                 tag_service.insert(1, tag)
                 tag_service.insert(1, {'change_serv': None})
-
-        # if counter_line_services == 0:
-        #     tag_service.append({'data': None})
-        # else:
-        #     if sreda == '1':
-        #         tag_service.append({'copper': None})
-        #     elif sreda == '2' or sreda == '4':
-        #         tag_service.append({'vols': None})
-        #     elif sreda == '3':
-        #         tag_service.append({'wireless': None})
 
         spd = session_tr_id.get('spd')
         if counter_line_services == 0:
@@ -3031,24 +2805,18 @@ def project_tr_exist_cl(request, trID):
                 elif sreda == '3':
                     tag_service.append({'wireless': None})
 
-        session_tr_id.update({'hotspot_users': hotspot_users, #'hotspot_points': hotspot_points,
-                              'counter_line_services': counter_line_services, #'services_plus_desc': services_plus_desc,
+        session_tr_id.update({'counter_line_services': counter_line_services,
                               'counter_line_services_initial': counter_line_services})
 
     if change_job_services and not new_job_services and not pass_job_services:
         type_pass.append('Изменение, не СПД')
-        tags, hotspot_users, premium_plus = _tag_service_for_new_serv(change_job_services)
+        tags = _tag_service_for_new_serv(change_job_services)
         for tag in tags:
             tag_service.insert(1, {'change_serv': tag})
         tag_service.append({'data': None})
 
     session_tr_id.update({'oattr': oattr, 'pps': pps, 'turnoff': turnoff, 'sreda': sreda, 'type_pass': type_pass,
                           'tag_service': tag_service})
-
-    # tag_service_index = []
-    # index = 0
-    # tag_service_index.append(index)
-    # request.session['tag_service_index'] = tag_service_index
     response = get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
     return response
 
@@ -3143,12 +2911,6 @@ def change_params_serv(request, trID):
         if changeparamsform.is_valid():
             session_tr_id = request.session[str(trID)]
             session_tr_id.update({**changeparamsform.cleaned_data})
-            # new_mask = changeparamsform.cleaned_data['new_mask']
-            # routed_ip = changeparamsform.cleaned_data['routed_ip']
-            # routed_vrf = changeparamsform.cleaned_data['routed_vrf']
-            # request.session['new_mask'] = new_mask
-            # request.session['routed_ip'] = routed_ip
-            # request.session['routed_vrf'] = routed_vrf
             tag_service = session_tr_id.get('tag_service')
             if {'data': None} not in tag_service:
                 tag_service.append({'data': None})
@@ -3195,8 +2957,6 @@ def change_log_shpd(request, trID):
         if changelogshpdform.is_valid():
             session_tr_id = request.session[str(trID)]
             session_tr_id.update({**changelogshpdform.cleaned_data})
-            # change_log_shpd = changelogshpdform.cleaned_data['change_log_shpd']
-            # request.session['change_log_shpd'] = change_log_shpd
             tag_service = session_tr_id.get('tag_service')
             csw_exist = [
                 session_tr_id.get('logic_csw'),
@@ -3287,10 +3047,6 @@ def pass_serv(request, trID):
             session_tr_id.update({**passservform.cleaned_data})
             type_passage = passservform.cleaned_data['type_passage']
             change_log = passservform.cleaned_data['change_log']
-            # exist_sreda = passservform.cleaned_data['exist_sreda']
-            # request.session['type_passage'] = type_passage
-            # request.session['change_log'] = change_log
-            # request.session['exist_sreda'] = exist_sreda
             tag_service = session_tr_id.get('tag_service')
             tag_service_index = session_tr_id.get('tag_service_index')
             index = tag_service_index[-1]
@@ -3334,16 +3090,11 @@ def pass_serv(request, trID):
 
                         spd = session_tr_id.get('spd')
                         if spd == 'РТК':
-                            # if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}]:
-                            #     tag_service.pop()
                             tag_service.append({'rtk': None})
                         elif spd == 'ППМ':
 
                             tag_service = append_change_log_shpd(session_tr_id)
                         elif spd == 'Комтехцентр':
-                            # if tag_service[-1] == {'rtk': None}:
-                            #     tag_service.pop()
-
                             if sreda == '1':
                                 tag_service.append({'copper': None})
                             elif sreda == '2' or sreda == '4':
@@ -3351,12 +3102,6 @@ def pass_serv(request, trID):
                             elif sreda == '3':
                                 tag_service.append({'wireless': None})
 
-                        # if sreda == '1':
-                        #     tag_service.append({'copper': None})
-                        # elif sreda == '2' or sreda == '4':
-                        #     tag_service.append({'vols': None})
-                        # elif sreda == '3':
-                        #     tag_service.append({'wireless': None})
                 if tag_service[-1] == {'pass_serv': None}:
                     tag_service.append({'data': None})
                 response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
@@ -3442,12 +3187,9 @@ class PassVideoFormView(FormView):
 
     def get_success_url(self, **kwargs):
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        #if self.request.session.get('type_pass'):
-
         tag_service = session_tr_id.get('tag_service')
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
         tag_service.append({'data': None})
-        #tag_service_index = self.request.session['tag_service_index']
         tag_service_index = session_tr_id.get('tag_service_index')
         index = tag_service_index[-1] + 1
         tag_service_index.append(index)
@@ -3477,12 +3219,6 @@ def pass_turnoff(request, trID):
         prev_page, index = backward_page(request, trID)
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
         ticket_tr = TR.objects.get(id=ticket_tr_id)
-        # spplink = request.session['spplink']
-        # regex_link = 'dem_tr\/dem_begin\.php\?dID=(\d+)&tID=(\d+)&trID=(\d+)'
-        # match_link = re.search(regex_link, spplink)
-        # dID = match_link.group(1)
-        # tID = match_link.group(2)
-        # trID = match_link.group(3)
         passturnoffform = PassTurnoffForm()
         context = {
             'passturnoffform': passturnoffform,
@@ -3779,7 +3515,7 @@ def report_time_tracking(request):
     return render(request, 'tickets/report_time_tracking.html', context)
 
 
-def add_comment_to_return_ticket(request, dID):    #trID
+def add_comment_to_return_ticket(request, dID):
     """Данный метод отображает html-страничку c формой для заполнения комментария к возвращаемой ТР"""
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
@@ -3791,10 +3527,6 @@ def add_comment_to_return_ticket(request, dID):    #trID
             comment = addcommentform.cleaned_data['comment']
             comment = comment + f' (Комментарий добавил {user.last_name}.)'
             return_to = addcommentform.cleaned_data['return_to']
-            #session_tr_id = request.session[str(trID)]
-            #dID = session_tr_id.get('dID')
-            #ticket_spp_id = session_tr_id.get('ticket_spp_id')
-            #ticket_spp = SPP.objects.get(id=ticket_spp_id)
             uid = ticket_spp.uID
             trdifperiod = ticket_spp.trdifperiod
             trcuratorphone = ticket_spp.trcuratorphone
@@ -3839,11 +3571,9 @@ def add_comment_to_return_ticket(request, dID):    #trID
         addcommentform = AddCommentForm()
         if user.groups.filter(name='Менеджеры').exists():
             addcommentform.fields['return_to'].widget.choices = [('Вернуть менеджеру', 'Вернуть менеджеру')]
-        #session_tr_id = request.session[str(trID)]
         context = {'addcommentform': addcommentform,
-                   'ticket_spp_id': ticket_spp_id, #session_tr_id.get('ticket_spp_id'),
-                   'dID': dID,#session_tr_id.get('dID'),
-                   #'trID': trID
+                   'ticket_spp_id': ticket_spp_id,
+                   'dID': dID,
                    }
         return render(request, 'tickets/return_comment.html', context)
 
@@ -3967,7 +3697,6 @@ class RtkFormView(FormView, CredentialMixin):
 
     def form_valid(self, form):
         rtk_form = dict(**form.cleaned_data)
-        #self.request.session['rtk_form'] = rtk_form
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
         session_tr_id.update({'rtk_form': rtk_form})
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
@@ -3977,7 +3706,6 @@ class RtkFormView(FormView, CredentialMixin):
         initial = super().get_initial()
         username, password = super().get_credential(self)
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        #rtk_initial = get_rtk_initial(username, password, self.request.session.get('oattr'))
         rtk_initial = get_rtk_initial(username, password, session_tr_id.get('oattr'))
         initial['switch_ip'] = rtk_initial.get('rtk_ip')
         initial['switch_port'] = rtk_initial.get('rtk_port')
@@ -4009,15 +3737,12 @@ class RtkFormView(FormView, CredentialMixin):
 
     def get_success_url(self, **kwargs):
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        #if self.request.session.get('type_pass'):
         if session_tr_id.get('type_pass'):
-            #tag_service = append_change_log_shpd(self.request.session)
             tag_service = append_change_log_shpd(session_tr_id)
         else:
             tag_service = session_tr_id.get('tag_service')
         self.request.session[str(self.kwargs['trID'])] = session_tr_id
         tag_service.append({'data': None})
-        #tag_service_index = self.request.session['tag_service_index']
         tag_service_index = session_tr_id.get('tag_service_index')
         index = tag_service_index[-1] + 1
         tag_service_index.append(index)
@@ -4049,9 +3774,7 @@ class PpsFormView(FormView, CredentialMixin):
     form_class = PpsForm
 
     def form_valid(self, form):
-        #pps_form = dict(**form.cleaned_data)
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
-        #session_tr_id.update({'pps_form': pps_form})
         session_tr_id.update(**form.cleaned_data)
         if form.cleaned_data['type_change_node'] in ('Установка дополнительного КАД', 'Замена КАД'):
             kad_name = form.cleaned_data['kad_name']
@@ -4084,7 +3807,7 @@ class PpsFormView(FormView, CredentialMixin):
         else:
             list_switches = parsingByNodename(ticket_tr.pps.strip(), username, password)
             list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
-            if isinstance(list_switches[0], str): #== 'Access denied':
+            if isinstance(list_switches[0], str):
                 list_switches = None
             session_tr_id.update({'list_switches': list_switches, 'pps': ticket_tr.pps.strip()})
             self.request.session[str(self.kwargs['trID'])] = session_tr_id
@@ -4094,7 +3817,6 @@ class PpsFormView(FormView, CredentialMixin):
     def get_success_url(self, **kwargs):
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
         tag_service = [{'pps': None}, {'data': None}]
-        # tag_service_index = self.request.session['tag_service_index']
         tag_service_index = session_tr_id.get('tag_service_index')
         index = tag_service_index[-1] + 1
         tag_service_index.append(index)
@@ -4284,7 +4006,6 @@ def static_formset(request):
             static_vars = {}
             selected = zip(static_vav, data)
             for static_vav, data in selected:
-                # static_vars.update({static_vav: data})
                 static_vars[static_vav] = next(iter(data.values()))
             print('!!!!static_vars')
             print(static_vars)
@@ -4300,7 +4021,6 @@ def static_formset(request):
         formset = TemplatesStaticFormSet()
         context = {
             'ono_for_formset': static_vav,
-            # 'contract': contract,
             'formset': formset
         }
 

@@ -36,15 +36,15 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{portvmform.new_vm.id_for_label}}">Новый ВМ</label>
-                    {{portvmform.new_vm}}
+                    <label for="{{portvmform.type_vm.id_for_label}}">Тип:</label>
+                    {{portvmform.type_vm}}
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{portvmform.exist_vm.id_for_label}}">Cуществующий ВМ</label>
+                <div class="form-group exist">
+                    <label for="{{portvmform.exist_vm.id_for_label}}">Название ВМ:</label>
                     {{portvmform.exist_vm}}
                 </div>
             </div>
@@ -52,7 +52,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{portvmform.policer_vm.id_for_label}}">Ограничение</label>
+                    <label for="{{portvmform.policer_vm.id_for_label}}">Точка ограничения сервиса:</label>
                     {{portvmform.policer_vm}}
                 </div>
             </div>
@@ -60,7 +60,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{portvmform.vm_inet.id_for_label}}">С доступом в Интернет</label>
+                    <label for="{{portvmform.vm_inet.id_for_label}}">С доступом в Интернет:</label>
                     {{portvmform.vm_inet}}
                 </div>
             </div>
@@ -71,7 +71,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{portvmform.exist_service_vm.id_for_label}}">Режим порта существующей услуги</label>
+                    <label for="{{portvmform.exist_service_vm.id_for_label}}">Режим порта существующей услуги:</label>
                     {{portvmform.exist_service_vm}}
                 </div>
             </div>
@@ -80,7 +80,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{portvmform.type_portvm.id_for_label}}">Режим порта</label>
+                    <label for="{{portvmform.type_portvm.id_for_label}}">Режим порта:</label>
                     {{portvmform.type_portvm}}
                 </div>
             </div>
@@ -104,7 +104,25 @@
 </div>
 </div>
 
+<script>
+$(function () {
+    $(".exist").show();
+});
 
+$(function () {
+  $("#id_type_vm").change(function() {
+    var val = $(this).val();
+
+    if (val === "Cуществующий ВМ") {
+        $(".exist").show();
+    }
+    else {
+        $(".exist").hide();
+    }
+});
+});
+
+</script>
 
 
 
