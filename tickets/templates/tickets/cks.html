@@ -35,7 +35,15 @@
 <form action="{% url 'cks' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
-        <p style="color: red">Внимание! Не забывать про subinterface AR03-25.ekb, AR13-23.ekb, AR149-02.ekb</p>
+
+        <div class="row">
+            <div class="col">
+                <div class="breadcrumb video alert-danger">
+                    <p class="breadcrumb-item"><b>Внимание.</b><br>На коммутаторах AR03-25.ekb, AR13-23.ekb, AR149-02.ekb индивидуальная схема организации sub-interface (<a href="https://ckb.itmh.ru/x/gQdaH" target ="_blank">смотри документ</a>, раздел "Схема. ЦКС между разными доменами агрегации").</p>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-4">
                 {% if list_strok%}
@@ -49,7 +57,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{cksform.pointA.id_for_label}}">Точка подключения "A"</label>
+                    <label for="{{cksform.pointA.id_for_label}}">Точка подключения "A":</label>
                     {{cksform.pointA}}
                 </div>
             </div>
@@ -57,7 +65,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{cksform.pointB.id_for_label}}">Точка подключения "B"</label>
+                    <label for="{{cksform.pointB.id_for_label}}">Точка подключения "B":</label>
                     {{cksform.pointB}}
                 </div>
             </div>
@@ -65,7 +73,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{cksform.policer_cks.id_for_label}}">Точка ограничения сервиса</label>
+                    <label for="{{cksform.policer_cks.id_for_label}}">Точка ограничения сервиса:</label>
                     {{cksform.policer_cks}}
                 </div>
             </div>
@@ -77,7 +85,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{cksform.exist_service.id_for_label}}">Режим порта существующей услуги</label>
+                    <label for="{{cksform.exist_service.id_for_label}}">Режим порта существующей услуги:</label>
                     {{cksform.exist_service}}
                 </div>
             </div>
@@ -86,7 +94,7 @@
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
-                    <label for="{{cksform.type_cks.id_for_label}}">Режим порта</label>
+                    <label for="{{cksform.type_cks.id_for_label}}">Режим порта:</label>
                     {{cksform.type_cks}}
                 </div>
             </div>

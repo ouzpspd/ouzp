@@ -43,7 +43,7 @@
         <div class="row">
             <div class="col">
                 <div class="breadcrumb video alert-success">
-                    <p class="breadcrumb-item"><b>Подсказка.</b> СКС отдельно от видеонаблюдения не требуется.</p>
+                    <p class="breadcrumb-item"><b>Подсказка.</b><br> СКС отдельно от видеонаблюдения не требуется.</p>
                 </div>
             </div>
         </div>
@@ -101,7 +101,7 @@
             <div class="col-4 mb-1">
                 <div class="form-group lvs">
                     <label for="{{localform.lvs_busy.id_for_label}}">Нет свободных портов в маршрутизаторе:</label>
-                    {{localform.lvs_busy}}
+                    <input type="checkbox" name="lvs_busy" class="form-check" id="id_lvs_busy" data-toggle="tooltip" data-placement="top" title="Будет высвобожден порт на маршрутизаторе для подключения коммутатора и переключен в коммутатор">
                 </div>
             </div>
         </div>
@@ -122,7 +122,7 @@
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button" data-toggle="tooltip" data-placement="top" title="Tooltip on top">Назад</a>
                 </div>
             </div>
             <div class="col-2">

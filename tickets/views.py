@@ -1556,7 +1556,7 @@ def phone(request, trID):
 
         form = PhoneForm(initial={
                                 'type_phone': 's',
-                                'vgw': 'Не требуется',
+                                #'vgw': 'Не требуется',
                             })
         if user.groups.filter(name='Менеджеры').exists():
             form.fields['type_phone'].widget.choices = [('s', 'SIP, по логину/паролю'),]
@@ -1808,7 +1808,7 @@ def portvk(request, trID):
     if request.method == 'POST':
         portvkform = PortVKForm(request.POST)
         if portvkform.is_valid():
-            new_vk = portvkform.cleaned_data['new_vk']
+            type_vk = portvkform.cleaned_data['type_vk']
             exist_vk = '"{}"'.format(portvkform.cleaned_data['exist_vk'])
             policer_vk = portvkform.cleaned_data['policer_vk']
             type_portvk = portvkform.cleaned_data['type_portvk']
@@ -1818,13 +1818,14 @@ def portvk(request, trID):
                 session_tr_id.update({'counter_line_services': 1})
             all_portvk_in_tr = session_tr_id.get('all_portvk_in_tr') if session_tr_id.get('all_portvk_in_tr') else dict()
             service = session_tr_id.get('current_service')
-            all_portvk_in_tr.update({service:{'new_vk': new_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk,
+            all_portvk_in_tr.update({service:{'type_vk': type_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk,
                                               'type_portvk': type_portvk, 'exist_service': exist_service}})
             session_tr_id.update({'all_portvk_in_tr': all_portvk_in_tr})
             tag_service = session_tr_id.get('tag_service')
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
+        mess = '(<a href="https://ckb.itmh.ru/x/gQdaH" target ="_blank">смотри документ</a>, раздел "Схема. ЦКС между'
         service_name = 'portvk'
         session_tr_id = request.session[str(trID)]
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
@@ -1860,7 +1861,7 @@ def portvm(request, trID):
     if request.method == 'POST':
         portvmform = PortVMForm(request.POST)
         if portvmform.is_valid():
-            new_vm = portvmform.cleaned_data['new_vm']
+            type_vm = portvmform.cleaned_data['type_vm']
             exist_vm = '"{}"'.format(portvmform.cleaned_data['exist_vm'])
             policer_vm = portvmform.cleaned_data['policer_vm']
             vm_inet = portvmform.cleaned_data['vm_inet']
@@ -1869,7 +1870,7 @@ def portvm(request, trID):
             session_tr_id = request.session[str(trID)]
             if type_portvm == 'trunk':
                 session_tr_id.update({'counter_line_services': 1})
-            session_tr_id.update({'policer_vm': policer_vm, 'new_vm': new_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
+            session_tr_id.update({'policer_vm': policer_vm, 'type_vm': type_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
                                   'type_portvm': type_portvm, 'exist_service_vm': exist_service_vm})
             tag_service = session_tr_id.get('tag_service')
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)

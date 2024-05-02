@@ -226,7 +226,7 @@ def _new_services(result_services, value_vars):
             hidden_vars = {}
             all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
             if all_portvk_in_tr.get(service):
-                if all_portvk_in_tr.get(service)['new_vk'] == True:
+                if all_portvk_in_tr.get(service)['type_vk'] == 'Новая ВЛС':
                     stroka = templates.get("Организация услуги ВЛС")
                     result_services.append(stroka)
                     static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
@@ -257,7 +257,7 @@ def _new_services(result_services, value_vars):
                 pass
             static_vars = {}
             hidden_vars = {}
-            if value_vars.get('new_vm') == True:
+            if value_vars.get('type_vm') == 'Новый ВМ':
                 stroka = templates.get("Организация услуги виртуальный маршрутизатор")
                 result_services.append(stroka)
                 static_vars['указать название ВМ'] = ', организованного по решению выше,'
@@ -2504,7 +2504,7 @@ def _change_services(value_vars):
             all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
             if all_portvk_in_tr:
                 service = next(iter(all_portvk_in_tr.keys()))
-                if all_portvk_in_tr.get(service)['new_vk'] == True:
+                if all_portvk_in_tr.get(service)['type_vk'] == 'Новая ВЛС':
                     stroka = templates.get("Организация услуги ВЛС")
                     result_services.append(stroka)
                     static_vars['указать ресурс ВЛС на договоре в Cordis'] = 'Для ВЛС, организованной по решению выше,'
@@ -2527,7 +2527,7 @@ def _change_services(value_vars):
             static_vars = {}
             hidden_vars = {}
             service = next(iter(type_change_service.values()))
-            if value_vars.get('new_vm') == True:
+            if value_vars.get('type_vm') == 'Новый ВМ':
                 stroka = templates.get("Организация услуги виртуальный маршрутизатор")
                 result_services.append(stroka)
                 static_vars['указать название ВМ'] = ', организованного по решению выше,'
@@ -2571,7 +2571,7 @@ def _change_services(value_vars):
                 all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
                 if all_portvk_in_tr:
                     service = next(iter(type_change_service.values()))
-                    if all_portvk_in_tr.get(change_service)['new_vk'] == True:
+                    if all_portvk_in_tr.get(change_service)['type_vk'] == 'Новая ВЛС':
                         extra_stroka = templates.get("Организация услуги ВЛС")
                         result_services.append(extra_stroka)
                         static_vars[

@@ -63,29 +63,29 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group vgw">
-                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза:</label>
+                    <label for="{{ form.vgw.id_for_label }}">Модель шлюза:</label>
                     {{form.vgw}}
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                     {{form.form_exist_vgw_name}}
                 </div>
             </div>
             <div class="col-3">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                     {{form.form_exist_vgw_model}}
                 </div>
             </div>
             <div class="col-3">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                     {{form.form_exist_vgw_port}}
                 </div>
             </div>
             <div class="col-2">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                 <a class="btn btn-info btn-block" href="{% url 'vgws' trID %}" target ="_blank" role="button">Шлюзы</a>
                 </div>
             </div>
@@ -165,7 +165,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group vgw">
-                    <label for="{{ form.vgw.id_for_label }}">Установка шлюза:</label>
+                    <label for="{{ form.vgw.id_for_label }}">Модель шлюза:</label>
                     {{form.vgw}}
                 </div>
             </div>
@@ -173,22 +173,22 @@
         </div>
         <div class="row">
             <div class="col-4">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                     {{form.form_exist_vgw_name}}
                 </div>
             </div>
             <div class="col-3">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                     {{form.form_exist_vgw_model}}
                 </div>
             </div>
             <div class="col-3">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                     {{form.form_exist_vgw_port}}
                 </div>
             </div>
             <div class="col-2">
-                <div class="form-group vgw">
+                <div class="form-group vgw_exist">
                 <a class="btn btn-info btn-block" href="{% url 'vgws' trID %}" target ="_blank" role="button">Шлюзы</a>
                 </div>
             </div>
@@ -223,7 +223,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group trunk">
-                    <label for="{{ form.types_ip_trunk.id_for_label }}">Режим порта для IP-транк:</label>
+                    <label for="{{ form.types_ip_trunk.id_for_label }}">Режим порта:</label>
                     {{form.type_ip_trunk}}
                 </div>
             </div>
@@ -253,6 +253,7 @@
 
 $(function () {
     $(".vgw").hide();
+    $(".vgw_exist").hide();
     $(".trunk").hide();
 
     var vats_extend = "{{vats_extend}}";
@@ -268,8 +269,16 @@ $(function () {
 $(function () {
   $("#id_type_phone").change(function() {
     var val = $(this).val();
-    if(val.includes("a")) {
+
+    if(val == "ab") {
+        $(".trunk").hide();
+        $(".vgw").hide();
+        $(".vgw_exist").show();
+        $(".vats_ports").show();
+    }
+    else if(val.includes("a")) {
         $(".vgw").show();
+        $(".vgw_exist").hide();
         $(".trunk").hide();
         $(".vats_ports").show();
     }
