@@ -328,10 +328,6 @@ class PassVideoForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        print('args')
-        print(args)
-        print('kwargs')
-        print(kwargs)
         if kwargs.get('data'):
             # for view func-based fields locate in args
             new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
