@@ -1922,8 +1922,8 @@ def video(request, trID):
             'videoform': videoform,
             'task_otpm': session_tr_id.get('task_otpm'),
             'back_link': back_link,
-            'ticket_spp_id': request.session.get('ticket_spp_id'),
-            'dID': request.session.get('dID'),
+            'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
+            'dID': session_tr_id.get('dID'),
             'trID': trID
         }
         return render(request, 'tickets/video.html', context)
@@ -2091,8 +2091,8 @@ def spp_view_save(request, dID, ticket_spp_id):
      получает из БД"""
     #request = flush_session_key(request)
 
-    request.session['ticket_spp_id'] = ticket_spp_id
-    request.session['dID'] = dID
+    # request.session['ticket_spp_id'] = ticket_spp_id  # проверить что ничего не ломается и удалить
+    # request.session['dID'] = dID
     current_ticket_spp = get_object_or_404(SPP, dID=dID, id=ticket_spp_id)
 
     context = {'current_ticket_spp': current_ticket_spp}
@@ -3132,30 +3132,30 @@ def pass_serv(request, trID):
         return render(request, 'tickets/pass_serv.html', context)
 
 
-def pass_video(request, trID):
-    if request.method == 'POST':
-        form = PassVideoForm(request.POST)
-        if form.is_valid():
-            session_tr_id = request.session[str(trID)]
-            session_tr_id.update({**form.cleaned_data})
-    else:
-        session_tr_id = request.session[str(trID)]
-        tag_service = session_tr_id.get('tag_service')
-        prev_page, index = backward_page(request, trID)
-
-        request.session[trID] = session_tr_id
-        form = PassVideoForm()
-        context = {
-            'form': form,
-            'oattr': session_tr_id.get('oattr'),
-            'pps': session_tr_id.get('pps'),
-            'head': session_tr_id.get('head'),
-            'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
-            'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-            'dID': session_tr_id.get('dID'),
-            'trID': trID
-        }
-        return render(request, 'tickets/pass_video.html', context)
+# def pass_video(request, trID):
+#     if request.method == 'POST':
+#         form = PassVideoForm(request.POST)
+#         if form.is_valid():
+#             session_tr_id = request.session[str(trID)]
+#             session_tr_id.update({**form.cleaned_data})
+#     else:
+#         session_tr_id = request.session[str(trID)]
+#         tag_service = session_tr_id.get('tag_service')
+#         prev_page, index = backward_page(request, trID)
+#
+#         request.session[trID] = session_tr_id
+#         form = PassVideoForm()
+#         context = {
+#             'form': form,
+#             'oattr': session_tr_id.get('oattr'),
+#             'pps': session_tr_id.get('pps'),
+#             'head': session_tr_id.get('head'),
+#             'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
+#             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
+#             'dID': session_tr_id.get('dID'),
+#             'trID': trID
+#         }
+#         return render(request, 'tickets/pass_video.html', context)
 
 
 class PassVideoFormView(FormView):
@@ -3180,8 +3180,8 @@ class PassVideoFormView(FormView):
         context['pps'] = session_tr_id.get('pps')
         context['oattr'] = session_tr_id.get('oattr')
         context['head'] = session_tr_id.get('head')
-        context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
-        context['dID'] = self.request.session.get('dID')
+        context['ticket_spp_id'] = session_tr_id.get('ticket_spp_id')
+        context['dID'] = session_tr_id.get('dID')
         context['trID'] = self.kwargs['trID']
         return context
 
@@ -3730,8 +3730,8 @@ class RtkFormView(FormView, CredentialMixin):
         context['back_link'] = back_link
         context['oattr'] = oattr
         context['ticket_k'] = ticket_k
-        context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
-        context['dID'] = self.request.session.get('dID')
+        context['ticket_spp_id'] = session_tr_id.get('ticket_spp_id')
+        context['dID'] = session_tr_id.get('dID')
         context['trID'] = self.kwargs['trID']
         return context
 
@@ -3799,8 +3799,8 @@ class PpsFormView(FormView, CredentialMixin):
         ticket_tr_id = session_tr_id.get('ticket_tr_id')
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         context['ticket_tr'] = ticket_tr
-        context['ticket_spp_id'] = self.request.session.get('ticket_spp_id')
-        context['dID'] = self.request.session.get('dID')
+        context['ticket_spp_id'] = session_tr_id.get('ticket_spp_id')
+        context['dID'] = session_tr_id.get('dID')
         context['trID'] = self.kwargs['trID']
         if session_tr_id.get('list_switches'):
             list_switches = session_tr_id.get('list_switches')
@@ -3935,7 +3935,7 @@ def sppdata(request, trID):
             form.fields['type_tr'].widget.choices = [('Коммерческое', 'Коммерческое'), ]
         ticket_tr = TR.objects.filter(ticket_tr=trID).last()
         request.session[trID] = {'ticket_spp_id': ticket_tr.ticket_k.id, 'ticket_tr_id': ticket_tr.id,
-                                 'technical_solution': trID}
+                                 'technical_solution': trID, 'dID': ticket_tr.ticket_k.dID}
         context = {
             'ticket_spp_id': ticket_tr.ticket_k.id,
             'dID': ticket_tr.ticket_k.dID,

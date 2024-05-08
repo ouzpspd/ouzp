@@ -77,7 +77,8 @@ def _new_services(result_services, value_vars):
             hidden_vars = {}
             stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
             static_vars['указать маску'] = '/32'
-            hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+            if value_vars.get('spd') == 'Комтехцентр':
+                hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
             if value_vars.get('spd') == 'ППМ':
                 hidden_vars[
                     """- Тег влан на стыке определить по адресу точки подключения клиента."""] = \
@@ -111,7 +112,8 @@ def _new_services(result_services, value_vars):
                 add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
                 static_vars.update(add_static_vars)
                 hidden_vars.update(add_hidden_vars)
-                hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+                if value_vars.get('spd') == 'Комтехцентр':
+                    hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
                 stroka = templates.get("Организация услуги ШПД в интернет access'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             elif all_shpd_in_tr.get(service) and all_shpd_in_tr.get(service)['type_shpd'] == 'trunk':
@@ -207,7 +209,8 @@ def _new_services(result_services, value_vars):
                     static_vars.update(add_static_vars)
                     hidden_vars.update(add_hidden_vars)
                     if all_cks_in_tr.get(service)['type_cks'] == 'access':
-                        hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+                        if value_vars.get('spd') == 'Комтехцентр':
+                            hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
                     else:
                         hidden_vars[
                             ", на портe подключения настроить xconnect"] = ", на портe подключения настроить xconnect"
@@ -239,8 +242,9 @@ def _new_services(result_services, value_vars):
                     static_vars.update(add_static_vars)
                     hidden_vars.update(add_hidden_vars)
                     if all_portvk_in_tr.get(service)['type_portvk'] == 'access':
-                        hidden_vars[
-                            ", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+                        if value_vars.get('spd') == 'Комтехцентр':
+                            hidden_vars[
+                                ", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
                     else:
                         hidden_vars[
                             ", на портe подключения настроить xconnect"] = ", на портe подключения настроить xconnect"
@@ -276,7 +280,8 @@ def _new_services(result_services, value_vars):
                 add_hidden_vars, add_static_vars = _get_pm_vars(value_vars)
                 static_vars.update(add_static_vars)
                 hidden_vars.update(add_hidden_vars)
-                hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
+                if value_vars.get('spd') == 'Комтехцентр':
+                    hidden_vars[", в порт подключения выдать vlan access"] = ", в порт подключения выдать vlan access"
                 stroka = templates.get("Организация услуги порт виртуального маршрутизатора access'ом.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
             elif value_vars.get('type_portvm') == 'trunk':

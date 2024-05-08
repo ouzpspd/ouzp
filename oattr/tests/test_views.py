@@ -81,6 +81,8 @@ class ViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'oattr/copper.html')
 
+    # если заявка 141891 в статусе расформирована, то тест упадет с ошибкой, т.к. не будет проходить ограничение на
+    # одно из полей более 10 символов
     def test_call_view_create_spp(self):
         response = self.client.get(f'/otpm/create_spp/{self.DID}/?stage=В работе ОТПМ')
         created_spp = str(OtpmSpp.objects.last())
@@ -111,6 +113,8 @@ class ViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'oattr/send_spp.html')
 
+    # если заявка 141891 в статусе расформирована, то тест упадет с ошибкой, т.к. не будет проходить ограничение на
+    # одно из полей более 10 символов
     def test_call_view_create_tr(self):
         self.client.get(f'/otpm/create_spp/{self.DID}/?stage=В работе ОТПМ')
         response = self.client.get(f'/otpm/add_tr/{self.DID}/{self.TID}/{self.TRID}/?action=add')
