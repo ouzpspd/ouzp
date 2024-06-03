@@ -285,11 +285,13 @@ $(function () {
     else if(val.includes("st")) {
         $(".trunk").show();
         $(".vgw").hide();
+        $(".vgw_exist").hide();
         $(".vats_ports").hide();
     }
     else if(val.includes("s")) {
         $(".trunk").hide();
         $(".vgw").hide();
+        $(".vgw_exist").hide();
         var vats_extend = "{{vats_extend}}";
         if(vats_extend) {
             $(".vats_ports").show();
@@ -300,6 +302,7 @@ $(function () {
     }
     else {
         $(".vgw").hide();
+        $(".vgw_exist").hide();
         $(".trunk").hide();
     }
 });
