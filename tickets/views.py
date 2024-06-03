@@ -2525,7 +2525,8 @@ def head(request, trID):
         session_tr_id.update({'old_model_csw': old_model_csw, 'node_csw': node_csw})
 
     service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -', '57 -', '60 -', '62 -',
-                    '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -']
+                    '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -', '106 -',
+                    '89 -', '138 -']
     service_shpd_bgp = ['BGP', 'bgp']
     service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']

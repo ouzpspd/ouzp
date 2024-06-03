@@ -2573,6 +2573,7 @@ def _change_services(value_vars):
                     '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
                 ] = '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
                 static_vars['указать полосу'] = _get_policer(change_service)
+                hidden_vars[' с полосой %указать полосу%'] = ' с полосой %указать полосу%'
                 all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
                 if all_portvk_in_tr:
                     service = next(iter(type_change_service.values()))
@@ -2586,6 +2587,20 @@ def _change_services(value_vars):
 
                     static_vars['полисером Subinterface/портом подключения'] = all_portvk_in_tr.get(change_service)[
                         'policer_vk']
+                elif value_vars.get('type_vm'):
+                    if value_vars.get('type_vm') == 'Новый ВМ':
+                        extra_stroka = templates.get("Организация услуги виртуальный маршрутизатор")
+                        result_services.append(extra_stroka)
+                        static_vars['указать новый сервис'] = ', организованного по решению выше,'
+                    else:
+                        static_vars['указать новый сервис'] = value_vars.get('exist_vm')
+                    static_vars['полисером Subinterface/портом подключения'] = value_vars.get('policer_vm')
+                    if value_vars.get('vm_inet') == True:
+                        static_vars['без доступа в интернет/с доступом в интернет'] = 'с доступом в интернет '
+                    else:
+                        static_vars['без доступа в интернет/с доступом в интернет'] = 'без доступа в интернет '
+                        hidden_vars[
+                            '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'] = '- Согласовать с клиентом адресацию для порта ВМ без доступа в интернет.'
 
 
             elif new_service_name == 'ЦКС':
