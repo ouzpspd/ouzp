@@ -667,6 +667,7 @@ def get_sw_config(sw, model, login, password):
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
 
     if req.status_code == 200 and model.startswith('Cisco'):
+        blob = None
         url = f'https://stash.itmh.ru/rest/api/latest/projects/NMS/repos/pantera_extrim/commits?followRenames=true&path=backups%2F{sw}-config&until=refs%2Fheads%2Fmaster&start=0&limit=3&avatarSize=32'
         req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
         if req.json().get('values'):
@@ -674,9 +675,10 @@ def get_sw_config(sw, model, login, password):
                 if i.get('author').get('name') == 'net_backup':
                     blob = i.get('id')
                     break
-            url = f'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/{sw}-config?at={blob}'
-            req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-            switch_config = req.content.decode('utf-8')
+            if blob:
+                url = f'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/{sw}-config?at={blob}'
+                req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+                switch_config = req.content.decode('utf-8')
     elif req.status_code == 200:
         switch_config = req.content.decode('utf-8')
     return switch_config
