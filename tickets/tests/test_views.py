@@ -354,42 +354,122 @@ class OuzpViewsTestCase(TestCase):
         response = self.client.post(f'/itv/{self.TRID}/', data=data)
         self.assertRedirects(response, expected)
 
-
-    def test_call_view_video(self):
-        self.sess.update({'tag_service': [{'sppdata': None}, {'video': 'Видеонаблюдение 1 камера'}, {'data': None}]})
+    @parameterized.expand([
+        ('/video/72459/?prev_page=sppdata&index=0', [0]),
+        ('/video/72459/?next_page=video&index=1', [0, 1]),
+    ])
+    def test_call_view_video_method_get(self, request_url, tag_service_index):
+        self.sess.update({'tag_service': [{'sppdata': None}, {'video': 'Видеонаблюдение 1 камера'}, {'data': None}],
+                          'tag_service_index': tag_service_index})
         session = self.client.session
         session[self.TRID] = self.sess
         session.save()
 
-        response = self.client.get(f'/video/{self.TRID}/?prev_page=sppdata&index=0')
+        response = self.client.get(request_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'tickets/video.html')
 
-    def test_call_view_copper(self):
+    def test_call_view_video_method_post(self):
+        data = {'camera_number': '3', 'camera_model': 'QTECH', 'deep_archive': '0',
+                'vm_inet': False, 'type_portvm': 'access', 'exist_service_vm': ''}
+
+        self.sess.update({'tag_service': [{'sppdata': None}, {'video': 'Видеонаблюдение 1 камера'}, {'shpd': 'Интернет, DHCP Next'}],
+                          'tag_service_index': [0]})
+        session = self.client.session
+        session[self.TRID] = self.sess
+        session.save()
+
+        response = self.client.post(f'/video/{self.TRID}/', data=data)
+        self.assertRedirects(response, '/shpd/72459/?prev_page=video&index=1')
+
+    @parameterized.expand([
+        ('/copper/72459/?prev_page=sppdata&index=0', [0]),
+        ('/copper/72459/?next_page=video&index=1', [0, 1]),
+    ])
+    def test_call_view_copper_method_get(self, request_url, tag_service_index):
         self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'copper': None}],
+                          'pps': 'БЗК Березовский тракт 5 П1 Э3 (Лестничная клетка), АВ',
+                          'tag_service_index': tag_service_index})
+        session = self.client.session
+        session[self.TRID] = self.sess
+        session.save()
+
+        response = self.client.get(request_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tickets/env.html')
+
+    @parameterized.expand([
+        ('2', [False, False, False, False], '1.1.1.1/30', '/copper/72459/?prev_page=shpd&index=1'),
+        ('1', [False, False, False, False], '1.1.1.1/30', '/data/72459/?prev_page=copper&index=2'),
+        ('1', [False, False, False, False], '1.1.1.1/32', '/change_log_shpd/72459/?prev_page=copper&index=2'),
+        ('1', [True, False, False, False], '1.1.1.1/30', '/csw/72459/?prev_page=copper&index=2'),
+        ('1', [False, True, False, False], '1.1.1.1/30', '/csw/72459/?prev_page=copper&index=2'),
+        ('1', [False, False, True, False], '1.1.1.1/30', '/csw/72459/?prev_page=copper&index=2'),
+        ('1', [False, False, False, True], '1.1.1.1/30', '/csw/72459/?prev_page=copper&index=2'),
+    ])
+    def test_call_view_copper_method_post(self, sreda, logic_csw, ip, expected):
+        data = {'correct_sreda': '1', 'kad': 'SW', 'port': '1', 'logic_csw': logic_csw[0],
+        'logic_replace_csw': logic_csw[1], 'logic_change_gi_csw': logic_csw[2], 'logic_change_csw': logic_csw[3],}
+
+        self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'copper': None}],
+                          'sreda': sreda, 'tag_service_index': [0, 1], 'type_pass': ['Перенос, СПД'],
+                          'readable_services': {'"ШПД в интернет"': f'c реквизитами "{ip}"'},
                           'pps': 'БЗК Березовский тракт 5 П1 Э3 (Лестничная клетка), АВ'})
         session = self.client.session
         session[self.TRID] = self.sess
         session.save()
 
-        response = self.client.get(f'/copper/{self.TRID}/?prev_page=shpd&index=1')
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tickets/env.html')
+        response = self.client.post(f'/copper/{self.TRID}/', data=data)
+        self.assertEqual(response.url, expected)
 
-    def test_call_view_vols(self):
+    @parameterized.expand([
+        ('/vols/72459/?prev_page=sppdata&index=0', [0]),
+        ('/vols/72459/?next_page=video&index=1', [0, 1]),
+    ])
+    def test_call_view_vols_method_get(self, request_url, tag_service_index):
         self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'vols': None}],
+                          'pps': 'БЗК Березовский тракт 5 П1 Э3 (Лестничная клетка), АВ',
+                          'tag_service_index': tag_service_index})
+        session = self.client.session
+        session[self.TRID] = self.sess
+        session.save()
+
+        response = self.client.get(request_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tickets/env.html')
+
+    @parameterized.expand([
+        ('1', [False, False, False, False], '1.1.1.1/30', '/vols/72459/?prev_page=shpd&index=1'),
+        ('2', [False, False, False, False], '1.1.1.1/30', '/data/72459/?prev_page=vols&index=2'),
+        ('2', [False, False, False, False], '1.1.1.1/32', '/change_log_shpd/72459/?prev_page=vols&index=2'),
+        ('2', [True, False, False, False], '1.1.1.1/30', '/csw/72459/?prev_page=vols&index=2'),
+        ('2', [False, True, False, False], '1.1.1.1/30', '/csw/72459/?prev_page=vols&index=2'),
+        ('2', [False, False, True, False], '1.1.1.1/30', '/csw/72459/?prev_page=vols&index=2'),
+        ('2', [False, False, False, True], '1.1.1.1/30', '/csw/72459/?prev_page=vols&index=2'),
+    ])
+    def test_call_view_vols_method_post(self, sreda, logic_csw, ip, expected):
+        data = {'correct_sreda': '2', 'kad': 'SW', 'port': '1', 'logic_csw': logic_csw[0],
+        'logic_replace_csw': logic_csw[1], 'logic_change_gi_csw': logic_csw[2], 'logic_change_csw': logic_csw[3],
+        'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
+        'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+        'speed_port': 'Auto'}
+
+        self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'vols': None}],
+                          'sreda': sreda, 'tag_service_index': [0, 1], 'type_pass': ['Перенос, СПД'],
+                          'readable_services': {'"ШПД в интернет"': f'c реквизитами "{ip}"'},
                           'pps': 'БЗК Березовский тракт 5 П1 Э3 (Лестничная клетка), АВ'})
         session = self.client.session
         session[self.TRID] = self.sess
         session.save()
 
-        response = self.client.get(f'/vols/{self.TRID}/?prev_page=shpd&index=1')
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tickets/env.html')
+        response = self.client.post(f'/vols/{self.TRID}/', data=data)
+        self.assertEqual(response.url, expected)
 
     def test_call_view_rtk(self):
-        self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'rtk': None}],
-                          })
+        self.sess.update({
+            'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'rtk': None}],
+            'oattr': '№ Наряда Лиры: 269828107 № КЗ Гермес : 9273957 Сх.вкл.:FTTb порт, № устр.:143431087870 № брони' +
+            ' в СТУ Аргус: 218384939, бронь до 06.07 ЛД: (Д_14057_Кабинет2_Фролова,31[172.20.80.194]-1 (1GE)[1/1]-н/о)'})
         session = self.client.session
         session[self.TRID] = self.sess
         session.save()
@@ -398,14 +478,18 @@ class OuzpViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'tickets/rtk.html')
 
-    def test_call_view_pass_video(self):
+    @parameterized.expand([
+        ('/pass_video/72459/?prev_page=job_formset&index=0', [0]),
+        ('/pass_video/72459/?next_page=pass_video&index=1', [0, 1]),
+    ])
+    def test_call_view_pass_video_method_get(self, request_url, tag_service_index):
         self.sess.update({'tag_service': [{'job_formset': None}, {'pass_video': None}],
-                          })
+                          'tag_service_index': tag_service_index})
         session = self.client.session
         session[self.TRID] = self.sess
         session.save()
 
-        response = self.client.get(f'/pass_video/{self.TRID}/?prev_page=job_formset&index=0')
+        response = self.client.get(request_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'tickets/pass_video.html')
 
