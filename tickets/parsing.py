@@ -1165,7 +1165,7 @@ class PprCheck:
             })
 
     def check_icc_dpi(self):
-        icc = [d for d in self.devices if d.name.startswith('ICC')]
+        icc = [d for d in self.devices if re.match('ICC\d+-DPI', d.name)]
         if icc:
             self.data.update({
                 'table_device_icc_dpi': {

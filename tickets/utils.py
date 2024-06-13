@@ -772,7 +772,9 @@ def get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
 def splice_services(services):
     """Объединение нескольких строк с сервисами Телефон, ЛВС, HotSpot, Видеонаблюдение, iTV в одну"""
     splice = {}
+    counter = 0
     for service in services:
+        counter += 1 # Для услуг которые не должны объединяться, но полностью дублируют друг друга
         for serv in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение', 'iTV']:
             if service.startswith(serv):
                 if splice.get(serv):
@@ -780,7 +782,7 @@ def splice_services(services):
                 else:
                     splice[serv] = service
             elif not [i for i in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение', 'iTV'] if service.startswith(i)]:
-                splice[service] = service
+                splice[f'{service}_{counter}'] = service
     return list(splice.values())
 
 
