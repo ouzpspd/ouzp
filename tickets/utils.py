@@ -294,9 +294,9 @@ def trunk_turnoff_shpd_cks_vk_vm(service, types_change_service):
     if types_change_service:
         for type_change_service in types_change_service:
             if next(iter(type_change_service.values())) == service:
-                if "Организация ШПД trunk'ом с простоем" == next(iter(type_change_service.keys())):
+                if "trunk'ом с простоем" in next(iter(type_change_service.keys())):
                     trunk_turnoff_on = True
-                elif "Организация ШПД trunk'ом" == next(iter(type_change_service.keys())):
+                elif "trunk'ом" in next(iter(type_change_service.keys())):
                     trunk_turnoff_off = True
     return trunk_turnoff_on, trunk_turnoff_off
 
