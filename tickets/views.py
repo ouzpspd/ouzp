@@ -823,122 +823,28 @@ def data(request, trID):
     username, password = get_user_credential_cordis(user)
     templates = ckb_parse(username, password)
     session_tr_id = request.session[str(trID)]
+
+    value_vars = {}
+
     if session_tr_id.get('rtk_form', {}).get('type_pm') == 'FVNO FTTH':
         msan_exist = ckb_parse_msan_exist(username, password, session_tr_id.get('rtk_form').get('switch_ip'))
-        session_tr_id.update({'msan_exist': msan_exist})
-    session_tr_id.update({'templates': templates})
-    if session_tr_id.get('counter_line_services_initial'):
-        counter_line_services = session_tr_id.get('counter_line_services_initial')
-    else:
-        counter_line_services = 0
-    if session_tr_id.get('counter_line_phone'):
-        counter_line_services += session_tr_id.get('counter_line_phone')
-    if session_tr_id.get('counter_line_hotspot'):
-        counter_line_services += session_tr_id.get('counter_line_hotspot')
-    if session_tr_id.get('counter_line_itv'):
-        counter_line_services += session_tr_id.get('counter_line_itv')
-    session_tr_id.update({'counter_line_services': counter_line_services})
-    if session_tr_id.get('result_services'):
-        del session_tr_id['result_services']
-    if session_tr_id.get('result_services_ots'):
-        del session_tr_id['result_services_ots']
-    value_vars = {}
+        value_vars.update({'msan_exist': msan_exist})
+
     for key, value in session_tr_id.items():
         value_vars.update({key: value})
+
     ticket_tr_id = session_tr_id.get('ticket_tr_id')
     ticket_tr = TR.objects.get(id=ticket_tr_id)
     decision_otpm = ticket_tr.oattr
     type_ticket = ticket_tr.ticket_k.type_ticket
     ticket_k = ticket_tr.ticket_k.ticket_k
     evaluative_tr = ticket_tr.ticket_k.evaluative_tr
-    value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm})
-    readable_services = value_vars.get('readable_services')
+    services = ticket_tr.services
 
+    value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm, 'services': services})
+    value_vars.update({'templates': templates})
+    result_services, result_services_ots, value_vars = construct_tr(value_vars)
 
-    if value_vars.get('type_pass') and 'Перенос, СПД' in value_vars.get('type_pass'):
-        if (value_vars.get('logic_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')) or (value_vars.get('logic_change_csw') and 'Организация/Изменение, СПД' in value_vars.get('type_pass')):
-            pass
-        elif value_vars.get('logic_csw'):
-            counter_line_services = value_vars.get('counter_exist_line')
-            value_vars.update({'counter_line_services': counter_line_services})
-            result_services, result_services_ots, value_vars = passage_services_with_install_csw(value_vars)
-        elif value_vars.get('logic_replace_csw'):
-            result_services, value_vars = exist_enviroment_replace_csw(value_vars)
-            if value_vars.get('type_passage') == 'Перевод на гигабит' and value_vars.get(
-                    'change_log') == 'Порт/КАД меняются':
-                value_vars.update({'result_services': result_services})
-                result_services, result_services_ots, value_vars = extend_service(value_vars)
-        elif value_vars.get('logic_change_csw') or value_vars.get('logic_change_gi_csw'):
-            counter_line_services = 0 # суть в том что организуем линии в блоке переноса КК типа порт в порт, т.к. если меняется лог подк, то орг линий не треб
-            value_vars.update({'counter_line_services': counter_line_services})
-            result_services, result_services_ots, value_vars = passage_services_with_passage_csw(value_vars)
-        elif value_vars.get('type_passage') == 'Перевод на гигабит' and value_vars.get('change_log') == 'Порт и КАД не меняется':
-            result_services, result_services_ots, value_vars = extend_service(value_vars)
-        elif value_vars.get('type_passage') == 'Перенос логического подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется':
-            result_services, result_services_ots, value_vars = passage_track(value_vars)
-        elif value_vars.get('type_passage') == 'Восстановление трассы' and value_vars.get('change_log') == 'Порт и КАД не меняется':
-            result_services, result_services_ots, value_vars = restore_track(value_vars)
-        elif value_vars.get('type_passage') == 'Перенос точки подключения' and value_vars.get('change_log') == 'Порт и КАД не меняется' and value_vars.get('selected_ono')[0][-2].startswith('CSW'):
-            result_services, result_services_ots, value_vars = passage_csw_no_install(value_vars)
-        else:
-            counter_line_services = value_vars.get('counter_line_services')
-            if value_vars.get('type_passage') == 'Перенос сервиса в новую точку' or value_vars.get('type_passage') == 'Перевод на гигабит':
-                value_vars.update({'counter_line_services': 1})
-            else:
-                value_vars.update({'counter_line_services': value_vars.get('counter_exist_line')})
-            result_services, result_services_ots, value_vars = passage_services(value_vars)
-            value_vars.update({'counter_line_services': counter_line_services})
-            value_vars.update({'result_services': result_services})
-            value_vars.update({'result_services_ots': result_services_ots})
-
-
-    if value_vars.get('type_pass') and 'Организация/Изменение, СПД' in value_vars.get('type_pass'):
-        if value_vars.get('logic_csw'):
-            counter_line_services = value_vars.get('counter_line_services') + value_vars.get('counter_exist_line')
-            value_vars.update(({'services_plus_desc': value_vars.get('new_job_services')}))
-            value_vars.update({'counter_line_services': counter_line_services})
-            result_services, result_services_ots, value_vars = extra_services_with_install_csw(value_vars)
-        elif value_vars.get('logic_replace_csw') and value_vars.get('logic_change_gi_csw') or value_vars.get('logic_replace_csw'):
-            value_vars.update(({'services_plus_desc': value_vars.get('new_job_services')}))
-            result_services, result_services_ots, value_vars = extra_services_with_replace_csw(value_vars)
-        elif value_vars.get('logic_change_gi_csw') or value_vars.get('logic_change_csw'):
-            value_vars.update(({'services_plus_desc': value_vars.get('new_job_services')}))
-            result_services, result_services_ots, value_vars = extra_services_with_passage_csw(value_vars)
-        else:
-            value_vars.update(({'services_plus_desc': value_vars.get('new_job_services')}))
-            result_services, result_services_ots, value_vars = client_new(value_vars)
-        value_vars.update({'result_services': result_services})
-        value_vars.update({'result_services_ots': result_services_ots})
-        if value_vars.get('type_passage') and value_vars.get('type_passage') == 'Перевод на гигабит':
-            result_services, result_services_ots, value_vars = extend_service(value_vars)
-            value_vars.update({'result_services': result_services})
-            value_vars.update({'result_services_ots': result_services_ots})
-
-    if value_vars.get('type_pass') and 'Изменение, не СПД' in value_vars.get('type_pass'):
-        result_services, result_services_ots, value_vars = change_services(value_vars)
-
-    if value_vars.get('type_pass') and 'Перенос Видеонаблюдение' in value_vars.get('type_pass'):
-        result_services, result_services_ots, value_vars = passage_video(value_vars)
-
-    if value_vars.get('type_tr') == 'Не требуется':
-        result_services = 'Решение ОУЗП СПД не требуется'
-        for service in ticket_tr.services:
-            if 'Телефон' in service:
-                result_services_ots = ['Решение ОУЗП СПД не требуется']
-            else:
-                result_services_ots = None
-
-    if value_vars.get('type_tr') == 'Коммерческое' and value_vars.get('con_point') == 'Нов. точка':
-        result_services, result_services_ots, value_vars = client_new(value_vars)
-
-    if value_vars.get('type_tr') == 'ПТО':
-        if value_vars.get('type_change_node') == 'Замена КАД':
-            result_services, value_vars = replace_kad(value_vars)
-        elif value_vars.get('type_change_node') == 'Установка дополнительного КАД':
-            result_services, value_vars = add_kad(value_vars)
-        elif value_vars.get('type_change_node') == 'Установка нового КАД':
-            result_services, value_vars = new_kad(value_vars)
-        result_services_ots = None
 
     userlastname = None
     if request.user.is_authenticated:
