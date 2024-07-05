@@ -308,8 +308,8 @@ def _new_services(result_services, value_vars):
             hidden_vars = {}
             all_cks_in_tr = value_vars.get('all_cks_in_tr')
             if all_cks_in_tr.get(service):
-                static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
-                static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+                static_vars['адрес точки "A"'] = all_cks_in_tr.get(service)['pointA']
+                static_vars['адрес точки "B"'] = all_cks_in_tr.get(service)['pointB']
                 static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
                 static_vars['указать полосу'] = _get_policer(service)
                 if all_cks_in_tr.get(service)['type_cks'] in ('access', 'xconnect'):
@@ -473,12 +473,12 @@ def _new_services(result_services, value_vars):
             name_new_service.add('Видеонаблюдение')
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать модель камеры'] = value_vars.get('camera_model')
+            static_vars['модель камеры'] = value_vars.get('camera_model')
             if value_vars.get('voice') == True:
-                static_vars['требуется запись звука / запись звука не требуется'] = 'требуется запись звука'
+                static_vars['необходимость записи звука'] = 'требуется запись звука'
                 hidden_vars[' и запись звука'] = ' и запись звука'
             else:
-                static_vars['требуется запись звука / запись звука не требуется'] = 'запись звука не требуется'
+                static_vars['необходимость записи звука'] = 'запись звука не требуется'
             camera_number = value_vars.get('camera_number')
             if camera_number < 3:
                 stroka = templates.get("Организация услуги Видеонаблюдение с использованием PoE-инжектора")
@@ -487,21 +487,21 @@ def _new_services(result_services, value_vars):
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 static_vars['указать количество линий'] = str(camera_number)
-                static_vars['указать количество камер'] = str(camera_number)
-                static_vars['указать количество инжекторов'] = str(camera_number)
-                static_vars['номер порта маршрутизатора'] = 'свободный'
-                static_vars['0/3/7/15/30'] = value_vars.get('deep_archive')
-                static_vars['указать адрес'] = value_vars.get('address')
-                static_vars['указать место установки 1'] = value_vars.get('camera_place_one')
+                static_vars['количество камер'] = str(camera_number)
+                static_vars['количество POE-инжекторов'] = str(camera_number)
+                static_vars['порт доступа на маршрутизаторе'] = 'свободный'
+                static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
+                static_vars['адрес установки камеры'] = value_vars.get('address')
+                static_vars['место установки камеры 1'] = value_vars.get('camera_place_one')
 
                 if camera_number == 2:
                     hidden_vars[
-                        '-- %номер порта маршрутизатора%: %указать адрес%, Камера %указать место установки 2%, %указать модель камеры%, %требуется запись звука / запись звука не требуется%.'] = '-- %номер порта маршрутизатора%: %указать адрес%, Камера %указать место установки 2%, %указать модель камеры%, %требуется запись звука / запись звука не требуется%.'
+                        '-- %порт доступа на маршрутизаторе%: %адрес установки камеры%, Камера %место установки камеры 2%, %модель камеры%, %необходимость записи звука%.'] = '-- %порт доступа на маршрутизаторе%: %адрес установки камеры%, Камера %место установки камеры 2%, %модель камеры%, %необходимость записи звука%.'
                     hidden_vars[
-                        '-- камеры %указать место установки 2% глубину хранения архива %0/3/7/15/30%[ и запись звука].'] = '-- камеры %указать место установки 2% глубину хранения архива %0/3/7/15/30%[ и запись звука].'
-                    static_vars['указать место установки 2'] = value_vars.get('camera_place_two')
+                        '-- камеры %место установки камеры 2% глубину хранения архива %глубина хранения записей с камеры%[ и запись звука].'] = '-- камеры %место установки камеры 2% глубину хранения архива %глубина хранения записей с камеры%[ и запись звука].'
+                    static_vars['место установки камеры 2'] = value_vars.get('camera_place_two')
                 static_vars[
-                    'PoE-инжектор СКАТ PSE-PoE.220AC/15VA / OSNOVO Midspan-1/151A'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
+                    'модель PoE-инжектора'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 counter_plur = camera_number
                 result_services.append(pluralizer_vars(stroka, counter_plur))
@@ -513,26 +513,26 @@ def _new_services(result_services, value_vars):
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 static_vars['указать количество линий'] = str(camera_number - 1)
-                static_vars['указать количество камер'] = str(camera_number)
+                static_vars['количество камер'] = str(camera_number)
                 if camera_number == 5:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор D-Link DES-1005P'
+                    static_vars['модель POE-коммутатора'] = 'POE-коммутатор D-Link DES-1005P'
                     static_vars['указать номер порта POE-коммутатора'] = '5'
-                    static_vars['номер камеры'] = '5'
+                    static_vars['номер камеры на схеме'] = '5'
                 elif camera_number == 9:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор Atis PoE-1010-8P'
+                    static_vars['модель POE-коммутатора'] = 'POE-коммутатор Atis PoE-1010-8P'
                     static_vars['указать номер порта POE-коммутатора'] = '10'
-                    static_vars['номер камеры'] = '9'
-                static_vars['номер порта маршрутизатора'] = 'свободный'
-                static_vars['0/3/7/15/30'] = value_vars.get('deep_archive')
-                static_vars['указать адрес'] = value_vars.get('address')
+                    static_vars['номер камеры на схеме'] = '9'
+                static_vars['порт доступа на маршрутизаторе'] = 'свободный'
+                static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
+                static_vars['адрес установки камеры'] = value_vars.get('address')
                 list_cameras_one = []
                 list_cameras_two = []
                 for i in range(camera_number - 1):
-                    extra_stroka_one = 'Порт {}: %указать адрес%, Камера №{}, %указать модель камеры%, %требуется запись звука / запись звука не требуется%\n'.format(
+                    extra_stroka_one = 'Порт {}: %адрес установки камеры%, Камера №{}, %модель камеры%, %необходимость записи звука%\n'.format(
                         i + 1, i + 1)
                     list_cameras_one.append(extra_stroka_one)
                 for i in range(camera_number):
-                    extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %0/3/7/15/30%< и запись звука>;\n'.format(
+                    extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;\n'.format(
                         i + 1)
                     list_cameras_two.append(extra_stroka_two)
                 extra_extra_stroka_one = ''.join(list_cameras_one)
@@ -542,8 +542,8 @@ def _new_services(result_services, value_vars):
                                                                                                                   '- Организовать 1 линию от камеры'):]
                 stroka = stroka + '\n' + extra_extra_stroka_two
                 static_vars[
-                    'PoE-инжектор СКАТ PSE-PoE.220AC/15VA / OSNOVO Midspan-1/151A'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
-                static_vars['указать количество POE-коммутаторов'] = '1'
+                    'модель PoE-инжектора'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
+                static_vars['количество POE-коммутаторов'] = '1'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 counter_plur = camera_number - 1
                 result_services.append(pluralizer_vars(stroka, counter_plur))
@@ -554,24 +554,24 @@ def _new_services(result_services, value_vars):
                 else:
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
                 static_vars['указать количество линий'] = str(camera_number)
-                static_vars['указать количество камер'] = str(camera_number)
+                static_vars['количество камер'] = str(camera_number)
                 if 5 < camera_number < 9:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор Atis PoE-1010-8P'
+                    static_vars['модель POE-коммутатора'] = 'POE-коммутатор Atis PoE-1010-8P'
                     static_vars['указать номер порта POE-коммутатора'] = '10'
                 elif 2 < camera_number < 5:
-                    static_vars['POE-коммутатор D-Link DES-1005P / TP-Link TL-SF1005P'] = 'POE-коммутатор D-Link DES-1005P'
+                    static_vars['модель POE-коммутатора'] = 'POE-коммутатор D-Link DES-1005P'
                     static_vars['указать номер порта POE-коммутатора'] = '5'
-                static_vars['номер порта маршрутизатора'] = 'свободный'
-                static_vars['0/3/7/15/30'] = value_vars.get('deep_archive')
-                static_vars['указать адрес'] = value_vars.get('address')
+                static_vars['порт доступа на маршрутизаторе'] = 'свободный'
+                static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
+                static_vars['адрес установки камеры'] = value_vars.get('address')
                 list_cameras_one = []
                 list_cameras_two = []
                 for i in range(camera_number):
-                    extra_stroka_one = 'Порт {}: %указать адрес%, Камера №{}, %указать модель камеры%, %требуется запись звука / запись звука не требуется%;\n'.format(
+                    extra_stroka_one = 'Порт {}: %адрес установки камеры%, Камера №{}, %модель камеры%, %необходимость записи звука%;\n'.format(
                         i + 1, i + 1)
                     list_cameras_one.append(extra_stroka_one)
                 for i in range(camera_number):
-                    extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %0/3/7/15/30%< и запись звука>;\n'.format(
+                    extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;\n'.format(
                         i + 1)
                     list_cameras_two.append(extra_stroka_two)
                 extra_extra_stroka_one = ''.join(list_cameras_one)
@@ -581,7 +581,7 @@ def _new_services(result_services, value_vars):
                                                                                                                                           stroka.index(
                                                                                                                                               '- Произвести настройку'):]
                 stroka = stroka + '\n' + extra_extra_stroka_two
-                static_vars['указать количество POE-коммутаторов'] = '1'
+                static_vars['количество POE-коммутаторов'] = '1'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 counter_plur = camera_number
                 result_services.append(pluralizer_vars(stroka, counter_plur))
@@ -613,95 +613,95 @@ def _new_services(result_services, value_vars):
                         static_vars['клиентского коммутатора / КАД (указать маркировку коммутатора)'] = value_vars.get(
                             'kad')
                     stroka = templates.get("Установка тел. шлюза у клиента")
-                    static_vars['указать модель тел. шлюза'] = vgw
+                    static_vars['модель тел. шлюза'] = vgw
                     if vgw in ['D-Link DVG-5402SP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
-                        static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
+                        static_vars['магистральный порт тел. шлюза'] = 'WAN порт'
                     else:
-                        static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
-                        static_vars['указать модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
+                        static_vars['магистральный порт тел. шлюза'] = 'Ethernet Порт 0'
+                        static_vars['модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
                     result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
                     if 'ватс' in service.lower():
                         stroka = templates.get("ВАТС (Подключение по аналоговой линии)")
-                        static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
-                        static_vars['указать модель тел. шлюза'] = vgw
-                        static_vars['указать количество портов'] = ports_vgw
+                        static_vars['название тел. шлюза'] = 'установленный по решению выше'
+                        static_vars['модель тел. шлюза'] = vgw
+                        static_vars['количество внутренних портов ВАТС'] = ports_vgw
                         if 'базов' in service.lower():
                             static_vars[
-                                'базовым набором сервисов / расширенным набором сервисов'] = 'базовым набором сервисов'
+                                'набор сервисов ВАТС'] = 'базовым набором сервисов'
                         elif 'расш' in service.lower():
                             static_vars[
-                                'базовым набором сервисов / расширенным набором сервисов'] = 'расширенным набором сервисов'
+                                'набор сервисов ВАТС'] = 'расширенным набором сервисов'
 
                         static_vars['указать количество телефонных линий'] = ports_vgw
                         if ports_vgw == '1':
-                            static_vars['указать порты тел. шлюза'] = '1'
+                            static_vars['порт доступа на тел. шлюзе'] = '1'
                         else:
-                            static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                            static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(ports_vgw)
                         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                         counter_plur = int(ports_vgw)
                         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
                     else:
                         stroka = templates.get(
                             "Подключение аналогового телефона с использованием тел.шлюза на стороне клиента")
-                        static_vars['указать модель тел. шлюза'] = vgw
+                        static_vars['модель тел. шлюза'] = vgw
                         static_vars['указать количество телефонных линий'] = str(phone_lines)
                         if phone_lines == 1:
-                            static_vars['указать порты тел. шлюза'] = '1'
+                            static_vars['порт доступа на тел. шлюзе'] = '1'
                         else:
-                            static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
+                            static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(phone_lines)
                         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                         counter_plur = phone_lines
                         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
             elif service.endswith('/'):
                 stroka = templates.get("Установка тел. шлюза на ППС")
-                static_vars['указать модель тел. шлюза'] = vgw
+                static_vars['модель тел. шлюза'] = vgw
                 static_vars['указать узел связи'] = value_vars.get('pps')
                 result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 if 'ватс' in service.lower():
                     stroka = templates.get("ВАТС (Подключение по аналоговой линии)")
                     if 'базов' in service.lower():
                         static_vars[
-                            'базовым набором сервисов / расширенным набором сервисов'] = 'базовым набором сервисов'
+                            'набор сервисов ВАТС'] = 'базовым набором сервисов'
                     elif 'расш' in service.lower():
                         static_vars[
-                            'базовым набором сервисов / расширенным набором сервисов'] = 'расширенным набором сервисов'
-                    static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
+                            'набор сервисов ВАТС'] = 'расширенным набором сервисов'
+                    static_vars['название тел. шлюза'] = 'установленный по решению выше'
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
-                    static_vars['указать количество портов'] = ports_vgw
+                    static_vars['количество внутренних портов ВАТС'] = ports_vgw
                     if ports_vgw == '1':
-                        static_vars['указать порты тел. шлюза'] = '1'
+                        static_vars['порт доступа на тел. шлюзе'] = '1'
                     else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                        static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(ports_vgw)
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                     counter_plur = int(ports_vgw)
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
                 else:
                     stroka = templates.get("Подключение аналогового телефона с использованием голосового шлюза на ППС")
-                    static_vars['идентификатор тел. шлюза'] = 'установленного по решению выше'
+                    static_vars['название тел. шлюза'] = 'установленного по решению выше'
                     static_vars['указать количество телефонных линий'] = str(phone_lines)
                     if phone_lines == 1:
-                        static_vars['указать порты тел. шлюза'] = '1'
+                        static_vars['порт доступа на тел. шлюзе'] = '1'
                     else:
-                        static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
+                        static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(phone_lines)
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                     counter_plur = phone_lines
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
             elif service.endswith('\\'):
-                static_vars['указать порты тел. шлюза'] = value_vars.get('form_exist_vgw_port')
-                static_vars['указать модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
-                static_vars['идентификатор тел. шлюза'] = value_vars.get('form_exist_vgw_name')
+                static_vars['порт доступа на тел. шлюзе'] = value_vars.get('form_exist_vgw_port')
+                static_vars['модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
+                static_vars['название тел. шлюза'] = value_vars.get('form_exist_vgw_name')
                 if 'ватс' in service.lower():
                     stroka = templates.get("ВАТС (Подключение по аналоговой линии)")
                     if 'базов' in service.lower():
                         static_vars[
-                            'базовым набором сервисов / расширенным набором сервисов'] = 'базовым набором сервисов'
+                            'набор сервисов ВАТС'] = 'базовым набором сервисов'
                     elif 'расш' in service.lower():
                         static_vars[
-                            'базовым набором сервисов / расширенным набором сервисов'] = 'расширенным набором сервисов'
+                            'набор сервисов ВАТС'] = 'расширенным набором сервисов'
 
                     static_vars['указать количество телефонных линий'] = ports_vgw
-                    static_vars['указать количество портов'] = ports_vgw
+                    static_vars['количество внутренних портов ВАТС'] = ports_vgw
                     stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                     counter_plur = int(ports_vgw)
                     result_services_ots.append(pluralizer_vars(stroka, counter_plur))
@@ -719,7 +719,7 @@ def _new_services(result_services, value_vars):
                         result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
                     elif 'расш' in service.lower():
                         stroka = templates.get("ВАТС Расширенная(SIP регистрация через Интернет)")
-                        static_vars['указать количество портов'] = ports_vgw
+                        static_vars['количество внутренних портов ВАТС'] = ports_vgw
                         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                         result_services_ots.append(pluralizer_vars(stroka, int(ports_vgw)))
                 else:
@@ -870,8 +870,8 @@ def rtk_enviroment(value_vars):
         static_vars['IP коммутатора'] = value_vars.get('rtk_form').get('switch_ip')
         static_vars['Порт коммутатора'] = value_vars.get('rtk_form').get('switch_port')
         if value_vars.get('rtk_form').get('optic_socket'):
-            hidden_vars['кросса Ростелеком, ОР %Номер ОР%'] = 'кросса Ростелеком, ОР %Номер ОР%'
-            static_vars['Номер ОР'] = value_vars.get('rtk_form').get('optic_socket')
+            hidden_vars['кросса Ростелеком, ОР %номер ОР%'] = 'кросса Ростелеком, ОР %номер ОР%'
+            static_vars['номер ОР'] = value_vars.get('rtk_form').get('optic_socket')
         else:
             hidden_vars['коммутатора Ростелеком %IP коммутатора%, порт %Порт коммутатора%'] = \
                 'коммутатора Ростелеком %IP коммутатора%, порт %Порт коммутатора%'
@@ -952,11 +952,11 @@ def _new_enviroment(value_vars):
                     static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                     static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
                     hidden_vars[
-                        '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                        '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
                     hidden_vars[
-                        'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-                    static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
-                    static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                        'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+                    static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
+                    static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
 
                     if logic_csw_1000 == True:
                         hidden_vars[
@@ -975,11 +975,11 @@ def _new_enviroment(value_vars):
                         static_vars['указать № ППР'] = value_vars.get('ppr')
                     static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
                     static_vars['ОИПМ/ОИПД'] = 'ОИПД'
-                    static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
+                    static_vars['модель беспроводной базовой станции'] = value_vars.get('access_point')
                     hidden_vars[
                         '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
                     hidden_vars[
-                        '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОАТТР.'
+                        '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %модель беспроводной базовой станции% по решению ОАТТР.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %модель беспроводной базовой станции% по решению ОАТТР.'
                     hidden_vars[
                         '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
                     hidden_vars[
@@ -1037,8 +1037,8 @@ def exist_enviroment_install_csw(value_vars):
     elif value_vars.get('type_install_csw') == 'ВОЛС и порт не меняются':
         static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
         hidden_vars[
-            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-        static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+        static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
         if logic_csw_1000 == True:
             hidden_vars[
                 '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
@@ -1076,11 +1076,11 @@ def exist_enviroment_install_csw(value_vars):
             hidden_vars[
             'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
             hidden_vars[
-            '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             hidden_vars[
-            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+            static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
 
             static_vars['указать название старого коммутатора'] = value_vars.get('selected_ono')[0][-2]
@@ -1100,11 +1100,11 @@ def exist_enviroment_install_csw(value_vars):
                 static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
                 static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
                 hidden_vars[
-                '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-                static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+                '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
+                static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
                 hidden_vars[
-                'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-                static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+                static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
                 if logic_csw_1000 == True:
                     hidden_vars[
                         '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'] = '-ВНИМАНИЕ! Совместно с ОНИТС СПД удаленно настроить клиентский коммутатор.'
@@ -1156,8 +1156,8 @@ def exist_enviroment_replace_csw(value_vars):
         static_vars['Замена/Замена и перевод на гигабит'] = 'Замена'
         if any(type in value_vars.get('old_model_csw') for type in types_old_models):
             hidden_vars[
-            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+            static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
         else:
             hidden_vars['(передатчик задействовать из демонтированного коммутатора)'] = '(передатчик задействовать из демонтированного коммутатора)'
         if logic_csw_1000 == True and value_vars.get('model_csw') == 'D-Link DGS-1100-06/ME':
@@ -1210,11 +1210,11 @@ def exist_enviroment_replace_csw(value_vars):
             hidden_vars[
             'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
             hidden_vars[
-            '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             hidden_vars[
-            'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+            static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
             static_vars['указать название старого коммутатора'] = old_kad
             static_vars['указать старый порт коммутатора'] = old_port
@@ -1233,18 +1233,18 @@ def exist_enviroment_replace_csw(value_vars):
             hidden_vars[
             '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
             hidden_vars[
-            '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             hidden_vars[
                 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
             hidden_vars[
                 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
             hidden_vars[
-                '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+                '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             hidden_vars[
-                'и %указать конвертер/передатчик на стороне клиента%'] = 'и %указать конвертер/передатчик на стороне клиента%'
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                'и %тип конвертера/передатчика на стороне клиента%'] = 'и %тип конвертера/передатчика на стороне клиента%'
+            static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
             static_vars['указать название старого коммутатора'] = old_kad
             static_vars['указать старый порт коммутатора'] = old_port
@@ -1336,8 +1336,8 @@ def exist_enviroment_passage_csw(value_vars):
 
     if sreda == '2' or sreda == '4':
         static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
-        static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
-        static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+        static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
+        static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
     else:
         static_vars['ОИПМ/ОИПД'] = 'ОИПД'
 
@@ -1420,9 +1420,9 @@ def exist_enviroment_passage_csw(value_vars):
                 '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого коммутатора по решению ОТПМ.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого коммутатора по решению ОТПМ.'
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-            hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            hidden_vars['- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
             if sreda != value_vars.get('exist_sreda'):
-                hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'
+                hidden_vars['- В %указать название клиентского коммутатора% установить %тип конвертера/передатчика на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %тип конвертера/передатчика на стороне клиента%.'
         elif sreda == '3':
             hidden_vars[
                 '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'] = '- Создать заявку в Cordis на ОНИТС СПД для выделения реквизитов беспроводных точек доступа WDS/WDA.'
@@ -1435,8 +1435,8 @@ def exist_enviroment_passage_csw(value_vars):
                 hidden_vars[
                     'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
             hidden_vars[
-                '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОТПМ.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОТПМ.'
-            static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
+                '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %модель беспроводной базовой станции% по решению ОТПМ.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %модель беспроводной базовой станции% по решению ОТПМ.'
+            static_vars['модель беспроводной базовой станции'] = value_vars.get('access_point')
             hidden_vars[
                 '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'] = '- По заявке в Cordis выделить реквизиты для управления беспроводными точками.'
             hidden_vars[
@@ -1472,9 +1472,9 @@ def exist_enviroment_passage_csw(value_vars):
                 '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого коммутатора по решению ОТПМ.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого коммутатора по решению ОТПМ.'
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-            hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            hidden_vars['- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
             if value_vars.get('exist_sreda') == '1' or value_vars.get('exist_sreda') == '3':
-                hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'
+                hidden_vars['- В %указать название клиентского коммутатора% установить %тип конвертера/передатчика на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %тип конвертера/передатчика на стороне клиента%.'
                 hidden_vars['- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
         elif sreda == '3':
             hidden_vars[
@@ -1488,8 +1488,8 @@ def exist_enviroment_passage_csw(value_vars):
                 hidden_vars[
                     'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'] = 'После выполнения подготовительных работ в рамках заявки в Cordis на ОНИТС СПД:'
             hidden_vars[
-                '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОТПМ.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %указать модель беспроводных точек% по решению ОТПМ.'
-            static_vars['указать модель беспроводных точек'] = value_vars.get('access_point')
+                '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %модель беспроводной базовой станции% по решению ОТПМ.'] = '- Установить на стороне %указать узел связи% и на стороне клиента беспроводные точки доступа %модель беспроводной базовой станции% по решению ОТПМ.'
+            static_vars['модель беспроводной базовой станции'] = value_vars.get('access_point')
             hidden_vars['- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до беспроводной точки по решению ОТПМ.'] = '- Организовать %медную линию связи/ВОЛС% от %указать узел связи% до беспроводной точки по решению ОТПМ.'
             hidden_vars['- На стороне клиента организовать медный патч-корд от WDA до клиентского коммутатора.'] = '- На стороне клиента организовать медный патч-корд от WDA до клиентского коммутатора.'
             hidden_vars[
@@ -1528,11 +1528,11 @@ def exist_enviroment_passage_csw(value_vars):
             hidden_vars[
                 '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
             if value_vars.get('exist_sreda_csw') == '2':
-                hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                hidden_vars['- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
 
         else:
             if value_vars.get('exist_sreda_csw') == '1' or value_vars.get('exist_sreda_csw') != value_vars.get('sreda'):
-                hidden_vars['- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %указать конвертер/передатчик на стороне клиента%.'
+                hidden_vars['- В %указать название клиентского коммутатора% установить %тип конвертера/передатчика на стороне клиента%.'] = '- В %указать название клиентского коммутатора% установить %тип конвертера/передатчика на стороне клиента%.'
                 hidden_vars['- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'] = '- Включить линию для клиента в порт %указать № порта% коммутатора %указать название клиентского коммутатора%.'
 
             if value_vars.get('exist_sreda_csw') == '2' or value_vars.get('exist_sreda_csw') == '4':
@@ -1543,7 +1543,7 @@ def exist_enviroment_passage_csw(value_vars):
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             hidden_vars[
                 '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
-            hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+            hidden_vars['- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
 
         if sreda == '1':
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
@@ -1591,9 +1591,9 @@ def enviroment(result_services, value_vars):
         static_vars['указать название коммутатора'] = kad
         static_vars['ОИПМ/ОИПД'] = 'ОИПМ'
         static_vars['указать порт коммутатора'] = port
-        static_vars['указать режим работы порта'] = speed_port
-        static_vars['указать конвертер/передатчик на стороне узла связи'] = device_pps
-        static_vars['указать конвертер/передатчик на стороне клиента'] = device_client
+        static_vars['режим работы порта доступа'] = speed_port
+        static_vars['тип конвертера/передатчика на стороне узла доступа'] = device_pps
+        static_vars['тип конвертера/передатчика на стороне клиента'] = device_client
         result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         return result_services
     elif sreda == '3':
@@ -1607,7 +1607,7 @@ def enviroment(result_services, value_vars):
         static_vars['указать узел связи'] = readable_pps
         static_vars['указать название коммутатора'] = kad
         static_vars['указать порт коммутатора'] = port
-        static_vars['указать модель беспроводных точек'] = access_point
+        static_vars['модель беспроводной базовой станции'] = access_point
         if access_point == 'Infinet E5':
             hidden_vars['- Доставить в офис ОНИТС СПД беспроводные точки Infinet E5 для их настройки.'] = '- Доставить в офис ОНИТС СПД беспроводные точки Infinet E5 для их настройки.'
             hidden_vars[' и настройки точек в офисе ОНИТС СПД'] = ' и настройки точек в офисе ОНИТС СПД'
@@ -1995,64 +1995,64 @@ def _passage_phone_service(result_services, value_vars):
                 static_vars['клиентского коммутатора / КАД (указать маркировку коммутатора)'] = value_vars.get(
                         'kad')
             stroka = templates.get("Установка тел. шлюза у клиента")
-            static_vars['указать модель тел. шлюза'] = vgw
+            static_vars['модель тел. шлюза'] = vgw
             if vgw in ['D-Link DVG-5402SP', 'Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-8.IP']:
-                static_vars['WAN порт/Ethernet Порт 0'] = 'WAN порт'
+                static_vars['магистральный порт тел. шлюза'] = 'WAN порт'
             else:
-                static_vars['WAN порт/Ethernet Порт 0'] = 'Ethernet Порт 0'
-                static_vars['указать модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
+                static_vars['магистральный порт тел. шлюза'] = 'Ethernet Порт 0'
+                static_vars['модель тел. шлюза'] = vgw + ' c кабелем для коммутации в плинт'
             result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
             stroka = templates.get(
                     "Перенос сервиса Телефония с использованием тел.шлюза на стороне клиента")
-            static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
-            static_vars['указать модель тел. шлюза'] = vgw
+            static_vars['название тел. шлюза'] = 'установленный по решению выше'
+            static_vars['модель тел. шлюза'] = vgw
             static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
             if 'ватс' in service.lower():
                 static_vars['указать количество телефонных линий'] = ports_vgw
                 counter_plur = int(ports_vgw)
                 if ports_vgw == '1':
-                    static_vars['указать порты тел. шлюза'] = '1'
+                    static_vars['порт доступа на тел. шлюзе'] = '1'
                 else:
-                    static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                    static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(ports_vgw)
             else:
                 static_vars['указать количество телефонных линий'] = str(phone_lines)
                 counter_plur = phone_lines
                 if phone_lines == 1:
-                    static_vars['указать порты тел. шлюза'] = '1'
+                    static_vars['порт доступа на тел. шлюзе'] = '1'
                 else:
-                    static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
+                    static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(phone_lines)
             stroka = analyzer_vars(stroka, static_vars, hidden_vars)
             result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     elif service.endswith('/'):
         stroka = templates.get("Установка тел. шлюза на ППС")
-        static_vars['указать модель тел. шлюза'] = vgw
+        static_vars['модель тел. шлюза'] = vgw
         static_vars['указать узел связи'] = value_vars.get('pps')
         result_services_ots.append(analyzer_vars(stroka, static_vars, hidden_vars))
         stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
-        static_vars['идентификатор тел. шлюза'] = 'установленный по решению выше'
+        static_vars['название тел. шлюза'] = 'установленный по решению выше'
         static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
         if 'ватс' in service.lower():
             static_vars['указать количество телефонных линий'] = ports_vgw
             counter_plur = int(ports_vgw)
             if ports_vgw == '1':
-                static_vars['указать порты тел. шлюза'] = '1'
+                static_vars['порт доступа на тел. шлюзе'] = '1'
             else:
-                static_vars['указать порты тел. шлюза'] = '1-{}'.format(ports_vgw)
+                static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(ports_vgw)
         else:
             static_vars['указать количество телефонных линий'] = str(phone_lines)
             counter_plur = phone_lines
             if phone_lines == 1:
-                static_vars['указать порты тел. шлюза'] = '1'
+                static_vars['порт доступа на тел. шлюзе'] = '1'
             else:
-                static_vars['указать порты тел. шлюза'] = '1-{}'.format(phone_lines)
+                static_vars['порт доступа на тел. шлюзе'] = '1-{}'.format(phone_lines)
         stroka = analyzer_vars(stroka, static_vars, hidden_vars)
         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     elif service.endswith('\\'):
         stroka = templates.get("Перенос сервиса Телефония с использованием голосового шлюза на ППС")
         static_vars['указать модель идентификатор существующего тел. шлюза'] = value_vars.get('old_name_model_vgws')
-        static_vars['указать порты тел. шлюза'] = value_vars.get('form_exist_vgw_port')
-        static_vars['указать модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
-        static_vars['идентификатор тел. шлюза'] = value_vars.get('form_exist_vgw_name')
+        static_vars['порт доступа на тел. шлюзе'] = value_vars.get('form_exist_vgw_port')
+        static_vars['модель тел. шлюза'] = value_vars.get('form_exist_vgw_model')
+        static_vars['название тел. шлюза'] = value_vars.get('form_exist_vgw_name')
         if 'ватс' in service.lower():
             static_vars['указать количество телефонных линий'] = ports_vgw
             counter_plur = int(ports_vgw)
@@ -2350,12 +2350,12 @@ def _passage_enviroment(value_vars):
                 static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
             else:
                 static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-                hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                hidden_vars['- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
                 static_vars['указать узел связи'] = readable_pps
-                static_vars['указать конвертер/передатчик на стороне узла связи'] = device_pps
+                static_vars['тип конвертера/передатчика на стороне узла доступа'] = device_pps
                 hidden_vars['ОНИТС СПД проведение работ:'] = 'ОНИТС СПД проведение работ:'
-                hidden_vars['- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
-                static_vars['указать режим работы порта'] = value_vars.get('speed_port')
+                hidden_vars['- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'] = '- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'
+                static_vars['режим работы порта доступа'] = value_vars.get('speed_port')
             hidden_vars['от %указать узел связи% '] = 'от %указать узел связи% '
             static_vars['указать узел связи'] = readable_pps
             hidden_vars['в новой точке подключения '] = 'в новой точке подключения '
@@ -2391,16 +2391,16 @@ def _passage_enviroment(value_vars):
             static_vars['медную линию связи/ВОЛС'] = 'медную линию связи'
         elif sreda == '2' or sreda == '4':
             static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
-            hidden_vars['- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            hidden_vars['- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             hidden_vars['ОНИТС СПД проведение работ:'] = 'ОНИТС СПД проведение работ:'
             hidden_vars[
-                '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
-            static_vars['указать режим работы порта'] = value_vars.get('speed_port')
+                '- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'] = '- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'
+            static_vars['режим работы порта доступа'] = value_vars.get('speed_port')
             if value_vars.get('exist_sreda') != '2':
-                hidden_vars['- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%указать конвертер/передатчик на стороне клиента%'] = '- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%указать конвертер/передатчик на стороне клиента%'
+                hidden_vars['- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%тип конвертера/передатчика на стороне клиента%'] = '- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%тип конвертера/передатчика на стороне клиента%'
                 static_vars['установить/заменить'] = 'установить'
-                static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+                static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
     elif value_vars.get('type_passage') == 'Перевод на гигабит':
         static_vars['медную линию связи/ВОЛС'] = 'ВОЛС'
         static_vars['указать узел связи'] = readable_pps
@@ -2408,10 +2408,10 @@ def _passage_enviroment(value_vars):
         static_vars['указать порт коммутатора'] = port
         hidden_vars['ОНИТС СПД проведение работ:'] = 'ОНИТС СПД проведение работ:'
         hidden_vars[
-            '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'] = '- На порту подключения клиента выставить скоростной режим %указать режим работы порта%.'
-        static_vars['указать режим работы порта'] = value_vars.get('speed_port')
+            '- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'] = '- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'
+        static_vars['режим работы порта доступа'] = value_vars.get('speed_port')
         hidden_vars[
-            '- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%указать конвертер/передатчик на стороне клиента%'] = '- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%указать конвертер/передатчик на стороне клиента%'
+            '- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%тип конвертера/передатчика на стороне клиента%'] = '- На стороне клиента %установить/заменить% [%указать существующий конвертер/передатчик на стороне клиента% на ]%тип конвертера/передатчика на стороне клиента%'
         if value_vars.get('head').split('\n')[3] == '- {}'.format(readable_pps) and value_vars.get('exist_sreda') == '2':
             hidden_vars['- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиентского оборудования.'] = '- Использовать существующую %медную линию связи/ВОЛС% от %указать узел связи% до клиентского оборудования.'
             hidden_vars['- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = '- Переключить линию для клиента в порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
@@ -2419,10 +2419,10 @@ def _passage_enviroment(value_vars):
             hidden_vars[
                 '%указать существующий конвертер/передатчик на стороне клиента% на '] = '%указать существующий конвертер/передатчик на стороне клиента% на '
             static_vars['указать существующий конвертер/передатчик на стороне клиента'] = 'конвертер 1550 нм'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
+            static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
             hidden_vars[
-                '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
             hidden_vars[
                 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
             static_vars['указать старый порт коммутатора'] = selected_ono[0][-1]
@@ -2435,7 +2435,7 @@ def _passage_enviroment(value_vars):
             hidden_vars['%указать существующий конвертер/передатчик на стороне клиента% на '] = '%указать существующий конвертер/передатчик на стороне клиента% на '
             static_vars['указать существующий конвертер/передатчик на стороне клиента'] = 'конвертер 1550 нм'
             hidden_vars['- Логическое подключение клиента не изменится.'] = '- Логическое подключение клиента не изменится.'
-            static_vars['указать конвертер/передатчик на стороне клиента'] = 'конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм'
+            static_vars['тип конвертера/передатчика на стороне клиента'] = 'конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм'
         else:
             hidden_vars[
                 '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'] = '- Организовать %медную линию связи/ВОЛС% [от %указать узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
@@ -2443,14 +2443,14 @@ def _passage_enviroment(value_vars):
             hidden_vars[
                 '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'] = '- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%.'
             static_vars['установить/заменить'] = 'установить'
-            static_vars['указать конвертер/передатчик на стороне узла связи'] = value_vars.get('device_pps')
+            static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             hidden_vars[
-                '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'] = '- Установить на стороне %указать узел связи% %указать конвертер/передатчик на стороне узла связи%'
+                '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'] = '- Установить на стороне %указать узел связи% %тип конвертера/передатчика на стороне узла доступа%'
             hidden_vars[
                 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'] = 'Старый порт: порт %указать старый порт коммутатора% коммутатора %указать название старого коммутатора%.'
             static_vars['указать старый порт коммутатора'] = selected_ono[0][-1]
             static_vars['указать название старого коммутатора'] = selected_ono[0][-2]
-            static_vars['указать конвертер/передатчик на стороне клиента'] = value_vars.get('device_client')
+            static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
             hidden_vars[
                 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'] = 'Новый порт: порт %указать порт коммутатора% коммутатора %указать название коммутатора%.'
     value_vars.update({'kad': kad})
@@ -2713,8 +2713,8 @@ def _change_services(value_vars):
 
             elif new_service_name == 'ЦКС':
                 hidden_vars[
-                    '"%указать точку "A"% - %указать точку "B"%"'
-                ] = '"%указать точку "A"% - %указать точку "B"%"'
+                    '"%адрес точки "A"% - %адрес точки "B"%"'
+                ] = '"%адрес точки "A"% - %адрес точки "B"%"'
                 hidden_vars[' с полосой %указать полосу%'] = ' с полосой %указать полосу%'
                 hidden_vars[
                     '- Ограничить скорость и настроить маркировку трафика для %Название нового сервиса% %полисером Subinterface/портом подключения%.'
@@ -2722,8 +2722,8 @@ def _change_services(value_vars):
                 static_vars['указать полосу'] = _get_policer(change_service)
                 all_cks_in_tr = value_vars.get('all_cks_in_tr')
                 if all_cks_in_tr:
-                    static_vars['указать точку "A"'] = all_cks_in_tr.get(change_service)['pointA']
-                    static_vars['указать точку "B"'] = all_cks_in_tr.get(change_service)['pointB']
+                    static_vars['адрес точки "A"'] = all_cks_in_tr.get(change_service)['pointA']
+                    static_vars['адрес точки "B"'] = all_cks_in_tr.get(change_service)['pointB']
                     static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(change_service)['policer_cks']
 
             elif new_service_name == 'ШПД в Интернет':
@@ -2769,21 +2769,21 @@ def _change_services(value_vars):
             static_vars['Название нового сервиса'] = new_service_name
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
-            stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %указать сущ. маску% на подсеть с маской %указать нов. маску%")
+            stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %сущ. маска IP-сети% на подсеть с маской %нов. маска IP-сети%")
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать нов. маску'] = value_vars.get('new_mask')
-            static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
+            static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
+            static_vars["сущ. маска IP-сети"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-            static_vars['изменится/не изменится'] = 'не изменится'
+            static_vars['состояние логического подключения клиента'] = 'не изменится'
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Замена IP":
-            stroka = templates.get("Замена IP адреса с маской %указать сущ. маску% на подсеть с маской %указать сущ. маску%")
+            stroka = templates.get("Замена IP адреса с маской %сущ. маска IP-сети% на подсеть с маской %сущ. маска IP-сети%")
             static_vars = {}
             hidden_vars = {}
-            static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
+            static_vars["сущ. маска IP-сети"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-            static_vars['родительская сеть'] = value_vars.get('parent_subnet')
+            static_vars['родительская IP-сеть'] = value_vars.get('parent_subnet')
             if value_vars.get('selected_ono')[0][4][-3:] != '/32':
                 hidden_vars[
                     '-- Актуализировать номер договора в КБЗ на странице учета адресации;'
@@ -2797,11 +2797,11 @@ def _change_services(value_vars):
             stroka = templates.get("Замена существующей connected подсети на connected подсеть с %большей/меньшей% маской")
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать нов. маску'] = value_vars.get('new_mask')
-            static_vars["указать сущ. маску"] = value_vars.get('selected_ono')[0][4][-3:]
+            static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
+            static_vars["сущ. маска IP-сети"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["указать ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
-            static_vars['изменится/не изменится'] = 'не изменится'
-            if int(static_vars['указать нов. маску'][1:]) > int(value_vars.get('selected_ono')[0][4][-2:]):
+            static_vars['состояние логического подключения клиента'] = 'не изменится'
+            if int(static_vars['нов. маска IP-сети'][1:]) > int(value_vars.get('selected_ono')[0][4][-2:]):
                 static_vars['большей/меньшей'] = 'меньшей'
             else:
                 static_vars['большей/меньшей'] = 'большей'
@@ -2817,7 +2817,7 @@ def _change_services(value_vars):
             stroka = templates.get('Организация дополнительной подсети (connected)')
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать нов. маску'] = value_vars.get('new_mask')
+            static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
             static_vars['маркировка маршрутизатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
             match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
             if match_svi:
@@ -2830,8 +2830,8 @@ def _change_services(value_vars):
             stroka = templates.get("Организация маршрутизируемого непрерывного блока адресов сети интернет")
             static_vars = {}
             hidden_vars = {}
-            static_vars['указать нов. маску'] = value_vars.get('new_mask')
-            static_vars['указать ip-адрес'] = value_vars.get('routed_ip')
+            static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
+            static_vars['адрес IP-сети'] = value_vars.get('routed_ip')
             static_vars['указать название vrf'] = value_vars.get('routed_vrf')
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация доп IPv6":
@@ -2852,8 +2852,8 @@ def _change_services(value_vars):
             all_cks_in_tr = value_vars.get('all_cks_in_tr')
             if all_cks_in_tr:
                 service = next(iter(type_change_service.values()))
-                static_vars['указать точку "A"'] = all_cks_in_tr.get(service)['pointA']
-                static_vars['указать точку "B"'] = all_cks_in_tr.get(service)['pointB']
+                static_vars['адрес точки "A"'] = all_cks_in_tr.get(service)['pointA']
+                static_vars['адрес точки "B"'] = all_cks_in_tr.get(service)['pointB']
                 static_vars['полисером Subinterface/портом подключения'] = all_cks_in_tr.get(service)['policer_cks']
                 static_vars['указать полосу'] = _get_policer(service)
                 if next(iter(type_change_service.keys())) == "Организация ЦКС trunk'ом":
