@@ -841,7 +841,25 @@ def data(request, trID):
     evaluative_tr = ticket_tr.ticket_k.evaluative_tr
     services = ticket_tr.services
 
+    # value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm, 'services': services})
+    # value_vars.update({'templates': templates})
+    # result_services, result_services_ots, value_vars = construct_tr(value_vars)
+
+    if value_vars.get('list_switches'):
+        del value_vars['list_switches']
+    if value_vars.get('oattr'):
+        del value_vars['oattr']
+    if value_vars.get('oattr'):
+        del value_vars['task_otpm']
+
+
     value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm, 'services': services})
+
+    print('!!!!')
+    for i, v in value_vars.items():
+        print(f'{i}: {v}')
+    #print([value_vars])
+    print('!!!!')
     value_vars.update({'templates': templates})
     result_services, result_services_ots, value_vars = construct_tr(value_vars)
 
@@ -2167,9 +2185,19 @@ def resources_formset(request, trID):
                     for i in unselected_ono:
                         if selected_ono[0][-2] == i[-2]:
                             selected_ono.append(i)
+                    for resource in selected_ono:
+                        format_rtk_port_to_port_channel(resource)
                     if cameras:
                         client_ip_addresses = get_ip_from_subset(selected_ono[0][-4])
-                        cameras = [camera for camera in cameras if camera.get('ip') in client_ip_addresses]
+                        if client_ip_addresses:
+                            cameras = [camera for camera in cameras if camera.get('ip') in client_ip_addresses]
+                        else:
+                            exclude = ['Екатеринбург,', 'Каменск-Уральский,', 'Нижний Тагил,', 'д.', ',', 'офис', 'кв']
+                            address = selected_ono[0][3]
+                            for e in exclude:
+                                address = address.replace(e, '')
+                            address = address.strip().split()
+                            cameras = [camera for camera in cameras if all(a in camera.get('summary') for a in address)]
                         session_tr_id.update({'cameras': cameras})
                     if phone_address:
                         if any(phone_addr in selected_ono[0][3] for phone_addr in phone_address):
@@ -2969,6 +2997,7 @@ def pass_serv(request, trID):
             else:
                 pass_job_services = session_tr_id.get('pass_job_services')
                 if change_log == 'Порт и КАД не меняется':
+                    types_turnoff = ['Перенос точки подключения', 'Перенос логического подключения', 'Восстановление трассы']
                     if type_passage == 'Перевод на гигабит':
                         desc_service, _ = get_selected_readable_service(readable_services, selected_ono)
                         if desc_service in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
@@ -2976,7 +3005,7 @@ def pass_serv(request, trID):
                             tag_service.append({'params_extend_service': None})
                             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                             return response
-                    elif (type_passage == 'Перенос точки подключения' or type_passage == 'Перенос логического подключения') and session_tr_id.get('turnoff'):
+                    elif type_passage in types_turnoff and session_tr_id.get('turnoff'):
                         tag_service.append({'pass_turnoff': None})
                         response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
                         return response
