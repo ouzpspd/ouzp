@@ -2185,6 +2185,8 @@ def resources_formset(request, trID):
                     for i in unselected_ono:
                         if selected_ono[0][-2] == i[-2]:
                             selected_ono.append(i)
+                    for resource in selected_ono:
+                        format_rtk_port_to_port_channel(resource)
                     if cameras:
                         client_ip_addresses = get_ip_from_subset(selected_ono[0][-4])
                         if client_ip_addresses:

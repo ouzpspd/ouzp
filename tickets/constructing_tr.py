@@ -855,7 +855,7 @@ def rtk_enviroment(value_vars):
         static_vars['оператор'] = 'ПАО "Ростелеком"'
         static_vars['указать узел связи'] = 'РУА ЕКБ Автоматики переулок 1 стр.В3 П1 Э2 (аппаратная)'
         static_vars['указать название коммутатора'] = 'AR113-37.ekb'
-        static_vars['указать порт коммутатора'] = 'Te8/1'
+        static_vars['указать порт коммутатора'] = 'Po4'
         stroka = templates.get("Присоединение к СПД через последнюю милю стороннего оператора %оператор%.")
     elif value_vars.get('rtk_form').get('type_pm') == 'FVNO Медь':
         static_vars['IP коммутатора'] = value_vars.get('rtk_form').get('switch_ip')

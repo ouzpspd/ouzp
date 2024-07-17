@@ -869,3 +869,12 @@ def get_user_credential_cordis(user):
         return (settings.CORDIS_USER_OATTR, settings.CORDIS_PASSWORD_OATTR)
     elif user.groups.filter(name='Сотрудники ОУПМ').exists():
         return (settings.CORDIS_USER_OUPM_SPD, settings.CORDIS_PASSWORD_OUPM_SPD)
+
+
+def format_rtk_port_to_port_channel(resource):
+    rtk_ports = ['TenGigabitEthernet8/1', 'TenGigabitEthernet9/3']
+    rtk_am = 'AR113-37.ekb'
+    if rtk_am == resource[-2] and any([port in resource[-1] for port in rtk_ports]):
+        resource.pop()
+        resource.append("Po4")
+    return resource
