@@ -2411,17 +2411,17 @@ def head(request, trID):
         if node_mon.endswith(key):
             finish_node = item + node_mon[:node_mon.index(key)]
             session_tr_id.update({'independent_pps': node_mon})
-    static_vars['указать узел связи'] = finish_node
+    static_vars['узел связи'] = finish_node
     if uplink == [None]:
-        static_vars['указать название коммутатора'] = selected_ono[0][-2]
+        static_vars['название коммутатора'] = selected_ono[0][-2]
         session_tr_id.update({'independent_kad': selected_ono[0][-2]})
-        static_vars['указать порт'] = selected_ono[0][-1]
-        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
+        static_vars['порт доступа на коммутаторе'] = selected_ono[0][-1]
+        index_of_device = stroka.index('<- порт %порт доступа на коммутаторе%>') + len('<- порт %порт доступа на коммутаторе%>') + 1
         stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
     else:
-        static_vars['указать название коммутатора'] = uplink[-1].split()[0]
+        static_vars['название коммутатора'] = uplink[-1].split()[0]
         session_tr_id.update({'independent_kad': uplink[-1].split()[0]})
-        static_vars['указать порт'] = ' '.join(uplink[-1].split()[1:])
+        static_vars['порт доступа на коммутаторе'] = ' '.join(uplink[-1].split()[1:])
         list_stroka_device = []
         if len(uplink) > 1:
             for i in range(len(uplink)-2, -1, -1):
@@ -2449,7 +2449,7 @@ def head(request, trID):
                 extra_stroka_device = '- {}\n'.format(downlink[i])
                 list_stroka_device.append(extra_stroka_device)
         extra_extra_stroka_device = ''.join(list_stroka_device)
-        index_of_device = stroka.index('<- порт %указать порт%>') + len('<- порт %указать порт%>') + 1
+        index_of_device = stroka.index('<- порт %порт доступа на коммутаторе%>') + len('<- порт %порт доступа на коммутаторе%>') + 1
         stroka = stroka[:index_of_device] + extra_extra_stroka_device + ' \n' + stroka[index_of_device:]
     if selected_ono[0][-2].startswith('CSW'):
         old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
@@ -2627,10 +2627,10 @@ def head(request, trID):
         if (selected_ono[0][-2].startswith('SW') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('IAS') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('AR') and counter_exist_line > 1):
             pass
         else:
-            hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
+            hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
     else:
         static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'c клиентом организован L2-стык.'
-        hidden_vars['- порт %указать порт%'] = '- порт %указать порт%'
+        hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
         counter_exist_line = 0
         session_tr_id.update({'stick': True})
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
@@ -3925,8 +3925,8 @@ def static_formset(request):
 -----------------------------------------------------------------------------------
 
 %ОИПМ/ОИПД% проведение работ.
-- Организовать медную линию связи от %указать узел связи% до клиентcкого оборудования.
-- Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%."""
+- Организовать медную линию связи от %узел связи% до клиентcкого оборудования.
+- Подключить организованную линию для клиента в коммутатор %название коммутатора%, порт задействовать %порт доступа на коммутаторе%."""
 
     TemplatesStaticFormSet = formset_factory(TemplatesStaticForm, extra=4)
     if request.method == 'POST':
@@ -3936,7 +3936,7 @@ def static_formset(request):
             data = formset.cleaned_data
             print('!!!!!!!!dataresources_formset')
             print(data)
-            static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
+            static_vav = ['ОИПМ/ОИПД', 'узел связи', 'название коммутатора', 'порт доступа на коммутаторе']
             selected_ono = []
             unselected_ono = []
             static_vars = {}
@@ -3951,9 +3951,9 @@ def static_formset(request):
         -----------------------------------------------------------------------------------
 
         %ОИПМ/ОИПД% проведение работ.
-        - Организовать медную линию связи от %указать узел связи% до клиентcкого оборудования.
-        - Подключить организованную линию для клиента в коммутатор %указать название коммутатора%, порт задействовать %указать порт коммутатора%."""
-        static_vav = ['ОИПМ/ОИПД', 'указать узел связи', 'указать название коммутатора', 'указать порт коммутатора']
+        - Организовать медную линию связи от %узел связи% до клиентcкого оборудования.
+        - Подключить организованную линию для клиента в коммутатор %название коммутатора%, порт задействовать %порт доступа на коммутаторе%."""
+        static_vav = ['ОИПМ/ОИПД', 'узел связи', 'название коммутатора', 'порт доступа на коммутаторе']
         formset = TemplatesStaticFormSet()
         context = {
             'ono_for_formset': static_vav,
