@@ -1647,7 +1647,8 @@ def cks(request, trID):
             exist_service = cksform.cleaned_data['exist_service']
             session_tr_id = request.session[str(trID)]
             if type_cks and type_cks == 'trunk':
-                session_tr_id.update({'counter_line_services': 1})
+                session_tr_id.update({'counter_line_services_initial': 1})
+
             all_cks_in_tr = session_tr_id.get('all_cks_in_tr') if session_tr_id.get('all_cks_in_tr') else dict()
             service = session_tr_id.get('current_service')
             tag_service = session_tr_id.get('tag_service')
@@ -1692,7 +1693,7 @@ def shpd(request, trID):
             exist_service = shpdform.cleaned_data['exist_service']
             session_tr_id = request.session[str(trID)]
             if type_shpd == 'trunk':
-                session_tr_id.update({'counter_line_services': 1})
+                session_tr_id.update({'counter_line_services_initial': 1})
 
             all_shpd_in_tr = session_tr_id.get('all_shpd_in_tr') if session_tr_id.get('all_shpd_in_tr') else dict()
             service = session_tr_id.get('current_service')
@@ -1739,7 +1740,8 @@ def portvk(request, trID):
             exist_service = portvkform.cleaned_data['exist_service']
             session_tr_id = request.session[str(trID)]
             if type_portvk == 'trunk':
-                session_tr_id.update({'counter_line_services': 1})
+                session_tr_id.update({'counter_line_services_initial': 1})
+
             all_portvk_in_tr = session_tr_id.get('all_portvk_in_tr') if session_tr_id.get('all_portvk_in_tr') else dict()
             service = session_tr_id.get('current_service')
             all_portvk_in_tr.update({service:{'type_vk': type_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk,
@@ -1793,7 +1795,8 @@ def portvm(request, trID):
             exist_service_vm = portvmform.cleaned_data['exist_service_vm']
             session_tr_id = request.session[str(trID)]
             if type_portvm == 'trunk':
-                session_tr_id.update({'counter_line_services': 1})
+                session_tr_id.update({'counter_line_services_initial': 1})
+
             session_tr_id.update({'policer_vm': policer_vm, 'type_vm': type_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
                                   'type_portvm': type_portvm, 'exist_service_vm': exist_service_vm})
             tag_service = session_tr_id.get('tag_service')

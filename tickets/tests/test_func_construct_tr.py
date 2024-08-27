@@ -2454,6 +2454,26 @@ COPPER_ONE_SHPD_TRUNK_EXPECTED_ORTR = [TEMPLATE_COPPER, TEMPLATE_NEW_SHPD_30_TRU
 COPPER_ONE_SHPD_TRUNK_EXPECTED_OTC = None
 
 
+COPPER_TWO_SHPD_TRUNK = copy(INITIAL)
+COPPER_TWO_SHPD_TRUNK.update({
+    'services_plus_desc': ['Интернет, блок Адресов Сети Интернет 10 Мбит/с ', 'Интернет, блок Адресов Сети Интернет 10 Мбит/с  '],
+    'all_shpd_in_tr': {'Интернет, блок Адресов Сети Интернет 10 Мбит/с ': {'router_shpd': False, 'type_shpd': 'trunk', 'exist_service': ''},
+                       'Интернет, блок Адресов Сети Интернет 10 Мбит/с  ': {'router_shpd': False, 'type_shpd': 'trunk', 'exist_service': ''}},
+})
+COPPER_TWO_SHPD_TRUNK_EXPECTED_ORTR = [TEMPLATE_COPPER, TEMPLATE_NEW_SHPD_30_TRUNK, TEMPLATE_NEW_SHPD_30_TRUNK]
+COPPER_TWO_SHPD_TRUNK_EXPECTED_OTC = None
+
+
+COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK = copy(INITIAL)
+COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK.update({
+    'services_plus_desc': ['Интернет, блок Адресов Сети Интернет 10 Мбит/с ', 'Интернет, блок Адресов Сети Интернет 10 Мбит/с  '],
+    'all_shpd_in_tr': {'Интернет, блок Адресов Сети Интернет 10 Мбит/с ': {'router_shpd': False, 'type_shpd': 'access', 'exist_service': ''},
+                       'Интернет, блок Адресов Сети Интернет 10 Мбит/с  ': {'router_shpd': False, 'type_shpd': 'trunk', 'exist_service': ''}},
+})
+COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK_EXPECTED_ORTR = [TEMPLATE_COPPER, TEMPLATE_NEW_SHPD_30_ACCESS, TEMPLATE_NEW_SHPD_30_TRUNK]
+COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK_EXPECTED_OTC = None
+
+
 SHPD_TRUNK_TURNOFF = copy(INITIAL)
 SHPD_TRUNK_TURNOFF.update({
     'services_plus_desc': ['Интернет, блок Адресов Сети Интернет 10 мбит /30'],
@@ -4304,6 +4324,8 @@ EXIST_PPS_REPLACE_KAD_EXPECTED_OTC = None
 parametrs = [
     ('COPPER_ONE_SHPD', COPPER_ONE_SHPD, COPPER_ONE_SHPD_EXPECTED_ORTR, COPPER_ONE_SHPD_EXPECTED_OTC),
     ('COPPER_ONE_SHPD_TRUNK', COPPER_ONE_SHPD_TRUNK, COPPER_ONE_SHPD_TRUNK_EXPECTED_ORTR, COPPER_ONE_SHPD_TRUNK_EXPECTED_OTC),
+    ('COPPER_TWO_SHPD_TRUNK', COPPER_TWO_SHPD_TRUNK, COPPER_TWO_SHPD_TRUNK_EXPECTED_ORTR, COPPER_TWO_SHPD_TRUNK_EXPECTED_OTC),
+    ('COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK', COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK, COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK_EXPECTED_ORTR, COPPER_ONE_SHPD_ACCESS_ONE_SHPD_TRUNK_EXPECTED_OTC),
     ('SHPD_TRUNK_TURNOFF', SHPD_TRUNK_TURNOFF, SHPD_TRUNK_TURNOFF_EXPECTED_ORTR, SHPD_TRUNK_TURNOFF_EXPECTED_OTC),
     ('VOLS_ONE_SHPD', VOLS_ONE_SHPD, VOLS_ONE_SHPD_EXPECTED_ORTR, VOLS_ONE_SHPD_EXPECTED_OTC),
     ('VOLS_TURNOFF_ONE_SHPD', VOLS_TURNOFF_ONE_SHPD, VOLS_TURNOFF_ONE_SHPD_EXPECTED_ORTR, VOLS_TURNOFF_ONE_SHPD_EXPECTED_OTC),

@@ -782,7 +782,7 @@ def splice_services(services):
                 else:
                     splice[serv] = service
             elif not [i for i in ['Телефон', 'ЛВС', 'HotSpot', 'Видеонаблюдение', 'iTV'] if service.startswith(i)]:
-                splice[f'{service}_{counter}'] = service
+                splice[f'{service}_{counter}'] = service + ' '*counter
     return list(splice.values())
 
 
