@@ -1290,7 +1290,7 @@ def send_to_spp(request, trID):
 
 
 def hotspot(request, trID):
-    """Данный метод отображает html-страничку c формой для заполнения данных по услуге Хот-спот"""
+    """Данный метод отображает html-страничку c формой для заполнения данных по услуге Хот-Спот"""
     if request.method == 'POST':
         hotspotform = HotspotForm(request.POST)
         if hotspotform.is_valid():
@@ -2505,12 +2505,12 @@ def head(request, trID):
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
                     if switch_config:
                         service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
-                        extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                        extra_stroka_main_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
                     else:
-                        extra_stroka_main_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                        extra_stroka_main_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('Хот-спот')
-                    readable_services = _readable(curr_value, readable_services, 'Хот-спот', i[-4])
+                    curr_value = readable_services.get('Хот-Спот')
+                    readable_services = _readable(curr_value, readable_services, 'Хот-Спот', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     if switch_config:
@@ -2557,7 +2557,7 @@ def head(request, trID):
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_other_client_service = f'- услугу Хот-спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
@@ -2695,7 +2695,7 @@ def project_tr_exist_cl(request, trID):
             type_pass.append('Перенос Видеонаблюдение')
             tag_service.append({'pass_video': None})
 
-        spd_services = ['Интернет', 'Порт ВЛС', 'Порт ВМ', 'ЦКС', 'Хот-спот']
+        spd_services = ['Интернет', 'Порт ВЛС', 'Порт ВМ', 'ЦКС', 'Хот-Спот']
         if [service for service in pass_job_services if any(service.startswith(serv) for serv in spd_services)]:
             type_pass.append('Перенос, СПД')
             tag_service.append({'pass_serv': None})

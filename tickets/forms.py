@@ -65,9 +65,9 @@ class LocalForm(forms.Form):
 
 
 class HotspotForm(forms.Form):
-    types = [('Хот-спот Стандарт', 'Хот-спот Стандарт'),
-             ('Хот-спот Премиум', 'Хот-спот Премиум'),
-             ('Хот-спот Премиум +', 'Хот-спот Премиум +')]
+    types = [('Хот-Спот Стандарт', 'Хот-Спот Стандарт'),
+             ('Хот-Спот Премиум', 'Хот-Спот Премиум'),
+             ('Хот-Спот Премиум +', 'Хот-Спот Премиум +')]
     type_hotspot = forms.CharField(
         widget=forms.Select(choices=types, attrs={'class': 'form-control transceiver'}))
     exist_hotspot_client = forms.BooleanField(label='Существующий клиент', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))

@@ -126,7 +126,7 @@ class OuzpViewsTestCase(TestCase):
         self.assertTemplateUsed(response, 'tickets/hotspot.html')
 
     def test_call_view_hotspot_method_post(self):
-        data = {'type_hotspot': 'Хот-спот Стандарт', 'exist_hotspot_client': False, 'hotspot_local_wifi': False,
+        data = {'type_hotspot': 'Хот-Спот Стандарт', 'exist_hotspot_client': False, 'hotspot_local_wifi': False,
                 'hotspot_points': 1, 'hotspot_users': 1}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'hotspot': 'HotSpot 1 точка хот-спот'}, {'shpd': 'Интернет, DHCP Next'}],

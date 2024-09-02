@@ -185,7 +185,7 @@ def append_change_log_shpd(session):
 
 
 
-def analyzer_vars(stroka, static_vars, hidden_vars):
+def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
     """Данный метод принимает строковую переменную, содержащую шаблон услуги со страницы
     Типовые блоки технического решения. Ищет в шаблоне блоки <> и сравнивает с аналогичными переменными из СПП.
     По средством доп. словаря формирует итоговый словарь содержащий блоки из СПП, которые
@@ -203,7 +203,7 @@ def analyzer_vars(stroka, static_vars, hidden_vars):
         if hidden_vars.get(i):
             stroka = stroka.replace('<{}>'.format(i), hidden_vars[i])
         else:
-            stroka = stroka.replace('<{}>'.format(i), '  ')
+            stroka = stroka.replace('<{}>'.format(i), '<>')
     regex_var_lines_in = '\[(.+?)\]'
     match_var_lines_in = re.finditer(regex_var_lines_in, stroka, flags=re.DOTALL)
     for i in match_var_lines_in:
@@ -212,15 +212,20 @@ def analyzer_vars(stroka, static_vars, hidden_vars):
         if hidden_vars.get(i):
             stroka = stroka.replace('[{}]'.format(i), i)
         else:
-            stroka = stroka.replace('[{}]'.format(i), '  ')
+            stroka = stroka.replace('[{}]'.format(i), '')
     if len(list_var_lines) > 0:
-        stroka = stroka.split('  \n')
-        stroka = ''.join(stroka)
-        stroka = stroka.replace('    ', ' ')
-        if '\n\n\n' in stroka:
-            stroka = stroka.replace('\n\n\n', '\n')
-        elif '\n \n \n \n' in stroka:
-            stroka = stroka.replace('\n \n \n \n', '\n\n')
+        stroka = stroka.replace('<>\n', '').replace('<>', '').replace('\n\n\n\n', '\n\n')
+
+    # блок заполнения повторяющихсся &&
+    regex_var_lines = '&(.+?)&'
+    match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
+    list_var_lines = [i.group(1) for i in match_var_lines]
+    for i in list_var_lines:
+        if multi_vars.get(i):
+            stroka = stroka.replace(f'&{i}&', '\n'.join(multi_vars[i]))
+        else:
+            if f'&{i}&\n' in stroka:
+                stroka = stroka.replace(f'&{i}&\n', '')
 
     # блок для заполнения %%
     ckb_vars = {}
@@ -236,8 +241,6 @@ def analyzer_vars(stroka, static_vars, hidden_vars):
     dynamic_vars.update(ckb_vars)
     for key in dynamic_vars.keys():
         stroka = stroka.replace('%{}%'.format(key), dynamic_vars[key])
-        stroka = stroka.replace(' .', '.')
-    stroka = ''.join([stroka[i] for i in range(len(stroka)) if i != len(stroka)-1 and not (stroka[i] == ' ' and stroka[i + 1] == ' ')])
     for i in [';', ',', ':', '.']:
         stroka = stroka.replace(' ' + i, i)
     return stroka
@@ -321,7 +324,7 @@ def get_service_name_from_service_plus_desc(services_plus_desc):
     elif services_plus_desc.startswith('Видеонаблюдение'):
         service = 'Видеонаблюдение'
     elif services_plus_desc.startswith('HotSpot'):
-        service = 'Хот-спот'
+        service = 'Хот-Спот'
     elif services_plus_desc.startswith('ЛВС'):
         service = 'ЛВС'
     return service
@@ -330,7 +333,7 @@ def get_service_name_from_service_plus_desc(services_plus_desc):
 
 def _tag_service_for_new_serv(services_plus_desc):
     """Данный метод принимает на входе список новых услуг и формирует последовательность url'ов услуг, по которым
-    необходимо пройти пользователю. Также определяет для услиги Хот-спот количество пользователей и принадлежность
+    необходимо пройти пользователю. Также определяет для услиги Хот-Спот количество пользователей и принадлежность
     к услуге премиум+"""
     tag_service = []
     for index_service in range(len(services_plus_desc)):

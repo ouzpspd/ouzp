@@ -288,11 +288,11 @@ class CopperFormView(CredentialMixin, FormView):
 #     def get_context_data(self, **kwargs):
 #         context = super().get_context_data(**kwargs)
 #         ticket_tr = get_object_or_404(OtpmTR, ticket_tr=self.kwargs['trID'])
-#         #services = [service for service in ticket_tr.services if ('Интернет' or 'Хот-спот') not in service]
+#         #services = [service for service in ticket_tr.services if ('Интернет' or 'Хот-Спот') not in service]
 #         services = {}
 #
 #
-#         tags_services = {'phone': 'Телефон', 'video': 'Видеонаблюдение', 'lvs': 'ЛВС', 'hotspot': 'Хот-спот'}
+#         tags_services = {'phone': 'Телефон', 'video': 'Видеонаблюдение', 'lvs': 'ЛВС', 'hotspot': 'Хот-Спот'}
 #         for key, value in tags_services.items():
 #             for service in ticket_tr.services:
 #                 if service.startswith(value):
