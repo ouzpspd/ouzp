@@ -169,26 +169,30 @@ def parsingByNodename(node_name, login, password):
                 clear_switch_id.append(match_switch_id[i])
             for i in clear_switch_id:
                 ports = {}
-                url_switch_id = 'https://cis.corp.itmh.ru/stu/Switch/Details/' + i
-                req_switch_id = requests.get(url_switch_id, verify=False, auth=HTTPBasicAuth(login, password))
-                switch_id = req_switch_id.content.decode('utf-8')
-
+                # Обработка AttributeError для обхода проблемы https://ctms.itmh.ru/browse/DEPIT3-5457
+                try:
+                    url_switch_id = 'https://cis.corp.itmh.ru/stu/Switch/Details/' + i
+                    req_switch_id = requests.get(url_switch_id, verify=False, auth=HTTPBasicAuth(login, password))
+                    switch_id = req_switch_id.content.decode('utf-8')
+                except AttributeError:
+                    switch_id = ''
                 regex_total_ports = 'for=\"TotalPorts\">([-+]?\d+)<'
                 match_total_ports = re.search(regex_total_ports, switch_id)
-                ports['Всего портов'] = match_total_ports.group(1)
+                ports['Всего портов'] = match_total_ports.group(1) if match_total_ports else ''
 
                 regex_client_ports = 'for=\"ClientCableUsedPorts\">([-+]?\d+)<'
                 match_client_ports = re.search(regex_client_ports, switch_id)
-                ports['Занятых клиентами'] = match_client_ports.group(1)
+                ports['Занятых клиентами'] = match_client_ports.group(1) if match_client_ports else ''
 
                 regex_link_ports = 'for=\"LinkUsedPorts\">([-+]?\d+)<'
                 match_link_ports = re.search(regex_link_ports, switch_id)
-                ports['Занятых линками'] = match_link_ports.group(1)
+                ports['Занятых линками'] = match_link_ports.group(1) if match_link_ports else ''
 
                 regex_avail_ports = 'for=\"AvailablePorts\">([-+]?\d+)<'
                 match_avail_ports = re.search(regex_avail_ports, switch_id)
-                ports['Доступные'] = match_avail_ports.group(1)
+                ports['Доступные'] = match_avail_ports.group(1) if match_avail_ports else ''
                 list_ports.append(ports)
+
 
                 configport_switch = {}
                 for page in range(1, 4):

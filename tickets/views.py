@@ -2465,7 +2465,7 @@ def head(request, trID):
                     '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -', '106 -',
                     '89 -', '138 -']
     service_shpd_bgp = ['BGP', 'bgp']
-    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
+    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh', '-vpls', 'vpls-', '4598-cks']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
     service_hotspot = ['hotspot']
     service_itv = ['itv']
@@ -2480,7 +2480,7 @@ def head(request, trID):
         if selected_ono[0][0] == i[0]:
             if i[2] == 'IP-адрес или подсеть':
                 if any(serv in i[-3] for serv in service_shpd_bgp) or '212.49.97.' in i[-4]:
-                    extra_stroka_main_client_service = f'- услугу "Подключение по BGP" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу "Подключение по BGP" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})'
                     if list_stroka_main_client_service:
                         for ind, main in enumerate(list_stroka_main_client_service):
                             if i[-1] in main:
@@ -2495,9 +2495,9 @@ def head(request, trID):
                 elif any(serv in i[-3] for serv in service_shpd):
                     if switch_config:
                         service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
-                        extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                        extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {service_ports})'
                     else:
-                        extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                        extra_stroka_main_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]})'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('"ШПД в интернет"')
                     readable_services = _readable(curr_value, readable_services, '"ШПД в интернет"', i[-4])
@@ -2505,9 +2505,9 @@ def head(request, trID):
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
                     if switch_config:
                         service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
-                        extra_stroka_main_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                        extra_stroka_main_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {service_ports})'
                     else:
-                        extra_stroka_main_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                        extra_stroka_main_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]})'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Хот-Спот')
                     readable_services = _readable(curr_value, readable_services, 'Хот-Спот', i[-4])
@@ -2515,22 +2515,22 @@ def head(request, trID):
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     if switch_config:
                         service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
-                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {service_ports})\n'
+                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {service_ports})'
                     else:
-                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})\n'
+                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Вебург.ТВ')
                     readable_services = _readable(curr_value, readable_services, 'Вебург.ТВ', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
-                    extra_stroka_main_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]})'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Порт ВЛС')
                     readable_services = _readable(curr_value, readable_services, 'Порт ВЛС', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() or serv in i[-4].lower() for serv in service_portvm):
-                    extra_stroka_main_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]})\n'
+                    extra_stroka_main_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]})'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
                     curr_value = readable_services.get('Порт ВМ')
                     readable_services = _readable(curr_value, readable_services, 'Порт ВМ', i[-4])
@@ -2545,7 +2545,7 @@ def head(request, trID):
                     if counter_stick == 5 and len(port_stick) == 1:
                         stick = True
                         break
-                extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})\n'
+                extra_stroka_main_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]})'
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 curr_value = readable_services.get('ЦКС')
                 readable_services = _readable(curr_value, readable_services, 'ЦКС', i[-4])
@@ -2553,36 +2553,36 @@ def head(request, trID):
         else:
             if i[2] == 'IP-адрес или подсеть':
                 if any(serv in i[-3] for serv in service_shpd):
-                    extra_stroka_other_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу "ШПД в интернет" c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_hotspot):
-                    extra_stroka_other_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Хот-Спот c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_other_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
-                    extra_stroka_other_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Порт ВЛС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_portvm):
-                    extra_stroka_other_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                    extra_stroka_other_client_service = f'- услугу Порт ВМ "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Etherline':
-                extra_stroka_other_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}\n'
+                extra_stroka_other_client_service = f'- услугу ЦКС "{i[4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                 list_stroka_other_client_service.append(extra_stroka_other_client_service)
                 counter_exist_line.add(f'{i[-2]} {i[-1]}')
     if not stick:
         if cameras:
-            extra_stroka_main_client_service = f'- услугу Видеонаблюдение:\n'
+            extra_stroka_main_client_service = f'- услугу Видеонаблюдение:'
             list_stroka_main_client_service.append(extra_stroka_main_client_service)
             for camera in cameras:
-                extra_stroka_main_client_service = f"""-- "{camera.get('title')}" ({camera.get('summary')})\n"""
+                extra_stroka_main_client_service = f"""-- "{camera.get('title')}" ({camera.get('summary')})"""
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
         if vgw_chains:
             old_name_model_vgws = []
@@ -2596,17 +2596,18 @@ def head(request, trID):
                     counter_exist_line.add(f'{vgw_uplink}')
                     readable_services.update({'"Телефония"': 'через IP-транк'})
                 else:
-                    extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}\n'
+                    extra_stroka_main_client_service = f'- услугу "Телефония" через тел. шлюз {model} {name} ({vgw_uplink}). Место установки: {room}'
                     old_name_model_vgws.append(f'{model} {name}')
                     readable_services.update({'"Телефония"': None})
                 list_stroka_main_client_service.append(extra_stroka_main_client_service)
                 readable_services.update({'"Телефония"': None})
             if old_name_model_vgws:
                 session_tr_id.update({'old_name_model_vgws': ', '.join(old_name_model_vgws)})
-        extra_extra_stroka_main_client_service = ''.join(list_stroka_main_client_service)
-        extra_extra_stroka_other_client_service = ''.join(list_stroka_other_client_service)
-        index_of_service = stroka.index('В данной точке %клиент потребляет/c клиентом организован L2-стык%') + len('В данной точке %клиент потребляет/c клиентом организован L2-стык%')+1
-        stroka = stroka[:index_of_service] + extra_extra_stroka_main_client_service + '\n' + extra_extra_stroka_other_client_service + stroka[index_of_service:]
+
+        hidden_vars['В данной точке клиент потребляет:\n&%ресурс на договоре%&'] = 'В данной точке клиент потребляет:\n&%ресурс на договоре%&'
+        rep_string = {}
+        rep_string['contract_resource'] = '%ресурс на договоре%'
+        multi_vars = {rep_string['contract_resource']: list_stroka_main_client_service + list_stroka_other_client_service}
         if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
             if waste_vgw:
                 list_stroka_other_vgw =[]
@@ -2626,17 +2627,17 @@ def head(request, trID):
                 extra_stroka_other_vgw = ''.join(list_stroka_other_vgw)
                 stroka = stroka + '\n' + extra_stroka_other_vgw
         counter_exist_line = len(counter_exist_line)
-        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'клиент потребляет:'
         if (selected_ono[0][-2].startswith('SW') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('IAS') and counter_exist_line > 1) or (selected_ono[0][-2].startswith('AR') and counter_exist_line > 1):
             pass
         else:
             hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
     else:
-        static_vars['клиент потребляет/c клиентом организован L2-стык'] = 'c клиентом организован L2-стык.'
+        multi_vars = {}
+        hidden_vars['В данной точке c клиентом организован L2-стык'] = 'В данной точке c клиентом организован L2-стык'
         hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
         counter_exist_line = 0
         session_tr_id.update({'stick': True})
-    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars, multi_vars))
     result_services = ''.join(result_services)
     rev_result_services = result_services[::-1]
     index_of_head = rev_result_services.index('''-----------------------------------------------------------------------------------\n''')

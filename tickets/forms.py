@@ -301,7 +301,7 @@ class VideoForm(forms.Form):
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
     voice = forms.BooleanField(label='Запись звука', required=False,
                                widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30')]
+    type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30'), ('90', '90')]
     deep_archive = forms.CharField(label='Глубина архива камеры',
                                    widget=forms.Select(choices=type_deep_archive, attrs={'class': 'form-control'}))
     camera_place_one = forms.CharField(label='Место установки Камеры №1', required=False,
@@ -440,8 +440,11 @@ class ChangeParamsForm(forms.Form):
                                 label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
     routed_vrf = forms.CharField(max_length=50, required=False,
                                  label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
-                  ('существующей родительской подсети', 'Существующая родительская подсеть'),
+    # types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
+    #               ('существующей родительской подсети', 'Существующая родительская подсеть'),
+    #               ]
+    types_mask = [(True, 'Новая родительская подсеть'),
+                  (False, 'Существующая родительская подсеть'),
                   ]
     parent_subnet = forms.CharField(label='Родительская сеть', required=False,
                                widget=forms.Select(choices=types_mask, attrs={'class': 'form-control'}))

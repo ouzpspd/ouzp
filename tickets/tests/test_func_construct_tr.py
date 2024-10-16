@@ -855,7 +855,7 @@ TEMPLATE_NEW_CKS_TRUNK_TURNOFF = """Организация услуги ЦКС E
  
 ОНИТС СПД проведение работ:
 - По согласованию с клиентом настроить порт подключения клиента:
--- Существующую услугу 11.11.11.11/30 выдать trunk'ом;
+-- Существующую услугу 11.11.11.11/30 выдать tag'ом;
 -- Vlan для услуги ЦКС 100 Мбит/с "Мамина-Сибиряка, д.101 - Евгения Савкова, д.35/2, оф.467" выдать в порт подключения tag'ом.
 -- Ограничить скорость и настроить маркировку трафика для ЦКС полисером Subinterface."""
 
@@ -1612,7 +1612,7 @@ TEMPLATE_CHANGE_SCHEMA_SHPD = """Изменение существующей cх
 -- Актуализировать информацию в системах учета."""
 
 
-TEMPLATE_REPLACE_IP_ADDRESS = """Замена IP адреса с маской /30 на подсеть с маской /30
+TEMPLATE_REPLACE_IP_ADDRESS = """Замена подсети connected для ШПД.
 -----------------------------------------------------------------------------------
 
 МКО:
@@ -1623,7 +1623,29 @@ TEMPLATE_REPLACE_IP_ADDRESS = """Замена IP адреса с маской /3
 
 
 ОНИТС СПД подготовиться к работам:
-- По заявке в ИС Cordis выделить подсеть с маской /30 из новой родительской подсети.
+- По заявке в ИС Cordis выделить подсеть с маской /30.
+
+ОНИТС СПД проведение работ:
+- По согласованию с клиентом сменить реквизиты на новую подсеть с маской /30;
+- Убедиться в восстановлении связи у клиента.
+- После смены реквизитов:
+-- Перенести ресурс 11.11.11.11/30 на договор К-76884 (Договор для ip-адресов ЧК);
+-- Актуализировать номер договора в КБЗ на странице учета адресации;
+-- Актуализировать информацию в системах учета."""
+
+
+TEMPLATE_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET = """Замена подсети connected для ШПД.
+-----------------------------------------------------------------------------------
+
+МКО:
+- Согласовать с клиентом:
+-- Необходимость смены реквизитов;
+-- Необходимость перерыва связи на время проведения работ.
+- Создать заявку на ОНИТС СПД для смены реквизитов.
+
+
+ОНИТС СПД подготовиться к работам:
+- По заявке в ИС Cordis выделить подсеть с маской /30 из новой родительской сети.
 
 ОНИТС СПД проведение работ:
 - По согласованию с клиентом сменить реквизиты на новую подсеть с маской /30;
@@ -1685,7 +1707,7 @@ TEMPLATE_EXTRA_IPV6_SUBNET = """Предоставление возможнос�
 
 
 
-TEMPLATE_REPLACE_CONNECTED_SUBNET = """Замена существующей connected подсети на connected подсеть с большей маской
+TEMPLATE_REPLACE_CONNECTED_SUBNET = """Замена подсети connected.
 -----------------------------------------------------------------------------------
 
 МКО:
@@ -3734,12 +3756,34 @@ SHPD_REPLACE_IP_ADDRESS.update({
     'new_mask': '',
     'routed_ip': '',
     'routed_vrf': '',
-    'parent_subnet': 'новой родительской подсети',
+    'parent_subnet': False,
     'ip_ban': True
 
 })
 SHPD_REPLACE_IP_ADDRESS_EXPECTED_ORTR = [TEMPLATE_REPLACE_IP_ADDRESS]
 SHPD_REPLACE_IP_ADDRESS_EXPECTED_OTC = None
+
+
+SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET = copy(INITIAL)
+SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET.update({
+    'con_point': 'Сущ. точка',
+    'selected_ono': [['00417394', 'Индивидуальный предприниматель Гладков Игорь Александрович', 'IP-адрес или подсеть', 'Екатеринбург, Московская, д. 75', '11.11.11.11/30', 'AR13-23.ekb - 1204 -  CC-00417394-Inet', 'SW364-AR139-27.ekb', 'Ethernet1/1']],
+    'new_job_services': [],
+    'pass_job_services': [],
+    'change_job_services': ['Интернет, блок Адресов Сети Интернет перенос /30'],
+    'type_pass': ['Изменение, не СПД'],
+    'types_change_service': [{'Замена IP': {'shpd': 'Интернет, блок Адресов Сети Интернет перенос /30'}}],
+    'new_mask': '',
+    'routed_ip': '',
+    'routed_vrf': '',
+    'parent_subnet': True,
+    'ip_ban': True
+
+})
+SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET_EXPECTED_ORTR = [TEMPLATE_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET]
+SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET_EXPECTED_OTC = None
+
+
 
 
 SERVICE_REPLACE_FROM_SHPD_TO_CKS_ACCESS = copy(INITIAL)
@@ -4375,6 +4419,7 @@ parametrs = [
     ('CSW_PASSAGE_FROM_COPPER_TO_WIRELESS_IN_NEW_KAD_WITH_CHANGE_AGGR', CSW_PASSAGE_FROM_COPPER_TO_WIRELESS_IN_NEW_KAD_WITH_CHANGE_AGGR, CSW_PASSAGE_FROM_COPPER_TO_WIRELESS_IN_NEW_KAD_WITH_CHANGE_AGGR_EXPECTED_ORTR, CSW_PASSAGE_FROM_COPPER_TO_WIRELESS_IN_NEW_KAD_WITH_CHANGE_AGGR_EXPECTED_OTC),
     ('SHPD_CHANGE_SCHEMA', SHPD_CHANGE_SCHEMA, SHPD_CHANGE_SCHEMA_EXPECTED_ORTR, SHPD_CHANGE_SCHEMA_EXPECTED_OTC),
     ('SHPD_REPLACE_IP_ADDRESS', SHPD_REPLACE_IP_ADDRESS, SHPD_REPLACE_IP_ADDRESS_EXPECTED_ORTR, SHPD_REPLACE_IP_ADDRESS_EXPECTED_OTC),
+    ('SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET', SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET, SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET_EXPECTED_ORTR, SHPD_REPLACE_IP_ADDRESS_NEW_PARENT_SUBNET_EXPECTED_OTC),
     ('SHPD_EXTRA_ROUTED_SUBNET', SHPD_EXTRA_ROUTED_SUBNET, SHPD_EXTRA_ROUTED_SUBNET_EXPECTED_ORTR, SHPD_EXTRA_ROUTED_SUBNET_EXPECTED_OTC),
     ('SHPD_REPLACE_CONNECTED_SUBNET', SHPD_REPLACE_CONNECTED_SUBNET, SHPD_REPLACE_CONNECTED_SUBNET_EXPECTED_ORTR, SHPD_REPLACE_CONNECTED_SUBNET_EXPECTED_OTC),
     ('SHPD_EXTRA_IPV6_SUBNET', SHPD_EXTRA_IPV6_SUBNET, SHPD_EXTRA_IPV6_SUBNET_EXPECTED_ORTR, SHPD_EXTRA_IPV6_SUBNET_EXPECTED_OTC),
@@ -4431,7 +4476,7 @@ def custom_name_func(testcase_func, param_num, param):
 class OuzpConstructTRTestCase(TestCase):
     def setUp(self):
         self.templates = ckb_parse(TEST_CORDIS_USER, TEST_CORDIS_PASSWORD)
-        #self.maxDiff = None
+        self.maxDiff = None
 
     @parameterized.expand([
         params for params in parametrs
