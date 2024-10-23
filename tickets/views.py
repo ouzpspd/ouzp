@@ -2462,7 +2462,7 @@ def head(request, trID):
                     '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -', '106 -',
                     '89 -', '138 -']
     service_shpd_bgp = ['BGP', 'bgp']
-    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh']
+    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh', 'vpls']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
     service_hotspot = ['hotspot']
     service_itv = ['itv']
