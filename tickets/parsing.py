@@ -1121,13 +1121,13 @@ class PprCheck:
             })
 
     def check_stik_getting_services_from_parther(self):
-        service = 'Физический стык для получения сервисов от партнера'
+        service = 'Физический стык для получения сервисов от'
         victims = [v for v in self.victims if service in v.resource_name]
         if victims:
             self.data.update({
                 'table_resource_stik_getting_services_from_parther': {
                     'set': victims,
-                    'messages': 'Обнаружен сервис <b>'+service+'</b>.<ul><li>Необходимо привлечь <b>DIR.I8.3.3</b> для проектирования ТР по вводу/выводу из эксплуатации стыков'
+                    'messages': 'Обнаружен сервис <b>'+service+' партнера</b>.<ul><li>Необходимо привлечь <b>DIR.I8.3.3</b> для проектирования ТР по вводу/выводу из эксплуатации стыков'
                 }
             })
 
