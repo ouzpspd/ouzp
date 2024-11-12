@@ -104,6 +104,10 @@ LOGGING = {
         },
     },
     'loggers': {
+        "tickets.views": {
+                "handlers": ["file"],
+                "level": "WARNING",
+            },
         'django.request': {
             'handlers': ['file'],
             'level': 'WARNING',

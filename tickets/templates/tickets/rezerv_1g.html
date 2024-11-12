@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<html style="font-size:0.85rem">
+
+<style>
+    .dropdown-content {
+        display: none;
+    }
+    .dropdown-btn {
+        cursor: pointer;
+        color: blue;
+        text-decoration: underline;
+    }
+</style>
+
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Анализ портов</h5>
+  <div class="card-body">
+    <div class="container mb-4">
+<div class="row">
+  <div class="col-7">
+    <div class="d-flex">
+      <textarea class="form-control mt-3 mr-4" rows="7" id="text_rezerv" placeholder="Введите IP АМ/КПА (разделять ;)"></textarea>
+      <div class="d-flex flex-column mt-3 col-6">
+        <button class="btn btn-info mb-4" id="add_rezerv">
+            <span class="" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Lo...</span>
+            Подписать Rezerv_1G_planning
+        </button>
+        <button class="btn btn-info mb-4" id="remove_rezerv">
+            <span class="" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Lo...</span>
+            Снять Rezerv_1G_planning
+        </button>
+        <button class="btn btn-info mb-4" id="get_sw">
+            <span class="" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Lo...</span>
+            Посчитать 1G/10G
+        </button>
+        <button class="btn btn-info" id="excel">
+            <span class="" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Lo...</span>
+            Выгрузить результаты в excel
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+  </div>
+</div>
+</div>
+
+<div class="container">
+<table class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th scope="col"></th>
+            <th scope="col">Коммутатор</th>
+          <th scope="col">Rezerv 1G</th>
+            <th scope="col">Rezerv 1G planning</th>
+          <th scope="col">Rezerv DIR.I2.4.4</th>
+            <th scope="col">1G без деск</th>
+            <th scope="col">10G без деск</th>
+            <th scope="col">1G прочие резервы</th>
+            <th scope="col">10G прочие резервы</th>
+            <th scope="col">1G с деск без линка</th>
+            <th scope="col">10G с деск без линка</th>
+        </tr>
+      </thead>
+    <tbody id="rezerv">
+    </tbody>
+</table>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<script>
+function toggleDropdown(button) {
+
+    const content = button.nextElementSibling;
+    const cell = button.parentElement;
+    const isHidden = content.style.display === 'none';
+    document.querySelectorAll('.dropdown-content').forEach(content => {
+    content.style.display = 'none';
+    content.previousElementSibling.textContent = 'Показать';
+    content.parentElement.style.minWidth = '';
+    });
+
+    if (isHidden) {
+        content.style.display = 'block';
+        button.textContent = 'Скрыть';
+
+        let maxWidth = Array.from(content.children).reduce((max, item) => {
+            return Math.max(max, item.textContent.length);
+        }, 0);
+        maxWidth = maxWidth < 50 ? maxWidth : 50;
+
+        cell.style.minWidth = `${maxWidth}ch`;
+    } else {
+        content.style.display = 'none';
+        button.textContent = 'Показать';
+        cell.style.minWidth = '';
+    }
+
+}
+
+function objToString (obj) {
+    let str = '';
+    for (const [sw, val] of Object.entries(obj)) {
+        str += `\n${sw}:\n`;
+        for (const [k, v] of Object.entries(val)) {
+            if (v && k == "error_ports") {
+                str += `Внимание! Не запланировано изменены: ${v}\n`
+            }
+            else if (v && k == "changed_ports") {
+                str += `Успешно изменены: ${v}\n`;
+            }
+        }
+    }
+    return str;
+}
+
+
+$(function () {
+
+	$('#add_rezerv').click(function () {
+          $(this).find('span').addClass('spinner-border spinner-border-sm');
+          $(this).prop('disabled', true);
+
+          var ip_adresses = $("#text_rezerv").val();
+          var url_mask = "{% url 'add_rezerv_1g_switch_ports' search_ip=12345 %}".replace(/12345/, ip_adresses.toString());
+          // создаем AJAX-вызов
+          $.ajax({
+              url: url_mask,
+              // если успешно, то
+              success: function (response) {
+                  $('#add_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
+                  $('#add_rezerv').prop('disabled', false);
+                  if (response.error) {
+                      alert(response.error);
+                  }
+                  else {
+                        const resp = objToString(response);
+                        alert(`Резервирование выполнено.\n${resp}`);
+                  }
+              },
+              error: function (response) {
+                  $('#add_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
+                  alert("Что-то пошло не так.");
+                  $('#add_rezerv').prop('disabled', false);
+              }
+          });
+          return false;
+        });
+});
+
+$(function () {
+	$('#remove_rezerv').click(function () {
+      $(this).find('span').addClass('spinner-border spinner-border-sm');
+      $(this).prop('disabled', true);
+
+      var ip_adresses = $("#text_rezerv").val();
+      var url_mask = "{% url 'remove_rezerv_1g_switch_ports' search_ip=12345 %}".replace(/12345/, ip_adresses.toString());
+      // создаем AJAX-вызов
+      $.ajax({
+          url: url_mask,
+          // если успешно, то
+          success: function (response) {
+              $('#remove_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
+              $('#remove_rezerv').prop('disabled', false);
+              if (response.error) {
+                  alert(response.error);
+              }
+              else {
+                    const resp = objToString(response);
+                    alert(`Снятие резерва выполнено.\n${resp}`);
+              }
+          },
+          error: function (response) {
+              $('#remove_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
+              alert("Что-то пошло не так.");
+              $('#remove_rezerv').prop('disabled', false);
+          }
+      });
+      return false;
+    });
+});
+
+
+function getTable() {
+    let data = [];
+    let columns = [
+        "Коммутатор", "Rezerv_1G", "Rezerv_1G_planning", "Rezerv_DIR.I2.4.4",
+        "Количество 1G портов без дескрипшена", "Количество 10G портов без дескрипшена",
+        "Количество 1G портов прочие резервы", "1G прочие резервы", "Количество 10G портов прочие резервы",
+        "10G прочие резервы", "Количество 1G портов с дескрипшеном без линка", "1G с дескрипшеном без линка",
+        "Количество 10G портов с дескрипшеном без линка", "10G с дескрипшеном без линка"
+    ]
+    data.push(columns)
+
+    $('#rezerv tr').each(function() {
+        let row = [];
+        let cells = $(this).find('td');
+
+        row.push($(cells[0]).text().trim());
+        row.push(Number($(cells[1]).text().trim()));
+        row.push(Number($(cells[2]).text().trim()));
+        row.push(Number($(cells[3]).text().trim()));
+        row.push(Number($(cells[4]).text().trim()));
+        row.push(Number($(cells[5]).text().trim()));
+
+        let cell_6 = $(cells[6]).text().trim().split('\n');
+        row.push(Number(cell_6[0]));
+        row.push(cell_6.slice(4).map((x) => x.trim()).filter(Boolean).join('\n'));
+
+        let cell_7 = $(cells[7]).text().trim().split('\n');
+        row.push(Number(cell_7[0]));
+        row.push(cell_7.slice(4).map((x) => x.trim()).filter(Boolean).join('\n'));
+
+        let cell_8 = $(cells[8]).text().trim().split('\n');
+        row.push(Number(cell_8[0]));
+        row.push(cell_8.slice(4).map((x) => x.trim()).filter(Boolean).join('\n'));
+
+        let cell_9 = $(cells[9]).text().trim().split('\n');
+        row.push(Number(cell_9[0]));
+        row.push(cell_9.slice(4).map((x) => x.trim()).filter(Boolean).join('\n'));
+        data.push(row);
+    });
+    return data;
+}
+
+$(function () {
+    $('#excel').click(function() {
+        let tableData = getTable();
+        let wb = XLSX.utils.book_new();
+        let ws = XLSX.utils.aoa_to_sheet(tableData);
+        XLSX.utils.book_append_sheet(wb, ws, "ports");
+        XLSX.writeFile(wb, "report_switch_ports.xlsx");
+    });
+});
+
+
+$(function () {
+
+	$('#get_sw').click(function () {
+          $(this).find('span').addClass('spinner-border spinner-border-sm');
+          $(this).prop('disabled', true);
+
+          var ip_adresses = $("#text_rezerv").val();
+          var url_mask = "{% url 'analysis_switch_ports' search_ip=12345 %}".replace(/12345/, ip_adresses.toString());
+          // создаем AJAX-вызов
+          $.ajax({
+
+              url: url_mask,
+              // если успешно, то
+              success: function (response) {
+                  $('#get_sw').find('span').removeClass('spinner-border spinner-border-sm');
+                  $('#get_sw').prop('disabled', false);
+                  if (response.error) {
+                      alert(response.error);
+                  }
+
+                  else {
+                        $("#rezerv").empty();
+
+                        let counter = 1
+                        for (csw in response) {
+
+                        $("#rezerv").append(`
+                        <tr>
+                            <th scope="row">${counter}</th>
+                            <td>${csw}</td>
+                            <td>${response[csw].rezerv_1g}</td>
+                            <td>${response[csw].rezerv_1g_planning}</td>
+                            <td>${response[csw].rezerv_dir2_4_4}</td>
+                            <td>${response[csw].no_description_1g}</td>
+                            <td>${response[csw].no_description_10g}</td>
+                            <td>
+                                <div>
+                                    ${response[csw].other_rezerv_1g.length}
+                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                                    <div class="dropdown-content" style="display:none" id="other_rezerv_1g_${counter}">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    ${response[csw].other_rezerv_10g.length}
+                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                                    <div class="dropdown-content" style="display:none" id="other_rezerv_10g_${counter}">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    ${response[csw].with_desc_no_link_1g.length}
+                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                                    <div class="dropdown-content" style="display:none" id="with_desc_no_link_1g_${counter}">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    ${response[csw].with_desc_no_link_10g.length}
+                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                                    <div class="dropdown-content" style="display:none" id="with_desc_no_link_10g_${counter}">
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        `);
+
+                        for (col of ["other_rezerv_1g", "other_rezerv_10g", "with_desc_no_link_1g", "with_desc_no_link_10g"]) {
+                        for (val of response[csw][col]) {
+                         $("#"+col+"_"+counter).append(`
+                         <div>${val}</div>
+                         `);
+                         }
+                        }
+                        counter += 1
+                        }
+                    }
+            },
+            error: function (response) {
+                  $('#get_sw').find('span').removeClass('spinner-border spinner-border-sm');
+                  alert("Что-то пошло не так.");
+                  $('#get_sw').prop('disabled', false);
+
+              }
+          });
+          return false;
+        });
+});
+</script>
+
+{% endblock %}

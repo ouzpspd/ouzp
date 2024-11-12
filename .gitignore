@@ -1,4 +1,6 @@
 .env
+.idea
+venv
 runserver.py
 local_settings.py
 *.pyc

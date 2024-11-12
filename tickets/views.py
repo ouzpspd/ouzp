@@ -6,6 +6,7 @@ from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 from urllib3.exceptions import NewConnectionError
 
+from .switch import Connect, SwitchException
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from oattr.parsing import get_or_create_otu, Tentura, Specification, BundleSpecItems, get_specication_resources
 from .models import TR, SPP, OrtrTR
@@ -3891,14 +3892,11 @@ def add_tr(request, dID, tID, trID):
     ticket_tr_id = add_tr_to_db(dID, tID, trID, tr_params, ticket_spp_id)
     return redirect('sppdata', trID)
 
-import time
 
 def ppr_check(request):
     context = {}
     return render(request, 'tickets/ppr_check.html', context)
 
-
-import time
 
 def perform_ppr_check(request, id_ppr):
     user = User.objects.get(username=request.user.username)
@@ -3917,6 +3915,61 @@ def perform_ppr_check(request, id_ppr):
     response = {'result': result}
     return JsonResponse(response)
 
+
+def rezerv_1g(request):
+    context = {}
+    return render(request, 'tickets/rezerv_1g.html', context)
+
+
+def add_rezerv_1g_switch_ports(request, search_ip):
+    list_ips = search_ip.split(";")
+    switches = [i for i in list_ips if re.search("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", i)]
+    if not switches or len(list_ips) != len(switches):
+        return JsonResponse({"error": "Ошибка в текстовом вводе"})
+    response = {}
+    try:
+        for switch in switches:
+            with Connect(switch) as session:
+                sw, error_ports, changed_ports = session.add_rezerv_1g_planning()
+                response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
+    except SwitchException as er:
+        logger.exception(er)
+        return JsonResponse({"error": f"Произошла ошибка. {er}"})
+    return JsonResponse(response)
+
+
+def remove_rezerv_1g_switch_ports(request, search_ip):
+    list_ips = search_ip.split(";")
+    switches = [i for i in list_ips if re.search("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", i)]
+    if not switches or len(list_ips) != len(switches):
+        return JsonResponse({"error": "Ошибка в текстовом вводе"})
+    response = {}
+    try:
+        for switch in switches:
+            with Connect(switch) as session:
+                sw, error_ports, changed_ports, = session.remove_rezerv_1g_planning()
+                response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
+    except SwitchException as er:
+        logger.exception(er)
+        return JsonResponse({"error": f"Произошла ошибка. {er}"})
+    return JsonResponse(response)
+
+
+def analysis_switch_ports(request, search_ip):
+    list_ips = search_ip.split(";")
+    switches = [i for i in list_ips if re.fullmatch("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", i)]
+    if not switches or len(list_ips) != len(switches):
+        return JsonResponse({"error": "Ошибка в текстовом вводе"})
+    response = {}
+    try:
+        for switch in switches:
+            with Connect(switch) as session:
+                sw, params = session.get_interfaces_summary()
+                response.update({sw: params})
+    except SwitchException as er:
+        logger.exception(er)
+        return JsonResponse({"error": f"Произошла ошибка. {er}"})
+    return JsonResponse(response)
 
 
 def static_formset(request):
