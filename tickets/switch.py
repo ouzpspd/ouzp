@@ -305,7 +305,7 @@ class Cisco:
     def _get_range_ports(interfaces):
         ports = {}
         total = []
-        regex = "(Fa\d{1,2}\/)(\d{1,2})"
+        regex = "(\w{2}\d{1,2}\/)(\d{1,2})"
         for interface in interfaces.keys():
             match = re.match(regex, interface)
             port = int(match.group(2)) if match else None
@@ -314,6 +314,7 @@ class Cisco:
                 ports[prefix_port].append(port)
             else:
                 ports[prefix_port] = [port]
+        print(ports)
         for prefix_port, data in ports.items():
             starts = [x for x in data if x - 1 not in data and x + 1 in data]
             ends = [x for x in data if x - 1 in data and x + 1 not in data and x not in starts]
