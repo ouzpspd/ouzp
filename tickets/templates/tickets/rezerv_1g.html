@@ -129,7 +129,13 @@ function objToString (obj) {
 
 $(function () {
 
-	$('#add_rezerv').click(function () {
+	$('#add_rezerv').click(function (e) {
+          var answer = confirm('Вы действительно хотить зарезервировать порты на оборудовании?');
+          if (!answer) {
+            e.preventDefault();
+            return false;
+          }
+
           $(this).find('span').addClass('spinner-border spinner-border-sm');
           $(this).prop('disabled', true);
 
@@ -162,6 +168,11 @@ $(function () {
 
 $(function () {
 	$('#remove_rezerv').click(function () {
+      var answer = confirm('Вы действительно хотить снять резерв с портов на оборудовании?');
+          if (!answer) {
+            e.preventDefault();
+            return false;
+          }
       $(this).find('span').addClass('spinner-border spinner-border-sm');
       $(this).prop('disabled', true);
 
