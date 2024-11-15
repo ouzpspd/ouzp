@@ -3922,9 +3922,16 @@ def rezerv_1g(request):
 
 
 def add_rezerv_1g_switch_ports(request, search_ip):
-    list_ips = search_ip.split(";")
-    switches = [i for i in list_ips if re.search("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", i)]
-    if not switches or len(list_ips) != len(switches):
+    input = [line for line in search_ip.split(";") if line]
+    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
+    if is_not_ar_ias:
+        return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
+    user = User.objects.get(username=request.user.username)
+    username, password = get_user_credential_cordis(user)
+    all_switches = get_all_switches(username, password)
+    switches_in_db = {sw: data[-1] for sw in input for data in all_switches if sw == data[2]}
+    switches = switches_in_db.values()
+    if not switches or len(input) != len(switches):
         return JsonResponse({"error": "Ошибка в текстовом вводе"})
     response = {}
     try:
@@ -3939,9 +3946,16 @@ def add_rezerv_1g_switch_ports(request, search_ip):
 
 
 def remove_rezerv_1g_switch_ports(request, search_ip):
-    list_ips = search_ip.split(";")
-    switches = [i for i in list_ips if re.search("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", i)]
-    if not switches or len(list_ips) != len(switches):
+    input = [line for line in search_ip.split(";") if line]
+    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
+    if is_not_ar_ias:
+        return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
+    user = User.objects.get(username=request.user.username)
+    username, password = get_user_credential_cordis(user)
+    all_switches = get_all_switches(username, password)
+    switches_in_db = {sw: data[-1] for sw in input for data in all_switches if sw == data[2]}
+    switches = switches_in_db.values()
+    if not switches or len(input) != len(switches):
         return JsonResponse({"error": "Ошибка в текстовом вводе"})
     response = {}
     try:
@@ -3956,9 +3970,16 @@ def remove_rezerv_1g_switch_ports(request, search_ip):
 
 
 def analysis_switch_ports(request, search_ip):
-    list_ips = search_ip.split(";")
-    switches = [i for i in list_ips if re.fullmatch("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", i)]
-    if not switches or len(list_ips) != len(switches):
+    input = [line for line in search_ip.split(";") if line]
+    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
+    if is_not_ar_ias:
+        return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
+    user = User.objects.get(username=request.user.username)
+    username, password = get_user_credential_cordis(user)
+    all_switches = get_all_switches(username, password)
+    switches_in_db = {sw: data[-1] for sw in input for data in all_switches if sw == data[2]}
+    switches = switches_in_db.values()
+    if not switches or len(input) != len(switches):
         return JsonResponse({"error": "Ошибка в текстовом вводе"})
     response = {}
     try:
