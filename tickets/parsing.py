@@ -461,6 +461,13 @@ def _get_chain_data(login, password, device):
     return chains
 
 
+def get_all_switches(login, password):
+    """Данный метод парсит все коммутаторы на СПД."""
+    url = 'https://mon.itss.mirasystem.net/mp/index.py/get_powermon_data'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    return req.json()
+
+
 def for_spp_view(login, password, dID):
     """Данный метод принимает в качестве параметра ID заявки в СПП, парсит страницу с данной заявкой и возвращает
     данные о заявке в СПП."""
