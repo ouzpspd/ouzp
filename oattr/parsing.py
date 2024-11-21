@@ -1092,7 +1092,7 @@ class BundleSpecItems:
                     items = [self.template.ride, self.template.connect_to_pps, self.template.pps_copper_cable,
                              self.template.pps_rj45]
                     self.add_copper_line(items)
-                elif "Организация СКС для Вебург.ТВ" in title:
+                elif "Организация СКС для ЦТВ" in title:
                     items = [self.template.ride, self.template.lvs_cabel, self.template.lvs_rj45, self.template.lvs_mount]
                     self.add_lvs_line(items, self.stb_lines)
                 elif "Организация СКС на" in title or "Организация ЛВС" in title:

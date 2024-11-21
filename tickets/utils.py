@@ -310,7 +310,7 @@ def get_service_name_from_service_plus_desc(services_plus_desc):
     if services_plus_desc.startswith('Телефон'):
         service = 'Телефон'
     elif services_plus_desc.startswith('iTV'):
-        service = 'Вебург.ТВ'
+        service = 'ЦТВ'
     elif services_plus_desc.startswith('Интернет, DHCP'):
         service = 'ШПД в Интернет'
     elif services_plus_desc.startswith('Интернет, блок Адресов Сети Интернет'):

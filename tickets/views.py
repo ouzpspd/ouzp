@@ -1551,7 +1551,7 @@ def local(request, trID):
 
 
 def itv(request, trID):
-    """Данный метод отображает html-страничку c формой для заполнения данных по услуге Вебург.ТВ"""
+    """Данный метод отображает html-страничку c формой для заполнения данных по услуге ЦТВ"""
     if request.method == 'POST':
         itvform = ItvForm(request.POST)
         if itvform.is_valid():
@@ -1568,11 +1568,11 @@ def itv(request, trID):
                 messages.warning(request, 'Нельзя выбрать "В vlan действующей услуги ШПД" при проектирование в новой точке.')
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
             if len(services_plus_desc) == 1 and type_itv == 'novlexist' and selected_ono[0][-4].endswith('/32') and need_line_itv is False:
-                messages.warning(request, 'В ШПД с маской /32 Вебург.ТВ организовано. ТР не требуется.')
+                messages.warning(request, 'В ШПД с маской /32 ЦТВ организовано. ТР не требуется.')
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
             shpd_exist = [serv for serv in services_plus_desc if serv.startswith('Интернет,')]
             if not shpd_exist and type_itv == 'novl':
-                messages.warning(request, 'Для Вебург.ТВ в vlan организуемой услуги ШПД требуется услуга ШПД в перечне услуг.')
+                messages.warning(request, 'Для ЦТВ в vlan организуемой услуги ШПД требуется услуга ШПД в перечне услуг.')
                 return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
 
 
@@ -2405,7 +2405,7 @@ def head(request, trID):
     switch_config = None
     static_vars = {}
     hidden_vars = {}
-    stroka = templates.get("Заголовок")
+    stroka = templates.get("Описание действующего подключения.")
     static_vars['номер контракта в ИС Cordis'] = selected_ono[0][0]
     static_vars['название клиента'] = selected_ono[0][1]
     static_vars['точка подключения'] = selected_ono[0][3]
@@ -2515,12 +2515,12 @@ def head(request, trID):
                 elif any(serv in i[-3].lower() for serv in service_itv):
                     if switch_config:
                         service_ports = get_extra_service_port_csw(i[-1], switch_config, old_model_csw)
-                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {service_ports})'
+                        extra_stroka_main_client_service = f'- услугу ЦТВ c реквизитами "{i[-4]}"({i[-2]} {service_ports})'
                     else:
-                        extra_stroka_main_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})'
+                        extra_stroka_main_client_service = f'- услугу ЦТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]})'
                     list_stroka_main_client_service.append(extra_stroka_main_client_service)
-                    curr_value = readable_services.get('Вебург.ТВ')
-                    readable_services = _readable(curr_value, readable_services, 'Вебург.ТВ', i[-4])
+                    curr_value = readable_services.get('ЦТВ')
+                    readable_services = _readable(curr_value, readable_services, 'ЦТВ', i[-4])
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
                 if any(serv in i[-3].lower() for serv in service_portvk):
@@ -2561,7 +2561,7 @@ def head(request, trID):
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
                 elif any(serv in i[-3].lower() for serv in service_itv):
-                    extra_stroka_other_client_service = f'- услугу Вебург.ТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
+                    extra_stroka_other_client_service = f'- услугу ЦТВ c реквизитами "{i[-4]}"({i[-2]} {i[-1]}) по договору {i[0]} {i[1]}'
                     list_stroka_other_client_service.append(extra_stroka_other_client_service)
                     counter_exist_line.add(f'{i[-2]} {i[-1]}')
             elif i[2] == 'Порт виртуального коммутатора':
