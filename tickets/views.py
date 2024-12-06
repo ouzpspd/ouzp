@@ -3941,7 +3941,7 @@ def add_rezerv_1g_switch_ports(request, search_ip):
                 response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
     except SwitchException as er:
         logger.exception(er)
-        return JsonResponse({"error": f"Произошла ошибка. {er}"})
+        response.update({"error": f"Выполнение прервано. Произошла ошибка. {er}"})
     return JsonResponse(response)
 
 
@@ -3965,7 +3965,7 @@ def remove_rezerv_1g_switch_ports(request, search_ip):
                 response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
     except SwitchException as er:
         logger.exception(er)
-        return JsonResponse({"error": f"Произошла ошибка. {er}"})
+        response.update({"error": f"Выполнение прервано. Произошла ошибка. {er}"})
     return JsonResponse(response)
 
 
