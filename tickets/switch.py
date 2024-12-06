@@ -25,10 +25,10 @@ class Connect:
     def __enter__(self):
         try:
             if self.switch.model == 'snr':
-                self.session = pexpect.spawn(f"telnet {self.ip}", timeout=20, encoding="utf-8")
+                self.session = pexpect.spawn(f"telnet {self.ip}", timeout=10, encoding="utf-8")
             elif self.switch.model == 'cisco':
                 self.session = pexpect.spawn(f"ssh1 {self.switch.username}@{self.ip} -o StrictHostKeyChecking=no",
-                                             timeout=20, encoding="utf-8")
+                                             timeout=10, encoding="utf-8")
             login = self.session.expect(["Password", "login"])
             if login:
                 self.session.sendline(self.switch.username)
@@ -304,7 +304,7 @@ class Cisco:
     @staticmethod
     def _get_range_ports(interfaces):
         ports = {}
-        total = []
+        ranges_by_module = []
         regex = "(\w{2}\d{1,2}\/)(\d{1,2})"
         for interface in interfaces.keys():
             match = re.match(regex, interface)
@@ -314,7 +314,6 @@ class Cisco:
                 ports[prefix_port].append(port)
             else:
                 ports[prefix_port] = [port]
-        print(ports)
         for prefix_port, data in ports.items():
             starts = [x for x in data if x - 1 not in data and x + 1 in data]
             ends = [x for x in data if x - 1 in data and x + 1 not in data and x not in starts]
@@ -323,22 +322,24 @@ class Cisco:
             str_ranges = [f'{i[0]}-{i[1]}' for i in ranges]
             result_ranges = str_ranges + singles
             res_ranges = f"{prefix_port}" + f",{prefix_port}".join(result_ranges) if result_ranges else ""
-            total.append(res_ranges)
-        if total:
-            return ",".join(total)
+            ranges_by_module.append(res_ranges)
+        if ranges_by_module:
+            all_ranges = ",".join(ranges_by_module).split(",")
+            chunks = [all_ranges[i:i + 5] for i in range(0, len(all_ranges), 5)]  # Cisco не может обработать более 5 диапазонов портов за раз
+            return [",".join(i) for i in chunks]
 
     def add_rezerv_1g_planning_command(self):
         interfaces = self.get_interfaces_1g_no_description()
         range_ports = self._get_range_ports(interfaces)
         if not range_ports:
             raise SwitchException(f"{self.name}: нет портов 1G без description.")
-        commands = [
-            ("conf t", "\(config\)#"),
-            (f"int range {range_ports}", f"\(config-if-range\)#"),
-            ("description Rezerv_1G_planning", f"\(config-if-range\)#"),
-            ("exit", "\(config\)#"),
-            ("exit",),
-        ]
+        commands = []
+        commands.append(("conf t", "\(config\)#"))
+        for block_range_ports in range_ports:
+            commands.append((f"int range {block_range_ports}", f"\(config-if-range\)#"))
+            commands.append(("description Rezerv_1G_planning", f"\(config-if-range\)#"))
+        commands.append(("exit", "\(config\)#"))
+        commands.append(("exit",))
         return commands
 
     def remove_rezerv_1g_planning_command(self):
@@ -346,13 +347,13 @@ class Cisco:
         range_ports = self._get_range_ports(interfaces)
         if not range_ports:
             raise SwitchException(f"{self.name}: нет портов Rezerv_1G_planning.")
-        commands = [
-            ("conf t", "\(config\)#"),
-            (f"int range {range_ports}", f"\(config-if-range\)#"),
-            ("no description", f"\(config-if-range\)#"),
-            ("exit", "\(config\)#"),
-            ("exit",),
-        ]
+        commands = []
+        commands.append(("conf t", "\(config\)#"))
+        for block_range_ports in range_ports:
+            commands.append((f"int range {block_range_ports}", f"\(config-if-range\)#"))
+            commands.append(("no description", f"\(config-if-range\)#"))
+        commands.append(("exit", "\(config\)#"))
+        commands.append(("exit",))
         return commands
 
     def _get_interfaces_1g(self):
