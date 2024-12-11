@@ -192,6 +192,17 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
     есть в блоках шаблона(чтобы не выводить неактуальный блок) и блоки шаблона, которых не было в блоках
     из СПП(чтобы не пропустить неучтенный блок)
     Передаем переменные, т.к. переменные из глобал видятся, а из другой функции нет."""
+    # блок заполнения повторяющихсся &&
+    regex_var_lines = '&(.+?)&'
+    match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
+    list_var_lines = [i.group(1) for i in match_var_lines]
+    for i in list_var_lines:
+        if multi_vars.get(i):
+            stroka = stroka.replace(f'&{i}&', '\n'.join(multi_vars[i]))
+        else:
+            if f'&{i}&\n' in stroka:
+                stroka = stroka.replace(f'&{i}&\n', '')
+
     #    блок для определения необходимости частных строк <>
     list_var_lines = []
     list_var_lines_in = []
@@ -215,17 +226,6 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
             stroka = stroka.replace('[{}]'.format(i), '')
     if len(list_var_lines) > 0:
         stroka = stroka.replace('<>\n', '').replace('<>', '').replace('\n\n\n\n', '\n\n')
-
-    # блок заполнения повторяющихсся &&
-    regex_var_lines = '&(.+?)&'
-    match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
-    list_var_lines = [i.group(1) for i in match_var_lines]
-    for i in list_var_lines:
-        if multi_vars.get(i):
-            stroka = stroka.replace(f'&{i}&', '\n'.join(multi_vars[i]))
-        else:
-            if f'&{i}&\n' in stroka:
-                stroka = stroka.replace(f'&{i}&\n', '')
 
     # блок для заполнения %%
     ckb_vars = {}

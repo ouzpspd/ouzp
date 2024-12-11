@@ -140,20 +140,20 @@ def _get_pm_vars(value_vars):
             '- Способ выдачи тега vlan в порт подключения клиента в access.'] = \
             '- Способ выдачи тега vlan в порт подключения клиента в access.'
         add_hidden_vars[
-            """- В стык ПАО "Ростелеком" выдать vlan %tag vlan% tag'ом."""] = \
-            """- В стык ПАО "Ростелеком" выдать vlan %tag vlan% tag'ом."""
+            """- В стык Ростелеком выдать vlan %tag vlan% tag'ом."""] = \
+            """- В стык Ростелеком выдать vlan %tag vlan% tag'ом."""
         if value_vars.get('rtk_form').get('type_pm') == 'ПМ':
             add_hidden_vars[
                 '- Добавить на ресурсе в ИС Cordis информацию: "Последняя миля через %название оператора%. Заявка СПП: %№ заявка СПП%".'] = \
                 '- Добавить на ресурсе в ИС Cordis информацию: "Последняя миля через %название оператора%. Заявка СПП: %№ заявка СПП%".'
-            add_static_vars['название оператора'] = 'ПАО "Ростелеком"'
+            add_static_vars['название оператора'] = 'Ростелеком'
         else:
             add_hidden_vars[
-                '- Добавить на ресурсе в ИС Cordis информацию: "B2B FVNO РТ. Заявка СПП: %№ заявка СПП%".'] = \
-                '- Добавить на ресурсе в ИС Cordis информацию: "B2B FVNO РТ. Заявка СПП: %№ заявка СПП%".'
+                '- Добавить на ресурсе в ИС Cordis информацию: "B2B FVNO Ростелеком. Заявка СПП: %№ заявка СПП%".'] = \
+                '- Добавить на ресурсе в ИС Cordis информацию: "B2B FVNO Ростелеком. Заявка СПП: %№ заявка СПП%".'
         add_static_vars['tag vlan'] = value_vars.get('rtk_form').get('vlan')
         add_static_vars['№ заявка СПП'] = value_vars.get('ticket_k')
-        add_hidden_vars[' СПД'] = ' СПД ПАО "Ростелеком"'
+        add_hidden_vars[' СПД'] = ' СПД Ростелеком'
         add_hidden_vars['от %название коммутатора%'] = 'через последнюю милю стороннего оператора'
         
     else:
@@ -523,26 +523,42 @@ def _new_services(result_services, value_vars):
                 static_vars['порт доступа на маршрутизаторе'] = 'свободный'
                 static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
                 static_vars['адрес установки камеры'] = value_vars.get('address')
-                list_cameras_one = []
-                list_cameras_two = []
+                # list_cameras_one = []
+                # list_cameras_two = []
+                # for i in range(camera_number - 1):
+                #     extra_stroka_one = 'Порт {}: %адрес установки камеры%, Камера №{}, %модель камеры%, %необходимость записи звука%\n'.format(
+                #         i + 1, i + 1)
+                #     list_cameras_one.append(extra_stroka_one)
+                # for i in range(camera_number):
+                #     extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;\n'.format(
+                #         i + 1)
+                #     list_cameras_two.append(extra_stroka_two)
+                # extra_extra_stroka_one = ''.join(list_cameras_one)
+                # extra_extra_stroka_two = ''.join(list_cameras_two)
+                # stroka = stroka[:stroka.index('- Организовать 1 линию от камеры')] + extra_extra_stroka_one + stroka[
+                #                                                                                               stroka.index(
+                #                                                                                                   '- Организовать 1 линию от камеры'):]
+                # stroka = stroka + '\n' + extra_extra_stroka_two
+                multi_vars = {}
+                multi_vars['Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'] = []
+                multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
+                counter = 1
                 for i in range(camera_number - 1):
-                    extra_stroka_one = 'Порт {}: %адрес установки камеры%, Камера №{}, %модель камеры%, %необходимость записи звука%\n'.format(
-                        i + 1, i + 1)
-                    list_cameras_one.append(extra_stroka_one)
+                    multi_vars[
+                        'Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'
+                    ].append(f'Порт {counter}: %адрес установки камеры%, Камера №{counter}, %модель камеры%, %необходимость записи звука%;')
+                    counter += 1
+                counter = 1
                 for i in range(camera_number):
-                    extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;\n'.format(
-                        i + 1)
-                    list_cameras_two.append(extra_stroka_two)
-                extra_extra_stroka_one = ''.join(list_cameras_one)
-                extra_extra_stroka_two = ''.join(list_cameras_two)
-                stroka = stroka[:stroka.index('- Организовать 1 линию от камеры')] + extra_extra_stroka_one + stroka[
-                                                                                                              stroka.index(
-                                                                                                                  '- Организовать 1 линию от камеры'):]
-                stroka = stroka + '\n' + extra_extra_stroka_two
+                    multi_vars[
+                        '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+                    ].append(f'-- камеры Камера №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
+                    counter += 1
+
                 static_vars[
                     'модель PoE-инжектора'] = 'PoE-инжектор СКАТ PSE-PoE.220AC/15VA'
                 static_vars['количество POE-коммутаторов'] = '1'
-                stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                stroka = analyzer_vars(stroka, static_vars, hidden_vars, multi_vars)
                 counter_plur = camera_number - 1
                 result_services.append(pluralizer_vars(stroka, counter_plur))
             else:
@@ -562,25 +578,20 @@ def _new_services(result_services, value_vars):
                 static_vars['порт доступа на маршрутизаторе'] = 'свободный'
                 static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
                 static_vars['адрес установки камеры'] = value_vars.get('address')
-                list_cameras_one = []
-                list_cameras_two = []
+                multi_vars = {}
+                multi_vars['Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'] = []
+                multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
+                counter = 1
                 for i in range(camera_number):
-                    extra_stroka_one = 'Порт {}: %адрес установки камеры%, Камера №{}, %модель камеры%, %необходимость записи звука%;\n'.format(
-                        i + 1, i + 1)
-                    list_cameras_one.append(extra_stroka_one)
-                for i in range(camera_number):
-                    extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;\n'.format(
-                        i + 1)
-                    list_cameras_two.append(extra_stroka_two)
-                extra_extra_stroka_one = ''.join(list_cameras_one)
-                extra_extra_stroka_two = ''.join(list_cameras_two)
-                stroka = stroka[:stroka.index(
-                    'порты POE-коммутатора:')] + 'порты POE-коммутатора:\n' + extra_extra_stroka_one + '\n \nОВИТС проведение работ:\n' + stroka[
-                                                                                                                                          stroka.index(
-                                                                                                                                              '- Произвести настройку'):]
-                stroka = stroka + '\n' + extra_extra_stroka_two
+                    multi_vars[
+                        'Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'
+                    ].append(f'Порт {counter}: %адрес установки камеры%, Камера №{counter}, %модель камеры%, %необходимость записи звука%;')
+                    multi_vars[
+                        '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+                    ].append(f'-- камеры Камера №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
+                    counter += 1
                 static_vars['количество POE-коммутаторов'] = '1'
-                stroka = analyzer_vars(stroka, static_vars, hidden_vars)
+                stroka = analyzer_vars(stroka, static_vars, hidden_vars, multi_vars)
                 counter_plur = camera_number
                 result_services.append(pluralizer_vars(stroka, counter_plur))
         elif 'Телефон' in service:
@@ -600,7 +611,7 @@ def _new_services(result_services, value_vars):
                     if logic_csw == True:
                         result_services.append(enviroment_csw(value_vars))
                     stroka = templates.get("Подключения по цифровой линии с использованием протокола SIP, тип линии «IP-транк».")
-                    static_vars['способ организации проектируемого сервиса'] = 'trunk' if value_vars.get('type_ip_trunk') == 'trunk' else 'access'
+                    static_vars['способ организации проектируемого сервиса'] = "trunk'ом" if value_vars.get('type_ip_trunk') == 'trunk' else "access'ом"
                     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
                 elif value_vars.get('type_phone') == 'ak':
                     if logic_csw == True:
@@ -761,17 +772,20 @@ def _new_services(result_services, value_vars):
                 hidden_vars['-- %тип конвертер А% - %количество портов ЛВС% шт.'] = '-- %тип конвертер А% - %количество портов ЛВС% шт.'
                 hidden_vars['-- %тип конвертер Б% - %количество портов ЛВС% шт.'] = '-- %тип конвертер Б% - %количество портов ЛВС% шт.'
                 hidden_vars[
-                    '- Установить %тип конвертер А% и %тип конвертер Б%.'] = '- Установить %тип конвертер А% и %тип конвертер Б%.'
+                    '- Установить %тип конвертер А% и %тип конвертер Б%.[ Выставить на конвертерах режим работы "auto".]'
+                ] = '- Установить %тип конвертер А% и %тип конвертер Б%.[ Выставить на конвертерах режим работы "auto".]'
                 static_vars['отдел ОИПМ / ОИПД'] = 'ОИПМ'
                 if value_vars.get('sks_transceiver') == 'Конвертеры 100':
-                    static_vars['тип конвертер А'] = '^конвертер^ 1310 нм'
-                    static_vars['тип конвертер Б'] = '^конвертер^ 1550 нм'
+                    static_vars['тип конвертер А'] = '100 Мбит/с ^конвертер^ с длиной волны 1310 нм, дальность до 20 км'
+                    static_vars['тип конвертер Б'] = '100 Мбит/с ^конвертер^ с длиной волны 1550 нм, дальность до 20 км'
+                    hidden_vars[' Выставить на конвертерах режим работы "auto".'] = ' Выставить на конвертерах режим работы "auto".'
                 elif value_vars.get('sks_transceiver') == 'Конвертеры 1000':
-                    static_vars['тип конвертер А'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1310 нм'
-                    static_vars['тип конвертер Б'] = '^конвертер^ SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм'
+                    static_vars['тип конвертер А'] = '1000 Мбит/с ^конвертер^ с модулем SFP WDM с длиной волны 1310 нм, дальность до 20 км'
+                    static_vars['тип конвертер Б'] = '1000 Мбит/с ^конвертер^ с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км'
+                    hidden_vars[' Выставить на конвертерах режим работы "auto".'] = ' Выставить на конвертерах режим работы "auto".'
                 elif value_vars.get('sks_transceiver') == 'SFP':
-                    static_vars['тип конвертер А'] = '^оптический^ ^передатчик^ SFP WDM, 20 км, 1310 нм'
-                    static_vars['тип конвертер Б'] = '^оптический^ ^передатчик^ SFP WDM, 20 км, 1550 нм'
+                    static_vars['тип конвертер А'] = '^оптический^ ^модуль^ SFP WDM с длиной волны 1310 нм, дальность до 20 км'
+                    static_vars['тип конвертер Б'] = '^оптический^ ^модуль^ SFP WDM с длиной волны 1550 нм, дальность до 20 км'
                 static_vars['указать количество'] = str(local_ports)
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars)
                 counter_plur = local_ports
@@ -850,7 +864,7 @@ def rtk_enviroment(value_vars):
     static_vars = {}
     hidden_vars = {}
     if value_vars.get('rtk_form').get('type_pm') == 'ПМ':
-        static_vars['название оператора'] = 'ПАО "Ростелеком"'
+        static_vars['название оператора'] = 'Ростелеком'
         static_vars['узел связи'] = 'РУА ЕКБ Автоматики переулок 1 стр.В3 П1 Э2 (аппаратная)'
         static_vars['название коммутатора'] = 'AR113-37.ekb'
         static_vars['порт доступа на коммутаторе'] = 'Po4'
@@ -2079,13 +2093,13 @@ def _passage_phone_service(result_services, value_vars):
         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     return result_services, result_services_ots, value_vars
 
-from oattr.utils import analyzer_vars as analyzer
+#from oattr.utils import analyzer_vars as analyzer
 
 def get_replace_kad(value_vars):
     """Данный метод формирует блок ТТР для замены КАД"""
     result_services = []
     templates = value_vars.get('templates')
-    stroka = templates.get("Замена КАД на ППС %узел связи%")
+    stroka = templates.get("Замена КАД на ППС %узел связи%.")
     type_new_model_kad = value_vars.get('type_new_model_kad')
     static_vars = {}
     hidden_vars = {}
@@ -2124,32 +2138,31 @@ def get_replace_kad(value_vars):
             ' (передатчик задействовать из демонтированного коммутатора)'
         ] = ' (передатчик задействовать из демонтированного коммутатора)'
         hidden_vars['Передатчик SFP переключить из существующего КАД.'] = 'Передатчик SFP переключить из существующего КАД.'
-        rep_string[
-            'gig_ports'] = '- Переключить существующий линк %линк/номер контракта в ИС Cordis% из порта %порт линка/договора% существующего коммутатора в свободный гигабитный порт' + \
-                           ' установленного коммутатора. Использовать оптический передатчик  . Передатчик SFP переключить из существующего КАД.'
     else:
         hidden_vars[' SFP WDM, дальность до 20км (12dB), 1310 нм'] = ' SFP WDM, дальность до 20км (12dB), 1310 нм'
+    multi_vars = {}
+    if 'оптогигабитный' not in type_new_model_kad:
         rep_string[
             'gig_ports'] = '- Переключить существующий линк %линк/номер контракта в ИС Cordis% из порта %порт линка/договора% существующего коммутатора в свободный гигабитный порт' + \
-                           ' установленного коммутатора. Использовать оптический передатчик SFP WDM, дальность до 20км (12dB), 1310 нм.   '
-    multi_vars = {rep_string['gig_ports']: []}
-    counter = 0
-    for k, v in gig_ports.items():
-        counter += 1
-        static_vars[f'линк/номер контракта в ИС Cordis {counter}'] = v
-        static_vars[f'порт линка/договора {counter}'] = k
-        if 'Cisco' not in model:
-            multi_vars[rep_string['gig_ports']].append(
-                f'- Переключить существующий линк %линк/номер контракта в ИС Cordis {counter}% из порта %порт линка/договора {counter}%' +
-                f' существующего коммутатора в свободный гигабитный порт установленного коммутатора. Использовать' +
-                ' оптический передатчик. Передатчик SFP переключить из существующего КАД.')
-        else:
-            multi_vars[rep_string['gig_ports']].append(
-                f'- Переключить существующий линк %линк/номер контракта в ИС Cordis {counter}% из порта %порт линка/договора {counter}%' +
-                f' существующего коммутатора в свободный гигабитный порт установленного коммутатора. Использовать' +
-                ' оптический передатчик SFP WDM, дальность до 20км (12dB), 1310 нм.')
+                           ' установленного коммутатора. Использовать оптический передатчик[ SFP WDM, дальность до 20км (12dB), 1310 нм]. [Передатчик SFP переключить из существующего КАД.]'
+        multi_vars.update({rep_string['gig_ports']: []})
+        counter = 0
+        for k, v in gig_ports.items():
+            counter += 1
+            static_vars[f'линк/номер контракта в ИС Cordis {counter}'] = v
+            static_vars[f'порт линка/договора {counter}'] = k
+            if 'Cisco' not in model:
+                multi_vars[rep_string['gig_ports']].append(
+                    f'- Переключить существующий линк %линк/номер контракта в ИС Cordis {counter}% из порта %порт линка/договора {counter}%' +
+                    f' существующего коммутатора в свободный гигабитный порт установленного коммутатора. Использовать' +
+                    ' оптический передатчик. Передатчик SFP переключить из существующего КАД.')
+            else:
+                multi_vars[rep_string['gig_ports']].append(
+                    f'- Переключить существующий линк %линк/номер контракта в ИС Cordis {counter}% из порта %порт линка/договора {counter}%' +
+                    f' существующего коммутатора в свободный гигабитный порт установленного коммутатора. Использовать' +
+                    ' оптический передатчик SFP WDM, дальность до 20км (12dB), 1310 нм.')
 
-    result_services.append(analyzer(stroka, static_vars, hidden_vars, multi_vars))
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars, multi_vars))
     value_vars.update({'pps': node, 'kad': value_vars.get('kad_name')})
     return result_services, value_vars
 
@@ -2186,7 +2199,7 @@ def get_add_kad(value_vars):
         hidden_vars[
             '- Совместно c ТЭО проверить резервирование по питанию.'
         ] = '- Совместно c ТЭО проверить резервирование по питанию.'
-        hidden_vars['от ИБП,'] = 'от ИБП,'
+        hidden_vars[' от ИБП,'] = ' от ИБП,'
     if value_vars.get('ppr'):
         hidden_vars[
             '- Требуется отключение согласно ППР %№ заявка ППР% согласовать проведение работ.'
@@ -2199,8 +2212,24 @@ def get_add_kad(value_vars):
         ] = '- После проведения монтажных работ убедиться в восстановлении услуг согласно ППР %№ заявка ППР%.'
         static_vars['№ заявка ППР'] = value_vars.get('ppr')
 
-    if value_vars.get('type_add_kad') == 'Установка 2-го медного кад в гирлянду':
-        stroka = templates.get("Установка дополнительного КАД на ППС %узел связи% вторым в гирлянду")
+    if value_vars.get('type_add_kad') == 'Установка 2-го кад в гирлянду':
+        stroka = templates.get("Установка дополнительного %тип коммутатора% КАД на ППС %узел связи% вторым в гирлянду.")
+        if 'оптогигабитный' not in value_vars.get('type_new_model_kad'):
+            static_vars['тип коммутатора'] = 'медного'
+            hidden_vars[' Использовать медный патчкорд'] = ' Использовать медный патчкорд'
+        else:
+            static_vars['тип коммутатора'] ='оптического'
+            hidden_vars['- Установить в порт %порт линка/договора% КАД %название коммутатора% оптический передатчик SFP WDM, дальность до 3км (6dB), 1310нм.'
+            ] = '- Установить в порт %порт линка/договора% КАД %название коммутатора% оптический передатчик SFP WDM, дальность до 3км (6dB), 1310нм.'
+            hidden_vars['- Установить в указанный ОНИТС СПД порт проектируемого КАД оптический передатчик SFP WDM, дальность до 3км (6dB), 1550нм.'
+            ] = '- Установить в указанный ОНИТС СПД порт проектируемого КАД оптический передатчик SFP WDM, дальность до 3км (6dB), 1550нм.'
+            hidden_vars[' Использовать оптический патчкорд SM SC-SC 1m'] = ' Использовать оптический патчкорд SM SC-SC 1m'
+            if value_vars.get('disabled_link'):
+                static_vars['порт линка/договора'] = value_vars.get('disabled_port')
+            else:
+                static_vars['порт линка/договора'] = 'указанный ОНИТС СПД'
+                hidden_vars['- Запросить в ОНИТС СПД порт для проектируемого КАД на %название коммутатора%.'
+                ] = '- Запросить в ОНИТС СПД порт для проектируемого КАД на %название коммутатора%.'
         if value_vars.get('disabled_link'):
             hidden_vars[
                 '- Переключить существующий линк %линк/номер контракта в ИС Cordis% из порта %порт линка/договора% существующего коммутатора' +
@@ -2262,14 +2291,12 @@ def get_add_kad(value_vars):
                 '- Скроссировать порт дополнительного КАД с портом КАД %название коммутатора нижестоящего%. Использовать оптический патчкорд SM SC-SC 1m.'
             ] = '- Скроссировать порт дополнительного КАД с портом КАД %название коммутатора нижестоящего%. Использовать оптический патчкорд SM SC-SC 1m.'
             hidden_vars[
-                '- Запустить существующий КАД %название коммутатора нижестоящего% от оптогигабитного коммутатора на магистрали 1 Гбит/с.' +
-                ' Задействовать оптические магистральные порты на коммутаторах согласно документу в КБЗ "Типовые варианты организации УАД".'
-                ] = '- Запустить существующий КАД %название коммутатора нижестоящего% от оптогигабитного коммутатора на магистрали 1 Гбит/с.' + \
-                    ' Задействовать оптические магистральные порты на коммутаторах согласно документу в КБЗ "Типовые варианты организации УАД".'
+                '- Запустить существующий КАД %название коммутатора нижестоящего% от оптогигабитного коммутатора на магистрали 1 Гбит/с.'
+            ] = '- Запустить существующий КАД %название коммутатора нижестоящего% от оптогигабитного коммутатора на магистрали 1 Гбит/с.'
         static_vars['диапазон оптических портов на демонтируемом коммутаторе'] = ', '.join(deleted_gig_ports.keys())
         static_vars['диапазон оптических портов на коммутаторе'] = ', '.join(gig_ports.keys())
         static_vars['старая модель коммутатора'] = deleted_model
-    result_services.append(analyzer(stroka, static_vars, hidden_vars, multi_vars))
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars, multi_vars))
     value_vars.update({'pps': node, 'kad': value_vars.get('kad_name')})
     return result_services, value_vars
 
@@ -2291,7 +2318,8 @@ def get_new_kad(value_vars):
                 type_new_model_kad not in ('24-портовый оптогигабитный коммутатор', '48-портовый оптогигабитный коммутатор'):
             stroka = templates.get("Установка оптического и медного КАД на УАД %узел связи%< с простоем связи>.")
         else:
-            stroka = templates.get("Установка нового КАД на УАД %узел связи%< с простоем связи>.")
+            static_vars['тип коммутатора'] = 'медного' if 'оптогигабитный' not in type_new_model_kad else 'оптического'
+            stroka = templates.get("Установка %тип коммутатора% КАД на УАД %узел связи%< с простоем связи>.")
         if 'ИБП' in value_vars.get(f'pps_{index}'):
             hidden_vars[', адаптированный для работы с РЭКопитоном'] = ', адаптированный для работы с РЭКопитоном'
             hidden_vars[
@@ -2300,7 +2328,7 @@ def get_new_kad(value_vars):
             hidden_vars[
                 '- Совместно c ТЭО проверить резервирование по питанию.'
             ] = '- Совместно c ТЭО проверить резервирование по питанию.'
-            hidden_vars['от ИБП,'] = 'от ИБП,'
+            hidden_vars[' от ИБП,'] = ' от ИБП,'
             hidden_vars[
                 '- По решению ОТПМ организовать резервирование УАД по питанию.'
             ] = '- По решению ОТПМ организовать резервирование УАД по питанию.'
@@ -2321,7 +2349,7 @@ def get_new_kad(value_vars):
         static_vars['название коммутатора вышестоящего'] = value_vars.get(f'uplink_{index}')
         static_vars['порт доступа на коммутаторе вышестоящем'] = value_vars.get(f'uplink_port_{index}')
         static_vars['тип модуля'] = value_vars.get(f'transceiver_{index}')
-        result_services.append(analyzer(stroka, static_vars, hidden_vars, multi_vars))
+        result_services.append(analyzer_vars(stroka, static_vars, hidden_vars, multi_vars))
         value_vars.update({'kad': value_vars.get(f'uplink_{index}')})
     value_vars.update({'pps': value_vars.get('pps')})
     return result_services, value_vars
@@ -2434,7 +2462,7 @@ def _passage_enviroment(value_vars):
             static_vars['вид работ'] = 'заменить'
             hidden_vars[
                 '%установленный тип конвертера/передатчика на стороне клиента% на '] = '%установленный тип конвертера/передатчика на стороне клиента% на '
-            static_vars['установленный тип конвертера/передатчика на стороне клиента'] = 'конвертер 1550 нм'
+            static_vars['установленный тип конвертера/передатчика на стороне клиента'] = '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"' #'конвертер 1550 нм'
             static_vars['тип конвертера/передатчика на стороне узла доступа'] = value_vars.get('device_pps')
             static_vars['тип конвертера/передатчика на стороне клиента'] = value_vars.get('device_client')
             hidden_vars[
@@ -2449,9 +2477,9 @@ def _passage_enviroment(value_vars):
             hidden_vars['- Использовать существующую %тип линии связи% от %узел связи% до клиентского оборудования.'] = '- Использовать существующую %тип линии связи% от %узел связи% до клиентского оборудования.'
             static_vars['вид работ'] = 'заменить'
             hidden_vars['%установленный тип конвертера/передатчика на стороне клиента% на '] = '%установленный тип конвертера/передатчика на стороне клиента% на '
-            static_vars['установленный тип конвертера/передатчика на стороне клиента'] = 'конвертер 1550 нм'
+            static_vars['установленный тип конвертера/передатчика на стороне клиента'] = '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"' #'конвертер 1550 нм'
             hidden_vars['- Логическое подключение клиента не изменится.'] = '- Логическое подключение клиента не изменится.'
-            static_vars['тип конвертера/передатчика на стороне клиента'] = 'конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм'
+            static_vars['тип конвертера/передатчика на стороне клиента'] = '1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"' #'конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм'
         else:
             hidden_vars[
                 '- Организовать %тип линии связи% [от %узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'] = '- Организовать %тип линии связи% [от %узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
@@ -2625,7 +2653,7 @@ def _change_services(value_vars):
                     static_vars["способ организации действующего сервиса"] = "tag'ом"
                 else:
                     static_vars["способ организации действующего сервиса"] = "access'ом (native vlan)"
-                static_vars["способ организации проектируемого сервиса"] = "tag'ом"
+                static_vars["способ организации проектируемого сервиса"] = "trunk'ом"
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом с простоем":
             static_vars = {}
@@ -2649,7 +2677,7 @@ def _change_services(value_vars):
                     else:
                         static_vars["способ организации действующего сервиса"] = "access'ом (native vlan)"
                     static_vars['ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
-                    static_vars["способ организации проектируемого сервиса"] = "tag'ом"
+                    static_vars["способ организации проектируемого сервиса"] = "trunk'ом"
                     stroka = templates.get("Организация услуги порт ВЛС trunk'ом с простоем связи.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом с простоем":
@@ -2678,7 +2706,7 @@ def _change_services(value_vars):
                     static_vars["способ организации действующего сервиса"] = "tag'ом"
                 else:
                     static_vars["способ организации действующего сервиса"] = "access'ом (native vlan)"
-                static_vars["способ организации проектируемого сервиса"] = "tag'ом"
+                static_vars["способ организации проектируемого сервиса"] = "trunk'ом"
                 static_vars['ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
                 stroka = templates.get("Организация услуги порт ВМ trunk'ом с простоем связи.")
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
