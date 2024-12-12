@@ -461,11 +461,14 @@ def _get_chain_data(login, password, device):
     return chains
 
 
-def get_all_switches(login, password):
-    """Данный метод парсит все коммутаторы на СПД."""
-    url = 'https://mon.itss.mirasystem.net/mp/index.py/get_powermon_data'
-    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    return req.json()
+def get_switch_ip(login, password, switch):
+    """Данный метод получает IP коммутатора по названию через mon.itss.mirasystem.net"""
+    url = f'https://mon.itss.mirasystem.net/mp/index.py/search'
+    data = {"hnames": f"^{switch}$", "haliases": "", "hgroups": "", "hips": ""}
+    req = requests.post(url, data=data, verify=False, auth=HTTPBasicAuth(login, password))
+    response = req.json()
+    if response and response[0].get("host_name") == switch:
+        return response[0].get("address")
 
 
 def for_spp_view(login, password, dID):
