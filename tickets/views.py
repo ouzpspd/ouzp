@@ -3928,15 +3928,19 @@ def add_rezerv_1g_switch_ports(request, search_ip):
         return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-    all_switches = get_all_switches(username, password)
-    switches_in_db = {sw: data[-1] for sw in input for data in all_switches if sw == data[2]}
-    switches = switches_in_db.values()
-    if not switches or len(input) != len(switches):
-        return JsonResponse({"error": "Ошибка в текстовом вводе"})
+    switches_in_db = {}
+    for switch in input:
+        switch_ip = get_switch_ip(username, password, switch)
+        if switch_ip:
+            switches_in_db.update({switch: switch_ip})
+    ip_switches = switches_in_db.values()
+    if not switches_in_db or len(input) != len(ip_switches):
+        unrecognized = set(input) - set(switches_in_db.keys())
+        return JsonResponse({"error": f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}"})
     response = {}
     try:
-        for switch in switches:
-            with Connect(switch) as session:
+        for ip in ip_switches:
+            with Connect(ip) as session:
                 sw, error_ports, changed_ports = session.add_rezerv_1g_planning()
                 response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
     except SwitchException as er:
@@ -3952,15 +3956,19 @@ def remove_rezerv_1g_switch_ports(request, search_ip):
         return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-    all_switches = get_all_switches(username, password)
-    switches_in_db = {sw: data[-1] for sw in input for data in all_switches if sw == data[2]}
-    switches = switches_in_db.values()
-    if not switches or len(input) != len(switches):
-        return JsonResponse({"error": "Ошибка в текстовом вводе"})
+    switches_in_db = {}
+    for switch in input:
+        switch_ip = get_switch_ip(username, password, switch)
+        if switch_ip:
+            switches_in_db.update({switch: switch_ip})
+    ip_switches = switches_in_db.values()
+    if not switches_in_db or len(input) != len(ip_switches):
+        unrecognized = set(input) - set(switches_in_db.keys())
+        return JsonResponse({"error": f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}"})
     response = {}
     try:
-        for switch in switches:
-            with Connect(switch) as session:
+        for ip in ip_switches:
+            with Connect(ip) as session:
                 sw, error_ports, changed_ports, = session.remove_rezerv_1g_planning()
                 response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
     except SwitchException as er:
@@ -3976,15 +3984,19 @@ def analysis_switch_ports(request, search_ip):
         return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-    all_switches = get_all_switches(username, password)
-    switches_in_db = {sw: data[-1] for sw in input for data in all_switches if sw == data[2]}
-    switches = switches_in_db.values()
-    if not switches or len(input) != len(switches):
-        return JsonResponse({"error": "Ошибка в текстовом вводе"})
+    switches_in_db = {}
+    for switch in input:
+        switch_ip = get_switch_ip(username, password, switch)
+        if switch_ip:
+            switches_in_db.update({switch: switch_ip})
+    ip_switches = switches_in_db.values()
+    if not switches_in_db or len(input) != len(ip_switches):
+        unrecognized = set(input) - set(switches_in_db.keys())
+        return JsonResponse({"error": f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}"})
     response = {}
     try:
-        for switch in switches:
-            with Connect(switch) as session:
+        for ip in ip_switches:
+            with Connect(ip) as session:
                 sw, params = session.get_interfaces_summary()
                 response.update({sw: params})
     except SwitchException as er:
