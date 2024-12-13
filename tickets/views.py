@@ -6,7 +6,7 @@ from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 from urllib3.exceptions import NewConnectionError
 
-from .switch import Connect, SwitchException
+from .switch import Connect, SwitchException, input_checks, InputSwitchException
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from oattr.parsing import get_or_create_otu, Tentura, Specification, BundleSpecItems, get_specication_resources
 from .models import TR, SPP, OrtrTR
@@ -3922,21 +3922,12 @@ def rezerv_1g(request):
 
 
 def add_rezerv_1g_switch_ports(request, search_ip):
-    input = [line for line in search_ip.split(";") if line]
-    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
-    if is_not_ar_ias:
-        return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-    switches_in_db = {}
-    for switch in input:
-        switch_ip = get_switch_ip(username, password, switch)
-        if switch_ip:
-            switches_in_db.update({switch: switch_ip})
-    ip_switches = switches_in_db.values()
-    if not switches_in_db or len(input) != len(ip_switches):
-        unrecognized = set(input) - set(switches_in_db.keys())
-        return JsonResponse({"error": f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}"})
+    try:
+        ip_switches = input_checks(search_ip, username, password)
+    except InputSwitchException as er:
+        return JsonResponse({"error": f"Произошла ошибка. {er}."})
     response = {}
     try:
         for ip in ip_switches:
@@ -3950,21 +3941,12 @@ def add_rezerv_1g_switch_ports(request, search_ip):
 
 
 def remove_rezerv_1g_switch_ports(request, search_ip):
-    input = [line for line in search_ip.split(";") if line]
-    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
-    if is_not_ar_ias:
-        return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-    switches_in_db = {}
-    for switch in input:
-        switch_ip = get_switch_ip(username, password, switch)
-        if switch_ip:
-            switches_in_db.update({switch: switch_ip})
-    ip_switches = switches_in_db.values()
-    if not switches_in_db or len(input) != len(ip_switches):
-        unrecognized = set(input) - set(switches_in_db.keys())
-        return JsonResponse({"error": f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}"})
+    try:
+        ip_switches = input_checks(search_ip, username, password)
+    except InputSwitchException as er:
+        return JsonResponse({"error": f"Произошла ошибка. {er}."})
     response = {}
     try:
         for ip in ip_switches:
@@ -3978,21 +3960,12 @@ def remove_rezerv_1g_switch_ports(request, search_ip):
 
 
 def analysis_switch_ports(request, search_ip):
-    input = [line for line in search_ip.split(";") if line]
-    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
-    if is_not_ar_ias:
-        return JsonResponse({"error": "Поиск выполняется только по АМ/КПА"})
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
-    switches_in_db = {}
-    for switch in input:
-        switch_ip = get_switch_ip(username, password, switch)
-        if switch_ip:
-            switches_in_db.update({switch: switch_ip})
-    ip_switches = switches_in_db.values()
-    if not switches_in_db or len(input) != len(ip_switches):
-        unrecognized = set(input) - set(switches_in_db.keys())
-        return JsonResponse({"error": f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}"})
+    try:
+        ip_switches = input_checks(search_ip, username, password)
+    except InputSwitchException as er:
+        return JsonResponse({"error": f"Произошла ошибка. {er}."})
     response = {}
     try:
         for ip in ip_switches:
