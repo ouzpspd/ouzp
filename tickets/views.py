@@ -2660,7 +2660,7 @@ def project_tr_exist_cl(request, trID):
     pps = pps.strip()
     turnoff = ticket_tr.turnoff
     task_otpm = ticket_tr.ticket_k.task_otpm
-    services_plus_desc = ticket_tr.services
+    services_plus_desc = splice_services(ticket_tr.services)
     des_tr = ticket_tr.ticket_k.des_tr
     address = None
     for i in range(len(des_tr)):

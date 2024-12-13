@@ -551,9 +551,13 @@ class Tentura:
             return {'error': 'Нет доступа. Неверный логин/пароль.'}
         soup = BeautifulSoup(req.json().get('data'), "html.parser")
         search = soup.find_all('a')
-        id_nodes_tentura = [i.text for i in search if i.get('href') and 'https://tentura' in i.get('href')]
-        id_node_tentura = id_nodes_tentura[0] if id_nodes_tentura else None
-        return {'result': id_node_tentura}
+        id_node_tentura = None
+        for ind, i in enumerate(search[:-1]):
+            next_column = ind + 1
+            if i.get('href') and 'https://tentura' in i.get('href') and data['Name'] in search[next_column].text:
+                id_node_tentura = i.text
+        if id_node_tentura:
+            return {'result': id_node_tentura}
 
     def get_id_address_connection_point(self, aid):
         url = f'https://sss.corp.itmh.ru/building/address_main.php?aID={aid}'
