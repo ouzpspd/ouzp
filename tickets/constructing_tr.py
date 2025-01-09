@@ -340,9 +340,9 @@ def _new_services(result_services, value_vars):
                 if all_portvk_in_tr.get(service)['type_vk'] == 'Новая ВЛС':
                     stroka = templates.get("Организация услуги ВЛС.")
                     result_services.append(stroka)
-                    static_vars['указать ресурс ВЛС на договоре в ИС Cordis'] = 'Для ВЛС, организованной по решению выше,'
+                    static_vars['название ВЛС'] = 'Для ВЛС, организованной по решению выше,'
                 else:
-                    static_vars['указать ресурс ВЛС на договоре в ИС Cordis'] = all_portvk_in_tr.get(service)['exist_vk']
+                    static_vars['название ВЛС'] = all_portvk_in_tr.get(service)['exist_vk']
                 static_vars['пропускная способность'] = _get_policer(service)
                 static_vars['L2. точка ограничения и маркировки трафика'] = all_portvk_in_tr.get(service)['policer_vk']
                 if all_portvk_in_tr.get(service)['type_portvk'] in ('access', 'xconnect'):
@@ -2664,9 +2664,9 @@ def _change_services(value_vars):
                 if all_portvk_in_tr.get(service)['type_vk'] == 'Новая ВЛС':
                     stroka = templates.get("Организация услуги ВЛС.")
                     result_services.append(stroka)
-                    static_vars['указать ресурс ВЛС на договоре в ИС Cordis'] = 'Для ВЛС, организованной по решению выше,'
+                    static_vars['название ВЛС'] = 'Для ВЛС, организованной по решению выше,'
                 else:
-                    static_vars['указать ресурс ВЛС на договоре в ИС Cordis'] = all_portvk_in_tr.get(service)['exist_vk']
+                    static_vars['название ВЛС'] = all_portvk_in_tr.get(service)['exist_vk']
                 static_vars['пропускная способность'] = _get_policer(service)
                 static_vars['L2. точка ограничения и маркировки трафика'] = all_portvk_in_tr.get(service)['policer_vk']
                 if next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом":
