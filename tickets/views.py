@@ -2604,10 +2604,8 @@ def head(request, trID):
             if old_name_model_vgws:
                 session_tr_id.update({'old_name_model_vgws': ', '.join(old_name_model_vgws)})
 
-        hidden_vars['В данной точке клиент потребляет:\n&%ресурс на договоре%&'] = 'В данной точке клиент потребляет:\n&%ресурс на договоре%&'
-        rep_string = {}
-        rep_string['contract_resource'] = '%ресурс на договоре%'
-        multi_vars = {rep_string['contract_resource']: list_stroka_main_client_service + list_stroka_other_client_service}
+        hidden_vars['В данной точке клиент потребляет:\n%ресурс на договоре%'] = 'В данной точке клиент потребляет:\n%ресурс на договоре%'
+        static_vars['ресурс на договоре'] = '\n'.join(list_stroka_main_client_service + list_stroka_other_client_service)
         if selected_ono[0][-2].startswith('CSW') or selected_ono[0][-2].startswith('WDA'):
             if waste_vgw:
                 list_stroka_other_vgw =[]
@@ -2632,12 +2630,11 @@ def head(request, trID):
         else:
             hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
     else:
-        multi_vars = {}
         hidden_vars['В данной точке c клиентом организован L2-стык'] = 'В данной точке c клиентом организован L2-стык'
         hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
         counter_exist_line = 0
         session_tr_id.update({'stick': True})
-    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars, multi_vars))
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars)) #multi_vars
     result_services = ''.join(result_services)
     rev_result_services = result_services[::-1]
     index_of_head = rev_result_services.index('''-----------------------------------------------------------------------------------\n''')
