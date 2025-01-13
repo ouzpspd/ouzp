@@ -2,7 +2,7 @@ import re
 
 def add_tag_for_services(ticket_tr):
     services = {}
-    tags_services = {'phone': 'Телефон', 'video': 'Видеонаблюдение', 'lvs': 'ЛВС', 'hotspot': 'Хот-спот'}
+    tags_services = {'phone': 'Телефон', 'video': 'Видеонаблюдение', 'lvs': 'ЛВС', 'hotspot': 'Хот-Спот'}
     for key, value in tags_services.items():
         for service in ticket_tr.services:
             if service.startswith(value):

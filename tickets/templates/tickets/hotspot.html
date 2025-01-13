@@ -103,11 +103,11 @@ $(function () {
 $(function () {
   $("#id_type_hotspot").change(function() {
     var val = $(this).val();
-    if(val === "Хот-спот Премиум") {
+    if(val === "Хот-Спот Премиум") {
         $(".local_wifi").show();
         $(".points").show();
     }
-    else if(val === "Хот-спот Премиум +") {
+    else if(val === "Хот-Спот Премиум +") {
             $(".local_wifi").hide();
             $(".points").hide();
             $("#id_hotspot_local_wifi").prop("checked", false);

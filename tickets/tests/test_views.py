@@ -126,7 +126,7 @@ class OuzpViewsTestCase(TestCase):
         self.assertTemplateUsed(response, 'tickets/hotspot.html')
 
     def test_call_view_hotspot_method_post(self):
-        data = {'type_hotspot': 'Хот-спот Стандарт', 'exist_hotspot_client': False, 'hotspot_local_wifi': False,
+        data = {'type_hotspot': 'Хот-Спот Стандарт', 'exist_hotspot_client': False, 'hotspot_local_wifi': False,
                 'hotspot_points': 1, 'hotspot_users': 1}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'hotspot': 'HotSpot 1 точка хот-спот'}, {'shpd': 'Интернет, DHCP Next'}],
@@ -251,7 +251,7 @@ class OuzpViewsTestCase(TestCase):
         self.assertTemplateUsed(response, 'tickets/cks.html')
 
     def test_call_view_cks_method_post(self):
-        data = {'pointA': 'Гагарина, д.8', 'pointB': 'Титова, д.14', 'policer_cks': 'полисером Subinterface',
+        data = {'pointA': 'Гагарина, д.8', 'pointB': 'Титова, д.14', 'policer_cks': 'полисером на Subinterface',
          'type_cks': 'access', 'exist_service': ''}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'phone': 'Телефон 1 номер'}, {'shpd': 'Интернет, DHCP Next'}],
@@ -450,9 +450,9 @@ class OuzpViewsTestCase(TestCase):
     def test_call_view_vols_method_post(self, sreda, logic_csw, ip, expected):
         data = {'correct_sreda': '2', 'kad': 'SW', 'port': '1', 'logic_csw': logic_csw[0],
         'logic_replace_csw': logic_csw[1], 'logic_change_gi_csw': logic_csw[2], 'logic_change_csw': logic_csw[3],
-        'device_pps': 'конвертер 1310 нм, выставить на конвертере режим работы Auto',
-        'device_client': 'конвертер 1550 нм, выставить на конвертере режим работы Auto',
-        'speed_port': 'Auto'}
+        'device_pps': '100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"', #'конвертер 1310 нм, выставить на конвертере режим работы Auto',
+        'device_client': '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"', #'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+        'speed_port': '"auto"'}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'vols': None}],
                           'sreda': sreda, 'tag_service_index': [0, 1], 'type_pass': ['Перенос, СПД'],

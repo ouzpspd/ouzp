@@ -65,9 +65,9 @@ class LocalForm(forms.Form):
 
 
 class HotspotForm(forms.Form):
-    types = [('Хот-спот Стандарт', 'Хот-спот Стандарт'),
-             ('Хот-спот Премиум', 'Хот-спот Премиум'),
-             ('Хот-спот Премиум +', 'Хот-спот Премиум +')]
+    types = [('Хот-Спот Стандарт', 'Хот-Спот Стандарт'),
+             ('Хот-Спот Премиум', 'Хот-Спот Премиум'),
+             ('Хот-Спот Премиум +', 'Хот-Спот Премиум +')]
     type_hotspot = forms.CharField(
         widget=forms.Select(choices=types, attrs={'class': 'form-control transceiver'}))
     exist_hotspot_client = forms.BooleanField(label='Существующий клиент', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
@@ -119,15 +119,23 @@ class ItvForm(forms.Form):
 
 class VolsForm(forms.Form):
     #types первое значение выводится в шаблон, второе значение отображается в форме
-    types = [('конвертер 1310 нм, выставить на конвертере режим работы Auto', 'конвертер 1310 нм'),
-             ('конвертер 1550 нм, выставить на конвертере режим работы Auto', 'конвертер 1550 нм'),
-             ('оптический передатчик SFP WDM, до 20 км, 1310 нм', 'SFP WDM, до 20 км, 1310 нм'),
-             ('оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентское оборудование', 'SFP WDM, до 20 км, 1550 нм'),
-             ('оптический передатчик SFP WDM, до 3 км, 1310 нм', 'SFP WDM, до 3 км, 1310 нм'),
-             ('оптический передатчик SFP WDM, до 3 км, 1550 нм в клиентское оборудование', 'SFP WDM, до 3 км, 1550 нм'),
-             ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм'),
-             ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 20 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм')]
-    speed = [('100FD', '100FD'), ('Auto', 'Auto')]
+    # types = [('конвертер 1310 нм, выставить на конвертере режим работы Auto', 'конвертер 1310 нм'),
+    #          ('конвертер 1550 нм, выставить на конвертере режим работы Auto', 'конвертер 1550 нм'),
+    #          ('оптический передатчик SFP WDM, до 20 км, 1310 нм', 'SFP WDM, до 20 км, 1310 нм'),
+    #          ('оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентское оборудование', 'SFP WDM, до 20 км, 1550 нм'),
+    #          ('оптический передатчик SFP WDM, до 3 км, 1310 нм', 'SFP WDM, до 3 км, 1310 нм'),
+    #          ('оптический передатчик SFP WDM, до 3 км, 1550 нм в клиентское оборудование', 'SFP WDM, до 3 км, 1550 нм'),
+    #          ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм'),
+    #          ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 20 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм')]
+    types = [('100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"', 'конвертер 1310 нм'),
+             ('100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"', 'конвертер 1550 нм'),
+             ('оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км', 'SFP WDM, до 20 км, 1310 нм'),
+             ('оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км в клиентское оборудование', 'SFP WDM, до 20 км, 1550 нм'),
+             ('оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км', 'SFP WDM, до 3 км, 1310 нм'),
+             ('оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование', 'SFP WDM, до 3 км, 1550 нм'),
+             ('1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"', 'SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм'),
+             ('1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"', 'SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм')]
+    speed = [('100FD', '100FD'), ('"auto"', 'Auto')]
     types_correct_sreda = [
         ('1', 'UTP'),
         ('2', 'ВОЛС'),
@@ -234,7 +242,7 @@ class ShpdForm(forms.Form):
 
 class ExtendServiceForm(forms.Form):
     type_police_cks_vk = [
-        ('полисером Subinterface', 'Subinterface'),
+        ('полисером на Subinterface', 'Subinterface'),
         ('портом подключения', 'Порт коммутатора'),
         ('не требуется', 'Не требуется')]
     type_police_vm = [
@@ -256,7 +264,7 @@ class ExtendServiceForm(forms.Form):
 class CksForm(forms.Form):
     pointA = forms.CharField(label='Точка A', widget=forms.TextInput(attrs={'class': 'form-control'}))
     pointB = forms.CharField(label='Точка B', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    type_police = [('полисером Subinterface', 'Subinterface'), ('портом подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
+    type_police = [('полисером на Subinterface', 'Subinterface'), ('портом подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
     policer_cks = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
     type_cks = forms.CharField(label='Режим порта', required=False,
@@ -301,7 +309,7 @@ class VideoForm(forms.Form):
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
     voice = forms.BooleanField(label='Запись звука', required=False,
                                widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30')]
+    type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30'), ('90', '90')]
     deep_archive = forms.CharField(label='Глубина архива камеры',
                                    widget=forms.Select(choices=type_deep_archive, attrs={'class': 'form-control'}))
     camera_place_one = forms.CharField(label='Место установки Камеры №1', required=False,
@@ -440,8 +448,11 @@ class ChangeParamsForm(forms.Form):
                                 label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
     routed_vrf = forms.CharField(max_length=50, required=False,
                                  label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
-                  ('существующей родительской подсети', 'Существующая родительская подсеть'),
+    # types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
+    #               ('существующей родительской подсети', 'Существующая родительская подсеть'),
+    #               ]
+    types_mask = [(True, 'Новая родительская подсеть'),
+                  (False, 'Существующая родительская подсеть'),
                   ]
     parent_subnet = forms.CharField(label='Родительская сеть', required=False,
                                widget=forms.Select(choices=types_mask, attrs={'class': 'form-control'}))
@@ -560,7 +571,7 @@ class PpsForm(forms.Form):
     ]
     types_add_kad = [
         ('не требуется', 'не требуется'),
-        ('Установка 2-го медного кад в гирлянду', 'Установка 2-го медного кад в гирлянду'),
+        ('Установка 2-го кад в гирлянду', 'Установка 2-го кад в гирлянду'),
         ('Установка 1-го оптического кад в гирлянду', 'Установка 1-го оптического кад в гирлянду'),
     ]
     type_change_node = forms.CharField(label='Тип работ на узле',
