@@ -2419,8 +2419,6 @@ def head(request, trID):
         static_vars['название коммутатора'] = selected_ono[0][-2]
         session_tr_id.update({'independent_kad': selected_ono[0][-2]})
         static_vars['порт доступа на коммутаторе'] = selected_ono[0][-1]
-        index_of_device = stroka.index('<- порт %порт доступа на коммутаторе%>') + len('<- порт %порт доступа на коммутаторе%>') + 1
-        stroka = stroka[:index_of_device] + ' \n' + stroka[index_of_device:]
     else:
         static_vars['название коммутатора'] = uplink[-1].split()[0]
         session_tr_id.update({'independent_kad': uplink[-1].split()[0]})
@@ -2453,7 +2451,7 @@ def head(request, trID):
                 list_stroka_device.append(extra_stroka_device)
         extra_extra_stroka_device = ''.join(list_stroka_device)
         index_of_device = stroka.index('<- порт %порт доступа на коммутаторе%>') + len('<- порт %порт доступа на коммутаторе%>') + 1
-        stroka = stroka[:index_of_device] + extra_extra_stroka_device + ' \n' + stroka[index_of_device:]
+        stroka = stroka[:index_of_device] + extra_extra_stroka_device + stroka[index_of_device:]
     if selected_ono[0][-2].startswith('CSW'):
         old_model_csw, node_csw = _parsing_model_and_node_client_device_by_device_name(selected_ono[0][-2], username,
                                                                                        password)
@@ -2465,7 +2463,7 @@ def head(request, trID):
                     '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -', '125 -', '131 -', '107 -', '109 -', '483 -', '106 -',
                     '89 -', '138 -']
     service_shpd_bgp = ['BGP', 'bgp']
-    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh', '-vpls', 'vpls-', '4598-cks']
+    service_portvk = ['-vk', 'vk-', '- vk', 'vk -', 'zhkh', 'vpls']
     service_portvm = ['-vrf', 'vrf-', '- vrf', 'vrf -']
     service_hotspot = ['hotspot']
     service_itv = ['itv']
