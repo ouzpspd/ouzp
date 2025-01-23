@@ -859,11 +859,9 @@ def data(request, trID):
     print('!!!!')
     for i, v in value_vars.items():
         print(f'{i}: {v}')
-    #print([value_vars])
     print('!!!!')
     value_vars.update({'templates': templates})
     result_services, result_services_ots, value_vars = construct_tr(value_vars)
-
 
     userlastname = None
     if request.user.is_authenticated:
@@ -1031,15 +1029,12 @@ def saved_data(request, trID):
             return render(request, 'tickets/saved_data.html', context)
 
     else:
-        kad = session_tr_id['kad']
-        if kad == 'Не требуется':
-            pps = 'Не требуется'
-        else:
-            pps = session_tr_id['pps']
         result_services = session_tr_id['result_services']
         counter_str_ortr = session_tr_id['counter_str_ortr']
         counter_str_ots = session_tr_id['counter_str_ots']
         result_services_ots = session_tr_id['result_services_ots']
+        kad = session_tr_id['kad']
+        pps = session_tr_id['pps']
         try:
             list_switches = session_tr_id['list_switches']
         except KeyError:

@@ -561,6 +561,9 @@ class PpsForm(forms.Form):
         ('Установка нового КАД', 'Установка нового КАД'),
         ('Установка дополнительного КАД', 'Установка дополнительного КАД'),
         ('Замена КАД', 'Замена КАД'),
+        ('Изменение трассы ВОК', 'Изменение трассы ВОК'),
+        ('Изменение трассы клиентских линий', 'Изменение трассы клиентских линий'),
+        ('Изминение физ. точки ППС', 'Изминение физ. точки ППС'),
     ]
     types_new_model = [
         ('24-портовый медный коммутатор (с 4-мя SFP портами)', '24-портовый медный коммутатор (с 4-мя SFP портами)'),
@@ -594,6 +597,18 @@ class PpsForm(forms.Form):
                                     widget=forms.TextInput(attrs={'class': 'form-control'}))
     delete_kad = forms.BooleanField(label='Демонтаж второго КАД', required=False,
                                  widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    pto_change_node = forms.BooleanField(label='УС меняется', required=False,
+                                 widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    pto_change_node_name = forms.CharField(label='Новое название УС', required=False,
+                          widget=forms.TextInput(attrs={'class': 'form-control'}))
+    pto_current_node_name = forms.CharField(label='Текущее название УС', required=False,
+                                           widget=forms.TextInput(attrs={'class': 'form-control'}))
+    pto_dark_optic = forms.BooleanField(label='Темное ОВ', required=False,
+                                         widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
+    pto_dark_optic_client = forms.CharField(label='Договор клиента темного ОВ', required=False,
+                                           widget=forms.TextInput(attrs={'class': 'form-control'}))
+    pto_dark_optic_after = forms.CharField(label='Проверка темного ОВ', required=False,
+                                            widget=forms.Textarea(attrs={'class': 'form-control'}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
