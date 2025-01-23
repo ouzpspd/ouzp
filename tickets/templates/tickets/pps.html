@@ -151,7 +151,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group type_new_model_kad">
+                            <div class="form-group new_model pto">
                                 <label for="{{form.type_new_model_kad.id_for_label}}">Новая модель КАД</label>
                                 {{form.type_new_model_kad}}
                             </div>
@@ -159,7 +159,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group kad_name">
+                            <div class="form-group kad_name pto">
                                 <label for="{{form.kad_name.id_for_label}}">Название коммутатора</label>
                                 {{form.kad_name}}
                             </div>
@@ -167,7 +167,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group type_add_kad add-g">
+                            <div class="form-group type_add_kad add-g pto">
                                 <label for="{{form.type_add_kad.id_for_label}}">Тип установки доп. КАД</label>
                                 {{form.type_add_kad}}
                             </div>
@@ -175,7 +175,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group disable add-g">
+                            <div class="form-group disable add-g pto">
                                 <label for="{{form.disable.id_for_label}}">Отключение</label>
                                 {{form.disable}}
                             </div>
@@ -183,7 +183,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group disabled_port add-g">
+                            <div class="form-group disabled_port add-g pto">
                                 <label for="{{form.disabled_port.id_for_label}}">Порт отключения</label>
                                 {{form.disabled_port}}
                             </div>
@@ -191,7 +191,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group disabled_link add-g">
+                            <div class="form-group disabled_link add-g pto">
                                 <label for="{{form.disabled_link.id_for_label}}">Линк/договор отключения</label>
                                 {{form.disabled_link}}
                             </div>
@@ -199,7 +199,7 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group deleted_kad add-g">
+                            <div class="form-group deleted_kad add-g pto">
                                 <label for="{{form.deleted_kad.id_for_label}}">Второй КАД в гирлянде</label>
                                 {{form.deleted_kad}}
                             </div>
@@ -207,24 +207,78 @@
                     </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group delete_kad add-g">
+                            <div class="form-group delete_kad add-g pto">
                                 <label for="{{form.delete_kad.id_for_label}}">Демонтаж второго КАД</label>
                                 {{form.delete_kad}}
                             </div>
                         </div>
                     </div>
 
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group pps pps-bool pto">
+                                <label for="{{form.pto_change_node.id_for_label}}">УС меняется</label>
+                                {{form.pto_change_node}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group pps pps-text pto">
+                                <label for="{{form.pto_current_node_name.id_for_label}}">Текущее название УС</label>
+                                {{form.pto_current_node_name}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group pps pps-text pto">
+                                <label for="{{form.pto_change_node_name.id_for_label}}">Новое название УС</label>
+                                {{form.pto_change_node_name}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group dark dark-bool pto">
+                                <label for="{{form.pto_dark_optic.id_for_label}}">Темное ОВ</label>
+                                {{form.pto_dark_optic}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group dark dark-text pto">
+                                <label for="{{form.pto_dark_optic_client.id_for_label}}">Договор клиента темного ОВ</label>
+                                {{form.pto_dark_optic_client}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="form-group dark dark-text pto">
+                                <label for="{{form.pto_dark_optic_after.id_for_label}}">Проверка темного ОВ</label>
+                                {{form.pto_dark_optic_after}}
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row mb-2">
-                            <div class="d-grid gap-2 col-2 ppr">
+                            <div class="d-grid gap-2 col-2 ppr pto">
                                 <a class="btn btn-info btn-block" href="{% url 'tr_view' ticket_tr.ticket_k.dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
                             </div>
-                            <div class="d-grid gap-2 col-2 ppr">
+                            <div class="d-grid gap-2 col-2 ppr pto">
                                 <a class="btn btn-info btn-block" href="{% url 'ppr' trID %}" target ="_blank" role="button">Создать ППР</a>
                             </div>
                         </div>
                     <div class="row">
                         <div class="col-4">
-                            <div class="form-group ppr">
+                            <div class="form-group ppr pto">
                                 <label for="{{form.ppr.id_for_label}}">ППР</label>
                                 {{form.ppr}}
                             </div>
@@ -232,7 +286,7 @@
                     </div>
                     <div class="row mt-3">
                         <div class="col-4">
-                                <div class="form-group get_node">
+                                <div class="form-group get_node pto">
                                     <button class="btn btn-info btn-block" id="id_get_node" type="button">
                                       <span class="" role="status" aria-hidden="true"></span>
                                         <span class="sr-only">Lo...</span>
@@ -269,27 +323,21 @@
 <script>
 
 $(function () {
-    $(".kad_name").hide();
-    $(".ppr").hide();
-    $(".add-g").hide();
-	$(".get_node").hide();
-
-
+    $(".pto").hide();
 });
 
 
 $(function () {
   $("#id_type_change_node").change(function() {
     var val = $(this).val();
-    console.log(1)
+    console.log($("input, textarea"))
+    $(".pto").hide();
+    $("input, textarea").not("input[type=checkbox], input[type=button], input[type=submit], input[type=hidden]").val("");
+    $("input[type=checkbox]").prop("checked", false);
+    $('.type_add_kad option:contains("не требуется")').prop('selected', true);
     if(val === "Установка нового КАД") {
         $(".get_node").show();
-        $("#id_disabled_port").val("");
-        $("#id_disabled_link").val("");
-        $('.type_add_kad option:contains("не требуется")').prop('selected', true);
-        $(".add-g").hide();
-        $(".kad_name").hide();
-        $(".ppr").hide();
+        $(".new_model").show();
         $(".disable").show();
         $("#id_disable").change(function() {
             var dis = $(this).val();
@@ -390,21 +438,12 @@ $(function () {
     }
     else if (val === "Замена КАД") {
         $(".kad_name").show();
+        $(".model_kad").show();
         $("#id_kad_name").prop("required", true);
-        $(".type_new_model_kad").show();
         $(".ppr").show();
-        $(".add-g").hide();
-
-        $("#id_disabled_port").val("");
-        $("#id_disabled_link").val("");
-        $('.type_add_kad option:contains("не требуется")').prop('selected', true);
-
-        $(".get_node").hide();
-
     }
     else if (val === "Установка дополнительного КАД") {
-        $(".ppr").hide();
-        $(".get_node").hide();
+        $(".new_model").show();
         $(".type_add_kad").show();
         $(".kad_name").show();
         $("#id_kad_name").prop("required", true);
@@ -446,20 +485,39 @@ $(function () {
         });
 
     }
-    else {
-        $(".ppr").hide();
-        $(".kad_name").hide();
-	    $(".add_g").hide();
-	    $(".get_node").hide();
-	    $("#id_kad_name").val("");
-	    $("#id_disabled_port").val("");
-	    $("#id_disabled_link").val("");
-	    $("#id_ppr").val("");
-	    $("#id_deleted_kad").val("");
-	    $("#id_delete_kad").prop("checked", false);
-	    $("#id_disable").prop("checked", false);
-	    $('.type_add_kad option:contains("не требуется")').prop('selected', true);
-
+    else if (val === "Изменение трассы ВОК") {
+        $(".ppr").show();
+        $(".dark-bool").show();
+        $("#id_pto_dark_optic").change(function() {
+            if(this.checked) {
+                $(".dark-text").show();
+                $("#id_pto_dark_optic_client").prop("required", true);
+                $("#id_pto_dark_optic_after").prop("required", true);
+            }
+            else {
+                $(".dark-text").hide();
+                $(".dark-text").find(':input').val("");
+            }
+        });
+    }
+    else if (val === "Изменение трассы клиентских линий") {
+        $(".ppr").show();
+    }
+    else if (val === "Изминение физ. точки ППС") {
+        $(".ppr").show();
+        $(".pps-bool").show();
+        $("#id_pto_change_node").change(function() {
+            if(this.checked) {
+                $(".pps-text").show();
+                const pps = "{{ticket_tr.pps}}";
+                $("#id_pto_current_node_name").val(pps);
+                $("#id_pto_change_node_name").prop("required", true);
+            }
+            else {
+                $(".pps-text").hide();
+                $(".pps-text").find(':input').val("");
+            }
+        });
     }
 
   });

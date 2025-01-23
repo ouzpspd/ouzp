@@ -108,6 +108,12 @@ def construct_tr(value_vars):
             result_services, value_vars = add_kad(value_vars)
         elif value_vars.get('type_change_node') == 'Установка нового КАД':
             result_services, value_vars = new_kad(value_vars)
+        elif value_vars.get('type_change_node') == 'Изминение физ. точки ППС':
+            result_services, value_vars = passage_pps_without_logic(value_vars)
+        elif value_vars.get('type_change_node') == 'Изменение трассы ВОК':
+            result_services, value_vars = passage_optic_line(value_vars)
+        elif value_vars.get('type_change_node') == 'Изменение трассы клиентских линий':
+            result_services, value_vars = passage_client_lines(value_vars)
         result_services_ots = None
     return result_services, result_services_ots, value_vars
 
@@ -2093,7 +2099,65 @@ def _passage_phone_service(result_services, value_vars):
         result_services_ots.append(pluralizer_vars(stroka, counter_plur))
     return result_services, result_services_ots, value_vars
 
-#from oattr.utils import analyzer_vars as analyzer
+
+def get_passage_optic_line(value_vars):
+    """Данный метод формирует блок ТТР для переноса трассы ВОК"""
+    result_services = []
+    templates = value_vars.get('templates')
+    stroka = templates.get("Изменение трассы ВОК присоединения к СПД.")
+    static_vars = {}
+    hidden_vars = {}
+    static_vars['№ заявка ППР'] = value_vars.get('ppr')
+    if value_vars.get('pto_dark_optic'):
+        hidden_vars[
+            'Внимание! Для проверки восстановления связи в "темном ОВ" для клиента %номер контракта в ИС Cordis% необходимо %способ проверки темного ОВ%.'
+        ] = 'Внимание! Для проверки восстановления связи в "темном ОВ" для клиента %номер контракта в ИС Cordis% необходимо %способ проверки темного ОВ%.'
+        static_vars['номер контракта в ИС Cordis'] = value_vars.get('pto_dark_optic_client')
+        static_vars['способ проверки темного ОВ'] = value_vars.get('pto_dark_optic_after')
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    return result_services, value_vars
+
+def get_passage_client_lines(value_vars):
+    """Данный метод формирует блок ТТР для переноса клиентских линий"""
+    result_services = []
+    templates = value_vars.get('templates')
+    stroka = templates.get("Изменение трассы клиентских линий связи присоединения к СПД.")
+    static_vars = {}
+    hidden_vars = {}
+    static_vars['№ заявка ППР'] = value_vars.get('ppr')
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    return result_services, value_vars
+
+def get_passage_pps_without_logic(value_vars):
+    """Данный метод формирует блок ТТР для изменения физ. точки ППС"""
+    result_services = []
+    templates = value_vars.get('templates')
+    stroka = templates.get("Изменение физической точки подключения ППС.")
+    static_vars = {}
+    hidden_vars = {}
+    if value_vars.get('pto_current_node_name'):
+        static_vars['узел связи'] = _readable_node(value_vars.get('pto_current_node_name'))
+    else:
+        static_vars['узел связи'] = _readable_node(value_vars.get('pps'))
+    if value_vars.get('pto_change_node'):
+        hidden_vars[
+            '- Актуализировать информацию в системах учета и на оборудовании c %узел связи% на %узел связи новый%.'
+        ] = '- Актуализировать информацию в системах учета и на оборудовании c %узел связи% на %узел связи новый%.'
+        hidden_vars[
+            '- Передать информацию в ОУИ СПД заявкой в ИС Cordis.'
+        ] = '- Передать информацию в ОУИ СПД заявкой в ИС Cordis.'
+        static_vars['узел связи новый'] = _readable_node(value_vars.get('pto_change_node_name'))
+    if value_vars.get('pto_current_node_name') and 'ИБП' in value_vars.get('pto_current_node_name') or \
+        not value_vars.get('pto_current_node_name') and 'ИБП' in value_vars.get('pps'):
+        hidden_vars[
+            '- Совместно с ОНИТС СПД проверить резервирование по питанию.'
+        ] = '- Совместно с ОНИТС СПД проверить резервирование по питанию.'
+        hidden_vars[
+            '- Совместно с ТЭО проверить резервирование по питанию.'
+        ] = '- Совместно с ТЭО проверить резервирование по питанию.'
+    static_vars['№ заявка ППР'] = value_vars.get('ppr')
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+    return result_services, value_vars
 
 def get_replace_kad(value_vars):
     """Данный метод формирует блок ТТР для замены КАД"""
@@ -3257,6 +3321,24 @@ def new_kad(value_vars):
     value_vars.update({'result_services': result_services})
     return result_services, value_vars
 
+
+def passage_pps_without_logic(value_vars):
+    """Данный метод формирует готовое ТР изменения физической точки подключения ППС"""
+    result_services, value_vars = get_passage_pps_without_logic(value_vars)
+    value_vars.update({'result_services': result_services})
+    return result_services, value_vars
+
+def passage_optic_line(value_vars):
+    """Данный метод формирует готовое ТР изменения трассы ВОК"""
+    result_services, value_vars = get_passage_optic_line(value_vars)
+    value_vars.update({'result_services': result_services})
+    return result_services, value_vars
+
+def passage_client_lines(value_vars):
+    """Данный метод формирует готовое ТР переноса клиентских линий"""
+    result_services, value_vars = get_passage_client_lines(value_vars)
+    value_vars.update({'result_services': result_services})
+    return result_services, value_vars
 
 def passage_csw_no_install(value_vars):
     """Данный метод формирует готовое ТР для переноса КК с изменением трассы, но без изменения лог. подключения"""
