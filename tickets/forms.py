@@ -304,9 +304,29 @@ class PortVMForm(forms.Form):
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class VideoForm(forms.Form):
-    camera_number = forms.IntegerField(max_value=9, label='Количество камер',
+    camera_number = forms.IntegerField(min_value=1, max_value=16, label='Количество камер',
                                        widget=forms.NumberInput(attrs={'class': 'form-control'}))
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    type_schema = [
+        # ('1 4-портовый', '4'),
+        # ('2 4-портовых', '4+4'),
+        # ('4-портовый и 8-портовый', '4+8'),
+        # ('1 8-портовый', '8'),
+        # ('8-портовый и 4-портовый', '8+4'),
+        # ('2 8-портовых', '8+8'),
+        ('4', '4'),
+        ('4+4', '4+4'),
+        ('4+8', '4+8'),
+        ('8', '8'),
+        ('8+4', '8+4'),
+        ('8+8', '8+8'),
+    ]
+    schema_poe = forms.CharField(label='POE-коммутаторы',
+                                   widget=forms.Select(choices=type_schema, attrs={'class': 'form-control'}))
+    poe_1_cameras = forms.IntegerField(max_value=8, label='Количество камер на POE-коммутаторе №1', required=False,
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    poe_2_cameras = forms.IntegerField(max_value=8, label='Количество камер на POE-коммутаторе №2', required=False,
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}))
     voice = forms.BooleanField(label='Запись звука', required=False,
                                widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30'), ('90', '90')]
@@ -318,6 +338,29 @@ class VideoForm(forms.Form):
     camera_place_two = forms.CharField(label='Место установки Камеры №2', required=False,
                                        widget=forms.TextInput(attrs={'class': 'form-control'}),
                                        help_text='только если 1 или 2 камеры')
+
+    # def clean(self):
+    #
+    #     cleaned_data = super().clean()
+    #     camera_number = cleaned_data.get("camera_number")
+    #     camera_schema = cleaned_data.get("camera_schema")
+    #     print('hey', type(camera_number), camera_number)
+    #     schemas = {1: ('0',), 2: ('0',), 3: ('4',), 4: ('4',), 5: ('4',), 6: ('8', '4+4'), 7: ('8', '4+4'),
+    #                8: ('8', '4+4'), 9: ('8', '4+4'), 10: ('8+4',), 11: ('8+4',), 12: ('8+4',), 13: ('8+8',),
+    #                14: ('8+8',), 15: ('8+8',), 16: ('8+8',),}
+    #
+    #     if camera_schema not in schemas[camera_number]:
+    #         print('hoo')
+    #         msg = "Схема POE-коммутаторов не соответствует количеству камер"
+    #         self.add_error("camera_schema", msg)
+    #         self.add_error("camera_number", msg)
+    #         #self._errors["camera_number"] = "Please enter a valid span"
+    #         # raise forms.ValidationError(
+    #         #         'Span must be less than or equal to Maximum Span'
+    #         # )
+    #
+    #     # print(self.cleaned_data)
+    #     # return self.cleaned_data
 
 
 class PassVideoForm(forms.Form):
