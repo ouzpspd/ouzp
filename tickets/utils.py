@@ -86,7 +86,7 @@ def _readable_node(node_mon):
     for key, item in node_templates.items():
         if node_mon.endswith(key):
             return item + node_mon[:node_mon.index(key)]
-    return ''
+    return node_mon
 
 
 def short_readable_node(node_mon):
@@ -95,7 +95,7 @@ def short_readable_node(node_mon):
     for key in node_templates:
         if node_mon.endswith(key):
             return node_mon[:node_mon.index(key)]
-    return ''
+    return node_mon
 
 
 def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):

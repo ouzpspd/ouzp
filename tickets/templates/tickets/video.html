@@ -72,7 +72,7 @@
         <div class="row">
             <div class="col-4">
                 <div class="form-group poe schema">
-                    <label for="{{ videoform.schema_poe.id_for_label }}">POE-коммутаторы:</label>
+                    <label for="{{ videoform.schema_poe.id_for_label }}">Схема POE-коммутаторов:</label>
                     {{videoform.schema_poe}}
                 </div>
             </div>
@@ -176,6 +176,8 @@ $(function () {
                 $(".poe1").hide();
                 $(".poe2").hide();
                 $("#id_poe_1_cameras").val(`${val}`);
+                $("#id_poe_1_cameras").prop("required", false)
+                $("#id_poe_2_cameras").prop("required", false)
             }
             else {
                 $(".poe1").show();

@@ -308,14 +308,8 @@ class VideoForm(forms.Form):
                                        widget=forms.NumberInput(attrs={'class': 'form-control'}))
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
     type_schema = [
-        # ('1 4-портовый', '4'),
-        # ('2 4-портовых', '4+4'),
-        # ('4-портовый и 8-портовый', '4+8'),
-        # ('1 8-портовый', '8'),
-        # ('8-портовый и 4-портовый', '8+4'),
-        # ('2 8-портовых', '8+8'),
         ('4', '4'),
-        ('4+4', '4+4'),
+        #('4+4', '4+4'),
         ('4+8', '4+8'),
         ('8', '8'),
         ('8+4', '8+4'),
@@ -338,29 +332,6 @@ class VideoForm(forms.Form):
     camera_place_two = forms.CharField(label='Место установки Камеры №2', required=False,
                                        widget=forms.TextInput(attrs={'class': 'form-control'}),
                                        help_text='только если 1 или 2 камеры')
-
-    # def clean(self):
-    #
-    #     cleaned_data = super().clean()
-    #     camera_number = cleaned_data.get("camera_number")
-    #     camera_schema = cleaned_data.get("camera_schema")
-    #     print('hey', type(camera_number), camera_number)
-    #     schemas = {1: ('0',), 2: ('0',), 3: ('4',), 4: ('4',), 5: ('4',), 6: ('8', '4+4'), 7: ('8', '4+4'),
-    #                8: ('8', '4+4'), 9: ('8', '4+4'), 10: ('8+4',), 11: ('8+4',), 12: ('8+4',), 13: ('8+8',),
-    #                14: ('8+8',), 15: ('8+8',), 16: ('8+8',),}
-    #
-    #     if camera_schema not in schemas[camera_number]:
-    #         print('hoo')
-    #         msg = "Схема POE-коммутаторов не соответствует количеству камер"
-    #         self.add_error("camera_schema", msg)
-    #         self.add_error("camera_number", msg)
-    #         #self._errors["camera_number"] = "Please enter a valid span"
-    #         # raise forms.ValidationError(
-    #         #         'Span must be less than or equal to Maximum Span'
-    #         # )
-    #
-    #     # print(self.cleaned_data)
-    #     # return self.cleaned_data
 
 
 class PassVideoForm(forms.Form):
@@ -646,11 +617,11 @@ class PpsForm(forms.Form):
                           widget=forms.TextInput(attrs={'class': 'form-control'}))
     pto_current_node_name = forms.CharField(label='Текущее название УС', required=False,
                                            widget=forms.TextInput(attrs={'class': 'form-control'}))
-    pto_dark_optic = forms.BooleanField(label='Темное ОВ', required=False,
+    pto_dark_optic = forms.BooleanField(label='Наличие "темного" ОВ в ВОК', required=False,
                                          widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    pto_dark_optic_client = forms.CharField(label='Договор клиента темного ОВ', required=False,
+    pto_dark_optic_client = forms.CharField(label='Договор клиента', required=False,
                                            widget=forms.TextInput(attrs={'class': 'form-control'}))
-    pto_dark_optic_after = forms.CharField(label='Проверка темного ОВ', required=False,
+    pto_dark_optic_after = forms.CharField(label='Решение по проверке темного ОВ', required=False,
                                             widget=forms.Textarea(attrs={'class': 'form-control'}))
 
     def __init__(self, *args, **kwargs):

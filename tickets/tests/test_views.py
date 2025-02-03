@@ -370,8 +370,8 @@ class OuzpViewsTestCase(TestCase):
         self.assertTemplateUsed(response, 'tickets/video.html')
 
     def test_call_view_video_method_post(self):
-        data = {'camera_number': '3', 'camera_model': 'QTECH', 'deep_archive': '0',
-                'vm_inet': False, 'type_portvm': 'access', 'exist_service_vm': ''}
+        data = {'camera_number': 6, 'camera_model': 'QTECH', 'deep_archive': '0', 'poe_1_cameras': 6,
+                'vm_inet': False, 'type_portvm': 'access', 'exist_service_vm': '', 'schema_poe': '8', }
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'video': 'Видеонаблюдение 1 камера'}, {'shpd': 'Интернет, DHCP Next'}],
                           'tag_service_index': [0]})
