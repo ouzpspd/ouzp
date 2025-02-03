@@ -39,9 +39,78 @@
     <div class="container">
         <div class="row">
             <div class="col-4">
-            {{ videoform.as_p }}
+                <div class="form-group">
+                    <label for="{{ videoform.camera_number.id_for_label }}">Количество камер:</label>
+                    {{videoform.camera_number}}
+                </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ videoform.camera_model.id_for_label }}">Модель камер:</label>
+                    {{videoform.camera_model}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ videoform.voice.id_for_label }}">Запись звука:</label>
+                    {{videoform.voice}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ videoform.deep_archive.id_for_label }}">Глубина архива:</label>
+                    {{videoform.deep_archive}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group poe schema">
+                    <label for="{{ videoform.schema_poe.id_for_label }}">Схема POE-коммутаторов:</label>
+                    {{videoform.schema_poe}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group poe poe1">
+                    <label for="{{ videoform.poe_1_cameras.id_for_label }}">Количество камер на POE-коммутаторе №1:</label>
+                    {{videoform.poe_1_cameras}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group poe poe2">
+                    <label for="{{ videoform.poe_2_cameras.id_for_label }}">Количество камер на POE-коммутаторе №2:</label>
+                    {{videoform.poe_2_cameras}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group inj">
+                    <label for="{{ videoform.camera_place_one.id_for_label }}">Место установки Камеры №1:</label>
+                    {{videoform.camera_place_one}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group inj inj2">
+                    <label for="{{ videoform.camera_place_two.id_for_label }}">Место установки Камеры №2:</label>
+                    {{videoform.camera_place_two}}
+                </div>
+            </div>
+        </div>
+
+
         <div class="row">
             <div class="col-2">
                 <div class="form-group">
@@ -61,7 +130,70 @@
 </div>
 
 
+<script>
 
+$(function () {
+    $(".poe").hide();
+    $(".inj").hide();
+});
+
+
+$(function () {
+  $("#id_camera_number").change(function() {
+    $("#id_camera_number").removeClass("is-invalid")
+    $(".poe").hide();
+    $(".inj").hide();
+    $("#id_poe_1_cameras").prop("required", false)
+    $("#id_poe_2_cameras").prop("required", false)
+    $("#id_camera_place_one").prop("required", false)
+    $("#id_camera_place_two").prop("required", false)
+    $("#id_poe_1_cameras").val("");
+    $("#id_poe_2_cameras").val("");
+    var val = $(this).val();
+    console.log(val)
+
+    if(val > 1 && val < 3) {
+        $(".inj").show();
+    }
+    else if(val == 1) {
+        $(".inj").show();
+        $(".inj2").hide();
+    }
+    else if(val == 5 || val == 9) {
+    }
+    else if(val > 2 && val < 17) {
+        $(".schema").show();
+        $(".poe1").hide();
+        $(".poe2").hide();
+        $("#id_poe_1_cameras").val(`${val}`);
+        $("#id_poe_1_cameras").prop("required", true)
+        $(".inj").hide();
+        $("#id_schema_poe").change(function() {
+            var schema = $(this).val();
+            console.log(val)
+
+            if(schema == "4" || schema == "8") {
+                $(".poe1").hide();
+                $(".poe2").hide();
+                $("#id_poe_1_cameras").val(`${val}`);
+                $("#id_poe_1_cameras").prop("required", false)
+                $("#id_poe_2_cameras").prop("required", false)
+            }
+            else {
+                $(".poe1").show();
+                $(".poe2").show();
+                $("#id_poe_1_cameras").val("");
+                $("#id_poe_2_cameras").prop("required", true)
+            }
+        });
+    }
+    else {
+        $("#id_camera_number").addClass("is-invalid")
+    }
+  });
+});
+
+</script>
 
 
 

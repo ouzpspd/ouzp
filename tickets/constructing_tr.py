@@ -529,22 +529,6 @@ def _new_services(result_services, value_vars):
                 static_vars['порт доступа на маршрутизаторе'] = 'свободный'
                 static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
                 static_vars['адрес установки камеры'] = value_vars.get('address')
-                # list_cameras_one = []
-                # list_cameras_two = []
-                # for i in range(camera_number - 1):
-                #     extra_stroka_one = 'Порт {}: %адрес установки камеры%, Камера №{}, %модель камеры%, %необходимость записи звука%\n'.format(
-                #         i + 1, i + 1)
-                #     list_cameras_one.append(extra_stroka_one)
-                # for i in range(camera_number):
-                #     extra_stroka_two = '-- камеры Камера №{} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;\n'.format(
-                #         i + 1)
-                #     list_cameras_two.append(extra_stroka_two)
-                # extra_extra_stroka_one = ''.join(list_cameras_one)
-                # extra_extra_stroka_two = ''.join(list_cameras_two)
-                # stroka = stroka[:stroka.index('- Организовать 1 линию от камеры')] + extra_extra_stroka_one + stroka[
-                #                                                                                               stroka.index(
-                #                                                                                                   '- Организовать 1 линию от камеры'):]
-                # stroka = stroka + '\n' + extra_extra_stroka_two
                 multi_vars = {}
                 multi_vars['Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'] = []
                 multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
@@ -567,39 +551,87 @@ def _new_services(result_services, value_vars):
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars, multi_vars)
                 counter_plur = camera_number - 1
                 result_services.append(pluralizer_vars(stroka, counter_plur))
-            else:
+            elif camera_number > 2 and camera_number < 17 and camera_number not in (5, 9):
                 stroka = templates.get("Организация услуги Видеонаблюдение с использованием POE-коммутатора.")
+                repr_str = """- Организовать %количество линий% {линию} от POE-коммутатора до видеокамер. Включить линии в свободные порты POE-коммутатора:
+Порт %порт доступа на POE-коммутаторе%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;"""
+                multi_vars = {}
+                multi_vars[repr_str] = []
+                multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
+
+                schema_poe = value_vars.get('schema_poe')
+                set_poes = schema_poe.split('+')
+                number_ports_poe_1 = set_poes[0]
+                number_ports_poe_2 = set_poes[1] if len(set_poes) == 2 else None
+                counter_same_poe = {}
+                counter_same_poe.update({number_ports_poe_1: 1})
+                if number_ports_poe_2:
+                    if counter_same_poe.get(number_ports_poe_2):
+                        counter_same_poe[number_ports_poe_2] += 1
+                    else:
+                        counter_same_poe.update({number_ports_poe_2: 1})
+                count_poe = 1 if not number_ports_poe_2 else 2
+                str_count_poe = "-- %портовая емкость коммутатора%-портовый POE-коммутатор - %количество POE-коммутаторов% шт."
+                str_poe_uplink = "-- В порт %порт доступа на POE-коммутаторе% %портовая емкость коммутатора%-портового POE-коммутатора."
+
+                multi_vars[str_count_poe] = []
+                multi_vars[str_poe_uplink] = []
+                for k,v in counter_same_poe.items():
+                    multi_vars[str_count_poe].append(f"-- {k}-портовый POE-коммутатор - {v} шт.")
+                    appended_str = "-- В порт 5 4-портового POE-коммутатора." if k == '4' else "-- В порт 10 8-портового POE-коммутатора."
+                    multi_vars[str_poe_uplink].append(appended_str)
+
+                text_schema = {
+                    '4': 'один 4-портовый',
+                    #'4+4': 'два 4-портовые',
+                    '4+8': '4-портовый и 8-портовый',
+                    '8': 'один 8-портовый',
+                    '8+4': '8-портовый и 4-портовый',
+                    '8+8': 'два 8-портовые',
+                }
+
+                static_vars["схема POE-коммутаторов"] = text_schema[schema_poe]
+                static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
+                static_vars['адрес установки камеры'] = value_vars.get('address')
+                static_vars['количество камер'] = str(camera_number)
                 if sreda == '2' or sreda == '4':
                     static_vars['отдел ОИПМ / ОИПД'] = 'ОИПМ'
                 else:
                     static_vars['отдел ОИПМ / ОИПД'] = 'ОИПД'
-                static_vars['количество линий'] = str(camera_number)
-                static_vars['количество камер'] = str(camera_number)
-                if 5 < camera_number < 9:
-                    static_vars['модель POE-коммутатора'] = 'POE-коммутатор Atis PoE-1010-8P'
-                    static_vars['порт доступа на POE-коммутаторе'] = '10'
-                elif 2 < camera_number < 5:
-                    static_vars['модель POE-коммутатора'] = 'POE-коммутатор D-Link DES-1005P'
-                    static_vars['порт доступа на POE-коммутаторе'] = '5'
-                static_vars['порт доступа на маршрутизаторе'] = 'свободный'
-                static_vars['глубина хранения записей с камеры'] = value_vars.get('deep_archive')
-                static_vars['адрес установки камеры'] = value_vars.get('address')
-                multi_vars = {}
-                multi_vars['Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'] = []
-                multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
+
+                counter_camera = 1
+                counter_port = 1
+                poe_1_cameras = value_vars.get('poe_1_cameras')
+                poe_2_cameras = value_vars.get('poe_2_cameras')
+                lines_poe = [poe_1_cameras, poe_2_cameras]
+                for j in range(count_poe):
+                    plured_str = pluralizer_vars("- Организовать %количество линий% {линию} от POE-коммутатора до видеокамер. Включить линии в свободные порты POE-коммутатора:", lines_poe[j])
+                    appended_str = plured_str.replace("%количество линий%", str(lines_poe[j]))
+                    multi_vars[repr_str].append(appended_str)
+
+                    for i in range(lines_poe[j]):
+                        multi_vars[repr_str].append(f'Порт {counter_port}: %адрес установки камеры%, Камера №{counter_camera}, %модель камеры%, %необходимость записи звука%;')
+                        counter_camera += 1
+                        counter_port += 1
+                    counter_port = 1
+
                 counter = 1
                 for i in range(camera_number):
-                    multi_vars[
-                        'Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'
-                    ].append(f'Порт {counter}: %адрес установки камеры%, Камера №{counter}, %модель камеры%, %необходимость записи звука%;')
                     multi_vars[
                         '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
                     ].append(f'-- камеры Камера №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
                     counter += 1
-                static_vars['количество POE-коммутаторов'] = '1'
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars, multi_vars)
-                counter_plur = camera_number
-                result_services.append(pluralizer_vars(stroka, counter_plur))
+                counter_plur = count_poe
+                if number_ports_poe_2:
+                    is_correct_poe_1 = poe_1_cameras <= int(number_ports_poe_1)
+                    is_correct_poe_2 = poe_2_cameras <= int(number_ports_poe_2)
+                    is_correct_cameras = poe_1_cameras + poe_2_cameras == camera_number
+                    is_correct_schema_poe = is_correct_poe_1 and is_correct_poe_2 and is_correct_cameras
+                else:
+                    is_correct_schema_poe = camera_number <= int(number_ports_poe_1)
+                if is_correct_schema_poe:
+                    result_services.append(pluralizer_vars(stroka, counter_plur))
         elif 'Телефон' in service:
             name_new_service.add('Телефония')
 
@@ -2113,7 +2145,11 @@ def get_passage_optic_line(value_vars):
             'Внимание! Для проверки восстановления связи в "темном ОВ" для клиента %номер контракта в ИС Cordis% необходимо %способ проверки темного ОВ%.'
         ] = 'Внимание! Для проверки восстановления связи в "темном ОВ" для клиента %номер контракта в ИС Cordis% необходимо %способ проверки темного ОВ%.'
         static_vars['номер контракта в ИС Cordis'] = value_vars.get('pto_dark_optic_client')
-        static_vars['способ проверки темного ОВ'] = value_vars.get('pto_dark_optic_after')
+        pto_dark_optic_after = value_vars.get('pto_dark_optic_after')
+        if pto_dark_optic_after:
+            pto_dark_optic_after = pto_dark_optic_after[0].lower() + pto_dark_optic_after[1:]
+            pto_dark_optic_after = pto_dark_optic_after[:-1] if pto_dark_optic_after[-1] == "." else pto_dark_optic_after
+        static_vars['способ проверки темного ОВ'] = pto_dark_optic_after
     result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     return result_services, value_vars
 

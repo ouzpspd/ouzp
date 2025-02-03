@@ -304,9 +304,23 @@ class PortVMForm(forms.Form):
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class VideoForm(forms.Form):
-    camera_number = forms.IntegerField(max_value=9, label='Количество камер',
+    camera_number = forms.IntegerField(min_value=1, max_value=16, label='Количество камер',
                                        widget=forms.NumberInput(attrs={'class': 'form-control'}))
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    type_schema = [
+        ('4', '4'),
+        #('4+4', '4+4'),
+        ('4+8', '4+8'),
+        ('8', '8'),
+        ('8+4', '8+4'),
+        ('8+8', '8+8'),
+    ]
+    schema_poe = forms.CharField(label='POE-коммутаторы',
+                                   widget=forms.Select(choices=type_schema, attrs={'class': 'form-control'}))
+    poe_1_cameras = forms.IntegerField(max_value=8, label='Количество камер на POE-коммутаторе №1', required=False,
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    poe_2_cameras = forms.IntegerField(max_value=8, label='Количество камер на POE-коммутаторе №2', required=False,
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}))
     voice = forms.BooleanField(label='Запись звука', required=False,
                                widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     type_deep_archive = [('0', '0'), ('3', '3'), ('7', '7'), ('15', '15'), ('30', '30'), ('90', '90')]
@@ -603,11 +617,11 @@ class PpsForm(forms.Form):
                           widget=forms.TextInput(attrs={'class': 'form-control'}))
     pto_current_node_name = forms.CharField(label='Текущее название УС', required=False,
                                            widget=forms.TextInput(attrs={'class': 'form-control'}))
-    pto_dark_optic = forms.BooleanField(label='Темное ОВ', required=False,
+    pto_dark_optic = forms.BooleanField(label='Наличие "темного" ОВ в ВОК', required=False,
                                          widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    pto_dark_optic_client = forms.CharField(label='Договор клиента темного ОВ', required=False,
+    pto_dark_optic_client = forms.CharField(label='Договор клиента', required=False,
                                            widget=forms.TextInput(attrs={'class': 'form-control'}))
-    pto_dark_optic_after = forms.CharField(label='Проверка темного ОВ', required=False,
+    pto_dark_optic_after = forms.CharField(label='Решение по проверке темного ОВ', required=False,
                                             widget=forms.Textarea(attrs={'class': 'form-control'}))
 
     def __init__(self, *args, **kwargs):
