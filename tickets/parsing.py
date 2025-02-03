@@ -731,9 +731,10 @@ def add_res_to_ppr(ppr, service, login, password):
     url_contract = f'https://cis.corp.itmh.ru/mvc/Autocomplete/ContractByFullName?term={contract}'
     req_contract = requests.get(url_contract, verify=False, auth=HTTPBasicAuth(login, password))
     contract_list = req_contract.json()
+    founded = [i for i in contract_list if i['Name'] == contract]
 
-    if len(contract_list) == 1:
-        id_contract = (contract_list[0]['ID'])
+    if len(founded) == 1:
+        id_contract = (founded[0]['ID'])
         url_id_contract = f'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceSimList?contract={id_contract}'
         req = requests.get(url_id_contract, verify=False, auth=HTTPBasicAuth(login, password))
         resources = req.json()
