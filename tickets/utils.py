@@ -816,27 +816,16 @@ def get_services(file):
     for disable_resource in disable_list:
         if '-->' in disable_resource:
             disable_resource = disable_resource.split('-->')[0]
-        if ', IP-адрес или подсеть;' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split(', IP-адрес или подсеть;')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
-        elif 'IP-адрес или подсеть' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split('IP-адрес или подсеть ')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
-        elif ', Etherline;' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split(', Etherline;')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
-        elif 'Etherline' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split('Etherline ')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
-        elif ', Порт виртуального коммутатора;' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split(', Порт виртуального коммутатора;')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
-        elif 'Порт виртуального коммутатора' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split('Порт виртуального коммутатора ')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
-        elif ', Предоставление в аренду оптического воло;' in disable_resource:
-            contract, ppr_resource = disable_resource.strip().strip('"').split(', Предоставление в аренду оптического воло;')
-            services.append((contract, ppr_resource, disable_resource.strip('"')))
+        name_services = (', IP-адрес или подсеть;', ', Etherline;', ', Порт виртуального коммутатора;',
+                       ', Предоставление в аренду оптического воло;', 'IP-адрес или подсеть', 'Etherline',
+                       'Порт виртуального коммутатора')
+
+        replaced_disable_resources = disable_resource.strip().strip('"')
+        for i in name_services:
+            replaced_disable_resources = replaced_disable_resources.replace(i, "name_service")
+        contract, *ppr_resources = replaced_disable_resources.split("name_service")
+        for ppr_resource in ppr_resources:
+            services.append((contract.strip(), ppr_resource.strip(',').strip(), disable_resource.strip('"')))
     return services
 
 
