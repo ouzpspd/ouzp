@@ -740,7 +740,7 @@ def add_res_to_ppr(ppr, service, login, password):
         resources = req.json()
 
         for resource in resources:
-            if resource['Name'] == ppr_resource:
+            if resource['Name'].strip() == ppr_resource:
                 url = 'https://cis.corp.itmh.ru/mvc/Demand/MaintenanceObjectAddSim'
                 data = {'demand': ppr, 'sim': resource['SimId']}
                 req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
