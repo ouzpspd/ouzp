@@ -37,6 +37,16 @@
 <form action="{% url 'video' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
+        {% if video_add %}
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ videoform.camera_new.id_for_label }}">Количество дополнительных камер:</label>
+                    {{videoform.camera_new}}
+                </div>
+            </div>
+        </div>
+        {% else %}
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
@@ -45,6 +55,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
         <div class="row">
             <div class="col-4">
                 <div class="form-group">
@@ -69,10 +80,36 @@
                 </div>
             </div>
         </div>
+        {% if video_add %}
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="{{ videoform.camera_schema.id_for_label }}">Cуществующая схема POE оборудования:</label>
+                    {{videoform.camera_schema}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group poe poe1">
+                    <label for="{{ videoform.count_busy_ports_1.id_for_label }}">Количество занятых портов на POE коммутаторе №1:</label>
+                    {{videoform.count_busy_ports_1}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group poe poe2">
+                    <label for="{{ videoform.count_busy_ports_2.id_for_label }}">Количество занятых портов на POE коммутаторе №2:</label>
+                    {{videoform.count_busy_ports_2}}
+                </div>
+            </div>
+        </div>
+        {% else %}
         <div class="row">
             <div class="col-4">
                 <div class="form-group poe schema">
-                    <label for="{{ videoform.schema_poe.id_for_label }}">Схема POE-коммутаторов:</label>
+                    <label for="{{ videoform.schema_poe.id_for_label }}">Установка POE-коммутаторов:</label>
                     {{videoform.schema_poe}}
                 </div>
             </div>
@@ -109,7 +146,7 @@
                 </div>
             </div>
         </div>
-
+        {% endif %}
 
         <div class="row">
             <div class="col-2">
@@ -135,6 +172,8 @@
 $(function () {
     $(".poe").hide();
     $(".inj").hide();
+    $("#id_camera_number").prop("required", true);
+    $("#id_camera_new").prop("required", true);
 });
 
 
@@ -192,6 +231,29 @@ $(function () {
     }
   });
 });
+
+$(function () {
+  $("#id_camera_schema").change(function() {
+    $(".poe").hide();
+    $("#id_count_busy_ports_1").prop("required", false);
+    $("#id_count_busy_ports_2").prop("required", false);
+    $("#id_count_busy_ports_1").val("");
+    $("#id_count_busy_ports_2").val("");
+    var val = $(this).val();
+    console.log(val)
+
+    if(val != "1-0-0" && val != "2-0-0") {
+        $(".poe").show();
+        $("#id_count_busy_ports_1").prop("required", true);
+        $("#id_count_busy_ports_2").prop("required", true);
+        if(val.endsWith("0")) {
+            $(".poe2").hide();
+            $("#id_count_busy_ports_2").prop("required", false);
+        }
+    }
+  });
+});
+
 
 </script>
 

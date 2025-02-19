@@ -855,10 +855,10 @@ def data(request, trID):
 
     value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm, 'services': services})
 
-    print('!!!!')
-    for i, v in value_vars.items():
-        print(f'{i}: {v}')
-    print('!!!!')
+    # print('!!!!')
+    # for i, v in value_vars.items():
+    #     print(f'{i}: {v}')
+    # print('!!!!')
     value_vars.update({'templates': templates})
     result_services, result_services_ots, value_vars = construct_tr(value_vars)
 
@@ -1833,6 +1833,10 @@ def video(request, trID):
     else:
         session_tr_id = request.session[str(trID)]
         tag_service = session_tr_id.get('tag_service')
+        video_add =False
+        change_services = session_tr_id.get('types_change_service')
+        if change_services:
+            video_add = bool([_ for _ in change_services if next(iter(_.keys())) == 'Установка дополнительных камер СВН'])
         service_name = 'video'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
@@ -1840,6 +1844,7 @@ def video(request, trID):
         request.session[trID] = session_tr_id
         videoform = VideoForm()
         context = {
+            'video_add': video_add,
             'service_video': service,
             'videoform': videoform,
             'task_otpm': session_tr_id.get('task_otpm'),
@@ -2764,6 +2769,7 @@ def change_serv(request, trID):
                 "Организация порта ВЛС trunk'ом с простоем",
                 "Организация порта ВМ trunk'ом с простоем",
                 "Изменение сервиса",
+                "Установка дополнительных камер СВН"
             ]
             types_only_mask = ["Организация доп connected",
                                "Организация доп маршрутизируемой",

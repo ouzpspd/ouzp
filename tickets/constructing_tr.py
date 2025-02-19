@@ -582,7 +582,7 @@ def _new_services(result_services, value_vars):
 
                 text_schema = {
                     '4': 'один 4-портовый',
-                    #'4+4': 'два 4-портовые',
+                    '4+4': 'два 4-портовые',
                     '4+8': '4-портовый и 8-портовый',
                     '8': 'один 8-портовый',
                     '8+4': '8-портовый и 4-портовый',
@@ -1762,6 +1762,8 @@ def get_need(value_vars):
                     need.append("- изменить cхему организации ШПД;")
                 elif next(iter(type_change_service.keys())) == "Замена IP":
                     need.append("- изменить IP адрес;")
+                elif next(iter(type_change_service.keys())) == "Установка дополнительных камер СВН":
+                    need.append("- установить дополнительные камеры СВН;")
                 elif next(iter(type_change_service.keys())) == "Изменение сервиса":
                     old_service = next(iter(value_vars.get('readable_services')))
                     change_service = next(iter(type_change_service.values()))
@@ -2911,6 +2913,10 @@ def _change_services(value_vars):
             static_vars['указать сервис'] = f'{next(iter(readable_services.keys()))} {next(iter(readable_services.values()))}'
             static_vars['название нового сервиса'] = new_service_name
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+        elif next(iter(type_change_service.keys())) == "Установка дополнительных камер СВН":
+            extra_cameras = ExtraCameras(value_vars)
+            stroka = extra_cameras.get_filled_template()
+            result_services.append(stroka)
         elif next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
             stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %сущ. маска IP-сети% на подсеть с маской %нов. маска IP-сети%.")
             static_vars = {}
@@ -3427,3 +3433,295 @@ def construct_phone_channels_string(value_vars, vats):
         single_number = ' '.join(total[0].split()[1:])
         total[0] = single_number
     return total
+
+
+class TextBlock:
+    """Компановка текста"""
+    def __init__(self, value_vars):
+        self.static_vars = {}
+        self.hidden_vars = {}
+        self.multi_vars = {}
+        self.value_vars = value_vars
+        self.plural = 1
+
+    def construct(self, template):
+        analyzed = analyzer_vars(template, self.static_vars, self.hidden_vars, self.multi_vars)
+        return pluralizer_vars(analyzed, self.plural)
+
+
+class TextBlockForExtraCameras(TextBlock):
+    """Компановка текста для шаблона Установка дополнительных камер."""
+    def __init__(self, value_vars):
+        super().__init__(value_vars)
+        count_inj, ports_sw1, ports_sw2 = [int(_) for _ in value_vars.get('camera_schema').split('-')]
+        count_busy_ports_1 = value_vars.get('count_busy_ports_1') if value_vars.get('count_busy_ports_1') else 0
+        count_busy_ports_2 = value_vars.get('count_busy_ports_2') if value_vars.get('count_busy_ports_2') else 0
+        self.count_inj = count_inj
+        self.busy_ports = [(ports_sw1, count_busy_ports_1), (ports_sw2, count_busy_ports_2)]
+        cur = count_inj + count_busy_ports_1 + count_busy_ports_2
+        self.new_cameras = value_vars.get('camera_new')
+        self.all_cameras = cur + self.new_cameras
+        self.added_cam = [i + cur for i in range(1, self.new_cameras + 1)]
+        self.counter_new_sw = {'4': 0, '8': 0}
+
+    def idle_service(self):
+        """Добавление строк с отключением"""
+        strs = []
+        strs.append('МКО:')
+        strs.append('- Проинформировать клиента о простое сервиса видеонаблюдение на время проведения работ.')
+        strs.append('- Согласовать время проведение работ.')
+        strs.append('- Убедиться в восстановлении сервиса видеонаблюдение у клиента.')
+        self.hidden_vars.update({i: i for i in strs})
+
+    def add_inj(self, inj_number):
+        """Добавление строк для добавления инжектора"""
+        strs = []
+        strs.append('-- PoE-инжектор СКАТ PSE-PoE.220AC/15VA - 1 шт.')
+        strs.append('- Организовать 1 линию от камеры до маршрутизатора клиента.')
+        strs.append('- Подключить организованную линию связи через POE инжектор в свободный lan-порт маршрутизатора:')
+        self.hidden_vars.update({i: i for i in strs})
+        port_ing_str = '-- свободный: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%.'
+        self.hidden_vars[port_ing_str] = port_ing_str.replace('%номер камеры на схеме%', inj_number)
+
+        cam_str = '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+        if not self.multi_vars.get(cam_str):
+            self.multi_vars[cam_str] = []
+        self.multi_vars[cam_str].append(cam_str.replace('%номер камеры на схеме%', inj_number))
+        self.add_camera_params()
+
+    def del_inj(self, start_port, last_port):
+        """Добавление строк для удаления инжектора"""
+        self.idle_service()
+        remove_inj_str = '- Демонтировать POE-^инжектор^ и высвободить ^порт^ на маршрутизаторе.'
+        self.hidden_vars[remove_inj_str] = pluralizer_vars(remove_inj_str, self.count_inj)
+        from_inj_to_sw_str = '- Переключить {существующую} {линию} для {камеры} из маршрутизатора клиента в %портовая емкость коммутатора%-портовый POE-коммутатор.'
+        from_inj_to_sw_str_changed = from_inj_to_sw_str.replace('%портовая емкость коммутатора%', str(last_port))
+        self.hidden_vars[from_inj_to_sw_str] = pluralizer_vars(from_inj_to_sw_str_changed, self.count_inj)
+        moved_cam_str = 'Порт %порт доступа на POE-коммутаторе%: существующая камера, переключенная с POE-инжектора;'
+        self.multi_vars[moved_cam_str] = []
+        for i in range(self.count_inj):
+            self.multi_vars[moved_cam_str].append(f'Порт {start_port}: существующая камера, переключенная с POE-инжектора;')
+            start_port += 1
+        return start_port
+
+    def replace_sw4_to_sw8(self):
+        """Добавление строк для замены коммутатора"""
+        self.idle_service()
+        replace_str = '- Заменить 4-^портовый^ POE-^коммутатор^ на 8-^портовый^ POE-^коммутатор^. Переключить линии от существующих камер "порт в порт".'
+        count_switch_str = '-- 8-портовый POE-коммутатор - %количество POE-коммутаторов% шт.'
+        if replace_str in self.hidden_vars.keys():
+            self.hidden_vars[replace_str] = pluralizer_vars(replace_str, 2)
+        else:
+            self.hidden_vars[replace_str] = pluralizer_vars(replace_str, 1)
+        if '-- 8-портовый POE-коммутатор - 1 шт.' in self.hidden_vars.values():
+            self.hidden_vars[count_switch_str] = '-- 8-портовый POE-коммутатор - 2 шт.'
+        else:
+            self.hidden_vars[count_switch_str] = '-- 8-портовый POE-коммутатор - 1 шт.'
+
+    def add_sw8(self):
+        """Добавление строк для добавления 8-портового коммутатора"""
+        count_ports = 8
+        self.new_poe(count_ports)
+        self.counter_new_sw['8'] += 1
+
+    def add_sw4(self):
+        """Добавление строк для добавления 4-портового коммутатора"""
+        count_ports = 4
+        self.new_poe(count_ports)
+        self.counter_new_sw['4'] += 1
+
+    def new_poe(self, count_ports):
+        """Добавление строк для добавления коммутатора"""
+        switch_str = f'-- {count_ports}-портовый POE-коммутатор - %количество POE-коммутаторов% шт.'
+        if switch_str in self.hidden_vars.keys():
+            self.hidden_vars[switch_str] = switch_str.replace('%количество POE-коммутаторов%', '2')
+        else:
+            self.hidden_vars[switch_str] = switch_str.replace('%количество POE-коммутаторов%', '1')
+
+        strs = []
+        strs.append(f'-- В порт {5 if count_ports == 4 else 10} {count_ports}-портового POE-коммутатора.')
+        strs.append('- Установить в помещении клиента %схема POE-коммутаторов% POE-^коммутаторы^.')
+        strs.append(
+            '- Организовать ^линию^ от маршрутизатора клиента до POE-^коммутаторов^. Включить {организованную} ^линию^ связи:')
+        strs.append('-- В ^свободный^ ^порты^ маршрутизатора;')
+        strs.append(
+            'Для выбора модели POE-коммутатора руководствоваться документом "ИТП ВН. Типовые терминалы и PoE оборудование" (ссылка на документ: https://ckb.itmh.ru/x/LgMcDg).')
+        self.hidden_vars.update({i: i for i in strs})
+
+    def add_schema_poe(self):
+        """Добавление схемы POE в переменные"""
+        new_sw = [pluralizer_vars(f'{k}-^портовый^', v) for k, v in self.counter_new_sw.items() if v]
+        new_sw_str = ' и '.join(new_sw)
+        self.static_vars.update({'схема POE-коммутаторов': new_sw_str})
+        self.plural = sum(self.counter_new_sw.values())
+
+    def add_cameras(self):
+        """Формирование заполненных строк с камерами"""
+        for last_port, count_busy_ports in self.busy_ports:
+            start_port = count_busy_ports + 1
+            if self.count_inj and start_port <= last_port:
+                start_port = self.del_inj(start_port, last_port)
+                self.count_inj = None
+            if self.added_cam and start_port <= last_port:
+                self.install_cameras(start_port, last_port)
+
+    def install_cameras(self, start_port, last_port):
+        """Добавление строк с камерами"""
+        temp_cam = copy(self.added_cam)
+        new_cam_str = """- Организовать %количество линий% {линию} от %портовая емкость коммутатора%-портового POE-коммутатора до видеокамер. Включить линии в свободные порты POE-коммутатора:
+Порт %порт доступа на POE-коммутаторе%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;"""
+        new_cam_str_2 = '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+        if not self.multi_vars.get(new_cam_str):
+            self.multi_vars[new_cam_str] = []
+        if not self.multi_vars.get(new_cam_str_2):
+            self.multi_vars[new_cam_str_2] = []
+        cnt_free_ports = last_port - start_port + 1
+        cnt_lines = len(self.added_cam) if len(self.added_cam) < cnt_free_ports else cnt_free_ports
+        lines_str = pluralizer_vars(
+            '- Организовать %количество линий% {линию} от %портовая емкость коммутатора%-портового POE-коммутатора до видеокамер. Включить линии в свободные порты POE-коммутатора:',
+            cnt_lines)
+        lines_str = lines_str.replace("%количество линий%", str(cnt_lines)).replace("%портовая емкость коммутатора%",
+                                                                                    str(last_port))
+        self.multi_vars[new_cam_str].append(lines_str)
+        for i in temp_cam:
+            self.added_cam.remove(i)
+            self.multi_vars[new_cam_str].append(
+                f'Порт {start_port}: %адрес установки камеры%, Камера №{i}, %модель камеры%, %необходимость записи звука%;')
+            self.multi_vars[new_cam_str_2].append(
+                f'-- камеры Камера №{i} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
+            if start_port == last_port:
+                break
+            start_port += 1
+        self.multi_vars[new_cam_str_2].sort(key=lambda x: int(x[18:20]))
+        self.add_camera_params()
+
+    def add_camera_params(self):
+        """Добавление параметров камер"""
+        self.static_vars.update({
+            'количество камер': str(self.new_cameras),
+            'количество POE-инжекторов': str(self.new_cameras),
+            'модель камеры': self.value_vars.get('camera_model'),
+            'глубина хранения записей с камеры': self.value_vars.get('deep_archive'),
+            'адрес установки камеры': self.value_vars.get('address'),
+        })
+        if self.value_vars.get('voice') is True:
+            self.static_vars['необходимость записи звука'] = 'требуется запись звука'
+            self.hidden_vars[' и запись звука'] = ' и запись звука'
+        else:
+            self.static_vars['необходимость записи звука'] = 'запись звука не требуется'
+
+
+class ExtraCameras:
+    """Формирование шаблона Установка дополнительных камер"""
+    def __init__(self, value_vars):
+        self.text_block = TextBlockForExtraCameras(value_vars)
+        self.value_vars = value_vars
+        self.schema = value_vars.get('camera_schema')
+        self.templates = self.value_vars.get('templates')
+
+    def camera_up_to_2(self):
+        """Увеличение количества камер до 2"""
+        number_inj_camera = '2'
+        if self.schema in ('1-0-0',):
+            self.text_block.add_inj(number_inj_camera)
+    def camera_up_to_4(self):
+        """Увеличение количества камер до 4"""
+        if self.schema in ('1-0-0', '2-0-0'):
+            self.text_block.add_sw4()
+            self.text_block.busy_ports[0] = (4, 0)
+
+    def camera_up_to_5(self):
+        """Увеличение количества камер до 5"""
+        number_inj_camera = '5'
+        if self.schema == '0-4-0':
+            self.text_block.add_inj(number_inj_camera)
+        elif self.schema == '1-4-0':
+            not_deleted_inj = 1
+            self.text_block.count_inj -= not_deleted_inj
+        elif self.schema in ('1-0-0', '2-0-0'):
+            not_deleted_inj = 1
+            self.text_block.count_inj -= not_deleted_inj
+            self.text_block.add_sw4()
+            self.text_block.busy_ports[0] = (4, 0)
+
+    def camera_up_to_8(self):
+        """Увеличение количества камер до 8"""
+        if self.schema in ('1-0-0', '2-0-0', '0-4-0', '1-4-0'):
+            if self.schema in ('1-0-0', '2-0-0'):
+                self.text_block.add_sw8()
+            elif self.schema in ('0-4-0', '1-4-0'):
+                self.text_block.replace_sw4_to_sw8()
+            self.text_block.busy_ports[0] = (8, self.text_block.busy_ports[0][1])
+
+    def camera_up_to_9(self):
+        """Увеличение количества камер до 9"""
+        number_inj_camera = '9'
+        if self.schema in ('1-0-0', '2-0-0'):
+            not_deleted_inj = 1
+            self.text_block.count_inj -= not_deleted_inj
+            self.text_block.add_sw8()
+            self.text_block.busy_ports[0] = (8, 0)
+        elif self.schema in ('0-4-0', '1-4-0'):
+            if self.schema == '0-4-0':
+                self.text_block.add_inj(number_inj_camera)
+            self.text_block.replace_sw4_to_sw8()
+            self.text_block.busy_ports[0] = (8, self.text_block.busy_ports[0][1])
+        elif self.schema in ('0-8-0', '0-4-4'):
+            self.text_block.add_inj(number_inj_camera)
+
+    def camera_up_to_12(self):
+        """Увеличение количества камер до 12"""
+        if self.schema in ('0-8-0', '1-8-0'):
+            self.text_block.add_sw4()
+            self.text_block.busy_ports[1] = (4, 0)
+        elif self.schema in ('0-4-4',):
+            self.text_block.replace_sw4_to_sw8()
+            self.text_block.busy_ports[0] = (8, self.text_block.busy_ports[0][1])
+        elif self.schema in ('1-0-0', '2-0-0'):
+            self.text_block.add_sw8()
+            self.text_block.add_sw4()
+            self.text_block.busy_ports = [(8, 0), (4, 0)]
+        elif self.schema in ('0-4-0', '1-4-0'):
+            self.text_block.add_sw8()
+            self.text_block.busy_ports[1] = (8, 0)
+
+    def camera_up_to_16(self):
+        """Увеличение количества камер до 16"""
+        if self.schema in ('1-0-0', '2-0-0'):
+            self.text_block.add_sw8()
+            self.text_block.add_sw8()
+            self.text_block.busy_ports = [(8, 0), (8, 0)]
+        elif self.schema in ('0-4-0', '1-4-0',):
+            self.text_block.replace_sw4_to_sw8()
+            self.text_block.add_sw8()
+            self.text_block.busy_ports = [(8, self.text_block.busy_ports[0][1]), (8, 0)]
+        elif self.schema in ('0-8-0', '1-8-0'):
+            self.text_block.add_sw8()
+            self.text_block.busy_ports[1] = (8, 0)
+        elif self.schema in ('0-4-4', '0-8-4', '0-4-8'):
+            if self.schema == '0-4-4':
+                self.text_block.replace_sw4_to_sw8()
+            self.text_block.replace_sw4_to_sw8()
+            self.text_block.busy_ports = [(8, self.text_block.busy_ports[0][1]), (8, self.text_block.busy_ports[1][1])]
+
+    def get_filled_template(self):
+        """Заполнение шаблона данными"""
+        if self.text_block.all_cameras == 2:
+            self.camera_up_to_2()
+        elif self.text_block.all_cameras <= 4:
+            self.camera_up_to_4()
+        elif self.text_block.all_cameras == 5:
+            self.camera_up_to_5()
+        elif self.text_block.all_cameras <= 8:
+            self.camera_up_to_8()
+        elif self.text_block.all_cameras == 9:
+            self.camera_up_to_9()
+        elif self.text_block.all_cameras <= 12:
+            self.camera_up_to_12()
+        elif self.text_block.all_cameras <= 16:
+            self.camera_up_to_16()
+        self.text_block.add_cameras()
+        self.text_block.add_schema_poe()
+        template = self.templates.get("Установка дополнительных камер.")
+        return self.text_block.construct(template)
+
