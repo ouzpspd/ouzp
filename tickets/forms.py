@@ -304,18 +304,18 @@ class PortVMForm(forms.Form):
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 class VideoForm(forms.Form):
-    camera_number = forms.IntegerField(min_value=1, max_value=16, label='Количество камер',
+    camera_number = forms.IntegerField(min_value=1, max_value=16, label='Количество камер', required=False,
                                        widget=forms.NumberInput(attrs={'class': 'form-control'}))
     camera_model = forms.CharField(label='Модель камеры', widget=forms.TextInput(attrs={'class': 'form-control'}))
     type_schema = [
         ('4', '4'),
-        #('4+4', '4+4'),
+        ('4+4', '4+4'),
         ('4+8', '4+8'),
         ('8', '8'),
         ('8+4', '8+4'),
         ('8+8', '8+8'),
     ]
-    schema_poe = forms.CharField(label='POE-коммутаторы',
+    schema_poe = forms.CharField(label='POE-коммутаторы', required=False,
                                    widget=forms.Select(choices=type_schema, attrs={'class': 'form-control'}))
     poe_1_cameras = forms.IntegerField(max_value=8, label='Количество камер на POE-коммутаторе №1', required=False,
                                        widget=forms.NumberInput(attrs={'class': 'form-control'}))
@@ -332,6 +332,26 @@ class VideoForm(forms.Form):
     camera_place_two = forms.CharField(label='Место установки Камеры №2', required=False,
                                        widget=forms.TextInput(attrs={'class': 'form-control'}),
                                        help_text='только если 1 или 2 камеры')
+    camera_new = forms.IntegerField(min_value=1, max_value=15, label='Количество новых камер', required=False,
+                                    widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    type_schema = [
+        ('1-0-0', '1-0-0'),
+        ('2-0-0', '2-0-0'),
+        ('1-4-0', '1-4-0'),
+        ('1-8-0', '1-8-0'),
+        ('0-4-0', '0-4-0'),
+        ('0-8-0', '0-8-0'),
+        ('0-4-4', '0-4-4'),
+        ('0-8-4', '0-8-4'),
+        ('0-4-8', '0-4-8'),
+        ('0-8-8', '0-8-8'),
+    ]
+    camera_schema = forms.CharField(label='Cхема POE оборудования', required=False,
+                                   widget=forms.Select(choices=type_schema, attrs={'class': 'form-control'}))
+    count_busy_ports_1 = forms.IntegerField(min_value=0, max_value=8, label='Количество камер на POE коммутаторе №1',
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}), required=False)
+    count_busy_ports_2 = forms.IntegerField(min_value=0, max_value=8, label='Количество камер на POE коммутаторе №2',
+                                       widget=forms.NumberInput(attrs={'class': 'form-control'}), required=False)
 
 
 class PassVideoForm(forms.Form):
@@ -432,21 +452,22 @@ class ChangeLogShpdForm(forms.Form):
 
 
 class ChangeServForm(forms.Form):
-    types = [("Организация ШПД trunk'ом", "Организация ШПД trunk'ом"),
-             ("Организация ШПД trunk'ом с простоем", "Организация ШПД trunk'ом с простоем"),
+    types = [("Организация ШПД trunk'ом", "ШПД. Организация trunk'ом"),
+             ("Организация ШПД trunk'ом с простоем", "ШПД. Организация trunk'ом с простоем"),
+             ("Изменение cхемы организации ШПД", "ШПД. Изменение cхемы"),
+             ("Замена IP", "ШПД. Замена IP"),
+             ("Замена connected на connected", "ШПД. Замена connected на connected подсеть"),
+             ("Организация доп connected", "ШПД. Организация доп. connected подсети"),
+             ("Организация доп маршрутизируемой", "ШПД. Организация доп. маршрутизируемой подсети"),
+             ("Организация доп IPv6", "ШПД. Организация доп IPv6"),
+             ("Организация ЦКС trunk'ом", "ЦКС. Организация trunk'ом"),
+             ("Организация ЦКС trunk'ом с простоем", "ЦКС. Организация trunk'ом с простоем"),
+             ("Организация порта ВЛС trunk'ом", "ВЛС. Организация порта trunk'ом"),
+             ("Организация порта ВЛС trunk'ом с простоем", "ВЛС. Организация порта trunk'ом с простоем"),
+             ("Организация порта ВМ trunk'ом", "ВМ. Организация порта trunk'ом"),
+             ("Организация порта ВМ trunk'ом с простоем", "ВМ. Организация порта trunk'ом с простоем"),
+             ("Установка дополнительных камер СВН", "СВН. Установка дополнительных камер"),
              ("Изменение сервиса", "Изменение сервиса"),
-             ("Изменение cхемы организации ШПД", "Изменение cхемы организации ШПД"),
-             ("Замена IP", "Замена IP"),
-             ("Замена connected на connected", "Замена connected на connected"),
-             ("Организация доп connected", "Организация доп connected"),
-             ("Организация доп маршрутизируемой", "Организация доп маршрутизируемой"),
-             ("Организация доп IPv6", "Организация доп IPv6"),
-             ("Организация ЦКС trunk'ом", "Организация ЦКС trunk'ом"),
-             ("Организация ЦКС trunk'ом с простоем", "Организация ЦКС trunk'ом с простоем"),
-             ("Организация порта ВЛС trunk'ом", "Организация порта ВЛС trunk'ом"),
-             ("Организация порта ВЛС trunk'ом с простоем", "Организация порта ВЛС trunk'ом с простоем"),
-             ("Организация порта ВМ trunk'ом", "Организация порта ВМ trunk'ом"),
-             ("Организация порта ВМ trunk'ом с простоем", "Организация порта ВМ trunk'ом с простоем")
              ]
     type_change_service = forms.CharField(label='Варианты ТР', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
