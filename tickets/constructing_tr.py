@@ -531,7 +531,7 @@ def _new_services(result_services, value_vars):
                 static_vars['адрес установки камеры'] = value_vars.get('address')
                 multi_vars = {}
                 multi_vars['Порт %номер камеры на схеме%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;'] = []
-                multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
+                multi_vars['-- камеры №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
                 counter = 1
                 for i in range(camera_number - 1):
                     multi_vars[
@@ -541,8 +541,8 @@ def _new_services(result_services, value_vars):
                 counter = 1
                 for i in range(camera_number):
                     multi_vars[
-                        '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
-                    ].append(f'-- камеры Камера №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
+                        '-- камеры №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+                    ].append(f'-- камеры №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
                     counter += 1
 
                 static_vars[
@@ -556,7 +556,7 @@ def _new_services(result_services, value_vars):
 Порт %порт доступа на POE-коммутаторе%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;"""
                 multi_vars = {}
                 multi_vars[repr_str] = []
-                multi_vars['-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
+                multi_vars['-- камеры №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'] = []
 
                 schema_poe = value_vars.get('schema_poe')
                 set_poes = schema_poe.split('+')
@@ -617,8 +617,8 @@ def _new_services(result_services, value_vars):
                 counter = 1
                 for i in range(camera_number):
                     multi_vars[
-                        '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
-                    ].append(f'-- камеры Камера №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
+                        '-- камеры №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+                    ].append(f'-- камеры №{counter} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
                     counter += 1
                 stroka = analyzer_vars(stroka, static_vars, hidden_vars, multi_vars)
                 counter_plur = count_poe
@@ -3483,7 +3483,7 @@ class TextBlockForExtraCameras(TextBlock):
         port_ing_str = '-- свободный: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%.'
         self.hidden_vars[port_ing_str] = port_ing_str.replace('%номер камеры на схеме%', inj_number)
 
-        cam_str = '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+        cam_str = '-- камеры №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
         if not self.multi_vars.get(cam_str):
             self.multi_vars[cam_str] = []
         self.multi_vars[cam_str].append(cam_str.replace('%номер камеры на схеме%', inj_number))
@@ -3494,7 +3494,7 @@ class TextBlockForExtraCameras(TextBlock):
         self.idle_service()
         remove_inj_str = '- Демонтировать POE-^инжектор^ и высвободить ^порт^ на маршрутизаторе.'
         self.hidden_vars[remove_inj_str] = pluralizer_vars(remove_inj_str, self.count_inj)
-        from_inj_to_sw_str = '- Переключить {существующую} {линию} для {камеры} из маршрутизатора клиента в %портовая емкость коммутатора%-портовый POE-коммутатор.'
+        from_inj_to_sw_str = '- Переключить {существующую} {линию} для {камеры} из маршрутизатора клиента на %портовая емкость коммутатора%-портовый POE-коммутатор.'
         from_inj_to_sw_str_changed = from_inj_to_sw_str.replace('%портовая емкость коммутатора%', str(last_port))
         self.hidden_vars[from_inj_to_sw_str] = pluralizer_vars(from_inj_to_sw_str_changed, self.count_inj)
         moved_cam_str = 'Порт %порт доступа на POE-коммутаторе%: существующая камера, переключенная с POE-инжектора;'
@@ -3570,7 +3570,7 @@ class TextBlockForExtraCameras(TextBlock):
         temp_cam = copy(self.added_cam)
         new_cam_str = """- Организовать %количество линий% {линию} от %портовая емкость коммутатора%-портового POE-коммутатора до видеокамер. Включить линии в свободные порты POE-коммутатора:
 Порт %порт доступа на POE-коммутаторе%: %адрес установки камеры%, Камера №%номер камеры на схеме%, %модель камеры%, %необходимость записи звука%;"""
-        new_cam_str_2 = '-- камеры Камера №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
+        new_cam_str_2 = '-- камеры №%номер камеры на схеме% глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;'
         if not self.multi_vars.get(new_cam_str):
             self.multi_vars[new_cam_str] = []
         if not self.multi_vars.get(new_cam_str_2):
@@ -3588,11 +3588,11 @@ class TextBlockForExtraCameras(TextBlock):
             self.multi_vars[new_cam_str].append(
                 f'Порт {start_port}: %адрес установки камеры%, Камера №{i}, %модель камеры%, %необходимость записи звука%;')
             self.multi_vars[new_cam_str_2].append(
-                f'-- камеры Камера №{i} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
+                f'-- камеры №{i} глубину хранения архива %глубина хранения записей с камеры%< и запись звука>;')
             if start_port == last_port:
                 break
             start_port += 1
-        self.multi_vars[new_cam_str_2].sort(key=lambda x: int(x[18:20]))
+        self.multi_vars[new_cam_str_2].sort(key=lambda x: int(x[11:13]))
         self.add_camera_params()
 
     def add_camera_params(self):
