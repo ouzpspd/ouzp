@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% block content %}
+<html style="font-size:0.85rem">
+    <style>
+
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Две колонки одинаковой ширины */
+            gap: 20px; /* Пробел между колонками */
+            max-width: 1200px;
+            width: 80%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .column {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            line-height: 1.1;
+            border-bottom: 1px solid #e0e0e0; /* Добавляем тонкую границу */
+            padding-bottom: 4px; /* Отступ под границей */
+        }
+
+        /* Убираем последнюю границу для последнего элемента */
+        .form-group:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        label {
+            flex: 1; /* Занимает всю доступную ширину */
+            margin-right: 6px; /* Уменьшаем отступ справа от текста до поля ввода */
+            white-space: nowrap; /* Чтобы текст не переносился на новую строку */
+            font-size: 12px; /* Уменьшаем размер шрифта */
+        }
+
+        input[type="text"] {
+            flex: 0 0 80px; /* Уменьшаем ширину полей ввода до 80px */
+            padding: 3px; /* Дополнительно уменьшаем высоту полей ввода */
+            font-size: 11px; /* Уменьшаем размер шрифта */
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            font-size: 14px; /* Уменьшение размера шрифта */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+            font-size: 12px; /* Уменьшение размера шрифта */
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+
+
+<div class="container">
+    <!-- Левая колонка (входные данные) -->
+    <div class="left-column column">
+        <h5>Входные данные</h5>
+        <form id="opticalLinkForm">
+            <div class="form-group">
+                <label for="tx_power">Transceivers Tx Power (dBm, multiple lambdas separated by space):</label>
+                <input type="text" id="tx_power" name="tx_power" value="0">
+            </div>
+            <div class="form-group">
+                <label for="attenuators_tx">Attenuators Tx Transceivers (dB):</label>
+                <input type="text" id="attenuators_tx" name="attenuators_tx" value="0">
+            </div>
+            <div class="form-group">
+                <label for="dwdm_tx_loss">DWDM MUX Tx Internal Loss (dB):</label>
+                <input type="text" id="dwdm_tx_loss" name="dwdm_tx_loss" value="2.5">
+            </div>
+            <div class="form-group">
+                <label for="attenuator_tx">Attenuator Tx (dB):</label>
+                <input type="text" id="attenuator_tx" name="attenuator_tx" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_db_input_power">EDFA-DB Input Power (optional, dBm):</label>
+                <input type="text" id="edfa_db_input_power" name="edfa_db_input_power" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_db_gain">EDFA-DB Gain (dB):</label>
+                <input type="text" id="edfa_db_gain" name="edfa_db_gain" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_db_output_power">EDFA-DB Output Power (optional, dBm):</label>
+                <input type="text" id="edfa_db_output_power" name="edfa_db_output_power" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_db_nf">EDFA-DB NF (dB):</label>
+                <input type="text" id="edfa_db_nf" name="edfa_db_nf" value="5.5">
+            </div>
+            <div class="form-group">
+                <label for="blue_red_tx_loss">Blue/Red Tx Internal Loss (dB):</label>
+                <input type="text" id="blue_red_tx_loss" name="blue_red_tx_loss" value="1.5">
+            </div>
+            <div class="form-group">
+                <label for="fiber_length">Optical Fiber Length (km, multiple spans separated by space):</label>
+                <input type="text" id="fiber_length" name="fiber_length" value="80">
+            </div>
+            <div class="form-group">
+                <label for="fiber_loss">Optical Fiber Loss (dB/km):</label>
+                <input type="text" id="fiber_loss" name="fiber_loss" value="0.3">
+            </div>
+            <div class="form-group">
+                <label for="fiber_dispersion">Optical Fiber Dispersion (ps/nm * km):</label>
+                <input type="text" id="fiber_dispersion" name="fiber_dispersion" value="18">
+            </div>
+            <div class="form-group">
+                <label for="blue_red_rx_loss">Blue/Red Rx Internal Loss (dB):</label>
+                <input type="text" id="blue_red_rx_loss" name="blue_red_rx_loss" value="1.5">
+            </div>
+            <div class="form-group">
+                <label for="edfa_da_input_power">EDFA-DA Input Power (optional, dBm):</label>
+                <input type="text" id="edfa_da_input_power" name="edfa_da_input_power" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_da_gain">EDFA-DA Gain (dB):</label>
+                <input type="text" id="edfa_da_gain" name="edfa_da_gain" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_da_output_power">EDFA-DA Output Power (optional, dBm):</label>
+                <input type="text" id="edfa_da_output_power" name="edfa_da_output_power" value="0">
+            </div>
+            <div class="form-group">
+                <label for="edfa_da_nf">EDFA-DA NF (dB):</label>
+                <input type="text" id="edfa_da_nf" name="edfa_da_nf" value="5.5">
+            </div>
+            <div class="form-group">
+                <label for="dcm_loss">DCM Internal Loss (dB):</label>
+                <input type="text" id="dcm_loss" name="dcm_loss" value="9.0">
+            </div>
+            <div class="form-group">
+                <label for="dcm_dispersion">DCM Chromatic Dispersion (ps/nm):</label>
+                <input type="text" id="dcm_dispersion" name="dcm_dispersion" value="0">
+            </div>
+            <div class="form-group">
+                <label for="dwdm_rx_loss">DWDM MUX Rx Internal Loss (dB):</label>
+                <input type="text" id="dwdm_rx_loss" name="dwdm_rx_loss" value="2.5">
+            </div>
+            <div class="form-group">
+                <label for="attenuators_rx">Attenuators Rx Transceivers (dB, multiple lambdas separated by space):</label>
+                <input type="text" id="attenuators_rx" name="attenuators_rx" value="0">
+            </div>
+        </form>
+        <button class="btn btn-info mb-4" onclick="submitForm()">Рассчитать</button>
+    </div>
+
+    <!-- Правая колонка (результаты) -->
+    <div class="right-column column">
+        <h5>Результат</h5>
+        <!-- Таблица для отображения результатов -->
+        <table id="resultsTable" style="display:none;">
+            <tbody id="resultsBody">
+                <!-- Результаты будут отображаться здесь -->
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+    function submitForm() {
+        const formData = new FormData(document.getElementById('opticalLinkForm'));
+        const data = {};
+        formData.forEach((value, key) => {
+            if (value.includes(' ')) {
+                data[key] = value.split(' ');
+            } else {
+                data[key] = value;
+            }
+        });
+        // Send data via AJAX
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/dwdm/submit/", true);
+
+        xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                const response = JSON.parse(xhr.responseText);
+                updateResultsTable(response);
+            }
+        };
+        xhr.send(JSON.stringify(data));
+    }
+
+    function updateResultsTable(response) {
+        console.log("Response content:", response);
+        const resultsTable = document.getElementById('resultsTable');
+        const resultsBody = document.getElementById('resultsBody');
+        // Clear previous results
+        resultsBody.innerHTML = '';
+        // Populate new results
+        for (const [key, value] of Object.entries(response)) {
+            const row = document.createElement('tr');
+            const cell1 = document.createElement('td');
+            const cell2 = document.createElement('td');
+            cell1.textContent = key;
+            cell2.textContent = value;
+            row.appendChild(cell1);
+            row.appendChild(cell2);
+            resultsBody.appendChild(row);
+        }
+        // Show the table
+        resultsTable.style.display = 'table';
+    }
+</script>
+{% endblock %}

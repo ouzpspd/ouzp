@@ -69,6 +69,7 @@
                 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                   <a class="dropdown-item" href="{% url 'ppr_check' %}">ППР. Проверка сервисов</a>
                   <a class="dropdown-item" href="{% url 'rezerv_1g' %}">СПД. Анализ портов</a>
+                  <a class="dropdown-item" href="{% url 'dwdm' %}">СПД. Калькулятор параметров DWDM магистрали</a>
                 </div>
               </li>
 
@@ -88,6 +89,7 @@
                   <a class="dropdown-item" href="{% url 'free_ppr' %}" target ="_blank">ППР. Добавление ресурсов</a>
                   <a class="dropdown-item" href="{% url 'ppr_check' %}" target ="_blank">ППР. Проверка сервисов</a>
                   <a class="dropdown-item" href="{% url 'rezerv_1g' %}">СПД. Анализ портов</a>
+                  <a class="dropdown-item" href="{% url 'dwdm' %}">СПД. Калькулятор параметров DWDM магистрали</a>
                 </div>
               </li>
 
@@ -111,7 +113,7 @@
               <a class="nav-link dropdown-toggle" href="#" id="navbarUser" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 {{user.last_name}}
               </a>
-              <div class="dropdown-menu" aria-labelledby="navbarUser">
+              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUser">
                 <a class="dropdown-item" href="{% url 'private_page' %}">История</a>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item" href="{% url 'change_password' %}">Изменить пароль</a>
