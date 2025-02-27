@@ -64,6 +64,7 @@ from .utils import _get_extra_selected_ono
 from .utils import _get_all_chain
 from .utils import _tag_service_for_new_serv
 from .utils import _readable
+from .DWDM import calculation
 
 from django import template
 register = template.Library()
@@ -3914,6 +3915,27 @@ def perform_ppr_check(request, id_ppr):
 
     response = {'result': result}
     return JsonResponse(response)
+
+
+def dwdm(request):
+    return render(request, 'tickets/dwdm.html')
+
+
+def dwdm_submit_form(request):
+    if request.method == 'POST':
+        try:
+            form_data = json.loads(request.body.decode('utf-8'))  # Получаем JSON из тела запроса
+            result = calculation(form_data)  # Выполняем расчеты
+            return JsonResponse(
+                result,
+                safe=False,
+                content_type='application/json'
+            )
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    else:
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
 
 
 def rezerv_1g(request):

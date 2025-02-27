@@ -84,7 +84,8 @@ urlpatterns = [
     path('analysis_switch_ports/<str:search_ip>/', analysis_switch_ports, name='analysis_switch_ports'),
     path('add_rezerv_1g_switch_ports/<str:search_ip>/', add_rezerv_1g_switch_ports, name='add_rezerv_1g_switch_ports'),
     path('remove_rezerv_1g_switch_ports/<str:search_ip>/', remove_rezerv_1g_switch_ports, name='remove_rezerv_1g_switch_ports'),
-
+    path('dwdm/', dwdm, name='dwdm'),
+    path('dwdm/submit/', dwdm_submit_form, name='dwdm_submit_form'),
 
 
     # path('otpm/', OtpmPoolView.as_view(), name='otpm'),
