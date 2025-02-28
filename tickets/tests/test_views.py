@@ -155,7 +155,7 @@ class OuzpViewsTestCase(TestCase):
         self.assertTemplateUsed(response, 'tickets/shpd.html')
 
     def test_call_view_shpd_method_post(self):
-        data = {'router': False, 'type_shpd': 'access', 'exist_service': ''}
+        data = {'router': False, 'port_type': 'access', 'exist_service': ''}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'shpd': 'Интернет, DHCP 15 мбит/32'}, {'copper': None}],
                           'tag_service_index': [0], 'pps': 'БЗК Березовский тракт 5 П1 Э3 (Лестничная клетка), АВ'
@@ -252,7 +252,7 @@ class OuzpViewsTestCase(TestCase):
 
     def test_call_view_cks_method_post(self):
         data = {'pointA': 'Гагарина, д.8', 'pointB': 'Титова, д.14', 'policer_cks': 'полисером на Subinterface',
-         'type_cks': 'access', 'exist_service': ''}
+         'port_type': 'access', 'exist_service': ''}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'phone': 'Телефон 1 номер'}, {'shpd': 'Интернет, DHCP Next'}],
                           'tag_service_index': [0]})
@@ -280,7 +280,7 @@ class OuzpViewsTestCase(TestCase):
 
     def test_call_view_portvk_method_post(self):
         data = {'type_vk': 'Новая ВЛС', 'exist_vk': '', 'policer_vk': 'полисером на Subinterface',
-                'type_portvk': 'access', 'exist_service': ''}
+                'port_type': 'access', 'exist_service': ''}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'portvk': 'Порт ВЛС 100 мбит: Громова 145'}, {'shpd': 'Интернет, DHCP Next'}],
                           'tag_service_index': [0]})
@@ -308,7 +308,7 @@ class OuzpViewsTestCase(TestCase):
 
     def test_call_view_portvm_method_post(self):
         data = {'type_vm': 'Cуществующий ВМ', 'exist_vm': 'CC-00340984-VRF', 'policer_vm': 'на порту подключения',
-                'vm_inet': False, 'type_portvm': 'access', 'exist_service_vm': ''}
+                'vm_inet': False, 'port_type': 'access', 'exist_service_vm': ''}
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'portvm': 'Порт ВМ 100 мбит: Громова 145'}, {'shpd': 'Интернет, DHCP Next'}],
                           'tag_service_index': [0]})
@@ -371,7 +371,7 @@ class OuzpViewsTestCase(TestCase):
 
     def test_call_view_video_method_post(self):
         data = {'camera_number': 6, 'camera_model': 'QTECH', 'deep_archive': '0', 'poe_1_cameras': 6,
-                'vm_inet': False, 'type_portvm': 'access', 'exist_service_vm': '', 'schema_poe': '8', }
+                'vm_inet': False, 'port_type': 'access', 'exist_service_vm': '', 'schema_poe': '8', }
 
         self.sess.update({'tag_service': [{'sppdata': None}, {'video': 'Видеонаблюдение 1 камера'}, {'shpd': 'Интернет, DHCP Next'}],
                           'tag_service_index': [0]})

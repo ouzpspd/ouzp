@@ -204,28 +204,31 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
                 stroka = stroka.replace(f'&{i}&\n', '')
 
     #    блок для определения необходимости частных строк <>
-    list_var_lines = []
-    list_var_lines_in = []
     regex_var_lines = '<(.+?)>'
-    match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
-    for i in match_var_lines:
-        list_var_lines.append(i.group(1))
-    for i in list_var_lines:
-        if hidden_vars.get(i):
-            stroka = stroka.replace('<{}>'.format(i), hidden_vars[i])
-        else:
-            stroka = stroka.replace('<{}>'.format(i), '<>')
-    regex_var_lines_in = '\[(.+?)\]'
-    match_var_lines_in = re.finditer(regex_var_lines_in, stroka, flags=re.DOTALL)
-    for i in match_var_lines_in:
-        list_var_lines_in.append(i.group(1))
-    for i in list_var_lines_in:
-        if hidden_vars.get(i):
-            stroka = stroka.replace('[{}]'.format(i), i)
-        else:
-            stroka = stroka.replace('[{}]'.format(i), '')
-    if len(list_var_lines) > 0:
-        stroka = stroka.replace('<>\n', '').replace('<>', '').replace('\n\n\n\n', '\n\n')
+    while True:
+        list_var_lines = []
+        list_var_lines_in = []
+        match_var_lines = re.finditer(regex_var_lines, stroka, flags=re.DOTALL)
+        for i in match_var_lines:
+            list_var_lines.append(i.group(1))
+        if not list_var_lines:
+            break
+        for i in list_var_lines:
+            if hidden_vars.get(i):
+                stroka = stroka.replace(f'<{i}>', f'{hidden_vars[i]}')
+            else:
+                stroka = stroka.replace(f'<{i}>', '<>')
+        regex_var_lines_in = '\[(.+?)\]'
+        match_var_lines_in = re.finditer(regex_var_lines_in, stroka, flags=re.DOTALL)
+        for i in match_var_lines_in:
+            list_var_lines_in.append(i.group(1))
+        for i in list_var_lines_in:
+            if hidden_vars.get(i):
+                stroka = stroka.replace(f'[{i}]', i)
+            else:
+                stroka = stroka.replace(f'[{i}]', '')
+        if len(list_var_lines) > 0:
+            stroka = stroka.replace('<>\n', '').replace('<>', '').replace('\n\n\n\n', '\n\n')
 
     # блок для заполнения %%
     ckb_vars = {}
@@ -240,7 +243,7 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
             dynamic_vars[key] = static_vars[key]
     dynamic_vars.update(ckb_vars)
     for key in dynamic_vars.keys():
-        stroka = stroka.replace('%{}%'.format(key), dynamic_vars[key])
+        stroka = stroka.replace(f'%{key}%', f'{dynamic_vars[key]}')
     for i in [';', ',', ':', '.']:
         stroka = stroka.replace(' ' + i, i)
     return stroka
