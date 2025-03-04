@@ -1,0 +1,245 @@
+{% extends 'tickets/nav_ticket.html' %}
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+        <th class="table-secondary text-right" style="width: 33%">Тип работ</th>
+        <td class="table-light" style="width: 67%">{{job}}</td>
+    </tr>
+        <tr>
+        <th class="table-secondary text-right" style="width: 33%">Описание работ</th>
+        <td class="table-light" style="width: 67%">{{service}}</td>
+    </tr>
+  {% comment %}{% endfor %}{% endcomment %}
+  </tbody>
+</table>
+
+</div>
+
+<div class="container">
+<div id="accordion">
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
+
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+  <div class="card-body">
+<form action="{% url 'pass_services' trID %}" method="post">
+    {% csrf_token %}
+    <div class="container">
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{form.connect.id_for_label}}">Подключение:</label>
+                    {{form.connect}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group shpd">
+                    <label for="{{ form.change_log_shpd.id_for_label }}">Изменение схемы ШПД для {{subnet_for_change_log_shpd}}</label>
+                    {{form.change_log_shpd}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group l2">
+                    <label for="{{ form.policer_cks.id_for_label }}">Ограничение L2</label>
+                    {{form.policer_cks}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group l3">
+                    <label for="{{ form.policer_vm.id_for_label }}">Ограничение L3</label>
+                    {{form.policer_vm}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group extend">
+                    <label for="{{ form.extend_speed.id_for_label }}">Новая полоса</label>
+                    {{form.extend_speed}}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+  </div>
+</div>
+</div>
+
+
+<script>
+$(document).ready(function() {
+
+    function hasService(connectData, serv) {
+        if (!connectData || !connectData.services) return false;
+
+        // Ищем услуги, содержащие выбранную услугу. Например "ШПД"
+        const sServices = Object.entries(connectData.services)
+            .filter(([serviceName]) => serviceName.includes(serv));
+
+        if (sServices.length === 0) return ''; //false;
+
+        // Формируем строку с описанием всех услуг ШПД
+        let result = '';
+        for (const [serviceName, requisites] of sServices) {
+            // Убираем лишние кавычки из названия услуги
+            const cleanServiceName = serviceName.replace(/^"+|"+$/g, '');
+
+            // Ограничиваем возможность выбора изменения подсети только для одной подсети и не более
+            // также в случае переноса кк, потому что блока сервисов не будет в ТР
+            // минусом подхода является то что при наличии в одном порту нескольких подсетей также нельзя будет изменить ни одну
+            if ((serv == 'ШПД' && requisites.length > 1) || (serv == 'ШПД' && connectData.logic_change_csw) || (serv == 'ШПД' && connectData.logic_change_gi_csw)) {
+            } else {
+                // Обрабатываем реквизиты
+                const cleanRequisites = requisites.map(req => {
+                    // Убираем лишние кавычки и текст "c реквизитами"
+                    return req;
+                    //.replace(/^c реквизитами\s*"+|"+$/g, '')
+                }).join(', ');
+
+                //result += `${cleanServiceName} ${cleanRequisites}, `;
+                result += `${cleanRequisites}, `;
+            }
+    }
+
+    // Убираем последнюю запятую и пробел
+    return result.replace(/,\s*$/, '');
+    }
+
+    function hasCksService(connectData) {
+        if (!connectData || !connectData.services) return false;
+        return Object.keys(connectData.services).some(service =>
+            service.includes('ЦКС')
+        );
+    }
+
+    // Обработчик изменения поля connect
+    $('#{{form.connect.id_for_label}}').change(function() {
+        var selectedValue = $(this).val();
+        console.log('selectedValue', selectedValue)
+
+        var connectData = JSON.parse('{{ connect_data_json|escapejs }}');
+        //var connectData = '{{ connect_data_json }}' || '{}';
+        console.log('connectData', connectData)
+        var selectedConnectData = connectData[selectedValue];
+        console.log('selectedConnectData', selectedConnectData)
+        // Скрываем все блоки сначала
+        $('.shpd, .l2, .l3').hide();
+        $('.extend').hide();
+        // Показываем соответствующие блоки в зависимости от типа подключения
+        if (selectedConnectData) {
+            const shpdLabel = hasService(selectedConnectData, 'ШПД');
+            console.log(shpdLabel)
+            const changeLog = selectedConnectData.change_log
+            const kad = selectedConnectData.kad
+            console.log(11)
+            console.log(kad)
+            console.log(changeLog)
+
+            if (shpdLabel && changeLog == 'меняется') {
+                $('.shpd').show();
+                // Обновляем текст label
+
+                $('.shpd label').html(
+                    `Изменение схемы ШПД: ${shpdLabel}`
+                );
+                if (kad) {
+                    console.log(11)
+                    $('.shpd label').append(
+                        `<br>на КАД: ${kad}`
+                    );
+                }
+            }
+            const l2Label = hasService(selectedConnectData, 'ЦКС') + hasService(selectedConnectData, 'Порт ВЛС');
+            if (l2Label) {
+                $('.l2').show();
+                let l2Extend = "{{service_extend}}";
+                if (l2Extend == 'True') {
+                    $('.extend').show();
+                }
+                // Обновляем текст label
+                $('.l2 label').text(
+                    `Ограничение: ${l2Label}`
+                );
+            }
+            const l3Label = hasService(selectedConnectData, 'Порт ВМ');
+            if (l3Label) {
+                $('.l3').show();
+                let l3Extend = "{{service_extend}}";
+                if (l3Extend == 'True') {
+                    $('.extend').show();
+                }
+                // Обновляем текст label
+                $('.l3 label').text(
+                    `Ограничение: ${l3Label}`
+                );
+            }
+
+
+        }
+    });
+
+    // Инициализация при загрузке страницы
+    $('#{{form.connect.id_for_label}}').trigger('change');
+});
+</script>
+
+
+
+{%endblock%}

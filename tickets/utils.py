@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pymorphy2
 from dotenv import load_dotenv
-
+from copy import copy
 from .parsing import parsing_config_ports_vgw
 from .parsing import _parsing_id_client_device_by_device_name
 from .parsing import _parsing_config_ports_client_device
@@ -45,7 +45,7 @@ def add_portconfig_to_list_swiches(list_switches, username, password):
         switches_name = ' или '.join(switch_name)
     return list_switches, switches_name
 
-from copy import copy
+
 def get_ip_from_subset(subset):
     ip_network = subset.split('/')[0]
     if subset.endswith('/32'):
@@ -62,7 +62,6 @@ def get_ip_from_subset(subset):
             copy_octets[3] = str(int(copy_octets[3]) + 2 + i)
             ip_addresses.append('.'.join(copy_octets))
         return tuple(ip_addresses)
-
 
 
 def _get_policer(service):
@@ -105,26 +104,14 @@ def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
     services = []
     service_shpd_change = []
     for key, value in readable_services.items():
-        if type(value) == str:
-            if key != '"ШПД в интернет"':
-                services.append(key + ' ' + value)
+        if key != '"ШПД в интернет"':
+            services.append(key + ' ' + ', '.join(value))
+        else:
+            if change_log_shpd == 'существующая адресация':
+                services.append(key + ' ' + ', '.join(value))
             else:
-                if change_log_shpd == 'существующая адресация':
-                    services.append(key + ' ' + value)
-                else:
-                    if '/32' in value:
-                        len_index = len('c реквизитами ')
-                        subnet_clear = value[len_index:]
-                        service_shpd_change.append(subnet_clear)
-                        services.append(key)
-        elif type(value) == list:
-            if key != '"ШПД в интернет"':
-                services.append(key + ', '.join(value))
-            else:
-                if change_log_shpd == 'существующая адресация':
-                    services.append(key + ', '.join(value))
-                else:
-                    for val in value:
+                for val in value:
+                    if len(value) > 1:
                         if '/32' in val:
                             len_index = len('c реквизитами ')
                             subnet_clear = val[len_index:]
@@ -133,56 +120,13 @@ def _separate_services_and_subnet_dhcp(readable_services, change_log_shpd):
                                 services.append(key)
                         else:
                             services.append(key + ' ' + val)
+                    else:
+                        len_index = len('c реквизитами ')
+                        subnet_clear = val[len_index:]
+                        service_shpd_change.append(subnet_clear)
+                        if len(value) == len(service_shpd_change):
+                            services.append(key)
     return services, service_shpd_change
-
-
-def get_selected_readable_service(readable_services, selected_ono):
-    """Данный метод получает все сервисы в точке подключения в читаемом виде и выбранный сервис в ресурсах клиента.
-    На основе выбранного сервиса возвращает отдельно название выбранного сервиса и название+описание выбранного
-    сервиса"""
-    for key, value in readable_services.items():
-        if type(value) == str and selected_ono[0][-4] in value:
-            desc_service = key
-            name_passage_service = key + ' ' + value
-        elif type(value) == list:
-            for val in value:
-                if selected_ono[0][-4] in val:
-                    desc_service = key
-                    name_passage_service = key + ' ' + val
-    return desc_service, name_passage_service
-
-
-def append_change_log_shpd(session):
-    tag_service = session.get('tag_service')
-    type_pass = session.get('type_pass')
-    if 'Перенос, СПД' in type_pass:
-        type_passage = session.get('type_passage')
-        if type_passage == 'Перенос сервиса в новую точку' or (
-                type_passage == 'Перевод на гигабит' and not any([session.get('logic_change_csw'), session.get('logic_change_gi_csw')])):
-            selected_ono = session.get('selected_ono')
-            selected_service = selected_ono[0][-3]
-            service_shpd = ['DA', 'BB', 'ine', 'Ine', '128 -', '53 -', '34 -', '33 -', '32 -', '45 -', '54 -', '55 -',
-                            '57 -', '60 -', '62 -', '64 -', '67 -', '68 -', '92 -', '96 -', '101 -', '105 -',
-                            '125 -', '131 -', '107 -', '109 -', '483 -']
-            if any(serv in selected_service for serv in service_shpd):
-                tag_service.append({'change_log_shpd': None})
-                session['subnet_for_change_log_shpd'] = selected_ono[0][-4]
-        else:
-            readable_services = session.get('readable_services')
-            _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services, 'Новая подсеть /32')
-            if service_shpd_change:
-                session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-                tag_service.append({'change_log_shpd': None})
-
-    elif 'Организация/Изменение, СПД' in type_pass and not 'Перенос, СПД' in type_pass and session.get('logic_csw') == True:
-        readable_services = session.get('readable_services')
-        _, service_shpd_change = _separate_services_and_subnet_dhcp(readable_services,
-                                                                    'Новая подсеть /32')
-        if service_shpd_change:
-            session['subnet_for_change_log_shpd'] = ' '.join(service_shpd_change)
-            tag_service.append({'change_log_shpd': None})
-    return tag_service
-
 
 
 def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
@@ -229,6 +173,8 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
                 stroka = stroka.replace(f'[{i}]', '')
         if len(list_var_lines) > 0:
             stroka = stroka.replace('<>\n', '').replace('<>', '').replace('\n\n\n\n', '\n\n')
+        while stroka.endswith('\n'):
+            stroka = stroka[:-1]
 
     # блок для заполнения %%
     ckb_vars = {}
@@ -553,27 +499,6 @@ def check_client_on_vgw(contracts, vgws, login, password):
     return selected_vgw, waste_vgws
 
 
-def _readable(curr_value, readable_services, serv, res):
-    """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
-    if serv in ['ЦКС', 'Порт ВЛС', 'Порт ВМ']:
-        if curr_value == None:
-            readable_services.update({serv: f' "{res}"'})
-        elif type(curr_value) == str:
-            readable_services.update({serv: [curr_value, f' "{res}"']})
-        elif type(curr_value) == list:
-            curr_value.append(f' "{res}"')
-            readable_services.update({serv: curr_value})
-    else:
-        if curr_value == None:
-            readable_services.update({serv: f'c реквизитами "{res}"'})
-        elif type(curr_value) == str:
-            readable_services.update({serv: [curr_value, f'c реквизитами "{res}"']})
-        elif type(curr_value) == list:
-            curr_value.append(f'c реквизитами "{res}"')
-            readable_services.update({serv: curr_value})
-    return readable_services
-
-
 def get_extra_service_port_csw(service_port, switch_config, model):
     """Данный метод ищет порты на КК, если услуга выдана в несколько портов"""
     if 'D-Link' in model and model != 'D-Link DIR-100':
@@ -686,18 +611,9 @@ def backward_page_service(request, trID, service_name):
     страница в последовательности tag_service не удаляется, т.к. список сервисов формируется только в начале и
     удаленный сервис не попадет в итоговое ТР"""
     index = int(request.GET.get('index'))
-    # tag_service = request.session['tag_service']
-    # tag_service_index = request.session['tag_service_index']
     session_tr_id = request.session[str(trID)]
     tag_service = session_tr_id.get('tag_service')
     tag_service_index = session_tr_id.get('tag_service_index')
-    # if request.GET.get('next_page'):  # вариант без случая обновления страницы
-    #     prev_page = next(iter(tag_service[index - 1]))
-    #     service = tag_service[index][service_name]
-    #     index -= 1
-    #     tag_service_index.pop()
-    #     session_tr_id.update({'tag_service_index': tag_service_index})
-    #     request.session[trID] = session_tr_id
     if request.GET.get('next_page'):
         if tag_service_index[-1] == index:
             prev_page = next(iter(tag_service[index - 1]))
@@ -721,47 +637,26 @@ def backward_page(request, trID):
     в url кнопки Вернуться. Для определения этих параметров, проверяется наличие GET параметра next_page.
     В случае если next_page не существует в кнопку Вернуться передаются соответствующие значения из GET параметров.
     В слугчае ссли next_page существует, это означает, что на данную страницу перешли не с предыдущей, а со следующей
-    по кнопке Вернуться. В этом случае в кнопку Вернуться передается уменьшенный индекс и из последовательности страниц
-    tag_service удаляется следующая страница"""
-
+    по кнопке Вернуться. В этом случае в кнопку Вернуться передается уменьшенный индекс"""
     index = int(request.GET.get('index'))
-    # tag_service = request.session['tag_service']
-    # tag_service_index = request.session['tag_service_index']
-
     session_tr_id = request.session[str(trID)]
     tag_service = session_tr_id.get('tag_service')
     tag_service_index = session_tr_id.get('tag_service_index')
-    # if request.GET.get('next_page'):  # вариант без случая обновления страницы
-    #     prev_page = next(iter(tag_service[index - 1]))
-    #     index -= 1
-    #     tag_service_index.pop()
-    #     tag_service.pop()
-    #     session_tr_id.update({'tag_service_index': tag_service_index, 'tag_service': tag_service})
-    #     request.session[trID] = session_tr_id
     if request.GET.get('next_page'):
-        if tag_service_index[-1] == index:
-            prev_page = next(iter(tag_service[index - 1]))
-            index -= 1
-            tag_service_index.pop()
-            tag_service.pop()
-            # request.session['tag_service_index'] = tag_service_index
-            # request.session['tag_service'] = tag_service
-            session_tr_id.update({'tag_service_index': tag_service_index, 'tag_service': tag_service})
-            request.session[trID] = session_tr_id
-        else:
-            prev_page = next(iter(tag_service[index - 1]))
+        prev_page = next(iter(tag_service[index - 1]))
+        index -= 1
+        tag_service_index.pop()
+        session_tr_id.update({'tag_service_index': tag_service_index})
+        request.session[trID] = session_tr_id
     else:
         prev_page = request.GET.get('prev_page')
-    return prev_page, index # request,
+    return prev_page, index
 
 
 def get_response_with_get_params(request, tag_service, session_tr_id, trID):  #request
     """Данный метод создает индекс для отображаемой страницы и при редиректе на новую страницу добавляет в url
      GET параметры текущей страницы и ее индекс"""
-    #tag_service = session_tr_id.get('tag_service')
     tag_service_index = session_tr_id.get('tag_service_index')
-    # tag_service = request.session['tag_service']
-    # tag_service_index = request.session['tag_service_index']
     index = tag_service_index[-1] + 1
     tag_service_index.append(index)
     session_tr_id.update({'tag_service': tag_service, 'tag_service_index': tag_service_index})
@@ -875,9 +770,38 @@ def get_user_credential_cordis(user):
 
 
 def format_rtk_port_to_port_channel(resource):
-    rtk_ports = ['TenGigabitEthernet8/1', 'TenGigabitEthernet9/3']
+    rtk_ports = ['TenGigabitEthernet8/5', 'TenGigabitEthernet9/5']
     rtk_am = 'AR113-37.ekb'
     if rtk_am == resource[-2] and any([port in resource[-1] for port in rtk_ports]):
         resource.pop()
         resource.append("Po4")
     return resource
+
+
+def add_readable_service(readable_services, serv, res):
+    """Данный метод формирует массив данных из услуг и реквизитов для использования в шаблонах переноса услуг"""
+    readable_res = f' "{res}"' if serv in ['ЦКС', 'Порт ВЛС', 'Порт ВМ'] else f'c реквизитами "{res}"'
+    if not readable_services.get(serv):
+        readable_services.update({serv: [readable_res]})
+    else:
+        readable_services[serv].append(readable_res)
+
+
+def get_services_in_connection(selected_ono, connect, readable_services, all_resources=False):
+    new_readable_services = {}
+    type_connect = connect['type_connect']
+    resources = [ono[-4] for ono in selected_ono if f'{ono[-2]}_{ono[-1]}' == type_connect]
+    if (not resources or all_resources) and type_connect != 'Новое подключение':
+        return readable_services
+    elif type_connect == 'Новое подключение':
+        return {}
+    elif resources:
+        for resource in resources:
+            for name, descriptions in readable_services.items():
+                for description in descriptions:
+                    if resource in description:
+                        if new_readable_services.get(name):
+                            new_readable_services[name].append(description)
+                        else:
+                            new_readable_services[name] = [description]
+        return new_readable_services

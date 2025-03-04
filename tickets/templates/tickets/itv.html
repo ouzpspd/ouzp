@@ -17,8 +17,12 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%">Услуга</th>
-        <td class="table-light" style="width: 75%">{{service_itv}}</td>
+        <th class="table-secondary text-right" style="width: 33%">Тип работ</th>
+        <td class="table-light" style="width: 67%">{{job}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 33%">Описание работ</th>
+        <td class="table-light" style="width: 67%">{{service_itv}}</td>
     </tr>
   </tbody>
 </table>
@@ -31,7 +35,14 @@
                 <form action="{% url 'itv' trID %}" method="post">
                     {% csrf_token %}
                     <div class="container">
-
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="form-group connection">
+                                    <label for="{{ itvform.type_phone.id_for_label }}">Подключение:</label>
+                                    {{itvform.connect}}
+                                </div>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-4 mb-1">
                                 <div class="form-group">
@@ -88,6 +99,7 @@
 
 $(function () {
     $(".router").hide();
+    $(".connection").hide();
 });
 
 $(function () {
@@ -96,11 +108,19 @@ $(function () {
     if(val === "vl") {
         $(".mount").hide();
         $(".router").show();
-    }
+        $(".connection").show();
 
+    }
+    else if(val === "novlexist") {
+        $(".connection").show();
+        $(".router").hide();
+        $(".mount").show();
+    }
     else {
         $(".mount").show();
         $(".router").hide();
+        $(".connection").hide();
+        $('#id_connect').val('');
     }
 });
 });

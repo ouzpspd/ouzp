@@ -14,107 +14,98 @@
 </div>
 
 <div class="container">
-
-<table class="table table-bordered">
-  <tbody>
-    <tr>
-          <th class="table-secondary text-right" style="width: 25%" >Узел связи</th>
-          <td class="table-light" style="width: 75%">{{pps}}</td>
-      </tr>
-  </tbody>
-</table>
-
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+              <th class="table-secondary text-right" style="width: 25%" >Узел связи</th>
+              <td class="table-light" style="width: 75%">{{pps}}</td>
+          </tr>
+      </tbody>
+    </table>
 </div>
-
 
 <div class="container">
-<div id="accordion">
-  <div class="card mb-2">
-    <div class="card-header" id="headingOne">
-      <h5 class="mb-0">
-          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
-      </h5>
-    </div>
-
-    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
-      <div class="card-body">
-        {{head|linebreaksbr}}
+    <div id="accordion">
+      <div class="card mb-2">
+        <div class="card-header" id="headingOne">
+          <h5 class="mb-0">
+              <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+          </h5>
+        </div>
+        <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+          <div class="card-body">
+            {{head|linebreaksbr}}
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-    {% if request.user|has_group:"Сотрудники ОУЗП" %}
-  <div class="card mb-2">
-    <div class="card-header" id="headingTwo">
-      <h5 class="mb-0">
-        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
-      </h5>
-    </div>
-    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
-      <div class="card-body">
-        {{oattr|linebreaksbr}}
+      {% if request.user|has_group:"Сотрудники ОУЗП" %}
+      <div class="card mb-2">
+        <div class="card-header" id="headingTwo">
+          <h5 class="mb-0">
+            <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+          </h5>
+        </div>
+        <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+          <div class="card-body">
+            {{oattr|linebreaksbr}}
+          </div>
+        </div>
       </div>
+      {% endif %}
     </div>
-  </div>
-    {% endif %}
 </div>
-</div>
-
-
 
 <div class="container">
     <div class="card mb-2">
-    <h5 class="card-header">Параметры</h5>
-  <div class="card-body">
-
-<form action="{% url 'job_formset' trID %}" method="post">
-    {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
-    {% csrf_token %}
-    <div class="container">
-        <div class="row">
-                <table class="table table-striped">
-                      <thead>
-                        <tr>
-                          {%comment%}<th scope="col"></th>{%endcomment%}
-                          <th class="col-4">Вид работ</th>
-                          <th class="col-8">Услуга</th>
-
-                        </tr>
-                      </thead>
-                      <tbody>
-                      {% for form in formset %}
-
-                        <tr>
-                          {%comment%}<th scope="row">{{forloop.counter}}</th>{%endcomment%}
-                          <td>{{ form.as_p }}</td>
-
-                              {% for element in services %}
-                                {% if forloop.counter == forloop.parentloop.counter %}
-                              <td>
-                                {{element}}
-                                  </td>
-                                {% endif %}
-                              {% endfor %}
-
-                        </tr>
-                      {% endfor %}
-                      </tbody>
-                </table>
-        </div>
-        <div class="row">
-            <div class="col-2">
-                <div class="form-group">
-                    <a class="btn btn-secondary btn-block" href="{% url 'sppdata' ticket_tr.ticket_tr %}" role="button">Назад</a>
+        <h5 class="card-header">Параметры</h5>
+        <div class="card-body">
+            <form action="{% url 'job_formset' trID %}" method="post">
+                {{ formset.management_form }}   {%comment%}Нужен, чтобы срабатывал метод is_valid(){%endcomment%}
+                {% csrf_token %}
+                <div class="container">
+                    <div class="row">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="col-4">Тип работ</th>
+                                    <th class="col-8">Описание работ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for form in formset %}
+                                <tr>
+                                    <td>
+                                        {{ form.jobs }}
+                                    </td>
+                                    {% for element in services %}
+                                        {% if forloop.counter == forloop.parentloop.counter %}
+                                            <td>
+                                                {{element}}
+                                            </td>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="row">
+                        <div class="col-2">
+                            <div class="form-group">
+                                <a class="btn btn-secondary btn-block" href="{% url 'sppdata' ticket_tr.ticket_tr %}" role="button">Назад</a>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-2">
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
-</form>
 </div>
-    </div>
-</div>
+
+
 {% endblock %}

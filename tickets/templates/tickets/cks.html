@@ -19,9 +19,12 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%">Услуга</th>
-        <td class="table-light" style="width: 75%">{{services_cks}}</td>
-
+        <th class="table-secondary text-right" style="width: 33%">Тип работ</th>
+        <td class="table-light" style="width: 67%">{{job}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 33%">Описание работ</th>
+        <td class="table-light" style="width: 67%">{{services_cks}}</td>
     </tr>
   </tbody>
 </table>
@@ -39,11 +42,19 @@
         <div class="row">
             <div class="col">
                 <div class="breadcrumb video alert-danger">
-                    <p class="breadcrumb-item"><b>Внимание.</b><br>На коммутаторах AR03-25.ekb, AR13-23.ekb, AR149-02.ekb индивидуальная схема организации sub-interface (<a href="https://ckb.itmh.ru/x/gQdaH" target ="_blank">смотри документ</a>, раздел "Схема. ЦКС между разными доменами агрегации").</p>
+                    <p class="breadcrumb-item"><b>Внимание!</b><br>Реализована индивидуальная схема организации sub-interface на коммутаторах: AR03-25.ekb, AR13-23.ekb, AR113-37.ekb, AR135-35.ekb, AR138-02.ekb, AR149-02.ekb, AR159-25.ekb.<br>(<a href="https://ckb.itmh.ru/x/gQdaH" target ="_blank">смотри документ</a>, раздел "Схема. ЦКС между разными доменами агрегации").</p>
                 </div>
             </div>
         </div>
 
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.connect.id_for_label}}">Подключение:</label>
+                    {{cksform.connect}}
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col-4">
                 {% if list_strok%}

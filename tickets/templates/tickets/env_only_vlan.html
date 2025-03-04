@@ -1,0 +1,210 @@
+{% extends 'tickets/nav_ticket.html' %}
+{% block content %}
+{% load custom_filters %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+<div class="container">
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+            <td class="table-light" style="width: 75%">{{pps}}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+
+
+<div class="container">
+<div id="accordion">
+    {% if head %}
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
+
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+    {% endif %}
+
+  <div class="card mb-2">
+    <div class="card-header" id="headingTwo">
+      <h5 class="mb-0">
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+      </h5>
+    </div>
+    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+
+<div class="container mt-5">
+    <div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+    <div class="card-body">
+
+
+    <form action="{% url 'vlan_env' trID %}" method="post" id="dynamicForm">
+          {% csrf_token %}
+          {% if form.errors %}
+            <div class="alert alert-danger">
+                {{ form.errors }}
+            </div>
+        {% endif %}
+          <div id="formBlocks">
+              <!-- Первый блок полей -->
+              <div class="form-block mb-3 p-3 border">
+
+                  <input type="hidden" class="form-control" name="connect_0" value="True">
+                  <input type="hidden" class="form-control" name="sreda_0" value="1">
+                  <input type="hidden" class="form-control" name="change_log_0" value="меняется">
+                  <input type="hidden" class="form-control" name="kad_0" value="">
+                  <div class="row">
+                    <div class="col-4 mb-1 ">
+                        <div class="form-group">
+                            <label>Подключение №0</label>
+                        </div>
+                    </div>
+                    <div class="col-7">
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <button class="btn btn-danger remove-block">
+                            <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                            <span class="sr-only">Close</span>
+                            </button>
+                        </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                        <div class="col-4 mb-1">
+                            <div class="form-group">
+                                <label for="type_connect">Тип подключения</label>
+                                <select class="form-control type-connect" id="type_connect_0" name="type_connect_0">
+                                    {% for connection in connections %}
+                                        <option value="{{ connection }}">{{ connection }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                  </div>
+
+              </div>
+          </div>
+
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <button id="addBlock" class="btn btn-success btn-block">Добавить блок</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                </div>
+            </div>
+        </div>
+
+      </form>
+
+  </div>
+    </div>
+</div>
+
+
+  <script>
+
+
+$(document).ready(function() {
+
+
+  let blockCount = 0;
+
+  // Функция для добавления нового блока полей
+  $('#addBlock').click(function(e) {
+      e.preventDefault();
+      blockCount++;
+      const newBlock = `
+          <div class="form-block mb-3 p-3 border">
+              <input type="hidden" class="form-control" name="connect_${blockCount}" value="True">
+              <input type="hidden" class="form-control" name="sreda_${blockCount}" value="1">
+              <input type="hidden" class="form-control" name="change_log_${blockCount}" value="меняется">
+
+                <div class="row">
+                    <div class="col-4 mb-1 ">
+                        <div class="form-group">
+                            <label>Подключение №${blockCount}</label>
+
+                        </div>
+                    </div>
+                    <div class="col-7">
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <button class="btn btn-danger remove-block">
+                            <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                            <span class="sr-only">Close</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-4 mb-1">
+                        <div class="form-group">
+                            <label for="type_connect">Тип подключения</label>
+                            <select class="form-control type-connect" id="type_connect_${blockCount}" name="type_connect_${blockCount}">
+                                {% for connection in connections %}
+                                    <option value="{{ connection }}">{{ connection }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+          </div>
+      `;
+      $('#formBlocks').append(newBlock);
+  });
+
+  // Функция для удаления блока полей
+  $(document).on('click', '.remove-block', function() {
+      $(this).closest('.form-block').remove();
+  });
+
+});
+  </script>
+
+
+
+
+{% endblock %}
