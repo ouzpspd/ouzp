@@ -371,6 +371,10 @@ def project_tr(request, dID, tID, trID):
             if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}]:
                 tag_service.pop()
             tag_service.append({'data': None})
+        elif spd == 'Вектор':
+            if tag_service[-1] in [{'copper': None}, {'vols': None}, {'wireless': None}, {'rtk': None}]:
+                tag_service.pop()
+            tag_service.append({'data': None})
         elif spd == 'Комтехцентр':
             if tag_service[-1] == {'rtk': None}:
                 tag_service.pop()
@@ -1291,20 +1295,18 @@ def hotspot(request, trID):
     if request.method == 'POST':
         hotspotform = HotspotForm(request.POST)
         if hotspotform.is_valid():
-            type_hotspot = hotspotform.cleaned_data['type_hotspot']
             hotspot_points = hotspotform.cleaned_data['hotspot_points']
-            hotspot_users = hotspotform.cleaned_data['hotspot_users']
-            exist_hotspot_client = hotspotform.cleaned_data['exist_hotspot_client']
-            hotspot_local_wifi = hotspotform.cleaned_data['hotspot_local_wifi']
             session_tr_id = request.session[str(trID)]
             tag_service = session_tr_id.get('tag_service')
-            services_plus_desc = session_tr_id.get('services_plus_desc')
             if hotspot_points:
                 counter_line_hotspot = hotspot_points-1
                 session_tr_id.update({'counter_line_hotspot': counter_line_hotspot})
-            session_tr_id.update({'services_plus_desc': services_plus_desc, 'hotspot_points': str(hotspot_points),
-                                  'hotspot_users': str(hotspot_users), 'exist_hotspot_client': exist_hotspot_client,
-                                  'hotspot_local_wifi': hotspot_local_wifi, 'type_hotspot': type_hotspot})
+
+            all_hotspot_in_tr = session_tr_id.get('all_hotspot_in_tr') if session_tr_id.get('all_hotspot_in_tr') else dict()
+            service = session_tr_id.get('current_service')
+            all_hotspot_in_tr.update({service: hotspotform.cleaned_data})
+
+            session_tr_id.update({'all_hotspot_in_tr': all_hotspot_in_tr})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
     else:
@@ -1316,6 +1318,8 @@ def hotspot(request, trID):
         service_name = 'hotspot'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
         premium = True if 'прем' in service.lower() else False
+        session_tr_id.update({'current_service': service})
+        request.session[trID] = session_tr_id
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
         context = {
@@ -1640,17 +1644,17 @@ def cks(request, trID):
             pointA = cksform.cleaned_data['pointA']
             pointB = cksform.cleaned_data['pointB']
             policer_cks = cksform.cleaned_data['policer_cks']
-            type_cks = cksform.cleaned_data['type_cks']
+            port_type = cksform.cleaned_data['port_type']
             exist_service = cksform.cleaned_data['exist_service']
             session_tr_id = request.session[str(trID)]
-            if type_cks and type_cks == 'trunk':
+            if port_type and port_type == 'trunk':
                 session_tr_id.update({'counter_line_services_initial': 1})
 
             all_cks_in_tr = session_tr_id.get('all_cks_in_tr') if session_tr_id.get('all_cks_in_tr') else dict()
             service = session_tr_id.get('current_service')
             tag_service = session_tr_id.get('tag_service')
             all_cks_in_tr.update({service:{'pointA': pointA, 'pointB': pointB, 'policer_cks': policer_cks,
-                                           'type_cks': type_cks, 'exist_service': exist_service}})
+                                           'port_type': port_type, 'exist_service': exist_service}})
             session_tr_id.update({'all_cks_in_tr': all_cks_in_tr})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
@@ -1686,16 +1690,16 @@ def shpd(request, trID):
         shpdform = ShpdForm(request.POST)
         if shpdform.is_valid():
             router_shpd = shpdform.cleaned_data['router']
-            type_shpd = shpdform.cleaned_data['type_shpd']
+            port_type = shpdform.cleaned_data['port_type']
             exist_service = shpdform.cleaned_data['exist_service']
             session_tr_id = request.session[str(trID)]
-            if type_shpd == 'trunk':
+            if port_type == 'trunk':
                 session_tr_id.update({'counter_line_services_initial': 1})
 
             all_shpd_in_tr = session_tr_id.get('all_shpd_in_tr') if session_tr_id.get('all_shpd_in_tr') else dict()
             service = session_tr_id.get('current_service')
             tag_service = session_tr_id.get('tag_service')
-            all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'type_shpd': type_shpd, 'exist_service': exist_service}})
+            all_shpd_in_tr.update({service:{'router_shpd': router_shpd, 'port_type': port_type, 'exist_service': exist_service}})
             session_tr_id.update({'all_shpd_in_tr': all_shpd_in_tr})
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
@@ -1711,7 +1715,7 @@ def shpd(request, trID):
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         shpdform = ShpdForm(initial={'shpd': 'access'})
         if 'Интернет, DHCP' in service:
-            shpdform.fields['type_shpd'].widget.choices = [('access', 'access')]
+            shpdform.fields['port_type'].widget.choices = [('access', 'access')]
         context = {
             'shpdform': shpdform,
             'services_shpd': service,
@@ -1733,16 +1737,16 @@ def portvk(request, trID):
             type_vk = portvkform.cleaned_data['type_vk']
             exist_vk = '"{}"'.format(portvkform.cleaned_data['exist_vk'])
             policer_vk = portvkform.cleaned_data['policer_vk']
-            type_portvk = portvkform.cleaned_data['type_portvk']
+            port_type = portvkform.cleaned_data['port_type']
             exist_service = portvkform.cleaned_data['exist_service']
             session_tr_id = request.session[str(trID)]
-            if type_portvk == 'trunk':
+            if port_type == 'trunk':
                 session_tr_id.update({'counter_line_services_initial': 1})
 
             all_portvk_in_tr = session_tr_id.get('all_portvk_in_tr') if session_tr_id.get('all_portvk_in_tr') else dict()
             service = session_tr_id.get('current_service')
             all_portvk_in_tr.update({service:{'type_vk': type_vk, 'exist_vk': exist_vk, 'policer_vk': policer_vk,
-                                              'type_portvk': type_portvk, 'exist_service': exist_service}})
+                                              'port_type': port_type, 'exist_service': exist_service}})
             session_tr_id.update({'all_portvk_in_tr': all_portvk_in_tr})
             tag_service = session_tr_id.get('tag_service')
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
@@ -1788,14 +1792,18 @@ def portvm(request, trID):
             exist_vm = '"{}"'.format(portvmform.cleaned_data['exist_vm'])
             policer_vm = portvmform.cleaned_data['policer_vm']
             vm_inet = portvmform.cleaned_data['vm_inet']
-            type_portvm = portvmform.cleaned_data['type_portvm']
+            port_type = portvmform.cleaned_data['port_type']
             exist_service_vm = portvmform.cleaned_data['exist_service_vm']
             session_tr_id = request.session[str(trID)]
-            if type_portvm == 'trunk':
+            if port_type == 'trunk':
                 session_tr_id.update({'counter_line_services_initial': 1})
 
-            session_tr_id.update({'policer_vm': policer_vm, 'type_vm': type_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
-                                  'type_portvm': type_portvm, 'exist_service_vm': exist_service_vm})
+            all_portvm_in_tr = session_tr_id.get('all_portvm_in_tr') if session_tr_id.get('all_portvm_in_tr') else dict()
+            service = session_tr_id.get('current_service')
+            all_portvm_in_tr.update({service:{'policer_vm': policer_vm, 'type_vm': type_vm, 'exist_vm': exist_vm, 'vm_inet': vm_inet,
+                                  'port_type': port_type, 'exist_service_vm': exist_service_vm}})
+            session_tr_id.update({'all_portvm_in_tr': all_portvm_in_tr})
+
             tag_service = session_tr_id.get('tag_service')
             response = get_response_with_get_params(request, tag_service, session_tr_id, trID)
             return response
@@ -3031,6 +3039,8 @@ def pass_serv(request, trID):
                             tag_service.append({'rtk': None})
                         elif spd == 'ППМ':
 
+                            tag_service = append_change_log_shpd(session_tr_id)
+                        elif spd == 'Вектор':
                             tag_service = append_change_log_shpd(session_tr_id)
                         elif spd == 'Комтехцентр':
                             if sreda == '1':

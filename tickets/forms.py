@@ -75,6 +75,9 @@ class HotspotForm(forms.Form):
                                               widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     hotspot_points = forms.IntegerField(max_value=10, required=False, label='Количество точек', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     hotspot_users = forms.IntegerField(max_value=1000, label='Количество пользователей', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    types = [('access', 'access'), ('trunk', 'trunk')]
+    port_type = forms.CharField(label='Режим порта', required=False,
+                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 
 class PhoneForm(forms.Form):
@@ -234,7 +237,7 @@ class CswForm(forms.Form):
 class ShpdForm(forms.Form):
     router = forms.BooleanField(label='Маршрутизатор', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
-    type_shpd = forms.CharField(label='Режим порта', required=False,
+    port_type = forms.CharField(label='Режим порта', required=False,
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
@@ -267,7 +270,7 @@ class CksForm(forms.Form):
     type_police = [('полисером на Subinterface', 'Subinterface'), ('портом подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
     policer_cks = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
-    type_cks = forms.CharField(label='Режим порта', required=False,
+    port_type = forms.CharField(label='Режим порта', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
@@ -282,7 +285,7 @@ class PortVKForm(forms.Form):
     type_police = [('полисером на Subinterface', 'Subinterface'), ('на порту подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
     policer_vk = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     types = [('access', 'access'), ('xconnect', 'xconnect'), ('trunk', 'trunk')]
-    type_portvk = forms.CharField(label='Режим порта', required=False,
+    port_type = forms.CharField(label='Режим порта', required=False,
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
@@ -298,7 +301,7 @@ class PortVMForm(forms.Form):
     policer_vm = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
     vm_inet = forms.BooleanField(required=False, label='С доступом в Интернет', widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     types = [('access', 'access'), ('trunk', 'trunk')]
-    type_portvm = forms.CharField(label='Режим порта', required=False,
+    port_type = forms.CharField(label='Режим порта', required=False,
                                widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service_vm = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
@@ -574,10 +577,9 @@ class SppDataForm(forms.Form):
         ('Комтехцентр', 'Комтехцентр'),
         ('РТК', 'ПАО "Ростелеком"'),
         ('ППМ', 'ООО "Пред-последняя миля"'),
+        ('Вектор', 'ООО "Вектор СБ"'),
     ]
     types_tr = [
-        # ('Нов. точка', 'Новая точка'),
-        # ('Сущ. точка', 'Существующая точка'),
         ('Коммерческое', 'Коммерческое'),
         ('ПТО', 'ПТО'),
         ('Не требуется', 'Не требуется'),

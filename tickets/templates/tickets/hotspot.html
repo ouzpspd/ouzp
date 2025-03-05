@@ -44,6 +44,14 @@
         </div>
         <div class="row">
             <div class="col-4">
+                <div class="form-group plus">
+                    <label for="{{ hotspotform.port_type.id_for_label }}">Режим порта:</label>
+                    {{hotspotform.port_type}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
                 <div class="form-group">
                     <label for="{{ hotspotform.exist_hotspot_client.id_for_label }}">Существующий контракт:</label>
                     {{hotspotform.exist_hotspot_client}}
@@ -98,11 +106,13 @@
 <script>
 $(function () {
     $(".local_wifi").hide();
+    $(".plus").hide();
 });
 
 $(function () {
   $("#id_type_hotspot").change(function() {
     var val = $(this).val();
+    $(".plus").hide();
     if(val === "Хот-Спот Премиум") {
         $(".local_wifi").show();
         $(".points").show();
@@ -111,6 +121,7 @@ $(function () {
             $(".local_wifi").hide();
             $(".points").hide();
             $("#id_hotspot_local_wifi").prop("checked", false);
+            $(".plus").show();
         }
     else {
         $(".local_wifi").hide();
