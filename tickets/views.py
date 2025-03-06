@@ -619,16 +619,16 @@ def vols(request, trID):
         if sreda == '2':
             volsform = VolsForm(
                     initial={'correct_sreda': '2',
-                            'device_pps': '100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"', #'конвертер 1310 нм, выставить на конвертере режим работы Auto',
-                             'device_client': '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"', #'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                            'device_pps': '100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"',
+                             'device_client': '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"',
                              'kad': switches_name,
                              'speed_port': '"auto"',
                              'port': 'свободный'})
         elif sreda == '4':
             volsform = VolsForm(
                         initial={'correct_sreda': '4',
-                                'device_pps': 'оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км', #'оптический передатчик SFP WDM, до 3 км, 1310 нм',
-                                 'device_client': '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"', #'конвертер 1550 нм, выставить на конвертере режим работы Auto',
+                                'device_pps': 'оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км',
+                                 'device_client': '100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"',
                                  'kad': switches_name,
                                  'speed_port': '100FD'})
         else:
@@ -846,10 +846,6 @@ def data(request, trID):
     ticket_k = ticket_tr.ticket_k.ticket_k
     evaluative_tr = ticket_tr.ticket_k.evaluative_tr
     services = ticket_tr.services
-
-    # value_vars.update({'type_ticket': type_ticket, 'ticket_k': ticket_k, 'decision_otpm': decision_otpm, 'services': services})
-    # value_vars.update({'templates': templates})
-    # result_services, result_services_ots, value_vars = construct_tr(value_vars)
 
     if value_vars.get('list_switches'):
         del value_vars['list_switches']
@@ -1671,6 +1667,8 @@ def cks(request, trID):
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         list_cks = session_tr_id.get('cks_points')
         cksform = CksForm(initial={'pointA': list_cks[0], 'pointB': list_cks[1]}) if len(list_cks) == 2 else CksForm()
+        if trunk_turnoff_on or trunk_turnoff_off:
+            cksform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         return render(request, 'tickets/cks.html', {
             'cksform': cksform,
             'list_strok': list_cks if len(list_cks) != 2 else None,
@@ -1716,6 +1714,8 @@ def shpd(request, trID):
         shpdform = ShpdForm(initial={'shpd': 'access'})
         if 'Интернет, DHCP' in service:
             shpdform.fields['port_type'].widget.choices = [('access', 'access')]
+        if trunk_turnoff_on or trunk_turnoff_off:
+            shpdform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         context = {
             'shpdform': shpdform,
             'services_shpd': service,
@@ -1771,6 +1771,8 @@ def portvk(request, trID):
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         request.session[trID] = session_tr_id
         portvkform = PortVKForm()
+        if trunk_turnoff_on or trunk_turnoff_off:
+            portvkform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         context = {'portvkform': portvkform,
                    'services_vk': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
@@ -1818,6 +1820,8 @@ def portvm(request, trID):
         trunk_turnoff_on, trunk_turnoff_off = trunk_turnoff_shpd_cks_vk_vm(service, types_change_service)
         request.session[trID] = session_tr_id
         portvmform = PortVMForm()
+        if trunk_turnoff_on or trunk_turnoff_off:
+            portvmform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         context = {'portvmform': portvmform,
                    'services_vm': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
@@ -2642,7 +2646,7 @@ def head(request, trID):
         hidden_vars['- порт %порт доступа на коммутаторе%'] = '- порт %порт доступа на коммутаторе%'
         counter_exist_line = 0
         session_tr_id.update({'stick': True})
-    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars)) #multi_vars
+    result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
     result_services = ''.join(result_services)
     rev_result_services = result_services[::-1]
     index_of_head = rev_result_services.index('''-----------------------------------------------------------------------------------\n''')
@@ -2684,13 +2688,6 @@ def project_tr_exist_cl(request, trID):
     for point in des_tr:
         if next(iter(point.keys())).startswith('г.'):
             cks_points.append(next(iter(point.keys())).split('ул.')[1])
-
-    # request.session['cks_points'] = cks_points
-    # request.session['services_plus_desc'] = services_plus_desc
-    # request.session['task_otpm'] = task_otpm
-    # request.session['pps'] = pps
-    # request.session['spd'] = 'Комтехцентр'  # Временно, пока нет выбора для переноса/организац. доп. услуг РКТ/Комтехцентр
-
     session_tr_id.update({'cks_points': cks_points, 'services_plus_desc': services_plus_desc,
                           'task_otpm': task_otpm, 'pps': pps})
 
@@ -2797,7 +2794,6 @@ def change_serv(request, trID):
                                ]
             tag_service = session_tr_id.get('tag_service')
             current_index_local = session_tr_id.get('current_index_local')
-
             if type_change_service in types_cks_vk_vm_trunk or type_change_service == "Организация доп IPv6":
                 tag_service.insert(current_index_local + 1, next(iter(tag_service[current_index_local].values())))
                 types_change_service.append(
@@ -2805,9 +2801,9 @@ def change_serv(request, trID):
                 )
             elif type_change_service in types_only_mask:
                 tag_service.insert(current_index_local + 1, {'change_params_serv': None})
-                types_change_service.append(
-                    {type_change_service: tag_service[current_index_local]['change_serv']}
-                )
+                shpd_service = tag_service[current_index_local].get('change_serv', {}).get('shpd')
+                if shpd_service:
+                    types_change_service.append({type_change_service: shpd_service})
             if tag_service[-1] != {'data': None}:
                 tag_service.append({'data': None})
             session_tr_id.update({'types_change_service': types_change_service})
@@ -2821,8 +2817,7 @@ def change_serv(request, trID):
         service_name = 'change_serv'
         request, service, prev_page, index = backward_page_service(request, trID, service_name)
         current_index_local = index + 1
-        if request.GET.get('next_page') and \
-                next(iter(tag_service[current_index_local].values())) == tag_service[current_index_local+1]:
+        if request.GET.get('next_page') and tag_service[current_index_local]['change_serv'] == tag_service[current_index_local + 1]:
             removed_tag = tag_service.pop(current_index_local+1)
             types_change_service = session_tr_id.get('types_change_service')
             for type_change_service in types_change_service:
@@ -2832,7 +2827,8 @@ def change_serv(request, trID):
             types_change_service = session_tr_id.get('types_change_service')
             tag_service.pop(current_index_local + 1)
             for type_change_service in types_change_service:
-                if next(iter(type_change_service.values())) == tag_service[current_index_local]['change_serv']:
+                shpd_service = tag_service[current_index_local].get('change_serv', {}).get('shpd')
+                if next(iter(type_change_service.values())) == shpd_service:
                     types_change_service.remove(type_change_service)
         session_tr_id.update({'current_index_local': current_index_local})
         request.session[trID] = session_tr_id
@@ -2869,6 +2865,7 @@ def change_params_serv(request, trID):
         prev_page, index = backward_page(request, trID)
         only_mask = False
         routed = False
+        parent_subnet = False
         for i in range(len(types_change_service)):
             types_only_mask = ["Организация доп connected",
                                "Замена connected на connected",
@@ -2878,7 +2875,8 @@ def change_params_serv(request, trID):
                 only_mask = True
             if next(iter(types_change_service[i].keys())) == "Организация доп маршрутизируемой":
                 routed = True
-            parent_subnet = True if next(iter(types_change_service[i].keys())) == "Замена IP" else False
+            if next(iter(types_change_service[i].keys())) == "Замена IP":
+                parent_subnet = True
 
         changeparamsform = ChangeParamsForm()
         context = {
@@ -3078,32 +3076,6 @@ def pass_serv(request, trID):
             'trID': trID
         }
         return render(request, 'tickets/pass_serv.html', context)
-
-
-# def pass_video(request, trID):
-#     if request.method == 'POST':
-#         form = PassVideoForm(request.POST)
-#         if form.is_valid():
-#             session_tr_id = request.session[str(trID)]
-#             session_tr_id.update({**form.cleaned_data})
-#     else:
-#         session_tr_id = request.session[str(trID)]
-#         tag_service = session_tr_id.get('tag_service')
-#         prev_page, index = backward_page(request, trID)
-#
-#         request.session[trID] = session_tr_id
-#         form = PassVideoForm()
-#         context = {
-#             'form': form,
-#             'oattr': session_tr_id.get('oattr'),
-#             'pps': session_tr_id.get('pps'),
-#             'head': session_tr_id.get('head'),
-#             'back_link': reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}',
-#             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
-#             'dID': session_tr_id.get('dID'),
-#             'trID': trID
-#         }
-#         return render(request, 'tickets/pass_video.html', context)
 
 
 class PassVideoFormView(FormView):

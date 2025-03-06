@@ -135,7 +135,7 @@ def _get_pm_vars(value_vars, service):
     spp_service = [_ for _ in connected_services.keys() if service.startswith(_)]
     if spp_service:
         name_connected_var = connected_services.get(spp_service[0])
-        connected_service = value_vars.get(name_connected_var).get(service)
+        connected_service = value_vars.get(name_connected_var, {}).get(service)
     if value_vars.get('spd') in ('ППМ', 'Вектор'):
         type_port = 'access'
         stick_str = templates.get("Организация услуги access'ом через FVNO стык с %название оператора%.")
@@ -2706,10 +2706,14 @@ def _change_services(value_vars):
     types_change_service = value_vars.get('types_change_service')
     templates = value_vars.get('templates')
     for type_change_service in types_change_service:
+        service = next(iter(type_change_service.values()))
+        static_vars = {}
+        hidden_vars = {}
+        add_hidden_vars, add_static_vars = _get_pm_vars(value_vars, service)
+        static_vars.update(add_static_vars)
+        hidden_vars.update(add_hidden_vars)
         if next(iter(type_change_service.keys())) == "Организация ШПД trunk'ом":
             stroka = templates.get("Организация услуги ШПД в интернет trunk'ом.")
-            static_vars = {}
-            hidden_vars = {}
             mask_service = next(iter(type_change_service.values()))
             if 'Интернет, блок Адресов Сети Интернет' in mask_service:
                 if ('29' in mask_service) or (' 8' in mask_service):
@@ -2721,8 +2725,6 @@ def _change_services(value_vars):
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация ШПД trunk'ом с простоем":
             stroka = templates.get("Организация услуги ШПД в интернет trunk'ом с простоем связи.")
-            static_vars = {}
-            hidden_vars = {}
             mask_service = next(iter(type_change_service.values()))
             if 'Интернет, блок Адресов Сети Интернет' in mask_service:
                 if ('29' in mask_service) or (' 8' in mask_service):
@@ -2744,8 +2746,6 @@ def _change_services(value_vars):
                 static_vars["способ организации проектируемого сервиса"] = "trunk'ом"
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВЛС trunk'ом с простоем":
-            static_vars = {}
-            hidden_vars = {}
             all_portvk_in_tr = value_vars.get('all_portvk_in_tr')
             if all_portvk_in_tr:
                 service = next(iter(all_portvk_in_tr.keys()))
@@ -2769,8 +2769,6 @@ def _change_services(value_vars):
                     stroka = templates.get("Организация услуги порт ВЛС trunk'ом с простоем связи.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом" or next(iter(type_change_service.keys())) == "Организация порта ВМ trunk'ом с простоем":
-            static_vars = {}
-            hidden_vars = {}
             service = next(iter(type_change_service.values()))
             all_portvm_in_tr = value_vars.get('all_portvm_in_tr')
             if all_portvm_in_tr:
@@ -2803,8 +2801,6 @@ def _change_services(value_vars):
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Изменение сервиса":
             stroka = templates.get("Изменение сервиса %название сервиса% на сервис %название нового сервиса% access'ом.")
-            static_vars = {}
-            hidden_vars = {}
             readable_services = value_vars.get('readable_services')
             change_service = next(iter(type_change_service.values()))
             new_service_name = get_service_name_from_service_plus_desc(change_service)
@@ -2917,8 +2913,6 @@ def _change_services(value_vars):
             result_services.append(stroka)
         elif next(iter(type_change_service.keys())) == "Изменение cхемы организации ШПД":
             stroka = templates.get("Изменение существующей cхемы организации ШПД с маской %сущ. маска IP-сети% на подсеть с маской %нов. маска IP-сети%.")
-            static_vars = {}
-            hidden_vars = {}
             static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
             static_vars["сущ. маска IP-сети"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
@@ -2926,8 +2920,6 @@ def _change_services(value_vars):
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Замена IP":
             stroka = templates.get("Замена подсети connected для ШПД.")
-            static_vars = {}
-            hidden_vars = {}
             static_vars["сущ. маска IP-сети"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
             if value_vars.get('parent_subnet') is True:
@@ -2943,8 +2935,6 @@ def _change_services(value_vars):
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Замена connected на connected":
             stroka = templates.get("Замена подсети connected.")
-            static_vars = {}
-            hidden_vars = {}
             static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
             static_vars["сущ. маска IP-сети"] = value_vars.get('selected_ono')[0][4][-3:]
             static_vars["ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
@@ -2959,8 +2949,6 @@ def _change_services(value_vars):
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация доп connected":
             stroka = templates.get('Организация дополнительного блока адресов сети интернет (connected).')
-            static_vars = {}
-            hidden_vars = {}
             static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
             static_vars['название коммутатора'] = '-'.join(value_vars.get('selected_ono')[0][-2].split('-')[1:])
             match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
@@ -2972,16 +2960,12 @@ def _change_services(value_vars):
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация доп маршрутизируемой":
             stroka = templates.get("Организация маршрутизируемого блока адресов сети интернет.")
-            static_vars = {}
-            hidden_vars = {}
             static_vars['нов. маска IP-сети'] = value_vars.get('new_mask')
             static_vars['адрес IP-сети'] = value_vars.get('routed_ip')
             static_vars['название VRF'] = value_vars.get('routed_vrf')
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация доп IPv6":
             stroka = templates.get('Предоставление возможности прямой маршрутизации IPv6 дополнительно к существующему IPv4 подключению.')
-            static_vars = {}
-            hidden_vars = {}
             match_svi = re.search('- (\d\d\d\d) -', value_vars.get('selected_ono')[0][-3])
             if match_svi:
                 svi = match_svi.group(1)
@@ -2991,8 +2975,6 @@ def _change_services(value_vars):
             static_vars["ресурс на договоре"] = value_vars.get('selected_ono')[0][4]
             result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
         elif next(iter(type_change_service.keys())) == "Организация ЦКС trunk'ом" or next(iter(type_change_service.keys())) == "Организация ЦКС trunk'ом с простоем":
-            static_vars = {}
-            hidden_vars = {}
             all_cks_in_tr = value_vars.get('all_cks_in_tr')
             if all_cks_in_tr:
                 service = next(iter(type_change_service.values()))
@@ -3010,6 +2992,7 @@ def _change_services(value_vars):
                     static_vars['ресурс на договоре'] = value_vars.get('selected_ono')[0][-4]
                     stroka = templates.get("Организация услуги ЦКС Etherline trunk'ом с простоем связи.")
                 result_services.append(analyzer_vars(stroka, static_vars, hidden_vars))
+
     if value_vars.get('stick'):
         pps = value_vars.get('independent_pps')
         value_vars.update({'pps': pps})

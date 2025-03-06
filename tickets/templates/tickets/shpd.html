@@ -37,9 +37,16 @@
 <form action="{% url 'shpd' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
-
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{shpdform.port_type.id_for_label}}">Режим порта:</label>
+                    {{shpdform.port_type}}
+                </div>
+            </div>
+        </div>
         {% if trunk_turnoff_off %}
-        <p>Параметры не требуются</p>
+
         {% elif trunk_turnoff_on %}
         <div class="row">
             <div class="col-4 mb-1">
@@ -58,14 +65,7 @@
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-4 mb-1">
-                <div class="form-group">
-                    <label for="{{shpdform.port_type.id_for_label}}">Режим порта:</label>
-                    {{shpdform.port_type}}
-                </div>
-            </div>
-        </div>
+
         {% endif %}
 
 
