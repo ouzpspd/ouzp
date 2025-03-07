@@ -3479,7 +3479,7 @@ class TextBlockForExtraCameras(TextBlock):
         self.idle_service()
         remove_inj_str = '- Демонтировать POE-^инжектор^ и высвободить ^порт^ на маршрутизаторе.'
         self.hidden_vars[remove_inj_str] = pluralizer_vars(remove_inj_str, self.count_inj)
-        from_inj_to_sw_str = '- Переключить {существующую} {линию} для {камеры} из маршрутизатора клиента на %портовая емкость коммутатора%-портовый POE-коммутатор.'
+        from_inj_to_sw_str = '- Переключить {существующую} {линию} для {камеры} из маршрутизатора клиента в %портовая емкость коммутатора%-портовый POE-коммутатор:'
         from_inj_to_sw_str_changed = from_inj_to_sw_str.replace('%портовая емкость коммутатора%', str(last_port))
         self.hidden_vars[from_inj_to_sw_str] = pluralizer_vars(from_inj_to_sw_str_changed, self.count_inj)
         moved_cam_str = 'Порт %порт доступа на POE-коммутаторе%: существующая камера, переключенная с POE-инжектора;'
