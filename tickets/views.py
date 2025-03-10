@@ -1318,6 +1318,8 @@ def hotspot(request, trID):
         request.session[trID] = session_tr_id
         back_link = reverse(next(iter(tag_service[index])), kwargs={'trID': trID}) + f'?next_page={prev_page}&index={index}'
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
+        if session_tr_id.get('spd') == 'РТК':
+            hotspotform.fields['port_type'].widget.choices = [('access', 'access')]
         context = {
             'premium_plus': session_tr_id.get('premium_plus'),
             'premium': premium,
@@ -1669,6 +1671,8 @@ def cks(request, trID):
         cksform = CksForm(initial={'pointA': list_cks[0], 'pointB': list_cks[1]}) if len(list_cks) == 2 else CksForm()
         if trunk_turnoff_on or trunk_turnoff_off:
             cksform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
+        if session_tr_id.get('spd') == 'РТК':
+            cksform.fields['port_type'].widget.choices = [('access', 'access')]
         return render(request, 'tickets/cks.html', {
             'cksform': cksform,
             'list_strok': list_cks if len(list_cks) != 2 else None,
@@ -1716,6 +1720,8 @@ def shpd(request, trID):
             shpdform.fields['port_type'].widget.choices = [('access', 'access')]
         if trunk_turnoff_on or trunk_turnoff_off:
             shpdform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
+        if session_tr_id.get('spd') == 'РТК':
+            shpdform.fields['port_type'].widget.choices = [('access', 'access')]
         context = {
             'shpdform': shpdform,
             'services_shpd': service,
@@ -1822,6 +1828,8 @@ def portvm(request, trID):
         portvmform = PortVMForm()
         if trunk_turnoff_on or trunk_turnoff_off:
             portvmform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
+        if session_tr_id.get('spd') == 'РТК':
+            portvmform.fields['port_type'].widget.choices = [('access', 'access')]
         context = {'portvmform': portvmform,
                    'services_vm': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
