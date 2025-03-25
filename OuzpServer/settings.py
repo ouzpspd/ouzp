@@ -37,6 +37,7 @@ import os
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -80,7 +81,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'OuzpServer.wsgi.application'
+#WSGI_APPLICATION = 'OuzpServer.wsgi.application'
+
+ASGI_APPLICATION = 'OuzpServer.asgi.application'
 
 
 # Database

@@ -3990,6 +3990,12 @@ def analysis_switch_ports(request, search_ip):
     return JsonResponse(response)
 
 
+def room(request, room_name):
+    return render(request, 'tickets/chat.html', {
+        'room_name': room_name
+    })
+
+
 def static_formset(request):
     """Не используется, задел на будущее"""
     template_static = """Присоединение к СПД по медной линии связи.
