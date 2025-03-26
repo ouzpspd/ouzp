@@ -32,8 +32,12 @@ class Connect:
             if self.switch.model == 'snr':
                 self.session = pexpect.spawn(f"telnet {self.ip}", timeout=10, encoding="utf-8")
             elif self.switch.model == 'cisco':
-                self.session = pexpect.spawn(f"ssh1 {self.switch.username}@{self.ip} -o StrictHostKeyChecking=no",
-                                             timeout=10, encoding="utf-8")
+                self.session = pexpect.spawn(
+                    f"ssh1 {self.switch.username}@{self.ip} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+                    timeout=10, encoding="utf-8"
+                )
+                # StrictHostKeyChecking - отключить вопрос на подключение к неизвестному серверу
+                # UserKnownHostsFile=/dev/null - отключить запоминание ssh ключа, т.к. не позволяет подключиться после замены SUP
             login = self.session.expect(["Password", "login"])
             if login:
                 self.session.sendline(self.switch.username)
