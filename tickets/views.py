@@ -3991,6 +3991,11 @@ def analysis_switch_ports(request, search_ip):
 
 
 def room(request, room_name):
+    user = User.objects.get(username=request.user.username)
+    username, password = get_user_credential_cordis(user)
+    model = 'Cisco Catalyst 6'
+    switches = parsing_switches_by_model(model, username, password)
+    print(switches)
     return render(request, 'tickets/chat.html', {
         'room_name': room_name
     })

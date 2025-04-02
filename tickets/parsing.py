@@ -1589,3 +1589,18 @@ def get_switch_data(chain_device, stu_data, uplink_data):
                 if chain_device not in i:
                     gig_ports.update({k: i.split(',')[0]})
     return (model, node, gig_ports)
+
+
+def parsing_switches_by_model(name, login, password):
+    """Данный метод получает на входе название КАД и по нему парсит страницу с поиском коммутатров, чтобы определить
+    модель коммутатора и название узла этого коммутатора"""
+    url = 'https://cis.corp.itmh.ru/stu/NetSwitch/SearchNetSwitchProxy'
+    data = {'IncludeDeleted': 'false', 'IncludeDisabled': 'false', 'HideFilterPane': 'false'}
+    data['ModelName'] = name
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.json()['data'], "html.parser")
+        table = soup.find('div', {"class": "t-grid-content"})
+        trs = table.find_all('tr')
+        switches = {tr.find_all('td')[0].text.strip(): tr.find_all('td')[3].text.strip() for tr in trs}
+        return switches
