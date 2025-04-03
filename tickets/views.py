@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, FormView, ListView
+from django.core.cache import cache
 from urllib3.exceptions import NewConnectionError
 
 from .switch import Connect, SwitchException, input_checks, InputSwitchException
@@ -65,6 +66,7 @@ from .utils import _get_all_chain
 from .utils import _tag_service_for_new_serv
 from .utils import _readable
 from .DWDM import calculation
+from .tag_analysis import sql_connection_and_request, get_free_vlans_for_ar
 
 from django import template
 register = template.Library()
@@ -4032,4 +4034,41 @@ def static_formset(request):
         }
 
         return render(request, 'tickets/template_static_formset.html', context)
+
+def tag_analysis(request):
+    # Получаем данные о коммутаторах из базы данных
+    ar_data = sql_connection_and_request()
+    # Инициализация переменных для свободных VLAN и зарезервированных тегов
+    free_vlans = []
+    rezerv_tags = []
+    if request.method == 'POST':
+        # Если форма отправлена, получаем выбранный коммутатор
+        selected_ar = request.POST.get('ar_select')
+        if selected_ar:
+            # Получаем IP-адрес выбранного коммутатора
+            selected_ar_ip = next((ip for name, ip in ar_data if f"{name} ({ip})" == selected_ar), None)
+
+            if selected_ar_ip:
+                # Получаем свободные VLAN и зарезервированные теги для выбранного коммутатора
+                free_vlans, rezerv_tags = get_free_vlans_for_ar(selected_ar_ip)
+            else:
+                return render(request, 'tickets/am_tag_analysis.html', {
+                    'ar_data': ar_data,
+                    'error_message': "Не удалось определить IP-адрес коммутатора."
+                })
+
+    # Подсчитываем общее количество свободных и зарезервированных тегов
+    total_free_vlans = len(free_vlans)
+    total_rezerv_tags = len(rezerv_tags)
+
+    # Рендерим страницу с данными
+    return render(request, 'tickets/am_tag_analysis.html', {
+        'ar_data': ar_data,
+        'free_vlans': free_vlans,
+        'rezerv_tags': rezerv_tags,
+        'total_free_vlans': total_free_vlans,
+        'total_rezerv_tags': total_rezerv_tags
+    })
+
+
 

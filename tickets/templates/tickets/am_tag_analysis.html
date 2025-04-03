@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load custom_filters %} <!-- Подключаем пользовательские фильтры -->
+{% block content %}
+<html style="font-size:0.85rem">
+<head>
+    <style>
+        #ar_input {
+        width: 100%; /* Полная ширина контейнера */
+        max-width: 400px; /* Ограничение максимальной ширины */
+        padding: 5px; /* Добавляем отступы внутри поля */
+        font-size: 0.9rem; /* Размер шрифта */
+        }
+        .custom-font {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h5 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: fixed; /* Фиксированная ширина таблицы */
+        }
+        table td {
+            padding: 4px; /* Уменьшаем отступы для компактности */
+            text-align: center;
+            border: 1px solid #ddd;
+            cursor: pointer; /* Добавляем указатель для клика */
+            font-size: 0.8rem; /* Уменьшаем размер текста */
+            word-wrap: break-word; /* Перенос текста, если он длинный */
+        }
+        table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        table td:hover {
+            background-color: #d1e7dd; /* Подсветка при наведении */
+        }
+    </style>
+</head>
+<body>
+<div class="custom-font">
+    <h5>Анализ свободных тегов на АМ</h5>
+    <form method="POST" action="">
+        {% csrf_token %}
+        <input
+            list="ar_list"
+            id="ar_input"
+            name="ar_select"
+            placeholder="Введите или выберите AR"
+            required
+        >
+        <datalist id="ar_list">
+            {% if ar_data %}
+                {% for ar_name, ar_ip in ar_data %}
+                    <option value="{{ ar_name }} ({{ ar_ip }})">
+                {% endfor %}
+            {% endif %}
+        </datalist>
+        <button class="btn btn-info mb-1" type="submit">Выбрать</button>
+    </form>
+
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+
+    {% if free_vlans or rezerv_tags %}
+        <p><strong>AR:</strong> {{ request.POST.ar_select }}</p>
+        <p><strong>Общее количество зарезервированных VLAN:</strong> {{ total_rezerv_tags }}</p>
+        <p><strong>Общее количество свободных VLAN:</strong> {{ total_free_vlans }}</p>
+        <!-- Блок для вывода VLAN с именем Rezerv -->
+        <h5>VLAN с именем "Rezerv":</h5>
+        {% if rezerv_tags %}
+            <table>
+                <tbody>
+                    {% with columns=10 %} <!-- Количество столбцов -->
+                        {% for row in rezerv_tags|batch:columns %}
+                            <tr>
+                                {% for vlan in row %}
+                                    <td>{{ vlan }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    {% endwith %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Зарезервированные VLAN отсутствуют.</p>
+        {% endif %}
+        <!-- Блок для вывода свободных VLAN -->
+        <h5>Свободные VLAN:</h5>
+        {% if free_vlans %}
+            <table>
+                <tbody>
+                    {% with columns=10 %} <!-- Количество столбцов -->
+                        {% for i in free_vlans|batch:columns %}
+                            <tr>
+                                {% for vlan in i %}
+                                    <td onclick="copyToClipboard('{{ vlan }}')">{{ vlan }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    {% endwith %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Нет свободных VLAN.</p>
+        {% endif %}
+    {% endif %}
+</div>
+
+<script>
+    // Функция для копирования значения в буфер обмена
+    function copyToClipboard(value) {
+        navigator.clipboard.writeText(value).then(() => {
+            alert(`Скопировано: ${value}`);
+        }).catch(err => {
+            console.error('Не удалось скопировать в буфер обмена:', err);
+            alert('Не удалось скопировать VLAN. Проверьте разрешения.');
+        });
+    }
+</script>
+</body>
+{% endblock %}
