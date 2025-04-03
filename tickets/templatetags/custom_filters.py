@@ -48,3 +48,13 @@ def get_item(dictionary, key):
     {{общий словарь|get_item:ключ первого уровня|get_item:ключ следующего уровня}}"""
     return dictionary.get(key)
 
+@register.filter
+def batch(iterable, n):
+    """
+    Разбивает итерируемый объект на подсписки длиной n.
+    Пример: [1, 2, 3, 4, 5] | batch:2 -> [[1, 2], [3, 4], [5]]
+    """
+    length = len(iterable)
+    for i in range(0, length, n):
+        yield iterable[i:i + n]
+

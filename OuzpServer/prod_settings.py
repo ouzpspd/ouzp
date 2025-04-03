@@ -34,6 +34,11 @@ SWITCH_KPA_SNR_PASSWORD = os.getenv('SWITCH_KPA_SNR_PASSWORD')
 SWITCH_AM_CISCO_USER = os.getenv('SWITCH_AM_CISCO_USER')
 SWITCH_AM_CISCO_PASSWORD = os.getenv('SWITCH_AM_CISCO_PASSWORD')
 
+DB_SERVER_CORDIS = os.getenv('DB_SERVER_CORDIS')
+DB_CORDIS = os.getenv('DB_CORDIS')
+DB_USER_CORDIS = os.getenv('DB_USER_CORDIS')
+DB_PASSWORD_CORDIS = os.getenv('DB_PASSWORD_CORDIS')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
