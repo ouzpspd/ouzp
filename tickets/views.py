@@ -4,7 +4,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, FormView, ListView
-from django.core.cache import cache
 from urllib3.exceptions import NewConnectionError
 
 from .switch import Connect, SwitchException, input_checks, InputSwitchException
