@@ -4,6 +4,7 @@ from Exscript.protocols import Telnet
 import re
 from typing import List, Tuple
 from django.conf import settings
+from itertools import chain
 
 
 def sql_connection_and_request():
@@ -43,7 +44,7 @@ def get_free_vlans_for_ar(selected_ar: str) -> Tuple[List[int], List[int]]:
     ar = Ar(selected_ar)
     ar.manage_connect()
     # Получаем данные о VLAN и xconnect
-    vlans_output = ar.send_cmd('show vlan brief | incl ^[1-2][0-9][0-9][0-9]')
+    vlans_output = ar.send_cmd('show vlan brief | incl ^[1-3][0-9][0-9][0-9]')
     xconnects_output = ar.send_cmd('show mpls l2transport vc | incl Eth')
     ar.manage_close()
     # Парсим данные
@@ -51,6 +52,8 @@ def get_free_vlans_for_ar(selected_ar: str) -> Tuple[List[int], List[int]]:
     xconnect_tags = parse_xconnects(xconnects_output)
     # Определяем диапазон VLAN
     vlan_range = range(1201, 2900)
+    if selected_ar == '212.49.96.113':
+        vlan_range = list(chain(range(1201, 2900), range(3000, 3299)))
     # Вычисляем свободные VLAN
     free_vlans = sorted(set(vlan_range) - set(vlan_tags) - set(xconnect_tags))
     return free_vlans, rezerv_tags

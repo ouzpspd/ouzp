@@ -123,14 +123,21 @@
 </div>
 
 <script>
-    // Функция для копирования значения в буфер обмена
     function copyToClipboard(value) {
-        navigator.clipboard.writeText(value).then(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = value;
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            document.execCommand('copy');
             alert(`Скопировано: ${value}`);
-        }).catch(err => {
+        } catch (err) {
             console.error('Не удалось скопировать в буфер обмена:', err);
-            alert('Не удалось скопировать VLAN. Проверьте разрешения.');
-        });
+            alert('Не удалось скопировать VLAN.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
     }
 </script>
 </body>
