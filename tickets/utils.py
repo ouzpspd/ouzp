@@ -1,7 +1,7 @@
 import re
 import os
 from pathlib import Path
-
+import pymssql
 import pymorphy2
 from dotenv import load_dotenv
 
@@ -881,3 +881,21 @@ def format_rtk_port_to_port_channel(resource):
         resource.pop()
         resource.append("Po4")
     return resource
+
+
+def sql_request_cordis(query):
+    # Параметры подключения к базе данных
+    server = settings.DB_SERVER_CORDIS
+    database = settings.DB_CORDIS
+    user = settings.DB_USER_CORDIS
+    password = settings.DB_PASSWORD_CORDIS
+
+    try:
+        # Подключение к базе данных
+        with pymssql.connect(server, user, password, database) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            result = cursor.fetchall()
+        return result
+    except pymssql.Error as e:
+        return []
