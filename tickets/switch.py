@@ -380,7 +380,19 @@ class Cisco:
 
     def construct_components_summary(self):
         if self.components:
-            return [v["model"] for v in self.components]
+            summary = []
+            for c in self.components:
+                if 'WS-SUP720' in c["model"]:
+                    summary.append('WS-SUP720')
+                elif 'WS-CAC-4000W' in c["model"]:
+                    summary.append('WS-CAC-4000W')
+                elif c["model"] in ['WS-X6516-GBIC', 'WS-X6516A-GBIC']:
+                    summary.append('WS-X6516(A)-GBIC')
+                elif c["model"] in ['WS-X6708-10GE', 'WS-X6708A-10GE']:
+                    summary.append('WS-X6708(A)-10GE')
+                else:
+                    summary.append(c["model"])
+            return summary
 
     @staticmethod
     def _get_range_ports(interfaces):
