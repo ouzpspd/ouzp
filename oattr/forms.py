@@ -56,6 +56,9 @@ class UserRegistrationForm(UserCreationForm):
         elif 'Инженер-технолог ОУПМ СПД' in str(self.cleaned_data.get('hold_position')):
             oupm_group = Group.objects.get(name='Сотрудники ОУПМ')
             oupm_group.user_set.add(user)
+        elif 'Инженер-администратор ОНИТС СПД' in str(self.cleaned_data.get('hold_position')):
+            onits_group = Group.objects.get(name='Сотрудники ОНИТС')
+            onits_group.user_set.add(user)
         user.save()
         return user
 
