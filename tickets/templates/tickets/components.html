@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<html style="font-size:0.85rem">
+
+
+
+
+<div class="container">
+<div class="card mb-2">
+    <h5 class="card-header">Анализ компонентов Cisco 6500</h5>
+    <div class="card-body">
+        <div class="container mb-4">
+            <div class="row" id="export-row">
+                <div class="col-md-4 mb-4">
+                    <button class="btn btn-info w-100" id="export-excel">
+                        <span class="" role="status" aria-hidden="true"></span>
+                        Выгрузить в Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="row" id="territory-analysis-buttons">
+                <!-- Колонка ЕКБ -->
+                <div class="col-md-4">
+                    <button class="btn btn-info analysis w-100" id="analyze_ekb">
+                        <span class="" role="status" aria-hidden="true"></span>
+                        Анализ территории ЕКБ
+                    </button>
+                    <div class="summary-table mt-4" id="summary-ekb">
+                        <table class="table table-sm table-bordered" id="sum_ekb">
+                            <thead>
+                                <tr>
+                                    <th>Компонент</th>
+                                    <th>Количество</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-ekb-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Колонка НТГ -->
+                <div class="col-md-4">
+                    <button class="btn btn-info analysis w-100" id="analyze_ntg">
+                        <span class="" role="status" aria-hidden="true"></span>
+                        Анализ территории НТГ
+                    </button>
+                    <div class="summary-table mt-4" id="summary-ntg">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Компонент</th>
+                                    <th>Количество</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-ntg-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Колонка КУР -->
+                <div class="col-md-4">
+                    <button class="btn btn-info analysis w-100" id="analyze_kur">
+                        <span class="" role="status" aria-hidden="true"></span>
+                        Анализ территории КУР
+                    </button>
+                    <div class="summary-table mt-4" id="summary-kur">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Компонент</th>
+                                    <th>Количество</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-kur-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+<!-- Таблица для анализа территории -->
+<div class="container mt-4">
+    <table class="table table-striped table-bordered" id="territory-table">
+        <thead>
+            <tr>
+                <th scope="col">Территория</th>
+                <th scope="col">АМ</th>
+                <th scope="col">Тип</th>
+                <th scope="col">Слот</th>
+                <th scope="col">Компонент</th>
+                <th scope="col">Серийный номер</th>
+                <th scope="col">Саб модуль</th>
+            </tr>
+        </thead>
+        <tbody id="territory-data">
+        </tbody>
+    </table>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<script>
+
+$(document).ready(function() {
+    $('.summary-table, #territory-table, #export-excel').hide();
+});
+
+// WebSocket соединение
+const territorySocket = new WebSocket(
+    'ws://' + window.location.host +
+    '/ws/components-analysis/'
+);
+
+const clickedButtons = {
+    ekb: false,
+    ntg: false,
+    kur: false
+};
+
+// Обработчик сообщений от сервера
+territorySocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    const tableBody = document.getElementById('territory-data');
+    
+    $('.analysis').find('span').removeClass('spinner-border spinner-border-sm');
+    $('.analysis').prop('disabled', false);
+    
+    if (data.error) {
+        alert('Ошибка: ' + data.error);
+        return;
+    }
+    clickedButtons[data.territory] = true;
+
+    data.data.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+            tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+    });
+    fillSummaryTable(data.territory, data.summary);
+    $('#export-excel').show();
+    $(`#summary-${data.territory}`).show();
+};
+
+// Заполнение таблиц summary
+function fillSummaryTable(territory, summaryData) {
+    const tbody = document.getElementById(`summary-${territory}-body`);
+    tbody.innerHTML = '';
+    const sortedComponents = Object.entries(summaryData)
+        .sort((a, b) => a[0].localeCompare(b[0]));
+
+    sortedComponents.forEach(([component, count]) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${component}</td>
+            <td>${count}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Обработчик закрытия WebSocket
+territorySocket.onclose = function(e) {
+    console.error('Territory socket closed unexpectedly');
+    alert('Ошибка. Сбой на сервере.');
+    $('.analysis').find('span').removeClass('spinner-border spinner-border-sm');
+    $('.analysis').prop('disabled', false);
+};
+
+// Экспорт в Excel
+function exportToExcel() {
+    const table = document.getElementById('territory-table');
+    const workbook = XLSX.utils.table_to_book(table);
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Components_cisco_6500_${dateStr}.xlsx`);
+}
+
+// Обработка кнопок территорий
+function handleClick(territory) {
+    if (clickedButtons[territory]) {
+        alert('Данные для этой территории уже были загружены');
+        return;
+    }
+    
+    if (territorySocket.readyState === WebSocket.OPEN) {
+        territorySocket.send(JSON.stringify({
+            'territory': territory
+        }));
+        $(`#analyze_${territory}`).find('span').addClass('spinner-border spinner-border-sm');
+        $('.analysis').prop('disabled', true);
+    } else {
+        alert('Ошибка. Сервер не отвечает.');
+    }
+}
+
+// Обработчики для кнопок
+$('#analyze_ekb').click(function() {
+    handleClick('ekb');
+});
+
+$('#analyze_ntg').click(function() {
+    handleClick('ntg');
+});
+
+$('#analyze_kur').click(function() {
+    handleClick('kur');
+});
+
+// Обработка кнопки экспорта
+//document.getElementById('export-excel').addEventListener('click', exportToExcel);
+$('#export-excel').click(function() {
+    exportToExcel();
+});
+
+</script>
+
+{% endblock %}

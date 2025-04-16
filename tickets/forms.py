@@ -58,6 +58,8 @@ class LocalForm(forms.Form):
              ('TP-Link TL-SG108 V4', 'TP-Link TL-SG108 (8 портов)'),
              ('ZYXEL GS1200-5', 'ZYXEL GS1200-5 (5 портов)'),
              ('ZYXEL GS1200-8', 'ZYXEL GS1200-8 (8 портов)'),
+             ('Origo OS2205/А2A', 'Origo OS2205/А2A (5 портов)'),
+             ('Cudy GS108', 'Cudy GS108 (8 портов)'),
              ('D-link DGS-1100-16/B', 'D-link DGS-1100-16 (16 портов)'),
              ('D-link DGS-1100-24/B', 'D-link DGS-1100-24 (24 порта)')]
     lvs_switch = forms.CharField(label='Коммутатор',

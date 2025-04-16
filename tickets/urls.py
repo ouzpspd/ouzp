@@ -80,6 +80,7 @@ urlpatterns = [
     path('spec_objects/<int:trID>/', spec_objects, name='spec_objects'),
     path('ppr_check/', ppr_check, name='ppr_check'),
     path('perform_ppr_check/<int:id_ppr>/', perform_ppr_check, name='perform_ppr_check'),
+    path('components/', components, name='components'),
     path('rezerv_1g/', rezerv_1g, name='rezerv_1g'),
     path('analysis_switch_ports/<str:search_ip>/', analysis_switch_ports, name='analysis_switch_ports'),
     path('add_rezerv_1g_switch_ports/<str:search_ip>/', add_rezerv_1g_switch_ports, name='add_rezerv_1g_switch_ports'),

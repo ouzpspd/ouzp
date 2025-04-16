@@ -38,6 +38,7 @@ DB_SERVER_CORDIS = os.getenv('DB_SERVER_CORDIS')
 DB_CORDIS = os.getenv('DB_CORDIS')
 DB_USER_CORDIS = os.getenv('DB_USER_CORDIS')
 DB_PASSWORD_CORDIS = os.getenv('DB_PASSWORD_CORDIS')
+CSRF_ORIGIN = os.getenv('CSRF_ORIGIN')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -49,6 +50,8 @@ DB_PASSWORD_CORDIS = os.getenv('DB_PASSWORD_CORDIS')
 DEBUG = False
 
 ALLOWED_HOSTS = [DB_HOST]
+
+CSRF_TRUSTED_ORIGINS = [CSRF_ORIGIN]
 
 DATABASES = {
     'default': {

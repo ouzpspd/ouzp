@@ -29,16 +29,8 @@ class Connect:
 
     def __enter__(self):
         try:
-            if self.switch.model == 'snr':
-                self.session = pexpect.spawn(f"telnet {self.ip}", timeout=10, encoding="utf-8")
-            elif self.switch.model == 'cisco':
-                self.session = pexpect.spawn(
-                    f"ssh1 {self.switch.username}@{self.ip} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
-                    timeout=10, encoding="utf-8"
-                )
-                # StrictHostKeyChecking - отключить вопрос на подключение к неизвестному серверу
-                # UserKnownHostsFile=/dev/null - отключить запоминание ssh ключа, т.к. не позволяет подключиться после замены SUP
-            login = self.session.expect(["Password", "login"])
+            self.session = pexpect.spawn(f"telnet {self.ip}", timeout=10, encoding="utf-8")
+            login = self.session.expect(["Password", "login", "Username"])
             if login:
                 self.session.sendline(self.switch.username)
                 self.session.expect("Password")
@@ -68,6 +60,23 @@ class Connect:
             output[command[0]] = self.send_command(*command)
         self.switch.interfaces = self.switch.show_ports_output(output)
         return self.switch.interfaces
+
+    def get_switch_components(self):
+        output = {}
+        commands = self.switch.show_components_command()
+        for command in commands:
+            output[command[0]] = self.send_command(*command)
+        self.switch.show_components_output(output)
+
+    def get_components_table(self):
+        if not self.switch.components:
+            self.get_switch_components()
+        return self.switch.construct_components_table()
+
+    def get_components_summary(self):
+        if not self.switch.components:
+            self.get_switch_components()
+        return self.switch.construct_components_summary()
 
     def get_interfaces_summary(self):
         self.get_switch_interfaces()
@@ -286,10 +295,16 @@ class Cisco:
         self.model = 'cisco'
         self.name = None
         self.interfaces = None
+        self.components = None
 
     @staticmethod
     def show_ports_command():
         commands = [("sh int des | e Vl",), ("sh mod",)]
+        return commands
+
+    @staticmethod
+    def show_components_command():
+        commands = [("sh power",), ("sh mod",), ("sh version",)]
         return commands
 
     @staticmethod
@@ -309,6 +324,75 @@ class Cisco:
         sup_line = [line.split()[0] for line in mod_output.split("\n") if 'Supervisor' in line]
         sup_slot = sup_line[0] if sup_line else ''
         return {k: v for k, v in interfaces.items() if k in ports and f"Gi{sup_slot}/" not in k and "REMOVED_" not in v["Desc"]}
+
+    def show_components_output(self, output):
+        linecards = {}
+        mod_output = output["sh mod"]
+        split_output = mod_output.split("\n")
+        keys = ["slot", "ports", "card_type", "model", "serial", "submodules", "type"]
+
+        for line in split_output:
+            regex = "\s*(\d{1,2})\s+(\d{1,2})\s+(.+?)\s+(\S+)\s+(\S+)\s?$"
+            match = re.match(regex, line)
+            if match:
+                data = list(match.groups())
+                data.append([])
+                data.append("Линейная карта")
+                linecards.update({data[0]: dict(zip(keys, data))})
+
+        keys = ["sub_module", "model", "serial"]
+        for line in split_output:
+            regex = "\s*(\d{1,2})\s+(.+?)\s+(\S+)\s+(\S+)\s+\d\.\d\s+Ok"
+            match = re.match(regex, line)
+            if match:
+                data = match.groups()
+                linecards[data[0]]["submodules"].append(dict(zip(keys, data[1:])))
+                self.components = [v for v in linecards.values()]
+
+        power_output = output["sh power"]
+        split_output = power_output.split("\n")
+        for line in split_output:
+            regex = "\s*(\d)\s+(WS-CAC\S+)\s.+"
+            match = re.match(regex, line)
+            if match:
+                self.components.append({"slot": match.group(1),"model": match.group(2), "type": "Блок питания"})
+
+        version_output = output["sh version"]
+        regex = ".+cisco (WS\S+) .+"
+        match = re.match(regex, version_output, flags=re.DOTALL)
+        if match:
+            self.components.append({"model": match.group(1), "type":"Шасси"})
+
+    def construct_components_table(self):
+        table = []
+        for v in self.components:
+            submodules = v.get("submodules")
+            row = [self.name.split(".")[-1], self.name.strip(), v["type"], v.get("slot"), v["model"], v.get("serial")]
+            if not submodules:
+                row.append(None)
+                table.append(row)
+            else:
+                for submodule in submodules:
+                    new_row = deepcopy(row)
+                    new_row.append(submodule["model"])
+                    table.append(new_row)
+        return table
+
+    def construct_components_summary(self):
+        if self.components:
+            summary = []
+            for c in self.components:
+                if 'WS-SUP720' in c["model"]:
+                    summary.append('WS-SUP720')
+                elif 'WS-CAC-4000W' in c["model"]:
+                    summary.append('WS-CAC-4000W')
+                elif c["model"] in ['WS-X6516-GBIC', 'WS-X6516A-GBIC']:
+                    summary.append('WS-X6516(A)-GBIC')
+                elif c["model"] in ['WS-X6708-10GE', 'WS-X6708A-10GE']:
+                    summary.append('WS-X6708(A)-10GE')
+                else:
+                    summary.append(c["model"])
+            return summary
 
     @staticmethod
     def _get_range_ports(interfaces):
