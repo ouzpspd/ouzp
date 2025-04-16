@@ -6,7 +6,7 @@
 <li class="nav-item">
   <a class="nav-link" href="{% url 'mko' %}">Пул заявок</a>
 </li>
-{% elif request.user|has_group:"Сотрудники ОУПМ" %}
+{% elif request.user|has_group:"Сотрудники ОУПМ" or request.user|has_group:"Сотрудники ОНИТС"%}
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       Утилиты
@@ -17,6 +17,7 @@
       <a class="dropdown-item" href="{% url 'dwdm' %}">СПД. Калькулятор параметров DWDM магистрали</a>
       <a class="dropdown-item" href="{% url 'am_tag_analysis' %}">СПД. Анализ свободных тегов на АМ</a>
         <a class="dropdown-item" href="{% url 'components' %}">СПД. Анализ компонентов Cisco 6500</a>
+        <a class="dropdown-item" href="{% url 'translit' %}">СПД. Транслитератор</a>
     </div>
 </li>
 
@@ -39,6 +40,7 @@
       <a class="dropdown-item" href="{% url 'dwdm' %}">СПД. Калькулятор параметров DWDM магистрали</a>
       <a class="dropdown-item" href="{% url 'am_tag_analysis' %}">СПД. Анализ свободных тегов на АМ</a>
       <a class="dropdown-item" href="{% url 'components' %}">СПД. Анализ компонентов Cisco 6500</a>
+      <a class="dropdown-item" href="{% url 'translit' %}">СПД. Транслитератор</a>
   </div>
 </li>
 
@@ -59,7 +61,7 @@
 {% block content %}
 {% load custom_filters %}
 
-{% if request.user|has_group:"Сотрудники ОУПМ" %}
+{% if request.user|has_group:"Сотрудники ОУПМ" or request.user|has_group:"Сотрудники ОНИТС"%}
 
 {% else %}
 <div class="container">

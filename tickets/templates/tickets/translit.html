@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block content %}
+<html style="font-size:0.85rem">
+
+<div class="container">
+<div class="card m-4">
+    <h5 class="card-header">Переводчик русских букв в транслит</h5>
+  <div class="card-body">
+
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="translation-box">
+                <span class="language-label">Русский текст:</span>
+                <textarea id="russianText" class="form-control" placeholder="Введите текст на русском..."></textarea>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="translation-box">
+                <span class="language-label">Транслит:</span>
+                <textarea id="englishText" class="form-control" placeholder="Здесь появится перевод..." readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+
+<script>
+    $(document).ready(function() {
+        // Соответствие русских букв английским аналогам
+        const ruToEn = {
+            'А': 'A', 'а': 'a',
+            'Б': 'B', 'б': 'b',
+            'В': 'V', 'в': 'v',
+            'Г': 'G', 'г': 'g',
+            'Д': 'D', 'д': 'd',
+            'Е': 'E', 'е': 'e',
+            'Ё': 'E', 'ё': 'e',
+            'Ж': 'Zh', 'ж': 'zh',
+            'З': 'Z', 'з': 'z',
+            'И': 'I', 'и': 'i',
+            'Й': 'Y', 'й': 'y',
+            'К': 'K', 'к': 'k',
+            'Л': 'L', 'л': 'l',
+            'М': 'M', 'м': 'm',
+            'Н': 'N', 'н': 'n',
+            'О': 'O', 'о': 'o',
+            'П': 'P', 'п': 'p',
+            'Р': 'R', 'р': 'r',
+            'С': 'S', 'с': 's',
+            'Т': 'T', 'т': 't',
+            'У': 'U', 'у': 'u',
+            'Ф': 'F', 'ф': 'f',
+            'Х': 'H', 'х': 'h',
+            'Ц': 'Ts', 'ц': 'ts',
+            'Ч': 'Ch', 'ч': 'ch',
+            'Ш': 'Sh', 'ш': 'sh',
+            'Щ': 'Sch', 'щ': 'sch',
+            'Ъ': '', 'ъ': '',
+            'Ы': 'Y', 'ы': 'y',
+            'Ь': '', 'ь': '',
+            'Э': 'E', 'э': 'e',
+            'Ю': 'Y', 'ю': 'y',
+            'Я': 'Ya', 'я': 'ya'
+        };
+
+        // Функция перевода с русского на английские аналоги
+        function translateRuToEn(text) {
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (ruToEn.hasOwnProperty(char)) {
+                    result += ruToEn[char];
+                } else {
+                    result += char;
+                }
+            }
+            return result;
+        }
+
+        function adjustTextareaHeight() {
+            $('#russianText, #englishText')
+                .height('auto')
+                .height(Math.max(
+                    $('#russianText')[0].scrollHeight,
+                    $('#englishText')[0].scrollHeight
+                ));
+        }
+
+        $('#russianText').on('input', function() {
+            if ($(this).val().length > 1000) {
+                alert('Текст длиннее 1000 знаков.')
+                $(this).val('');
+            } else {
+                const inputText = $(this).val();
+                const translatedText = translateRuToEn(inputText);
+                $('#englishText').val(translatedText);
+                adjustTextareaHeight();
+            }
+        });
+
+        adjustTextareaHeight();
+        $(window).on('resize', adjustTextareaHeight);
+
+    });
+</script>
+
+{%endblock%}

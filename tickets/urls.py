@@ -88,6 +88,7 @@ urlpatterns = [
     path('dwdm/', dwdm, name='dwdm'),
     path('dwdm/submit/', dwdm_submit_form, name='dwdm_submit_form'),
     path('am_tag_analysis/', tag_analysis, name='am_tag_analysis'),
+    path('translit/', translit, name='translit'),
 
 
     # path('otpm/', OtpmPoolView.as_view(), name='otpm'),

@@ -3939,6 +3939,11 @@ def components(request):
     return render(request, 'tickets/components.html', context)
 
 
+def translit(request):
+    context = {}
+    return render(request, 'tickets/translit.html', context)
+
+
 def add_rezerv_1g_switch_ports(request, search_ip):
     user = User.objects.get(username=request.user.username)
     username, password = get_user_credential_cordis(user)
