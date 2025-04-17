@@ -54,12 +54,12 @@ class LocalForm(forms.Form):
 
     lvs_busy = forms.BooleanField(label='Все порты маршрутизатора заняты', required=False,
                                   widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    types = [('TP-Link TL-SG105 V4', 'TP-Link TL-SG105 (5 портов)'),
+    types = [('Origo OS2205/А2A', 'Origo OS2205/А2A (5 портов)'),
+             ('Cudy GS108', 'Cudy GS108 (8 портов)'),
+             ('TP-Link TL-SG105 V4', 'TP-Link TL-SG105 (5 портов)'),
              ('TP-Link TL-SG108 V4', 'TP-Link TL-SG108 (8 портов)'),
              ('ZYXEL GS1200-5', 'ZYXEL GS1200-5 (5 портов)'),
              ('ZYXEL GS1200-8', 'ZYXEL GS1200-8 (8 портов)'),
-             ('Origo OS2205/А2A', 'Origo OS2205/А2A (5 портов)'),
-             ('Cudy GS108', 'Cudy GS108 (8 портов)'),
              ('D-link DGS-1100-16/B', 'D-link DGS-1100-16 (16 портов)'),
              ('D-link DGS-1100-24/B', 'D-link DGS-1100-24 (24 порта)')]
     lvs_switch = forms.CharField(label='Коммутатор',

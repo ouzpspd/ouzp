@@ -822,9 +822,9 @@ def _new_services(result_services, value_vars):
                         '- Подтвердить восстановление связи для порта ЛВС который был переключен в установленный коммутатор.'] = '- Подтвердить восстановление связи для порта ЛВС который был переключен в установленный коммутатор.'
                 lvs_switch = value_vars.get('lvs_switch')
                 static_vars['модель коммутатора'] = lvs_switch
-                if lvs_switch in ['TP-Link TL-SG105 V4', 'ZYXEL GS1200-5']:
+                if lvs_switch in ['TP-Link TL-SG105 V4', 'ZYXEL GS1200-5', 'Origo OS2205/А2A']:
                     static_vars['портовая емкость коммутатора'] = '5'
-                elif lvs_switch in ['TP-Link TL-SG108 V4', 'ZYXEL GS1200-8']:
+                elif lvs_switch in ['TP-Link TL-SG108 V4', 'ZYXEL GS1200-8', 'Cudy GS108']:
                     static_vars['портовая емкость коммутатора'] = '8'
                 elif lvs_switch == 'D-link DGS-1100-16/B':
                     static_vars['портовая емкость коммутатора'] = '16'
