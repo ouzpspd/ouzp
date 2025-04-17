@@ -2111,6 +2111,7 @@ def tr_view(request, dID, tID, trID):
     return render(request, 'tickets/tr_view.html', {'ticket_tr': ticket_tr})
 
 
+@permission_check(["Сотрудники ОУЗП"])
 def get_title_tr(request):
     """Данный метод очищает сессию и перенаправляет на get_resources"""
     #flush_session_key(request)
@@ -3163,6 +3164,7 @@ def pass_turnoff(request, trID):
         return render(request, 'tickets/pass_turnoff.html', context)
 
 
+@permission_check(["Сотрудники ОУЗП"])
 def search(request):
     """Данный метод отображает html-страницу с поиском заявок"""
     searchticketsform = SearchTicketsForm(request.GET)
@@ -3242,6 +3244,8 @@ def search(request):
         }
     return render(request, 'tickets/search.html', context)
 
+
+@permission_check(["Сотрудники ОУЗП"])
 def free_ppr(request):
     """Данный метод для выполнения ppr создает в сессии индекс не связанный не с одним ТР"""
     not_exists_trid = 1
@@ -3249,6 +3253,7 @@ def free_ppr(request):
     return redirect('ppr', not_exists_trid)
 
 
+@permission_check(["Сотрудники ОУЗП"])
 def ppr(request, trID):
     """Данный метод отображает html-страничку c формой для выбора новой или сущ. ППР"""
     user = User.objects.get(username=request.user.username)
@@ -3420,6 +3425,7 @@ def ppr_result(request, trID):
     return render(request, 'tickets/ppr_result.html', context)
 
 
+@permission_check(["Руководство ОУЗП"])
 def report_time_tracking(request):
     """Данный метод отображает html-страницу с формированием отчета"""
     if request.method == 'POST':
@@ -3885,6 +3891,7 @@ def add_tr(request, dID, tID, trID):
     return redirect('sppdata', trID)
 
 
+@permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])
 def ppr_check(request):
     context = {}
     return render(request, 'tickets/ppr_check.html', context)
@@ -3908,6 +3915,7 @@ def perform_ppr_check(request, id_ppr):
     return JsonResponse(response)
 
 
+@permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])
 def dwdm(request):
     return render(request, 'tickets/dwdm.html')
 
@@ -3928,17 +3936,19 @@ def dwdm_submit_form(request):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-
+@permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])
 def rezerv_1g(request):
     context = {}
     return render(request, 'tickets/rezerv_1g.html', context)
 
 
+@permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])
 def components(request):
     context = {}
     return render(request, 'tickets/components.html', context)
 
 
+@permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])
 def translit(request):
     context = {}
     return render(request, 'tickets/translit.html', context)
@@ -4044,6 +4054,8 @@ def static_formset(request):
 
         return render(request, 'tickets/template_static_formset.html', context)
 
+
+@permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])
 def tag_analysis(request):
     # Получаем данные о коммутаторах из базы данных
     ar_data = sql_connection_and_request()
