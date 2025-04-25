@@ -416,20 +416,21 @@ def get_cis_vss_camera(login, password, sim, contract_id):
     soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
     stream = soup.find('input', id="primary_stream_url").get('value')
     match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", stream)
-    ip = match.group(1)
-    summary = soup.find('textarea', id="mem").text.strip()
-    return {'title': sim.title, 'ip': ip, 'summary': summary}
+    if match:
+        ip = match.group(1)
+        summary = soup.find('textarea', id="mem").text.strip()
+        return {'title': sim.title, 'ip': ip, 'summary': summary}
 
 
 def check_contract_video(login, password, table, contract_id):
     all_a = table.find_all('a')
-    regex = "javascript:EditSIM\('SIM\.vss_camera'\,(\d+)\,(\d+)\,(\d+)\,(\d+)"
     SimCamera = namedtuple('SimCamera', 'title id')
-    #sims = [[a.get('title'), a.get('href').split(',')[1]] for a in all_a if a.get('href') and 'vss_camera' in a['href']]
     sims = [SimCamera(a.get('title'), a.get('href').split(',')[1]) for a in all_a if a.get('href') and 'vss_camera' in a['href']]
     cameras = []
     for sim in sims:
-        cameras.append(get_cis_vss_camera(login, password, sim, contract_id))
+        cis_vss_camera = get_cis_vss_camera(login, password, sim, contract_id)
+        if cis_vss_camera:
+            cameras.append(cis_vss_camera)
     return cameras
 
 def check_contract_phone_exist(table):
