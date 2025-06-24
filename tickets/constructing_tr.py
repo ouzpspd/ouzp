@@ -2264,9 +2264,10 @@ def get_add_kad(value_vars):
     static_vars = {}
     hidden_vars = {}
     multi_vars = {}
-    model, node, gig_ports = value_vars.get('switch_data')
+    exist_model, node, gig_ports = value_vars.get('switch_data')
     uplink_node, uplink, uplink_port = value_vars.get('uplink_data')
-    static_vars['старая модель коммутатора'] = model
+    type_new_model_kad = value_vars.get('type_new_model_kad')
+    static_vars['старая модель коммутатора'] = exist_model
     static_vars['узел связи'] = short_readable_node(node)
     static_vars['название коммутатора'] = value_vars.get('kad_name')
     static_vars['узел связи вышестоящий'] = _readable_node(uplink_node)
@@ -2302,22 +2303,45 @@ def get_add_kad(value_vars):
 
     if value_vars.get('type_add_kad') == 'Установка 2-го кад в гирлянду':
         stroka = templates.get("Установка дополнительного %тип коммутатора% КАД на ППС %узел связи% вторым в гирлянду.")
-        if 'оптогигабитный' not in value_vars.get('type_new_model_kad'):
+        optic_gig_model_examples = [
+            'S2990G-24FX', 'S3650G-48S', 'DGS-1210-28XS/ME', 'S2995G-24FX', 'S2995G-48FX'
+        ]
+        sfp_1_str = '- Установить в порт %порт линка/договора% КАД %название коммутатора% оптический передатчик[ SFP WDM, дальность до 3км (6dB), 1310нм][ SFP+, дальность до 300м (5dB), 850нм].'
+        sfp_2_str = '- Установить в указанный ОНИТС СПД порт проектируемого КАД оптический передатчик[ SFP WDM, дальность до 3км (6dB), 1550нм][ SFP+, дальность до 300м (5dB), 850нм].'
+        patch_str = ' Использовать оптический патчкорд[ SM SC-SC 1m][ LC/UPC-LC/UPC 3.0мм MM 1m duplex]'
+
+        is_optic_exist_model = any(example in exist_model for example in optic_gig_model_examples)
+        if 'оптогигабитный' not in type_new_model_kad and not is_optic_exist_model:
             static_vars['тип коммутатора'] = 'медного'
             hidden_vars[' Использовать медный патчкорд'] = ' Использовать медный патчкорд'
+            hidden_vars[' 1'] = ' 1'
+        elif 'оптогигабитный' not in type_new_model_kad and is_optic_exist_model:
+            static_vars['тип коммутатора'] = 'медного'
+            hidden_vars[sfp_1_str] = sfp_1_str
+            hidden_vars[sfp_2_str] = sfp_2_str
+            hidden_vars[patch_str] = patch_str
+            hidden_vars[' 1'] = ' 1'
+            hidden_vars[' SFP WDM, дальность до 3км (6dB), 1310нм'] = ' SFP WDM, дальность до 3км (6dB), 1310нм'
+            hidden_vars[' SFP WDM, дальность до 3км (6dB), 1550нм'] = ' SFP WDM, дальность до 3км (6dB), 1550нм'
+            hidden_vars[' SM SC-SC 1m'] = ' SM SC-SC 1m'
+        elif 'оптогигабитный' in type_new_model_kad and is_optic_exist_model:
+            static_vars['тип коммутатора'] = 'оптического'
+            hidden_vars[sfp_1_str] = sfp_1_str
+            hidden_vars[sfp_2_str] = sfp_2_str
+            hidden_vars[patch_str] = patch_str
+            hidden_vars[' 10'] = ' 10'
+            hidden_vars[' SFP+, дальность до 300м (5dB), 850нм'] = ' SFP+, дальность до 300м (5dB), 850нм'
+            hidden_vars[' LC/UPC-LC/UPC 3.0мм MM 1m duplex'] = ' LC/UPC-LC/UPC 3.0мм MM 1m duplex'
         else:
-            static_vars['тип коммутатора'] ='оптического'
-            hidden_vars['- Установить в порт %порт линка/договора% КАД %название коммутатора% оптический передатчик SFP WDM, дальность до 3км (6dB), 1310нм.'
-            ] = '- Установить в порт %порт линка/договора% КАД %название коммутатора% оптический передатчик SFP WDM, дальность до 3км (6dB), 1310нм.'
-            hidden_vars['- Установить в указанный ОНИТС СПД порт проектируемого КАД оптический передатчик SFP WDM, дальность до 3км (6dB), 1550нм.'
-            ] = '- Установить в указанный ОНИТС СПД порт проектируемого КАД оптический передатчик SFP WDM, дальность до 3км (6dB), 1550нм.'
-            hidden_vars[' Использовать оптический патчкорд SM SC-SC 1m'] = ' Использовать оптический патчкорд SM SC-SC 1m'
-            if value_vars.get('disabled_link'):
-                static_vars['порт линка/договора'] = value_vars.get('disabled_port')
-            else:
-                static_vars['порт линка/договора'] = 'указанный ОНИТС СПД'
-                hidden_vars['- Запросить в ОНИТС СПД порт для проектируемого КАД на %название коммутатора%.'
-                ] = '- Запросить в ОНИТС СПД порт для проектируемого КАД на %название коммутатора%.'
+            return result_services, value_vars
+
+        if value_vars.get('disabled_link'):
+            static_vars['порт линка/договора'] = value_vars.get('disabled_port')
+        else:
+            static_vars['порт линка/договора'] = 'указанный ОНИТС СПД'
+            port_str = '- Запросить в ОНИТС СПД порт для проектируемого КАД на %название коммутатора%.'
+            hidden_vars[port_str] = port_str
+
         if value_vars.get('disabled_link'):
             hidden_vars[
                 '- Переключить существующий линк %линк/номер контракта в ИС Cordis% из порта %порт линка/договора% существующего коммутатора' +
@@ -2330,7 +2354,7 @@ def get_add_kad(value_vars):
                 '- Сменить логическое подключение %линк/номер контракта в ИС Cordis% с КАД %название коммутатора% порт %порт линка/договора% на проектируемый КАД.'
             ] = '- Сменить логическое подключение %линк/номер контракта в ИС Cordis% с КАД %название коммутатора% порт %порт линка/договора% на проектируемый КАД.'
             static_vars['линк/номер контракта в ИС Cordis'] = value_vars.get('disabled_link')
-            if 'Cisco' not in model:
+            if 'Cisco' not in exist_model:
                 hidden_vars[
                     ' (передатчик задействовать из демонтированного коммутатора)'
                 ] = ' (передатчик задействовать из демонтированного коммутатора)'
