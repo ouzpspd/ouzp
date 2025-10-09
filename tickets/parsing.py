@@ -1,11 +1,9 @@
-import json
-
 import requests
 from requests.auth import HTTPBasicAuth
 import re
 from bs4 import BeautifulSoup
 import datetime
-
+from collections import namedtuple
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -16,57 +14,6 @@ dotenv_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path)
 GOTTLIEB_USER = os.getenv('GOTTLIEB_USER')
 GOTTLIEB_PASSWORD = os.getenv('GOTTLIEB_PASSWORD')
-
-
-def check_fio(login, password):
-    """Данный метод парсит страницу СПП с данными о ФИО пользователя"""
-    templates = {}
-    url = 'https://sss.corp.itmh.ru/dem_tr/demands_filter.php'
-    req = requests.get(url, verify=False, auth=(login, password))
-    soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-    search = soup.find('td', id='td_space5').text
-    return search
-
-
-def _counter_line_services(services_plus_desc):
-    """Данный метод проходит по списку услуг, чтобы определить количество организуемых линий от СПД.
-     Метод возвращает количество требуемых линий"""
-    # hotspot_points = None
-    # for index_service in range(len(services_plus_desc)):
-    #     if 'Интернет, блок Адресов Сети Интернет' in services_plus_desc[index_service]:
-    #         services_plus_desc[index_service] += '|'
-    #         replace_index = services_plus_desc[index_service]
-    #         services_plus_desc.remove(replace_index)
-    #         services_plus_desc.insert(0, replace_index)
-    #     elif 'Интернет, DHCP' in services_plus_desc[index_service]:
-    #         services_plus_desc[index_service] += '|'
-    #         replace_index = services_plus_desc[index_service]
-    #         services_plus_desc.remove(replace_index)
-    #         services_plus_desc.insert(0, replace_index)
-    #     elif 'ЦКС' in services_plus_desc[index_service]:
-    #         services_plus_desc[index_service] += '|'
-    #     elif 'Порт ВЛС' in services_plus_desc[index_service]:
-    #         services_plus_desc[index_service] += '|'
-    #     elif 'Порт ВМ' in services_plus_desc[index_service]:
-    #         services_plus_desc[index_service] += '|'
-    #     elif 'HotSpot' in services_plus_desc[index_service]:
-    #         services_plus_desc[index_service] += '|'
-    #         regex_hotspot_point = ['(\d+)станц', '(\d+) станц', '(\d+) точ', '(\d+)точ', '(\d+)антен', '(\d+) антен']
-    #         for regex in regex_hotspot_point:
-    #             match_hotspot_point = re.search(regex, services_plus_desc[index_service])
-    #             if match_hotspot_point:
-    #                 hotspot_points = match_hotspot_point.group(1)
-    #                 break
-    counter_line_services = 0
-    line_services = ('Интернет', 'ЦКС', 'Порт ВЛС', 'Порт ВМ', 'HotSpot')
-    for service in line_services:
-        counter_line_services += len([serv for serv in services_plus_desc if serv.startswith(service)])
-    # counter_line_services = 0
-    # for i in services_plus_desc:
-    #     while i.endswith('|'):
-    #         counter_line_services += 1
-    #         i = i[:-1]
-    return counter_line_services #, hotspot_points, services_plus_desc
 
 
 def get_rtk_initial(username, password, line_data):
@@ -238,7 +185,6 @@ def ckb_parse(login, password):
 
 def ckb_parse_msan_exist(login, password, ip):
     """Данный метод парсит страницу КБЗ с Типовыми блоками ТР"""
-    templates = {}
     url = 'https://ckb.itmh.ru/pages/viewpage.action?pageId=578595591'
     req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
     if ip in req.content.decode('utf-8'):
@@ -406,8 +352,6 @@ def get_cis_resources(login, password, contract_id):
     table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
     return table
 
-from collections import namedtuple
-
 
 def get_cis_vss_camera(login, password, sim, contract_id):
     """Данный метод по id контракта и id ресурса Управление видеокамерой получает данные о ресурсе"""
@@ -434,12 +378,8 @@ def check_contract_video(login, password, table, contract_id):
     return cameras
 
 def check_contract_phone_exist(table):
-    """Данный метод получает ID контракта и парсит вкладку Ресурсы в Cordis, проверяет налиличие ресурсов
+    """Данный метод получает Ресурсы в Cordis, проверяет налиличие ресурсов
     Телефонный номер и возвращает список точек подключения, на которых есть такой ресурс"""
-    # url = f'https://cis.corp.itmh.ru/doc/CRM/contract.aspx?contract={contract_id}&tab=4'
-    # req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
-    # soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
-    # table = soup.find('table', id="ctl00_middle_ResourceContent_ContractResources_RadGrid_Resources_ctl00")
     rows_td = table.find_all('td')
     pre_phone_address = []
     for index, td in enumerate(rows_td):
@@ -618,6 +558,13 @@ def for_tr_view(login, password, dID, tID, trID):
                 if i['name'] == 'vID':
                     spp_params[i['name']] = i['value']
         spp_params['Точка подключения'] = get_connection_point(dID, tID, login, password)
+        unranged_services = spp_params['Перечень требуемых услуг']
+        always_last = ['Видеонаблюдение', 'ЛВС', 'Телефон']
+        temp = [service for service in unranged_services for template in always_last if service.startswith(template)]
+        for service in temp:
+            unranged_services.remove(service)
+        ranged_services = unranged_services + temp
+        spp_params['Перечень требуемых услуг'] = ranged_services
         return spp_params
     else:
         spp_params['Access denied'] = 'Access denied'
@@ -672,8 +619,6 @@ def in_work_ortr(login, password):
 
 def get_sw_config(sw, model, login, password):
     """Данный метод парсит конфиг коммутатора со stash"""
-    #url = 'https://stash.itmh.ru/projects/NMS/repos/pantera_extrim/raw/backups/' + sw + '-config?at=refs%2Fheads%2Fmaster'
-    #sw = 'SW144-AR13-23.ekb'
     switch_config = None
     if model.startswith('3COM'):
         return switch_config
@@ -1352,40 +1297,12 @@ def lost_whitespace(text):
     text = re.sub('(.+\d)([А-Я]\w.+)', lambda m: m.group(1) + '\n' + m.group(2), text)
     return text
 
-def spec_with_cookie(cookie, x_session_id):
-    """Данный метод выполняет запрос к api arm"""
-
-    # Авторизация не требуется
-    #url = 'https://arm.itmh.ru/v3/api'
-    #data = {'app': "ARM", 'alias': "production", 'service': "ArmOopm", 'method': "TaskIdByProjectGet", 'args': {'project_id': 37859}}
-    #data = {'app': "ARM", 'alias': "production", 'service': "Common", 'method': "UserInfoByUserId", 'args': {'user_id': 469}}
-    #req = requests.post(url, verify=False, json=data)
-    #spec_j = req.json()
-
-    # Авторизация требуется
-    # ответ на неавторизованный запрос
-    # {'name': 'Unauthorized',
-    # 'message': 'Вы не авторизованы',
-    # 'code': 0,
-    # 'status': 401,
-    # 'type': 'yii\\web\\UnauthorizedHttpException'}
-    # req.status_code = 401
-    # в авторизованном запросе должны быть в headers Cookie и X-Session-Id
-    headers = {
-        'Cookie': cookie,
-        'X-Session-Id': x_session_id
-    }
-    url = 'https://arm.itmh.ru/v3/backend/manager/user-info/'
-    req = requests.get(url, verify=False, headers=headers)
-    spec_j = req.json()
-    return req.status_code
 
 def spec(username, password):
     """Данный метод выполняет авторизацию sts"""
     data_sts = {'UserName': f'CORP\\{username}', 'Password': f'{password}', 'AuthMethod': 'FormsAuthentication'}
     url = """https://arm.itmh.ru/v3/backend/manager/login/"""
     req = requests.get(url)
-    #if req.headers.get('X-Frame-Options') == 'DENY':
     sts_url = req.url
     req = requests.post(sts_url, data=data_sts)
     response = req.content.decode('utf-8')
@@ -1400,11 +1317,6 @@ def spec(username, password):
     req = requests.post(url, data=data_arm)
     cookie = req.request.headers.get('Cookie')
     x_session_id = cookie.split(';')[0].strip('PHPSESSID=')
-    # if req.history:
-    #     for resp in req.history:
-    #         print(resp.request.headers)
-    #         print(resp.status_code, resp.headers, resp.url)
-    #         print('!!end respon!!!')
     return cookie, x_session_id
 
 

@@ -1,13 +1,5 @@
-from django.core.exceptions import ValidationError
-from django.db import transaction
 from django import forms
-
-from .models import TR, SPP, ServicesTR #, HoldPosition, UserHoldPosition
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
-from django.forms import ModelChoiceField
-
-
 
 
 class OrtrForm(forms.Form):
@@ -15,10 +7,6 @@ class OrtrForm(forms.Form):
     pps = forms.CharField(label='ППС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     kad = forms.CharField(label='КАД', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     ots_field = forms.CharField(label='Решение ОТС', required=False, widget=forms.Textarea(attrs={'class': 'form-control'}))
-
-
-class LinkForm(forms.Form):
-    spplink =forms.CharField(max_length=150, label='Ссылка на ТР', widget=forms.TextInput(attrs={'class': 'form-control'}))
 
 
 class LocalForm(forms.Form):
@@ -80,6 +68,8 @@ class HotspotForm(forms.Form):
     types = [('access', 'access'), ('trunk', 'trunk')]
     port_type = forms.CharField(label='Режим порта', required=False,
                                 widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    connect = forms.CharField(label='Подключение', required=False,
+                                 widget=forms.Select(attrs={'class': 'form-control'}))
 
 
 class PhoneForm(forms.Form):
@@ -87,11 +77,11 @@ class PhoneForm(forms.Form):
     type_phone = forms.CharField(label='Тип телефонии', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     types_vgw = [('D-Link DVG-5402SP', 'D-Link DVG-5402SP'), ('Eltex RG-1404G или Eltex TAU-4M.IP', 'Eltex TAU-4M.IP'),
                  ('Eltex TAU-8.IP', 'Eltex TAU-8.IP'), ('Eltex TAU-16.IP', 'Eltex TAU-16.IP'), ('Eltex TAU-24.IP', 'Eltex TAU-24.IP'),
-                 ('Eltex TAU-36.IP', 'Eltex TAU-36.IP'), ('Eltex TAU-72.IP', 'Eltex TAU-72.IP'),] # ('Не требуется', 'Не требуется')
+                 ('Eltex TAU-36.IP', 'Eltex TAU-36.IP'), ('Eltex TAU-72.IP', 'Eltex TAU-72.IP'),]
     vgw = forms.CharField(label='Модель шлюза', widget=forms.Select(choices=types_vgw, attrs={'class': 'form-control'}))
     channel_vgw = forms.IntegerField(label='Количество каналов', widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Канальность'}))
     ports_vgw = forms.CharField(required=False, label='Количество портов ВАТС', widget=forms.NumberInput(attrs={'class': 'form-control'}))
-    types_ip_trunk = [('access', 'access'), ('trunk', 'trunk')] # ('Не требуется', 'Не требуется'),
+    types_ip_trunk = [('access', 'access'), ('trunk', 'trunk')]
     type_ip_trunk = forms.CharField(label='Режим порта для IP-транк', required=False,
                                 widget=forms.Select(choices=types_ip_trunk, attrs={'class': 'form-control'}))
     form_exist_vgw_model = forms.CharField(max_length=100, required=False,
@@ -100,6 +90,9 @@ class PhoneForm(forms.Form):
                                   widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название сущ. шлюза'}))
     form_exist_vgw_port = forms.CharField(max_length=100, required=False,
                                   widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Порты сущ. шлюза'}))
+    con = [('', 'Не требуется')]
+    connect = forms.CharField(label='Подключение', required=False,
+                                 widget=forms.Select(choices=con, attrs={'class': 'form-control'}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -120,120 +113,9 @@ class ItvForm(forms.Form):
     need_line_itv = forms.BooleanField(label='Монтаж линий', required=False,
                                            widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     router_itv = forms.BooleanField(label='Маршрутизатор для иТВ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-
-
-class VolsForm(forms.Form):
-    #types первое значение выводится в шаблон, второе значение отображается в форме
-    # types = [('конвертер 1310 нм, выставить на конвертере режим работы Auto', 'конвертер 1310 нм'),
-    #          ('конвертер 1550 нм, выставить на конвертере режим работы Auto', 'конвертер 1550 нм'),
-    #          ('оптический передатчик SFP WDM, до 20 км, 1310 нм', 'SFP WDM, до 20 км, 1310 нм'),
-    #          ('оптический передатчик SFP WDM, до 20 км, 1550 нм в клиентское оборудование', 'SFP WDM, до 20 км, 1550 нм'),
-    #          ('оптический передатчик SFP WDM, до 3 км, 1310 нм', 'SFP WDM, до 3 км, 1310 нм'),
-    #          ('оптический передатчик SFP WDM, до 3 км, 1550 нм в клиентское оборудование', 'SFP WDM, до 3 км, 1550 нм'),
-    #          ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 3 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм'),
-    #          ('конвертер SNR-CVT-1000SFP-mini с модулем SFP WDM, дальность до 20 км, 1550 нм', 'SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм')]
-    types = [('100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"', 'конвертер 1310 нм'),
-             ('100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"', 'конвертер 1550 нм'),
-             ('оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км', 'SFP WDM, до 20 км, 1310 нм'),
-             ('оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км в клиентское оборудование', 'SFP WDM, до 20 км, 1550 нм'),
-             ('оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км', 'SFP WDM, до 3 км, 1310 нм'),
-             ('оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование', 'SFP WDM, до 3 км, 1550 нм'),
-             ('1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"', 'SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм'),
-             ('1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"', 'SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм')]
-    speed = [('100FD', '100FD'), ('"auto"', 'Auto')]
-    types_correct_sreda = [
-        ('1', 'UTP'),
-        ('2', 'ВОЛС'),
-        ('4', 'FTTH'),
-        ('3', 'WiFi'),
-    ]
-    correct_sreda = forms.CharField(label='Среда передачи',
-                                  widget=forms.Select(choices=types_correct_sreda, attrs={'class': 'form-control'}))
-    device_pps = forms.CharField(label='На стороне ППС', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    device_client = forms.CharField(label='На стороне клиента', widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    speed_port = forms.CharField(label='Скорость порта', widget=forms.Select(choices=speed, attrs={'class': 'form-control'}))
-    port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
-                                           widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
-                                          widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_gi_csw = forms.BooleanField(label='Перевод КК 1G', required=False,
-                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-
-
-class CopperForm(forms.Form):
-    types_correct_sreda = [
-        ('1', 'UTP'),
-        ('2', 'ВОЛС'),
-        ('4', 'FTTH'),
-        ('3', 'WiFi'),
-    ]
-    correct_sreda = forms.CharField(label='Среда передачи',
-                                    widget=forms.Select(choices=types_correct_sreda, attrs={'class': 'form-control'}))
-    kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
-                                   widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
-                                             widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_gi_csw = forms.BooleanField(label='Перевод КК 1G', required=False,
-                                   widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-
-
-class WirelessForm(forms.Form):
-    ap_types = [('AirGrid 23 M5 или LiteBeam LBE-M5-23', 'LiteBeam LBE-M5-23'),
-             ('AirGrid 27 M5', 'AirGrid 27 M5'),
-             ('Nanostation M5', 'Nanostation M5'),
-             ('Infinet E5', 'Infinet E5')]
-    types_correct_sreda = [
-        ('1', 'UTP'),
-        ('2', 'ВОЛС'),
-        ('4', 'FTTH'),
-        ('3', 'WiFi'),
-    ]
-    correct_sreda = forms.CharField(label='Среда передачи',
-                                    widget=forms.Select(choices=types_correct_sreda, attrs={'class': 'form-control'}))
-    access_point = forms.CharField(label='Точки доступа', widget=forms.Select(choices=ap_types, attrs={'class': 'form-control'}))
-    kad = forms.CharField(label='Коммутатор', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    port = forms.CharField(label='Порт', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    logic_csw = forms.BooleanField(label='Установка КК', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_replace_csw = forms.BooleanField(label='Замена КК', required=False,
-                                           widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_csw = forms.BooleanField(label='Перенос КК', required=False,
-                                          widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    logic_change_gi_csw = forms.BooleanField(label='Перевод КК на 1G', required=False,
-                                              widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-
-
-class CswForm(forms.Form):
-    types_csw = [('D-Link DGS-1100-06/ME', 'D-Link DGS-1100-06/ME'), ('24-портовый коммутатор', '24-портовый коммутатор')]
-    types_port = [('5', '5'), ('6', '6'), ('указанный ОНИТС СПД', 'указанный ОНИТС СПД')]
-    types_speed_csw = [('Нет', 'Нет'), ('100', '100'), ('1000', '1000')]
-    types_install_csw = [('Медная линия и порт не меняются', 'Медная линия и порт не меняются'),
-             ('ВОЛС и порт не меняются', 'ВОЛС и порт не меняются'),
-             ('Перевод на гигабит переключение с меди на ВОЛС', 'Перевод на гигабит переключение с меди на ВОЛС'),
-             ('Перевод на гигабит по меди на текущем узле', 'Перевод на гигабит по меди на текущем узле'),
-             ('Перевод на гигабит по ВОЛС на текущем узле', 'Перевод на гигабит по ВОЛС на текущем узле'),
-             ('Перенос на новый узел', 'Перенос на новый узел')]
-    types_exist_sreda_csw = [
-        ('1', 'UTP'),
-        ('2', 'ВОЛС'),
-        ('4', 'FTTH'),
-        ('3', 'WiFi'),
-    ]
-    logic_csw_1000 = forms.BooleanField(label='Запуск КК на магистрали 1 Гбит/с', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-    exist_speed_csw = forms.CharField(label='Существующая магистраль', required=False, widget=forms.Select(choices=types_speed_csw, attrs={'class': 'form-control'}))
-    exist_sreda_csw = forms.CharField(label='Существующее подключение КК', required=False,
-                                       widget=forms.Select(choices=types_exist_sreda_csw, attrs={'class': 'form-control'}))
-    type_install_csw = forms.CharField(label='Варианты установки КК', required=False,
-                                       widget=forms.Select(choices=types_install_csw, attrs={'class': 'form-control'}))
-    model_csw = forms.CharField(label='Модель', required=False, widget=forms.Select(choices=types_csw, attrs={'class': 'form-control'}))
-    port_csw = forms.CharField(label='Порт', required=False, widget=forms.Select(choices=types_port, attrs={'class': 'form-control'}))
+    con = [('', 'Не требуется')]
+    connect = forms.CharField(label='Подключение', required=False,
+                                 widget=forms.Select(choices=con, attrs={'class': 'form-control'}))
 
 
 class ShpdForm(forms.Form):
@@ -243,6 +125,33 @@ class ShpdForm(forms.Form):
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                                     widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    connect = forms.CharField(label='Подключение', required=False,
+                                 widget=forms.Select(attrs={'class': 'form-control'}))
+
+
+class PassServiceForm(forms.Form):
+    connect = forms.CharField(label='Подключение', required=False,
+                                 widget=forms.Select(attrs={'class': 'form-control'}))
+    types_change_log_shpd = [
+        ('существующая адресация', 'существующая адресация'),
+        ('Новая подсеть /30', 'Новая подсеть /30'),
+        ('Новая подсеть /32', 'Новая подсеть /32'),
+    ]
+    change_log_shpd = forms.CharField(label='Изменение схемы ШПД для подсетей с маской /32', required=False,
+                                      widget=forms.Select(choices=types_change_log_shpd,
+                                                          attrs={'class': 'form-control'}))
+    type_police = [('полисером на Subinterface', 'Subinterface'), ('портом подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
+    policer_cks = forms.CharField(label='Ограничение', required=False, widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
+    type_police_vm = [('полисером на SVI', 'SVI'), ('портом подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
+    policer_vm = forms.CharField(label='Ограничение', required=False,
+                                 widget=forms.Select(choices=type_police_vm, attrs={'class': 'form-control'}))
+    types = [
+        ('10 Мбит/с', '10 Мбит/с'),
+        ('100 Мбит/с', '100 Мбит/с'),
+        ('1 Гбит/с', '1 Гбит/с'),
+    ]
+    extend_speed = forms.CharField(label='Новая полоса', required=False,
+                                   widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
 
 
 class ExtendServiceForm(forms.Form):
@@ -276,13 +185,16 @@ class CksForm(forms.Form):
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
     exist_service = forms.CharField(label='Режим порта существующей услуги', required=False,
                            widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
+    connect = forms.CharField(label='Подключение', required=False,
+                              widget=forms.Select(attrs={'class': 'form-control'}))
 
 
 class PortVKForm(forms.Form):
+    connect = forms.CharField(label='Подключение', required=False,
+                              widget=forms.Select(attrs={'class': 'form-control'}))
     types = [('Cуществующая ВЛС', 'Cуществующая ВЛС'), ('Новая ВЛС', 'Новая ВЛС'),]
     type_vk = forms.CharField(label='Тип ВЛС',
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    #new_vk = forms.BooleanField(label='Новая ВЛС', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     exist_vk = forms.CharField(label='Cуществующая ВЛС', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     type_police = [('полисером на Subinterface', 'Subinterface'), ('на порту подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
     policer_vk = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
@@ -294,10 +206,11 @@ class PortVKForm(forms.Form):
 
 
 class PortVMForm(forms.Form):
+    connect = forms.CharField(label='Подключение', required=False,
+                              widget=forms.Select(attrs={'class': 'form-control'}))
     types = [('Cуществующий ВМ', 'Cуществующий ВМ'), ('Новый ВМ', 'Новый ВМ'),]
     type_vm = forms.CharField(label='Тип ВМ',
                               widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-    #new_vm = forms.BooleanField(label='Новый ВМ', required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
     exist_vm = forms.CharField(label='Cуществующий ВМ', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     type_police = [('полисером на SVI', 'SVI'), ('на порту подключения', 'Порт коммутатора'), ('не требуется', 'Не требуется')]
     policer_vm = forms.CharField(label='Ограничение', widget=forms.Select(choices=type_police, attrs={'class': 'form-control'}))
@@ -398,62 +311,23 @@ class ListContractIdForm(forms.Form):
 
 class ListJobsForm(forms.Form):
     types = [
-        ('Перенос, СПД', 'Перенос/расширение'),
-        ('Организация/Изменение, СПД', 'Организация'),
-        ('Изменение, не СПД', 'Сущ. порт'),
+        ('Перенос', 'Перенос'),
+        ('Расширение', 'Расширение'),
+        ('Восстановление', 'Восстановление'),
+        ('Организация', 'Организация'),
+        ('Изменение, не СПД', 'Изменение'),
         ('Не требуется', 'Не требуется'),
+
+
     ]
     jobs = forms.CharField(label='',
                                  widget=forms.Select(choices=types, attrs={'class': 'form-control'}))
-
-
-class TemplatesHiddenForm(forms.Form):
-    hidden = forms.BooleanField(label="", required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check'}))
-
-
-class TemplatesStaticForm(forms.Form):
-    static = forms.CharField(label='', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    requisite = forms.CharField(label='', required=False,
+                           widget=forms.Select(attrs={'class': 'form-control'}))
 
 
 class PassTurnoffForm(forms.Form):
     ppr = forms.CharField(label='ППР', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-
-
-class PassServForm(forms.Form):
-    types_exist_sreda = [
-        ('1', 'UTP'),
-        ('2', 'ВОЛС'),
-        ('4', 'FTTH'),
-        ('3', 'WiFi'),
-    ]
-    exist_sreda = forms.CharField(label='Подключен по',
-                                   widget=forms.Select(choices=types_exist_sreda, attrs={'class': 'form-control'}))
-    types_passage = [
-        ('Перенос сервиса в новую точку', 'Перенос сервиса в новую точку'),
-        ('Перенос точки подключения', 'Перенос точки подключения'),
-        ('Перенос логического подключения', 'Перенос трассы/логического подключения'),
-        ('Восстановление трассы', 'Восстановление трассы'),
-        ('Перевод на гигабит', 'Расширение сервиса'),
-    ]
-    type_passage = forms.CharField(label='Варианты переноса',
-                                widget=forms.Select(choices=types_passage, attrs={'class': 'form-control'}))
-    types_change_log = [
-        ('Порт и КАД не меняется', 'Порт и КАД не меняется'),
-        ('Порт/КАД меняются', 'Порт/КАД меняются'),
-    ]
-    change_log = forms.CharField(label='Изменение логики при работах',
-                                 widget=forms.Select(choices=types_change_log, attrs={'class': 'form-control'}))
-
-
-class ChangeLogShpdForm(forms.Form):
-    types_change_log_shpd = [
-        ('существующая адресация', 'существующая адресация'),
-        ('Новая подсеть /30', 'Новая подсеть /30'),
-        ('Новая подсеть /32', 'Новая подсеть /32'),
-    ]
-    change_log_shpd = forms.CharField(label='Изменение схемы ШПД для подсетей с маской /32',
-                                      widget=forms.Select(choices=types_change_log_shpd,
-                                                          attrs={'class': 'form-control'}))
 
 
 class ChangeServForm(forms.Form):
@@ -488,9 +362,6 @@ class ChangeParamsForm(forms.Form):
                                 label='Ip-адрес', widget=forms.TextInput(attrs={'class': 'form-control'}))
     routed_vrf = forms.CharField(max_length=50, required=False,
                                  label='VRF', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    # types_mask = [('новой родительской подсети', 'Новая родительская подсеть'),
-    #               ('существующей родительской подсети', 'Существующая родительская подсеть'),
-    #               ]
     types_mask = [(True, 'Новая родительская подсеть'),
                   (False, 'Существующая родительская подсеть'),
                   ]
@@ -660,76 +531,27 @@ class PpsForm(forms.Form):
                 self.fields[f'{field}'] = forms.CharField()
 
 
-class RtkForm(forms.Form):
-    types_pm = [
-        ('ПМ', 'ПМ'),
-        ('FVNO Медь', 'FVNO Медь'),
-        ('FVNO FTTH', 'FVNO FTTH'),
-        ('FVNO GPON', 'FVNO GPON'),
-    ]
-    vlan = forms.CharField(label='Vlan',
-                                widget=forms.TextInput(attrs={'class': 'form-control'}))
-    type_pm = forms.CharField(widget=forms.Select(choices=types_pm, attrs={'class': 'form-control'}))
-    switch_ip = forms.CharField(label='IP коммутатора', required=False,
-                                widget=forms.TextInput(attrs={'class': 'form-control'}))
-    switch_port = forms.CharField(label='Порт коммутатора', required=False,
-                                widget=forms.TextInput(attrs={'class': 'form-control'}))
-    optic_socket = forms.CharField(label='Опт. розетка', required=False,
-                                widget=forms.TextInput(attrs={'class': 'form-control'}))
-    ploam = forms.CharField(label='PLOAM-пароль', required=False,
-                                widget=forms.TextInput(attrs={'class': 'form-control'}))
-
-    # def clean(self):
-    #     cleaned_data = super().clean()
-    #     type_pm = cleaned_data.get("type_pm")
-    #     switch_ip = cleaned_data.get("switch_ip")
-    #     switch_port = cleaned_data.get("switch_port")
-    #     print(type_pm)
-    #
-    #
-    #     if type_pm == 'FVNO Медь' and not all([switch_ip, switch_port]):
-    #         # Only do something if both fields are valid so far.
-    #         self.add_error(
-    #                 "switch_ip", "required"
-    #             )
+class KtcEnvForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
+            for field in new_fields:
+                if 'logic_csw' in field:
+                    self.fields[f'{field}'] = forms.BooleanField(required=False)
+                else:
+                    self.fields[f'{field}'] = forms.CharField(required=False)
 
 
+class OtherEnvForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs.get('data'):
+            # for view func-based fields locate in args
+            new_fields = set(kwargs['data'].keys()) - set(self.fields.keys())
+            new_fields.remove('csrfmiddlewaretoken')
 
-# class TechnologModelChoiceField(ModelChoiceField):
-#     """По умолчанию в ModelChoiceField используется поле, которое возвращает метод __str__, поэтому меняем
-#      на нужное поле"""
-#     def label_from_instance(self, obj):
-#         return obj.last_name
-
-
-# class OtpmPoolForm(forms.Form):
-#     groups = [
-#         ('Все', 'Все'),
-#         ('Коммерческая', 'Коммерческая'),
-#         ('ПТО', 'ПТО'),
-#     ]
-#     statuses = [
-#         ('Все', 'Все'),
-#         ('В работе', 'В работе'),
-#         ('Не взята в работу', 'Не взята в работу'),
-#         ('Отслеживается', 'Отслеживается'),
-#     ]
-#     # technologs = [
-#     #     ('Все', 'Все'),
-#     # ]
-#     technolog = TechnologModelChoiceField(
-#         queryset=User.objects.all(),
-#         empty_label='Все',
-#         required=False,
-#         to_field_name='last_name',
-#         widget=forms.Select(attrs={'class': 'form-control'})
-#     )
-#     # technolog = forms.CharField(label='Технолог', required=False,
-#     #                            widget=forms.Select(choices=technologs, attrs={'class': 'form-control'}))
-#     group = forms.CharField(label='Группа', required=False,
-#                             widget=forms.Select(choices=groups, attrs={'class': 'form-control'}),
-#                             )
-#     status = forms.CharField(label='Статус', required=False,
-#                              widget=forms.Select(choices=statuses, attrs={'class': 'form-control'}),
-#                              )
-#                                #widget=forms.TextInput(attrs={'class': 'form-control'}))
+            for field in new_fields:
+                self.fields[f'{field}'] = forms.CharField(required=False)
