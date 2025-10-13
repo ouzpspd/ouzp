@@ -46,7 +46,7 @@
   <div class="card mb-2">
     <div class="card-header" id="headingTwo">
       <h5 class="mb-0">
-        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+        <a role="button" data-toggle="collapse show" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">Решение ОТПМ</a>
       </h5>
     </div>
     <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
@@ -406,6 +406,7 @@ $(document).ready(function() {
       `;
       $('#formBlocks').append(newBlock);
       updateFieldsVisibility($('.form-block').last());
+      updateExistSredaVisibility($('.form-block').last());
   });
 
   // Функция для удаления блока полей

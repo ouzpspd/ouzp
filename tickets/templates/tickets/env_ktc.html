@@ -140,10 +140,10 @@
   <div class="card mb-2">
     <div class="card-header" id="headingTwo">
       <h5 class="mb-0">
-        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">Решение ОТПМ</a>
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">Решение ОТПМ</a>
       </h5>
     </div>
-    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+    <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
       <div class="card-body">
         {{oattr|linebreaksbr}}
       </div>
@@ -338,6 +338,16 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row mb-2 ppr">
+                            <div class="d-grid gap-2 col-2">
+                                <a class="btn btn-info btn-block" href="{% url 'tr_view' dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
+                            </div>
+                            <div class="d-grid gap-2 col-2">
+                                <a class="btn btn-info btn-block" href="{% url 'ppr' trID %}" target ="_blank" role="button">Создать ППР</a>
+                            </div>
+                        </div>
+
                         <div class="row ppr">
                             <div class="col-4 mb-1">
                                 <div class="form-group">
@@ -607,6 +617,14 @@
                                             <label for="port">Порт</label>
                                             <input type="text" class="form-control port" id="port_${blockCount}" name="port_${blockCount}">
                                         </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-2 ppr">
+                                    <div class="d-grid gap-2 col-2">
+                                        <a class="btn btn-info btn-block" href="{% url 'tr_view' dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
+                                    </div>
+                                    <div class="d-grid gap-2 col-2">
+                                        <a class="btn btn-info btn-block" href="{% url 'ppr' trID %}" target ="_blank" role="button">Создать ППР</a>
                                     </div>
                                 </div>
                                 <div class="row ppr">

@@ -3120,6 +3120,8 @@ class KtcEnvFormView(EnvFormView):
         oattr = session_tr_id.get('oattr')
         turnoff = session_tr_id.get('turnoff')
         tag_service = session_tr_id.get('tag_service')
+        ticket_tr_id = session_tr_id.get('ticket_tr_id')
+        ticket_tr = TR.objects.get(id=ticket_tr_id)
 
         sreda_types = {
             '2': {
@@ -3150,6 +3152,7 @@ class KtcEnvFormView(EnvFormView):
             'ticket_spp_id': session_tr_id.get('ticket_spp_id'),
             'trID': self.kwargs['trID'],
             'dID': session_tr_id.get('dID'),
+            'ticket_tr': ticket_tr
         })
         context.update({**personal_sreda})
         return context
