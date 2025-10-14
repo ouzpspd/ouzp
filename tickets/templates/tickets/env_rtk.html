@@ -20,6 +20,10 @@
             <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
             <td class="table-light" style="width: 75%">{{pps}}</td>
         </tr>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%" >Заявка К</th>
+            <td class="table-light" style="width: 75%">{{ticket_tr.ticket_k}}</td>
+        </tr>
       </tbody>
     </table>
 </div>
@@ -42,26 +46,24 @@
     </div>
   </div>
     {% endif %}
-
   <div class="card mb-2">
     <div class="card-header" id="headingTwo">
       <h5 class="mb-0">
-        <a role="button" data-toggle="collapse show" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">Решение ОТПМ</a>
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">Решение ОТПМ</a>
       </h5>
     </div>
-    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+    <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
       <div class="card-body">
         {{oattr|linebreaksbr}}
       </div>
     </div>
   </div>
-
 </div>
 </div>
 
 
 
-<div class="container mt-5">
+<div class="container">
     <div class="card mb-2">
     <h5 class="card-header">Параметры</h5>
     <div class="card-body">
