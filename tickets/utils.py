@@ -173,6 +173,7 @@ def analyzer_vars(stroka, static_vars, hidden_vars, multi_vars={}):
                 stroka = stroka.replace(f'[{i}]', '')
         if len(list_var_lines) > 0:
             stroka = stroka.replace('<>\n', '').replace('<>', '').replace('\n\n\n\n', '\n\n')
+            stroka = stroka.replace('-----\n\n\n', '-----\n\n')
         while stroka.endswith('\n'):
             stroka = stroka[:-1]
 
@@ -261,9 +262,9 @@ def get_service_name_from_service_plus_desc(services_plus_desc):
     elif services_plus_desc.startswith('iTV'):
         service = 'ЦТВ'
     elif services_plus_desc.startswith('Интернет, DHCP'):
-        service = 'ШПД в Интернет'
+        service = 'ШПД в интернет'
     elif services_plus_desc.startswith('Интернет, блок Адресов Сети Интернет'):
-        service = 'ШПД в Интернет'
+        service = 'ШПД в интернет'
     elif services_plus_desc.startswith('ЦКС'):
         service = 'ЦКС'
     elif services_plus_desc.startswith('Порт ВЛС'):

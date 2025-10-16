@@ -162,7 +162,7 @@ def get_need(value_vars):
         for type_change_service in value_vars.get('types_change_service'):
             if next(iter(type_change_service.keys())) in types_trunk:
                 if 'ШПД' in next(iter(type_change_service.keys())):
-                    need.append("- организовать дополнительную услугу ШПД в Интернет;")
+                    need.append("- организовать дополнительную услугу ШПД в интернет;")
                 elif 'ЦКС' in next(iter(type_change_service.keys())):
                     need.append("- организовать дополнительную услугу ЦКС;")
                 elif 'ВЛС' in next(iter(type_change_service.keys())):
@@ -707,7 +707,7 @@ def _change_services(value_vars):
                     static_vars['адрес точки "B"'] = all_cks_in_tr.get(change_service)['pointB']
                     static_vars['L2. точка ограничения и маркировки трафика'] = all_cks_in_tr.get(change_service)['policer_cks']
 
-            elif new_service_name == 'ШПД в Интернет':
+            elif new_service_name == 'ШПД в интернет':
                 hidden_vars['использовать подсеть с маской %маска IP-сети%'] = 'использовать подсеть с маской %маска IP-сети%'
                 if 'Интернет, блок Адресов Сети Интернет' in change_service:
                     mask_service = next(iter(type_change_service.values()))
@@ -1441,7 +1441,7 @@ class NewServiceItv(Connectable):
     def get_exist_shpd(self):
         """Метод определяет наличие услуги ШПД среди услуг Corsis и возвращает значение подсети."""
         cis_resources = self.get_cis_resources()
-        shpd_list = cis_resources.get("ШПД в Интернет")
+        shpd_list = cis_resources.get('"ШПД в интернет"')
         return shpd_list[0] if shpd_list else ''
 
 
@@ -1463,7 +1463,7 @@ class NewServiceItv(Connectable):
                 template = self.templates.get("Организация услуги ЦТВ в vlan'е новой услуги ШПД в интернет.")
         elif self.type_itv == 'novlexist':
             exist_shpd = self.get_exist_shpd()
-            if not exist_shpd.endswith('/32'):
+            if '/32' not in exist_shpd:
                 template = self.templates.get("Организация услуги ЦТВ в vlan'е действующей услуги ШПД в интернет с простоем связи.")
         if template:
             self.ortr.append(self.text_block.construct(template))
