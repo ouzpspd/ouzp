@@ -2443,7 +2443,8 @@ class KtcMount:
         if self.change_log == 'не меняется':
             self.fill_rebuild_exist_line()
         else:
-            if self.pps == self.old_pps and self.exist_mount_type == self.mount_type:
+            if self.pps == self.old_pps and self.exist_mount_type == self.mount_type and\
+                    self.mount_type in ['2', '4'] and (self.job == 'Расширение' or self.params.get('logic_csw')):
                 self.fill_exist_line_from_kad()
             else:
                 self.fill_new_line_from_kad()
@@ -2470,7 +2471,7 @@ class KtcMount:
             template = self.templates.get("Изменение трассы присоединения к СПД.")
             self.ortr.append(self.text_block.construct(template))
             self.service_part_tr = False
-        elif self.change_log == self.change_physic == 'не меняется' and self.mount_type == self.exist_mount_type:
+        elif self.job == 'Организация' and self.change_log == self.change_physic == 'не меняется' and self.mount_type == self.exist_mount_type:
             # сейчас когда change_log не меняется автоматически нов. среда становится равной существующей и невозможно
             # обработать случай расширения когда из работ только 100М конвертер надо поменять на 1Г у клиента
             pass
@@ -3098,7 +3099,8 @@ class OrganizationJob:
 
     def perform_job(self):
         """Метод выполняет работы по оргназици услуги."""
-        if self.mount and not self.mount.is_not_change():
+        if self.mount:
+            self.mount.job = self.job_name
             self.get_mount_filled_template()
 
         for service in self.services:
@@ -3245,8 +3247,6 @@ class Csw:
         self.change_physic = self.params.get('change_physic')
         self.change_log = self.params.get('change_log')
         self.device_pps = self.params.get('device_pps')
-        self.replace_str_device_client = ''
-        self.device_client = self.params.get('device_client')
 
     def set_text_block(self, text_block):
         """Метод устанавливает класс переменных TextBlock, взятый из класс Приесоединение, вместо собственного,
@@ -3288,13 +3288,17 @@ class Csw:
                 'и %тип конвертера/передатчика на стороне клиента%'
             ]
             self.text_block.hidden_vars.update({i:i for i in strs})
-
-        self.text_block.static_vars['название коммутатора'] = self.kad
-        self.text_block.static_vars['порт доступа на коммутаторе'] = self.params.get('port')
-        self.text_block.static_vars['тип конвертера/передатчика на стороне узла доступа'] = self.device_pps
-        self.device_client = self.device_client.replace(' в клиентское оборудование', self.replace_str_device_client)
-        self.text_block.static_vars['тип конвертера/передатчика на стороне клиента'] = self.device_client
-
+            # параметр device_client для данного класса не используется, т.к. в КК по-умолчанию всегда ставится sfp
+            # помимо этого в случае когда КК устанавливается в порт с существующей услугой, используется режим лог. подключение
+            # не меняется, а при этом режиме параметры конверторов, кад и порта скрыты от пользователя.
+            sfp_20km = 'оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км'
+            sfp_3km = 'оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км'
+            self.text_block.static_vars[
+                'тип конвертера/передатчика на стороне клиента'
+            ] = sfp_20km if self.mount_type == '2' else sfp_3km
+            if not self.device_pps:
+                raise ExistError('Не был указан тип конвертера/передатчика на стороне УС.')
+            self.text_block.static_vars['тип конвертера/передатчика на стороне узла доступа'] = self.device_pps
 
     def fill_change_old_port_to_new_port(self):
         """Метод добавляет переменные старого и нового портов."""

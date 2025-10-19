@@ -163,7 +163,7 @@
                       <div class="col-4 mb-1">
                           <div class="form-group">
                               <label for="kad_0">Switch IP</label>
-                              <input type="text" class="form-control" id="kad_0" name="kad_0" required>
+                              <input type="text" class="form-control kad" id="kad_0" name="kad_0" required>
                           </div>
                       </div>
                   </div>
@@ -171,7 +171,7 @@
                       <div class="col-4 mb-1">
                           <div class="form-group">
                               <label for="port_0">Switch Port</label>
-                              <input type="text" class="form-control" id="port_0" name="port_0" required>
+                              <input type="text" class="form-control port" id="port_0" name="port_0" required>
                           </div>
                       </div>
                   </div>
@@ -187,7 +187,7 @@
                       <div class="col-4 mb-1">
                           <div class="form-group">
                               <label for="ploam_0">PLOAM</label>
-                              <input type="text" class="form-control" id="ploam_0" name="ploam_0" required>
+                              <input type="text" class="form-control ploam" id="ploam_0" name="ploam_0" required>
                           </div>
                       </div>
                   </div>
@@ -225,6 +225,10 @@
 
 
 $(document).ready(function() {
+    let on_kad = "{{kad}}";
+    let on_port = "{{port}}";
+    let on_ploam = "{{ploam}}";
+
   function updateFieldsVisibility(block) {
     const typePm = block.find('.type-pm-select').val();
     const vlanGroup = block.find('.vlan-group');
@@ -256,9 +260,17 @@ $(document).ready(function() {
     }
   }
 
+  // Заполнение распознанных полей
+  function fillFields(block) {
+    block.find('.kad').val(on_kad);
+    block.find('.port').val(on_port);
+    block.find('.ploam').val(on_ploam);
+    }
+
   // Инициализация видимости полей
   updateFieldsVisibility($('.form-block').first());
   updateExistSredaVisibility($('.form-block').first());
+  fillFields($('.form-block').first());
 
   // Обработчик изменения типа PM
   $(document).on('change', '.type-pm-select', function() {
@@ -376,7 +388,7 @@ $(document).ready(function() {
                   <div class="col-4 mb-1">
                       <div class="form-group">
                           <label for="kad_0">Switch IP</label>
-                          <input type="text" class="form-control" id="kad_${blockCount}" name="kad_${blockCount}" required>
+                          <input type="text" class="form-control kad" id="kad_${blockCount}" name="kad_${blockCount}" required>
                       </div>
                   </div>
               </div>
@@ -384,7 +396,7 @@ $(document).ready(function() {
                   <div class="col-4 mb-1">
                       <div class="form-group">
                           <label for="port_0">Switch Port</label>
-                          <input type="text" class="form-control" id="port_${blockCount}" name="port_${blockCount}" required>
+                          <input type="text" class="form-control port" id="port_${blockCount}" name="port_${blockCount}" required>
                       </div>
                   </div>
               </div>
@@ -400,7 +412,7 @@ $(document).ready(function() {
                   <div class="col-4 mb-1">
                       <div class="form-group">
                           <label for="ploam_0">PLOAM</label>
-                          <input type="text" class="form-control" id="ploam_${blockCount}" name="ploam_${blockCount}" required>
+                          <input type="text" class="form-control ploam" id="ploam_${blockCount}" name="ploam_${blockCount}" required>
                       </div>
                   </div>
               </div>
@@ -409,6 +421,7 @@ $(document).ready(function() {
       $('#formBlocks').append(newBlock);
       updateFieldsVisibility($('.form-block').last());
       updateExistSredaVisibility($('.form-block').last());
+      fillFields($('.form-block').last());
   });
 
   // Функция для удаления блока полей

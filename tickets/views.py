@@ -423,7 +423,8 @@ def data(request, trID):
     try:
         result_services, result_services_ots, value_vars = construct_tr(value_vars)
     except ExistError as e:
-        return render(request, 'base.html', {'my_message': f'Проектирование не выполнено. {e}'})
+        messages.warning(request, f'Проектирование не выполнено. {e}')
+        return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
     # Обработка ошибок отсутствия подключения в услуге обрабатывается на уровне интерфейса, только для формы переноса
     # сервиса. Для новых услуг такой обработки нет, т.к. данные формы используются и для изменения сервиса, а там
     # пока что оставлена старая логика.
@@ -3060,9 +3061,6 @@ class KtcEnvFormView(EnvFormView):
             list_switches = parsingByNodename(pps, username, password)
             if not isinstance(list_switches, list):
                 return render(self.request, 'base.html', {'my_message': 'Нет доступа к странице Cordis с коммутаторами'})
-            if 'No records to display' in list_switches[0]:
-                messages.warning(self.request, 'Нет коммутаторов на узле {}'.format(list_switches[0][22:]))
-                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
 
             list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
             session_tr_id.update({'list_switches': list_switches})
@@ -3181,18 +3179,14 @@ class RtkEnvFormView(EnvFormView):
             self.request.session[str(self.kwargs['trID'])] = session_tr_id
         return super().form_valid(form)
 
-    def get_initial(self, *args, **kwargs):
-        initial = super().get_initial()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         username, password = super().get_credential(self)
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
         rtk_initial = get_rtk_initial(username, password, session_tr_id.get('oattr'))
-        initial['switch_ip'] = rtk_initial.get('rtk_ip')
-        initial['switch_port'] = rtk_initial.get('rtk_port')
-        initial['ploam'] = rtk_initial.get('rtk_ploam')
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        kad = rtk_initial.get('rtk_ip') if rtk_initial.get('rtk_ip') else ''
+        port = rtk_initial.get('rtk_port') if rtk_initial.get('rtk_port') else ''
+        ploam = rtk_initial.get('rtk_ploam') if rtk_initial.get('rtk_ploam') else ''
         context['trID'] = self.kwargs['trID']
         prev_page, index = backward_page(self.request, self.kwargs['trID'])
         session_tr_id = self.request.session[str(self.kwargs['trID'])]
@@ -3218,6 +3212,9 @@ class RtkEnvFormView(EnvFormView):
         ticket_tr = TR.objects.get(id=ticket_tr_id)
         context.update({
             'head': head,
+            'kad': kad,
+            'port': port,
+            'ploam': ploam,
             'pps': pps,
             'oattr': oattr,
             'turnoff': turnoff,

@@ -69,7 +69,6 @@ def parsingByNodename(node_name, login, password):
         switch = req.content.decode('utf-8')
         if 'No records to display.' in switch:
             list_switches = []
-            list_switches.append('No records to display {}'.format(node_name))
             return list_switches
         else:
             # Получение данных о названии и модели всех устройств на узле связи

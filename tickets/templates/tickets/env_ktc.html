@@ -24,7 +24,7 @@
       </tbody>
     </table>
 
-
+    {% if list_switches %}
     <table class="table table-striped" id="switch">
       <thead>
         <tr>
@@ -117,6 +117,15 @@
       {% endfor %}
       </tbody>
     </table>
+    {% else %}
+    <div class="row">
+        <div class="col">
+            <div class="breadcrumb video alert-danger">
+                <p class="breadcrumb-item"><b>Внимание!</b><br>На узле {{pps}} нет коммутаторов.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     </div>
 <div class="container">
