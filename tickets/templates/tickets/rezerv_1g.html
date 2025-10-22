@@ -17,25 +17,25 @@
 
 <div class="container">
 <div class="card mb-2">
-    <h5 class="card-header">Анализ портов</h5>
+    <h5 class="card-header">Анализ портов АМ, КПА</h5>
   <div class="card-body">
     <div class="container mb-4">
 <div class="row">
   <div class="col-7">
     <div class="d-flex">
-      <textarea class="form-control mt-3 mr-4" rows="7" id="text_rezerv" placeholder="Введите название АМ/КПА в столбик (максимум 10)"></textarea>
+      <textarea class="form-control mt-3 mr-4" rows="7" id="text_rezerv" placeholder="Введите название АМ/КПА в столбик"></textarea>
       <div class="d-flex flex-column mt-3 col-6">
-        <button class="btn btn-info mb-4" id="add_rezerv">
+        <button class="btn btn-info mb-4 rez" id="add_rezerv">
             <span class="" role="status" aria-hidden="true"></span>
             <span class="sr-only">Lo...</span>
             Подписать Rezerv_1G_planning
         </button>
-        <button class="btn btn-info mb-4" id="remove_rezerv">
+        <button class="btn btn-info mb-4 rez" id="remove_rezerv">
             <span class="" role="status" aria-hidden="true"></span>
             <span class="sr-only">Lo...</span>
             Снять Rezerv_1G_planning
         </button>
-        <button class="btn btn-info mb-4" id="get_sw">
+        <button class="btn btn-info mb-4 rez" id="show_rezerv">
             <span class="" role="status" aria-hidden="true"></span>
             <span class="sr-only">Lo...</span>
             Посчитать 1G/10G
@@ -81,6 +81,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 <script>
+// раскрытие списков в таблице
 function toggleDropdown(button) {
 
     const content = button.nextElementSibling;
@@ -110,105 +111,187 @@ function toggleDropdown(button) {
 
 }
 
+// преобразование полученных данных к строке для отображения в диалоговом окне
 function objToString (obj) {
     let str = '';
+    let result = '';
     for (const [sw, val] of Object.entries(obj)) {
         if (sw == "error") {
-            str += `\n${val}\n`;
+            result += `\n${val}\n`;
         }
-        else {
-            str += `\n${sw}:\n`;
+        else if (sw != "action") {
+            str = '';
             for (const [k, v] of Object.entries(val)) {
-                if (v && k == "error_ports") {
+                if (v && k == "error_switch") {
+                    str += `${v}\n`;
+                }
+                else if (v && k == "error_ports") {
                     str += `Внимание! Не запланировано изменены: ${v}\n`
                 }
                 else if (v && k == "changed_ports") {
                     str += `Успешно изменены: ${v}\n`;
                 }
             }
+            if (str) {
+                result += `\n${sw}:\n${str}\n`;
+            }
         }
     }
-    return str;
+    if (result) {
+        let data = result
+        if (obj.action == 'show') {
+            result = "Подсчет 1G/10G не выполнен как ожидалось.\n" + data;
+        } else if (obj.action == 'add') {
+            result = "Результат резервирования портов.\n" + data;
+        } else if (obj.action == 'remove') {
+            result = "Результат снятия резерва.\n" + data;
+        }
+    }
+    return result;
 }
 
+// WebSocket соединение
+const rezervSocket = new WebSocket(
+    'ws://' + window.location.host +
+    '/ws/rezerv-1g/'
+);
 
-$(function () {
+const requiredReserve = {
+    add: 'add',
+    remove: 'remove',
+    show: 'show'
+};
 
-	$('#add_rezerv').click(function (e) {
-          var answer = confirm('Вы действительно хотить зарезервировать порты на оборудовании?');
-          if (!answer) {
+
+// Обработка кнопок территорий
+function handleClick(action) {
+    if (requiredReserve[action] == 'add') {
+        var answer = confirm('Вы действительно хотите зарезервировать порты на оборудовании?');
+        if (!answer) {
             e.preventDefault();
             return false;
-          }
+        }
+    } else if (requiredReserve[action] == 'remove') {
+        var answer = confirm('Вы действительно хотите снять резерв с портов на оборудовании?');
+        if (!answer) {
+            e.preventDefault();
+            return false;
+            }
+    } else {
+    }
 
-          $(this).find('span').addClass('spinner-border spinner-border-sm');
-          $(this).prop('disabled', true);
+    var switch_name = $("#text_rezerv").val().trim().replaceAll('\n', ';');
 
-          var switch_name = $("#text_rezerv").val().trim().replaceAll('\n', ';');
-          var url_mask = "{% url 'add_rezerv_1g_switch_ports' search_ip=12345 %}".replace(/12345/, switch_name);
-          // создаем AJAX-вызов
-          $.ajax({
-              url: url_mask,
-              // если успешно, то
-              success: function (response) {
-                  $('#add_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
-                  $('#add_rezerv').prop('disabled', false);
-                  const resp = objToString(response);
-                  if (response.error) {
-                      alert(`Внимание! Резервирование не выполнено как ожидалось.\n${resp}`);
-                  }
-                  else {
-                        alert(`Резервирование выполнено.\n${resp}`);
-                  }
-              },
-              error: function (response) {
-                  $('#add_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
-                  alert("Что-то пошло не так.");
-                  $('#add_rezerv').prop('disabled', false);
-              }
-          });
-          return false;
-        });
+    if (rezervSocket.readyState === WebSocket.OPEN) {
+        rezervSocket.send(JSON.stringify({
+            'switches': switch_name,
+            'action': action,
+        }));
+        $(`#${action}_rezerv`).find('span').addClass('spinner-border spinner-border-sm');
+        $('.rez').prop('disabled', true);
+    } else {
+        alert('Ошибка. Сервер не отвечает. Попробуйте перезагрузить страницу.');
+    }
+}
+
+// Обработчики для кнопок
+$('#remove_rezerv').click(function() {
+    handleClick('remove');
 });
 
-$(function () {
-	$('#remove_rezerv').click(function () {
-      var answer = confirm('Вы действительно хотить снять резерв с портов на оборудовании?');
-          if (!answer) {
-            e.preventDefault();
-            return false;
-          }
-      $(this).find('span').addClass('spinner-border spinner-border-sm');
-      $(this).prop('disabled', true);
+// Обработчики для кнопок
+$('#add_rezerv').click(function() {
+    handleClick('add');
+});
 
-      var switch_name = $("#text_rezerv").val().trim().replaceAll('\n', ';');
-      var url_mask = "{% url 'remove_rezerv_1g_switch_ports' search_ip=12345 %}".replace(/12345/, switch_name);
-      // создаем AJAX-вызов
-      $.ajax({
-          url: url_mask,
-          // если успешно, то
-          success: function (response) {
-              $('#remove_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
-              $('#remove_rezerv').prop('disabled', false);
-              const resp = objToString(response);
-              if (response.error) {
-                  alert(`Внимание! Снятие резерва не выполнено как ожидалось.\n${resp}`);
-              }
-              else {
-                    alert(`Снятие резерва выполнено.\n${resp}`);
-              }
-          },
-          error: function (response) {
-              $('#remove_rezerv').find('span').removeClass('spinner-border spinner-border-sm');
-              alert("Что-то пошло не так.");
-              $('#remove_rezerv').prop('disabled', false);
-          }
-      });
-      return false;
-    });
+// Обработчики для кнопок
+$('#show_rezerv').click(function() {
+    handleClick('show');
 });
 
 
+// Обработчик закрытия WebSocket
+rezervSocket.onclose = function(e) {
+    alert('Ошибка. Сбой на сервере. Попробуйте перезагрузить страницу.');
+    $('.rez').find('span').removeClass('spinner-border spinner-border-sm');
+    $('.rez').prop('disabled', false);
+};
+
+// Обработчик сообщений от сервера
+rezervSocket.onmessage = function(e) {
+    const response = JSON.parse(e.data);
+    const tableBody = document.getElementById('territory-data');
+
+    $('.rez').find('span').removeClass('spinner-border spinner-border-sm');
+    $('.rez').prop('disabled', false);
+    log_message = objToString(response);
+
+    if (response.action == 'show') {
+        $("#rezerv").empty();
+        let counter = 1
+        for (csw in response) {
+        if (csw != 'action' && csw != 'error' && 'rezerv_1g' in response[csw]) {
+            $("#rezerv").append(`
+            <tr>
+                <th scope="row">${counter}</th>
+                <td>${csw}</td>
+                <td>${response[csw].rezerv_1g}</td>
+                <td>${response[csw].rezerv_1g_planning}</td>
+                <td>${response[csw].rezerv_dir2_4_4}</td>
+                <td>${response[csw].no_description_1g}</td>
+                <td>${response[csw].no_description_10g}</td>
+                <td>
+                    <div>
+                        ${response[csw].other_rezerv_1g.length}
+                        <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                        <div class="dropdown-content" style="display:none" id="other_rezerv_1g_${counter}">
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        ${response[csw].other_rezerv_10g.length}
+                        <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                        <div class="dropdown-content" style="display:none" id="other_rezerv_10g_${counter}">
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        ${response[csw].with_desc_no_link_1g.length}
+                        <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                        <div class="dropdown-content" style="display:none" id="with_desc_no_link_1g_${counter}">
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        ${response[csw].with_desc_no_link_10g.length}
+                        <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
+                        <div class="dropdown-content" style="display:none" id="with_desc_no_link_10g_${counter}">
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            `);
+
+            for (col of ["other_rezerv_1g", "other_rezerv_10g", "with_desc_no_link_1g", "with_desc_no_link_10g"]) {
+                for (val of response[csw][col]) {
+                 $("#"+col+"_"+counter).append(`
+                 <div>${val}</div>
+                 `);
+                 }
+            }
+            counter += 1
+            }
+        }
+    }
+    if (log_message) {
+        alert(log_message);
+    }
+};
+
+// получение данных таблицы
 function getTable() {
     let data = [];
     let columns = [
@@ -251,6 +334,7 @@ function getTable() {
     return data;
 }
 
+// Обработчик кнопки excel
 $(function () {
     $('#excel').click(function() {
         let tableData = getTable();
@@ -261,98 +345,6 @@ $(function () {
     });
 });
 
-
-$(function () {
-
-	$('#get_sw').click(function () {
-          $(this).find('span').addClass('spinner-border spinner-border-sm');
-          $(this).prop('disabled', true);
-
-          var switch_name = $("#text_rezerv").val().trim().replaceAll('\n', ';');
-          var url_mask = "{% url 'analysis_switch_ports' search_ip=12345 %}".replace(/12345/, switch_name);
-          // создаем AJAX-вызов
-          $.ajax({
-
-              url: url_mask,
-              // если успешно, то
-              success: function (response) {
-                  $('#get_sw').find('span').removeClass('spinner-border spinner-border-sm');
-                  $('#get_sw').prop('disabled', false);
-                  if (response.error) {
-                      alert(response.error);
-                  }
-
-                  else {
-                        $("#rezerv").empty();
-
-                        let counter = 1
-                        for (csw in response) {
-
-                        $("#rezerv").append(`
-                        <tr>
-                            <th scope="row">${counter}</th>
-                            <td>${csw}</td>
-                            <td>${response[csw].rezerv_1g}</td>
-                            <td>${response[csw].rezerv_1g_planning}</td>
-                            <td>${response[csw].rezerv_dir2_4_4}</td>
-                            <td>${response[csw].no_description_1g}</td>
-                            <td>${response[csw].no_description_10g}</td>
-                            <td>
-                                <div>
-                                    ${response[csw].other_rezerv_1g.length}
-                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
-                                    <div class="dropdown-content" style="display:none" id="other_rezerv_1g_${counter}">
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    ${response[csw].other_rezerv_10g.length}
-                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
-                                    <div class="dropdown-content" style="display:none" id="other_rezerv_10g_${counter}">
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    ${response[csw].with_desc_no_link_1g.length}
-                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
-                                    <div class="dropdown-content" style="display:none" id="with_desc_no_link_1g_${counter}">
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    ${response[csw].with_desc_no_link_10g.length}
-                                    <span class="dropdown-btn" onclick="toggleDropdown(this)">Показать</span>
-                                    <div class="dropdown-content" style="display:none" id="with_desc_no_link_10g_${counter}">
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        `);
-
-                        for (col of ["other_rezerv_1g", "other_rezerv_10g", "with_desc_no_link_1g", "with_desc_no_link_10g"]) {
-                        for (val of response[csw][col]) {
-                         $("#"+col+"_"+counter).append(`
-                         <div>${val}</div>
-                         `);
-                         }
-                        }
-                        counter += 1
-                        }
-                    }
-            },
-            error: function (response) {
-                  $('#get_sw').find('span').removeClass('spinner-border spinner-border-sm');
-                  alert("Что-то пошло не так.");
-                  $('#get_sw').prop('disabled', false);
-
-              }
-          });
-          return false;
-        });
-});
 </script>
 
 {% endblock %}
