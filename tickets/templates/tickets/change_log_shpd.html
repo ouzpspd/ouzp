@@ -52,6 +52,14 @@
     {% csrf_token %}
     <div class="container">
         <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{changelogshpdform.connect.id_for_label}}">Подключение:</label>
+                    {{changelogshpdform.connect}}
+                </div>
+            </div>
+        </div>
+        <div class="row">
             <div class="col-4">
             {%comment%}{{ changelogshpdform.as_p }}{%endcomment%}
                 <div class="form-group">

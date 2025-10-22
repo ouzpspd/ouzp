@@ -1,0 +1,858 @@
+{% extends 'tickets/nav_ticket.html' %}
+{% block content %}
+{% load custom_filters %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+            <td class="table-light" style="width: 75%">{{pps}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {% if list_switches %}
+    <table class="table table-striped" id="switch">
+      <thead>
+        <tr>
+
+          <th scope="col">Название</th>
+          <th scope="col">Модель</th>
+            <th scope="col">IP-адрес</th>
+            <th scope="col">Uplink</th>
+            <th scope="col">Статус</th>
+            <th scope="col">Описание</th>
+
+            <th scope="col">Кл.</th>
+            <th scope="col">Лин.</th>
+            <th scope="col">Своб.</th>
+            <th scope="col">Всего</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for switch in list_switches %}
+        <tr>
+
+
+            <td>{{switch.0}}</td>
+            <td>{{switch.1}}</td>
+            <td><a href="telnet://{{switch.2}}">{{switch.2}}</a></td>
+            <td>{{switch.3}}</td>
+            {%if switch.4 == 'ВЫКЛ'%}
+            <td style="color:red;font-weight:bold">{{switch.4}}</td>
+            {%else%}
+            <td style="color:green;font-weight:bold">{{switch.4}}</td>
+            {%endif%}
+            <td>{{switch.5}}</td>
+
+            <td>{{switch.7}}</td>
+            <td>{{switch.8}}</td>
+            <td>{{switch.9}}</td>
+            <td>
+                <a href="#myModal{{forloop.counter}}" data-toggle="modal">{{switch.6}}</a>
+            <!-- HTML-код модального окна -->
+            <div id="myModal{{forloop.counter}}" class="modal fade">
+              <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                  <!-- Заголовок модального окна -->
+                  <div class="modal-header">
+                    <h4 class="modal-title">Порты</h4>
+                  </div>
+                  <!-- Основное содержимое модального окна -->
+                  <div class="modal-body">
+                      <table>
+                          <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                              <th scope="col">Порт</th>
+                                <th scope="col">Тэг</th>
+                              <th scope="col">Договор</th>
+                                <th scope="col">Дескрипшн</th>
+                                <th scope="col">Заглушка</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                              {% for key, value in switch.10.items %}
+                                <tr>
+                                    <th scope="row"></th>
+
+                                    <td>{{key}}</td>
+                                    <td>{{value.0}}</td>
+                                    <td>{{value.1}}</td>
+                                    <td>{{value.2}}</td>
+                                    <td>{{value.3}}</td>
+
+
+                                </tr>
+                                {% endfor %}
+                          </tbody>
+                        </table>
+                  </div>
+
+                  <!-- Футер модального окна -->
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+            </td>
+
+        </tr>
+
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="row">
+        <div class="col">
+            <div class="breadcrumb video alert-danger">
+                <p class="breadcrumb-item"><b>Внимание!</b><br>На узле {{pps}} нет коммутаторов.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    </div>
+<div class="container">
+<div id="accordion">
+    {% if head %}
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
+
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+    {% endif %}
+    {% if request.user|has_group:"Сотрудники ОУЗП" %}
+  <div class="card mb-2">
+    <div class="card-header" id="headingTwo">
+      <h5 class="mb-0">
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">Решение ОТПМ</a>
+      </h5>
+    </div>
+    <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+    {% endif %}
+</div>
+</div>
+
+
+
+
+
+
+    <div class="container">
+        <div class="card mb-2">
+        <h5 class="card-header">Параметры</h5>
+        <div class="card-body">
+        <form action="{% url 'ktc_env' trID %}" method="post">
+            {% csrf_token %}
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    {{ form.errors }}
+                </div>
+            {% endif %}
+            <div id="blocksContainer">
+            <!-- Изначальный блок -->
+
+                    <div class="form-block mb-3 p-3 border">
+
+                        <input type="hidden" class="form-control" name="connect_0" value="True">
+                        <div class="row">
+                            <div class="col-4 mb-1 ">
+                                <div class="form-group">
+                                    <label>Подключение №0</label>
+                                </div>
+                            </div>
+                            <div class="col-7">
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <button class="btn btn-danger remove-block">
+                                    <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                    <span class="sr-only">Close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="type_connect">Тип подключения</label>
+                                    <select class="form-control type-connect" id="type_connect_0" name="type_connect_0">
+                                        {% for connection in connections %}
+                                            <option value="{{ connection }}">{{ connection }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Поле "Cуществующая Среда передачи" (select) -->
+                        <div class="row pps-not-changed">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="sreda">Cуществующая среда передачи</label>
+                                    <select class="form-control exist-sreda" id="exist_sreda_0" name="exist_sreda_0">
+                                        <option value="1">UTP</option>
+                                        <option value="2">ВОЛС</option>
+                                        <option value="3">WiFi</option>
+                                        <option value="4">FTTH</option>
+                                        <option value="FVNO">FVNO</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="sreda">Лог. подключение</label>
+                                    <select class="form-control change-log" id="change_log_0" name="change_log_0">
+                                        <option value="меняется">меняется</option>
+                                        <option value="не меняется">не меняется</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="sreda">Физ. подключение</label>
+                                    <select class="form-control change-physic" id="change_physic_0" name="change_physic_0">
+                                        <option value="меняется">меняется</option>
+                                        <option value="не меняется">не меняется</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!--<div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="all_res">Задействовать все ресурсы</label>
+                                    <select class="form-control all-res" id="all_res_0" name="all_res_0">
+                                        <option value=0>Нет</option>
+                                        <option value=1>Да</option>
+                                    </select>
+                                </div>
+                            </div>-->
+                        </div>
+                        <!-- Поле "Среда передачи" (select) -->
+                        <div class="row ">
+                            <div class="col-4 mb-1 fields-for-sreda">
+                                <div class="form-group">
+                                    <label for="sreda">Среда передачи</label>
+                                    <select class="form-control sreda-select" id="sreda_0" name="sreda_0">
+                                        <option value="1">UTP</option>
+                                        <option value="2">ВОЛС</option>
+                                        <option value="3">WiFi</option>
+                                        <option value="4">FTTH</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Поля, которые отображаются только при sreda == 2 или sreda == 4 -->
+                        <div class="row fields-for-sreda2-and4" style="display: none;">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="device_pps">На стороне ППС</label>
+                                    <select class="form-control device-pps" id="device_pps_0" name="device_pps_0">
+                                        <option value='100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"'>конвертер 1310 нм</option>
+                                        <option value='100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"'>конвертер 1550 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км'>SFP WDM, до 20 км, 1310 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км в клиентское оборудование'>SFP WDM, до 20 км, 1550 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км'>SFP WDM, до 3 км, 1310 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование'>SFP WDM, до 3 км, 1550 нм</option>
+                                        <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм</option>
+                                        <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="device_client">На стороне клиента</label>
+                                    <select class="form-control device-client" id="device_client_0" name="device_client_0">
+                                        <option value='100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"'>конвертер 1310 нм</option>
+                                        <option value='100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"'>конвертер 1550 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км'>SFP WDM, до 20 км, 1310 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км в клиентское оборудование'>SFP WDM, до 20 км, 1550 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км'>SFP WDM, до 3 км, 1310 нм</option>
+                                        <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование'>SFP WDM, до 3 км, 1550 нм</option>
+                                        <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм</option>
+                                        <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="speed_port">Скорость порта</label>
+                                    <select class="form-control speed-port" id="speed_port_0" name="speed_port_0">
+                                        <option value='"auto"'>Auto</option>
+                                        <option value='100FD'>100FD</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Поле "Точки доступа", которое отображается только при sreda == 3 -->
+                        <div class="row fields-for-sreda3" style="display: none;">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="access_points">Точки доступа</label>
+                                    <select class="form-control access-points" id="access_points_0" name="access_points_0">
+                                        <option value='LiteBeam LBE-M5-23'>LiteBeam LBE-M5-23</option>
+                                        <!--<option value='AirGrid 27 M5'>AirGrid 27 M5</option>
+                                        <option value='Nanostation M5'>Nanostation M5</option>-->
+                                        <option value='Infinet E5'>Infinet E5</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Общие поля для всех sreda -->
+                        <div class="row fields-for-sreda">
+                            <div class="col-4 mb-1 ">
+                                <div class="form-group">
+                                    <label for="kad">Коммутатор</label>
+                                    <input type="text" class="form-control kad" name="kad_0" id="kad_0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row fields-for-sreda">
+                            <div class="col-4 mb-1 ">
+                                <div class="form-group">
+                                    <label for="port">Порт</label>
+                                    <input type="text" class="form-control port" name="port_0" id="port_0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 ppr">
+                            <div class="d-grid gap-2 col-2">
+                                <a class="btn btn-info btn-block" href="{% url 'tr_view' dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
+                            </div>
+                            <div class="d-grid gap-2 col-2">
+                                <a class="btn btn-info btn-block" href="{% url 'ppr' trID %}" target ="_blank" role="button">Создать ППР</a>
+                            </div>
+                        </div>
+
+                        <div class="row ppr">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="ppr">ППР</label>
+                                    <input type="text" class="form-control" id="ppr_0" name="ppr_0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Чекбоксы -->
+                        <div class="row">
+                            <div class="col-1 mb-1">
+                                <div class="form-group">
+                                    <label for="logic_csw">Установка КК</label>
+                                    <input type="checkbox" class="form-check logic_csw" id="logic_csw_0" name="logic_csw_0">
+                                </div>
+                            </div>
+                            <div class="col-1 mb-1">
+                                <div class="form-group">
+                                    <label for="logic_replace_csw">Замена КК</label>
+                                    <input type="checkbox" class="form-group logic_replace_csw" id="logic_replace_csw_0" name="logic_replace_csw_0">
+                                </div>
+                            </div>
+                            <div class="col-1 mb-1">
+                                <div class="form-group">
+                                    <label for="logic_change_csw">Перенос КК</label>
+                                    <input type="checkbox" class="form-group" id="logic_change_csw_0" name="logic_change_csw_0">
+                                </div>
+                            </div>
+                            <div class="col-1 mb-1">
+                                <div class="form-group">
+                                    <label for="logic_change_csw">Запуск КК 1G</label>
+                                    <input type="checkbox" class="form-group" id="logic_run_gi_csw_0" name="logic_run_gi_csw_0">
+                                </div>
+                            </div>
+                            <div class="col-1 mb-1">
+                                <div class="form-group">
+                                    <label for="logic_change_gi_csw">Перевод КК 1G</label>
+                                    <input type="checkbox" class="form-group logic_change_gi_csw" id="logic_change_gi_csw_0" name="logic_change_gi_csw_0">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Поля uplink_port_csw и model_csw -->
+                        <div class="row fields-for-csw" style="display: none;">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="uplink_port_csw">Порт КК</label>
+                                    <select class="form-control uplink_port_csw" id="uplink_port_csw_0" name="uplink_port_csw_0">
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="указанный ОНИТС СПД">указанный ОНИТС СПД</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row fields-for-csw" style="display: none;">
+                            <div class="col-4 mb-1">
+                                <div class="form-group">
+                                    <label for="model_csw">Модель КК</label>
+                                    <select class="form-control model_csw" id="model_csw_0" name="model_csw_0">
+                                        <option value="D-Link DGS-1100-06/ME">D-Link DGS-1100-06/ME</option>
+                                        <option value="24-портовый коммутатор">24-портовый коммутатор</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-2">
+                        <div class="form-group">
+                            <button id="addBlock" class="btn btn-success btn-block">Добавить блок</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-2">
+                        <div class="form-group">
+                            <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
+                        </div>
+                    </div>
+                    <div class="col-2">
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        $(document).ready(function() {
+            let type_sreda = "{{sreda}}";
+            let turnoff = "{{turnoff}}";
+            let on_pps = "{{device_pps}}".replace(/&quot;/g, '"');
+            let on_client = "{{device_client}}".replace(/&quot;/g, '"');
+            let on_kad = "{{kad}}";
+            let on_speed_port = "{{speed_port}}".replace(/&quot;/g, '"');
+            let on_port = "{{port}}";
+
+            let blockCount = 0;
+            // Функция для добавления нового блока
+            $("#addBlock").click(function(e) {
+                e.preventDefault();
+                blockCount++;
+                var newBlock = `
+                        <div class="form-block mb-3 p-3 border">
+
+                                <input type="hidden" class="form-control" name="connect_${blockCount}" value="True">
+                                <div class="row">
+                                    <div class="col-4 mb-1 ">
+                                        <div class="form-group">
+                                            <label>Подключение №${blockCount}</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-7">
+                                    </div>
+                                    <div class="col">
+                                        <div class="form-group">
+                                            <button class="btn btn-danger remove-block">
+                                            <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                            <span class="sr-only">Close</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="type_connect">Тип подключения</label>
+                                            <select class="form-control type-connect" id="type_connect_${blockCount}" name="type_connect_${blockCount}">
+                                                {% for connection in connections %}
+                                                    <option value="{{ connection }}">{{ connection }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Поле "Cуществующая Среда передачи" (select) -->
+                                <div class="row pps-not-changed">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="sreda">Cуществующая среда передачи</label>
+                                            <select class="form-control exist-sreda" id="exist_sreda_${blockCount}" name="exist_sreda_${blockCount}">
+                                                <option value="1">UTP</option>
+                                                <option value="2">ВОЛС</option>
+                                                <option value="3">WiFi</option>
+                                                <option value="4">FTTH</option>
+                                                <option value="FVNO">FVNO</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="sreda">Лог. подключение</label>
+                                            <select class="form-control change-log" id="change_log_${blockCount}" name="change_log_${blockCount}">
+                                                <option value="меняется">меняется</option>
+                                                <option value="не меняется">не меняется</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="sreda">Физ. подключение</label>
+                                            <select class="form-control change-physic" id="change_physic_${blockCount}" name="change_physic_${blockCount}">
+                                                <option value="меняется">меняется</option>
+                                                <option value="не меняется">не меняется</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <!-- Поле "Среда передачи" (select) -->
+                                <div class="row fields-for-sreda">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="sreda">Среда передачи</label>
+                                            <select class="form-control sreda-select" id="sreda_${blockCount}" name="sreda_${blockCount}">
+                                                <option value="1">UTP</option>
+                                                <option value="2">ВОЛС</option>
+                                                <option value="3">WiFi</option>
+                                                <option value="4">FTTH</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Поля, которые отображаются только при sreda == 2 или sreda == 4 -->
+                                <div class="row fields-for-sreda2-and4" style="display: none;">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="device_pps">На стороне ППС</label>
+                                            <select class="form-control device-pps" id="device_pps_${blockCount}" name="device_pps_${blockCount}">
+                                                <option value='100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"'>конвертер 1310 нм</option>
+                                                <option value='100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"'>конвертер 1550 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км'>SFP WDM, до 20 км, 1310 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км в клиентское оборудование'>SFP WDM, до 20 км, 1550 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км'>SFP WDM, до 3 км, 1310 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование'>SFP WDM, до 3 км, 1550 нм</option>
+                                                <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм</option>
+                                                <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм</option>
+                                            </select>
+
+                                            <!--<input type="text" class="form-control" name="device_pps"> -->
+                                        </div>
+                                    </div>
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="device_client">На стороне клиента</label>
+                                            <select class="form-control device-client" id="device_client_${blockCount}" name="device_client_${blockCount}">
+                                                <option value='100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"'>конвертер 1310 нм</option>
+                                                <option value='100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"'>конвертер 1550 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км'>SFP WDM, до 20 км, 1310 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 20 км в клиентское оборудование'>SFP WDM, до 20 км, 1550 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 3 км'>SFP WDM, до 3 км, 1310 нм</option>
+                                                <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование'>SFP WDM, до 3 км, 1550 нм</option>
+                                                <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм</option>
+                                                <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="speed_port">Скорость порта</label>
+                                            <select class="form-control speed-port" id="speed_port_${blockCount}" name="speed_port_${blockCount}">
+                                                <option value='"auto"'>Auto</option>
+                                                <option value='100FD'>100FD</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Поле "Точки доступа", которое отображается только при sreda == 3 -->
+                                <div class="row fields-for-sreda3" style="display: none;">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="access_points">Точки доступа</label>
+                                            <select class="form-control access-points" id="access_points_${blockCount}" name="access_points_${blockCount}">
+                                                <option value='LiteBeam LBE-M5-23'>LiteBeam LBE-M5-23</option>
+                                                <option value='Infinet E5'>Infinet E5</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Общие поля для всех sreda -->
+                                <div class="row fields-for-sreda">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="kad">Коммутатор</label>
+                                            <input type="text" class="form-control kad" id="kad_${blockCount}" name="kad_${blockCount}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row fields-for-sreda">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="port">Порт</label>
+                                            <input type="text" class="form-control port" id="port_${blockCount}" name="port_${blockCount}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-2 ppr">
+                                    <div class="d-grid gap-2 col-2">
+                                        <a class="btn btn-info btn-block" href="{% url 'tr_view' dID ticket_tr.ticket_cp ticket_tr.ticket_tr %}" target ="_blank" role="button">Нагрузки</a>
+                                    </div>
+                                    <div class="d-grid gap-2 col-2">
+                                        <a class="btn btn-info btn-block" href="{% url 'ppr' trID %}" target ="_blank" role="button">Создать ППР</a>
+                                    </div>
+                                </div>
+                                <div class="row ppr">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="ppr">ППР</label>
+                                            <input type="text" class="form-control" id="ppr_${blockCount}" name="ppr_${blockCount}">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Чекбоксы -->
+                                <div class="row">
+                                    <div class="col-1 mb-1">
+                                        <div class="form-group">
+                                            <label for="logic_csw">Установка КК</label>
+                                            <input type="checkbox" class="form-group logic_csw" id="logic_csw_${blockCount}" name="logic_csw_${blockCount}">
+                                        </div>
+                                    </div>
+                                    <div class="col-1 mb-1">
+                                        <div class="form-group">
+                                            <label for="logic_replace_csw">Замена КК</label>
+                                            <input type="checkbox" class="form-group logic_replace_csw" id="logic_replace_csw_${blockCount}" name="logic_replace_csw_${blockCount}">
+                                        </div>
+                                    </div>
+                                    <div class="col-1 mb-1">
+                                        <div class="form-group">
+                                            <label for="logic_change_csw">Перенос КК</label>
+                                            <input type="checkbox" class="form-group" id="logic_change_csw_${blockCount}" name="logic_change_csw_${blockCount}">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-1 mb-1">
+                                        <div class="form-group">
+                                            <label for="logic_change_csw">Запуск КК 1G</label>
+                                            <input type="checkbox" class="form-group" id="logic_run_gi_csw_${blockCount}" name="logic_run_gi_csw_${blockCount}">
+                                        </div>
+                                    </div>
+                                    <div class="col-1 mb-1">
+                                        <div class="form-group">
+                                            <label for="logic_change_gi_csw">Перевод КК 1G</label>
+                                            <input type="checkbox" class="form-group logic_change_gi_csw" id="logic_change_gi_csw_${blockCount}" name="logic_change_gi_csw_${blockCount}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Поля uplink_port_csw и model_csw -->
+                                <div class="row fields-for-csw" style="display: none;">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="uplink_port_csw">Порт КК</label>
+                                            <select class="form-control uplink_port_csw" id="uplink_port_csw_${blockCount}" name="uplink_port_csw_${blockCount}">
+                                                <option value="5">5</option>
+                                                <option value="6">6</option>
+                                                <option value="указанный ОНИТС СПД">указанный ОНИТС СПД</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row fields-for-csw" style="display: none;">
+                                    <div class="col-4 mb-1">
+                                        <div class="form-group">
+                                            <label for="model_csw">Модель КК</label>
+                                            <select class="form-control model_csw" id="model_csw_${blockCount}" name="model_csw_${blockCount}">
+                                                <option value="D-Link DGS-1100-06/ME">D-Link DGS-1100-06/ME</option>
+                                                <option value="24-портовый коммутатор">24-портовый коммутатор</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
+                `;
+                $("#blocksContainer").append(newBlock);
+                initializeBlockVisibility($("#blocksContainer .form-block").last()); // Инициализация видимости для нового блока
+                initializeCswFieldsVisibility($("#blocksContainer .form-block").last());
+            });
+
+            // Функция для удаления блока
+            $(document).on('click', '.remove-block', function() {
+                $(this).closest('.form-block').remove();
+            });
+
+            // Логика отображения/скрытия полей в зависимости от выбранной среды передачи
+            $(document).on('change', '.sreda-select', function() {
+                const block = $(this).closest('.form-block');
+                updateFieldsSredaVisibility(block);
+            });
+
+            // Логика обновления среды при обновлении существующей среды когда порт не меняется
+            $(document).on('change', '.exist-sreda', function() {
+                const block = $(this).closest('.form-block');
+                updateFieldSredaByExistSreda(block);
+            });
+
+            // Обработчик изменения состояния чекбоксов
+            $(document).on('change', '.logic_csw, .logic_replace_csw, .logic_change_gi_csw', function() {
+
+                const block = $(this).closest('.form-block');
+                console.log(block)
+                updateCswFieldsVisibility(block);
+            });
+
+            // Функция для обновления поля среды при обновлении существующей среды
+            function updateFieldSredaByExistSreda(block) {
+            const existSreda = block.find('.exist-sreda').val()
+            const changeLog = block.find('.change-log').val();
+            if (changeLog === "не меняется") {
+                    block.find('.sreda-select').val(existSreda)
+                }
+            }
+
+            // Функция для обновления видимости полей среды
+            function updateFieldsSredaVisibility(block) {
+            const sreda = block.find('.sreda-select').val()
+            console.log('sreda', sreda)
+            if (sreda == 2 || sreda == 4) {
+                    block.find('.fields-for-sreda2-and4').show();
+                    block.find('.fields-for-sreda3').hide();
+                    block.find('.device-client').val(on_client);
+                    block.find('.device-pps').val(on_pps);
+                    block.find('.speed-port').val(on_speed_port);
+
+                } else if (sreda == 3) {
+                    block.find('.fields-for-sreda2-and4').hide();
+                    block.find('.fields-for-sreda3').show();
+                } else if (sreda == 1) {
+                    block.find('.fields-for-sreda2-and4').hide();
+                    block.find('.fields-for-sreda3').hide();
+
+                }
+            }
+
+            // Функция для обновления видимости полей
+            function updateFieldsVisibility(block) {
+                updateKadAndPort(block);
+                if (turnoff == 'True') {
+                    block.find('.ppr').show();
+                } else {
+                    block.find('.ppr').hide();
+                }
+            }
+            // Функция для обновления видимости полей когда сущ. порт не меняется
+            function updateChangeLogVisibility(block) {
+                const changeLog = block.find('.change-log').val();
+                if (changeLog === "не меняется") {
+                    block.find('.fields-for-sreda').hide();
+                    block.find('.fields-for-sreda2-and4').hide();
+                    block.find('.fields-for-sreda3').hide();
+                    const sreda = block.find('.exist-sreda').val();
+                    block.find('.sreda-select').val(sreda);
+                } else {
+                    block.find('.fields-for-sreda').show();
+                    updateFieldsSredaVisibility(block);
+                }
+            }
+
+            // Функция для обновления видимости полей uplink_port_csw и model_csw
+            function updateCswFieldsVisibility(block) {
+                const isLogicCswChecked = block.find('.logic_csw').is(':checked');
+                const isLogicReplaceCswChecked = block.find('.logic_replace_csw').is(':checked');
+                const isLogicChangeGiCswChecked = block.find('.logic_change_gi_csw').is(':checked');
+
+                if (isLogicCswChecked || isLogicReplaceCswChecked || isLogicChangeGiCswChecked) {
+                    block.find('.fields-for-csw').show();
+                } else {
+                    block.find('.fields-for-csw').hide();
+                }
+            }
+            // Инициализация видимости полей при загрузке страницы
+            function initializeCswFieldsVisibility(block) {
+                updateCswFieldsVisibility(block);
+            }
+
+            function updateKadAndPort(block) {
+                const selectedConnection = block.find('.type-connect').val();
+                const selectedChangeLog = block.find('.change-log').val();
+                console.log(selectedChangeLog)
+                if (selectedConnection !== "Новое подключение") {
+                        block.find('.pps-not-changed').show();
+                } else {
+                    block.find('.pps-not-changed').hide();
+                }
+                if (selectedConnection !== "Новое подключение" && selectedChangeLog == "не меняется") {
+                    const [kad, port] = selectedConnection.split(/_(.*)/s); // Разделяем по первому знаку _
+
+                    block.find('.kad').val(kad);
+                    block.find('.port').val(port);
+                } else {
+                    block.find('.kad').val(on_kad); // Очищаем поле kad
+                    block.find('.port').val(on_port); // Очищаем поле port
+
+                    updateFieldsSredaVisibility(block);
+                    block.find('.fields-for-sreda').show();
+                }
+            }
+
+            // Обработчик изменения значения type_connect
+            $(document).on('change', '.type-connect', function() {
+                const block = $(this).closest('.form-block');
+                updateKadAndPort(block);
+            });
+
+            // Обработчик изменения значения change_log
+            $(document).on('change', '.change-log', function() {
+                const block = $(this).closest('.form-block');
+                updateChangeLogVisibility(block);
+                updateKadAndPort(block);
+            });
+
+            // Инициализация видимости полей для изначального блока
+            function initializeBlockVisibility(block) {
+                block.find('.sreda-select').val(type_sreda);
+                updateFieldsVisibility(block);
+            }
+
+            // Инициализация для изначального блока
+            initializeBlockVisibility($('.form-block'));
+            initializeCswFieldsVisibility($('.form-block'));
+        });
+    </script>
+
+
+{% endblock %}

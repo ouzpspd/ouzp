@@ -1092,7 +1092,7 @@ class BundleSpecItems:
         """Метод проходится по всем заголовкам ТР и вызывает соответствующие методы"""
         if self.titles:
             for title in self.titles.split('\n'):
-                if "Присоединение к СПД по медной линии связи" in title:
+                if "Присоединение к СПД по медной линии связи." in title:
                     items = [self.template.ride, self.template.connect_to_pps, self.template.pps_copper_cable,
                              self.template.pps_rj45]
                     self.add_copper_line(items)

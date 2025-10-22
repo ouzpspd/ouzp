@@ -1,0 +1,444 @@
+{% extends 'tickets/nav_ticket.html' %}
+{% block content %}
+{% load custom_filters %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb align-items-center justify-content-center">
+                  <li class="breadcrumb-item active" aria-current="page"><h6 class="text-center" style="color:black">ТР №{{trID}}</h6></li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+<div class="container">
+    <table class="table table-bordered">
+      <tbody>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
+            <td class="table-light" style="width: 75%">{{pps}}</td>
+        </tr>
+        <tr>
+            <th class="table-secondary text-right" style="width: 25%" >Заявка К</th>
+            <td class="table-light" style="width: 75%">{{ticket_tr.ticket_k}}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+
+
+<div class="container">
+<div id="accordion">
+    {% if head %}
+  <div class="card mb-2">
+    <div class="card-header" id="headingOne">
+      <h5 class="mb-0">
+          <a role="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">Подключение</a>
+      </h5>
+    </div>
+
+    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+      <div class="card-body">
+        {{head|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+    {% endif %}
+  <div class="card mb-2">
+    <div class="card-header" id="headingTwo">
+      <h5 class="mb-0">
+        <a role="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">Решение ОТПМ</a>
+      </h5>
+    </div>
+    <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
+      <div class="card-body">
+        {{oattr|linebreaksbr}}
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+
+<div class="container">
+    <div class="card mb-2">
+    <h5 class="card-header">Параметры</h5>
+    <div class="card-body">
+
+
+    <form action="{% url 'rtk_env' trID %}" method="post" id="dynamicForm">
+          {% csrf_token %}
+          {% if form.errors %}
+            <div class="alert alert-danger">
+                {{ form.errors }}
+            </div>
+        {% endif %}
+          <div id="formBlocks">
+              <!-- Первый блок полей -->
+              <div class="form-block mb-3 p-3 border">
+
+                  <input type="hidden" class="form-control" name="connect_0" value="True">
+
+                    <div class="row">
+                        <div class="col-4 mb-1">
+                            <div class="form-group">
+                                <label for="type_connect">Тип подключения</label>
+                                <select class="form-control type-connect" id="type_connect_0" name="type_connect_0">
+                                    {% for connection in connections %}
+                                        <option value="{{ connection }}">{{ connection }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-7">
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <button class="btn btn-danger remove-block">
+                                <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                                <span class="sr-only">Close</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row pps-not-changed">
+                        <div class="col-4 mb-1">
+                            <div class="form-group">
+                                <label for="sreda">Cуществующая среда передачи</label>
+                                <select class="form-control exist-sreda" id="exist_sreda_0" name="exist_sreda_0">
+                                  <option value="ПМ">ПМ</option>
+                                  <option value="FVNO Медь">FVNO Медь</option>
+                                  <option value="FVNO FTTH">FVNO FTTH</option>
+                                  <option value="FVNO GPON">FVNO GPON</option>
+                                    <option value="КТЦ">КТЦ</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-4 mb-1">
+                            <div class="form-group">
+                                <label for="sreda">Лог. подключение</label>
+                                <select class="form-control change-log" id="change_log_0" name="change_log_0">
+                                    <option value="меняется">меняется</option>
+                                    <option value="не меняется">не меняется</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-4 mb-1">
+                            <div class="form-group">
+                                <label for="sreda">Физ. подключение</label>
+                                <select class="form-control change-physic" id="change_physic_0" name="change_physic_0">
+                                    <option value="меняется">меняется</option>
+                                    <option value="не меняется">не меняется</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="row">
+                        <div class="col-4 mb-1 ">
+                            <div class="form-group">
+                                <label for="vlan_0">VLAN</label>
+                                <input type="text" class="form-control vlan-group" id="vlan_0" name="vlan_0" required>
+                            </div>
+                        </div>
+                    </div>
+                  <div class="row">
+                      <div class="col-4 mb-1">
+                          <div class="form-group">
+                              <label for="sreda_0">Среда</label>
+                              <select class="form-control type-pm-select" id="sreda_0" name="sreda_0" required="True">
+                                  <option value="ПМ">ПМ</option>
+                                  <option value="FVNO Медь">FVNO Медь</option>
+                                  <option value="FVNO FTTH">FVNO FTTH</option>
+                                  <option value="FVNO GPON">FVNO GPON</option>
+                              </select>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="row switch-group" style="display: none;">
+                      <div class="col-4 mb-1">
+                          <div class="form-group">
+                              <label for="kad_0">Switch IP</label>
+                              <input type="text" class="form-control kad" id="kad_0" name="kad_0" required>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="row switch-port-group" style="display: none;">
+                      <div class="col-4 mb-1">
+                          <div class="form-group">
+                              <label for="port_0">Switch Port</label>
+                              <input type="text" class="form-control port" id="port_0" name="port_0" required>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="row optic-socket-group" style="display: none;">
+                      <div class="col-4 mb-1">
+                          <div class="form-group">
+                              <label for="optic_socket_0">Optic Socket</label>
+                              <input type="text" class="form-control" id="optic_socket_0" name="optic_socket_0" required>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="row ploam-group" style="display: none;">
+                      <div class="col-4 mb-1">
+                          <div class="form-group">
+                              <label for="ploam_0">PLOAM</label>
+                              <input type="text" class="form-control ploam" id="ploam_0" name="ploam_0" required>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <button id="addBlock" class="btn btn-success btn-block">Добавить блок</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-2">
+                <div class="form-group">
+                    <a class="btn btn-secondary btn-block" href="{{back_link}}" role="button">Назад</a>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block">Далее</button>
+                </div>
+            </div>
+        </div>
+
+      </form>
+
+  </div>
+    </div>
+</div>
+
+
+  <script>
+
+
+$(document).ready(function() {
+    let on_kad = "{{kad}}";
+    let on_port = "{{port}}";
+    let on_ploam = "{{ploam}}";
+
+  function updateFieldsVisibility(block) {
+    const typePm = block.find('.type-pm-select').val();
+    const vlanGroup = block.find('.vlan-group');
+    const switchGroup = block.find('.switch-group');
+    const switchPortGroup = block.find('.switch-port-group');
+    const opticSocketGroup = block.find('.optic-socket-group');
+    const ploamGroup = block.find('.ploam-group');
+
+    // Скрываем все группы полей и убираем required
+    switchGroup.hide().find('input').prop('required', false);
+    switchPortGroup.hide().find('input').prop('required', false);
+    opticSocketGroup.hide().find('input').prop('required', false);
+    ploamGroup.hide().find('input').prop('required', false);
+
+    // Показываем только нужные группы полей и добавляем required
+    vlanGroup.show().find('input').prop('required', true);
+
+    if (typePm === 'FVNO Медь') {
+        switchGroup.show().find('input').prop('required', true);
+        switchPortGroup.show().find('input').prop('required', true);
+    } else if (typePm === 'FVNO FTTH') {
+        switchGroup.show().find('input').prop('required', true);
+        switchPortGroup.show().find('input').prop('required', true);
+        opticSocketGroup.show().find('input').prop('required', true);
+    } else if (typePm === 'FVNO GPON') {
+        switchGroup.show().find('input').prop('required', true);
+        switchPortGroup.show().find('input').prop('required', true);
+        ploamGroup.show().find('input').prop('required', true);
+    }
+  }
+
+  // Заполнение распознанных полей
+  function fillFields(block) {
+    block.find('.kad').val(on_kad);
+    block.find('.port').val(on_port);
+    block.find('.ploam').val(on_ploam);
+    }
+
+  // Инициализация видимости полей
+  updateFieldsVisibility($('.form-block').first());
+  updateExistSredaVisibility($('.form-block').first());
+  fillFields($('.form-block').first());
+
+  // Обработчик изменения типа PM
+  $(document).on('change', '.type-pm-select', function() {
+        const block = $(this).closest('.form-block');
+        updateFieldsVisibility(block);
+  });
+
+
+  function updateExistSredaVisibility(block) {
+    const typeConnect = block.find('.type-connect')
+    const changeConnect = block.find('.pps-not-changed')
+    const selectedConnection = typeConnect.val();
+    if (selectedConnection !== "Новое подключение") {
+        changeConnect.show();
+    } else {
+        changeConnect.hide();
+    }
+  }
+
+  // Обработчик изменения типа подключения
+  $(document).on('change', '.type-connect', function() {
+    const block = $(this).closest('.form-block');
+    updateExistSredaVisibility(block);
+  });
+
+
+
+  let blockCount = 0;
+
+  // Функция для добавления нового блока полей
+  $('#addBlock').click(function(e) {
+      e.preventDefault();
+      blockCount++;
+      const newBlock = `
+          <div class="form-block mb-3 p-3 border">
+              <input type="hidden" class="form-control" name="connect_${blockCount}" value="True">
+              <div class="row">
+                    <div class="col-4 mb-1">
+                        <div class="form-group">
+                            <label for="type_connect">Тип подключения</label>
+                            <select class="form-control type-connect" id="type_connect_${blockCount}" name="type_connect_${blockCount}">
+                                {% for connection in connections %}
+                                    <option value="{{ connection }}">{{ connection }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-7">
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <button class="btn btn-danger remove-block">
+                            <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                            <span class="sr-only">Close</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Поле "Cуществующая Среда передачи" (select) -->
+                <div class="row pps-not-changed">
+                    <div class="col-4 mb-1">
+                        <div class="form-group">
+                            <label for="sreda">Cуществующая среда передачи</label>
+                            <select class="form-control exist-sreda" id="exist_sreda_${blockCount}" name="exist_sreda_${blockCount}">
+                              <option value="ПМ">ПМ</option>
+                              <option value="FVNO Медь">FVNO Медь</option>
+                              <option value="FVNO FTTH">FVNO FTTH</option>
+                              <option value="FVNO GPON">FVNO GPON</option>
+                              <option value="КТЦ">КТЦ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-4 mb-1">
+                        <div class="form-group">
+                            <label for="sreda">Лог. подключение</label>
+                            <select class="form-control change-log" id="change_log_${blockCount}" name="change_log_${blockCount}">
+                                <option value="меняется">меняется</option>
+                                <option value="не меняется">не меняется</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-4 mb-1">
+                        <div class="form-group">
+                            <label for="sreda">Физ. подключение</label>
+                            <select class="form-control change-physic" id="change_physic_${blockCount}" name="change_physic_${blockCount}">
+                                <option value="меняется">меняется</option>
+                                <option value="не меняется">не меняется</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-4 mb-1 ">
+                        <div class="form-group">
+                            <label for="vlan_0">VLAN</label>
+                            <input type="text" class="form-control vlan-group" id="vlan_${blockCount}" name="vlan_${blockCount}" required>
+                        </div>
+                    </div>
+                </div>
+              <div class="row">
+                  <div class="col-4 mb-1">
+                      <div class="form-group">
+                          <label for="sreda_0">Среда</label>
+                          <select class="form-control type-pm-select" id="sreda_${blockCount}" name="sreda_${blockCount}" required="True">
+                              <option value="ПМ">ПМ</option>
+                              <option value="FVNO Медь">FVNO Медь</option>
+                              <option value="FVNO FTTH">FVNO FTTH</option>
+                              <option value="FVNO GPON">FVNO GPON</option>
+                          </select>
+                      </div>
+                  </div>
+              </div>
+              <div class="row switch-group" style="display: none;">
+                  <div class="col-4 mb-1">
+                      <div class="form-group">
+                          <label for="kad_0">Switch IP</label>
+                          <input type="text" class="form-control kad" id="kad_${blockCount}" name="kad_${blockCount}" required>
+                      </div>
+                  </div>
+              </div>
+              <div class="row switch-port-group" style="display: none;">
+                  <div class="col-4 mb-1">
+                      <div class="form-group">
+                          <label for="port_0">Switch Port</label>
+                          <input type="text" class="form-control port" id="port_${blockCount}" name="port_${blockCount}" required>
+                      </div>
+                  </div>
+              </div>
+              <div class="row optic-socket-group" style="display: none;">
+                  <div class="col-4 mb-1">
+                      <div class="form-group">
+                          <label for="optic_socket_0">Optic Socket</label>
+                          <input type="text" class="form-control" id="optic_socket_${blockCount}" name="optic_socket_${blockCount}" required>
+                      </div>
+                  </div>
+              </div>
+              <div class="row ploam-group" style="display: none;">
+                  <div class="col-4 mb-1">
+                      <div class="form-group">
+                          <label for="ploam_0">PLOAM</label>
+                          <input type="text" class="form-control ploam" id="ploam_${blockCount}" name="ploam_${blockCount}" required>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      `;
+      $('#formBlocks').append(newBlock);
+      updateFieldsVisibility($('.form-block').last());
+      updateExistSredaVisibility($('.form-block').last());
+      fillFields($('.form-block').last());
+  });
+
+  // Функция для удаления блока полей
+  $(document).on('click', '.remove-block', function() {
+      $(this).closest('.form-block').remove();
+  });
+
+  // Обработка отправки формы
+  //$('#dynamicForm').submit(function(event) {
+      //event.preventDefault();
+      // Здесь можно добавить код для обработки данных формы
+      //alert('Форма отправлена!');
+  //});
+});
+  </script>
+
+
+
+
+{% endblock %}

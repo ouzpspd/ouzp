@@ -17,9 +17,12 @@
 <table class="table table-bordered">
   <tbody>
     <tr>
-        <th class="table-secondary text-right" style="width: 25%">Услуга</th>
-        <td class="table-light" style="width: 75%">{{services_vm}}</td>
-
+        <th class="table-secondary text-right" style="width: 33%">Тип работ</th>
+        <td class="table-light" style="width: 67%">{{job}}</td>
+    </tr>
+    <tr>
+        <th class="table-secondary text-right" style="width: 33%">Описание работ</th>
+        <td class="table-light" style="width: 67%">{{services_vm}}</td>
     </tr>
   </tbody>
 </table>
@@ -33,6 +36,14 @@
 <form action="{% url 'portvm' trID %}" method="post">
     {% csrf_token %}
     <div class="container">
+        <div class="row">
+            <div class="col-4 mb-1">
+                <div class="form-group">
+                    <label for="{{cksform.connect.id_for_label}}">Подключение:</label>
+                    {{portvmform.connect}}
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col-4 mb-1">
                 <div class="form-group">
