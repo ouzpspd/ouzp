@@ -1,5 +1,3 @@
-import json
-
 import requests
 from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 from django.shortcuts import render, redirect, get_object_or_404
@@ -8,7 +6,6 @@ from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 from urllib3.exceptions import NewConnectionError
 
-from .switch import Connect, SwitchException, input_checks, InputSwitchException
 from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
 from oattr.parsing import get_or_create_otu, Tentura, Specification, BundleSpecItems, get_specication_resources
 from .models import TR, SPP, OrtrTR
@@ -3555,63 +3552,6 @@ def components(request):
 def translit(request):
     context = {}
     return render(request, 'tickets/translit.html', context)
-
-
-def add_rezerv_1g_switch_ports(request, search_ip):
-    user = User.objects.get(username=request.user.username)
-    username, password = get_user_credential_cordis(user)
-    try:
-        ip_switches = input_checks(search_ip, username, password)
-    except InputSwitchException as er:
-        return JsonResponse({"error": f"Произошла ошибка. {er}."})
-    response = {}
-    try:
-        for ip in ip_switches:
-            with Connect(ip) as session:
-                sw, error_ports, changed_ports = session.add_rezerv_1g_planning()
-                response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
-    except SwitchException as er:
-        logger.exception(er)
-        response.update({"error": f"Выполнение прервано. Произошла ошибка. {er}"})
-    return JsonResponse(response)
-
-
-def remove_rezerv_1g_switch_ports(request, search_ip):
-    user = User.objects.get(username=request.user.username)
-    username, password = get_user_credential_cordis(user)
-    try:
-        ip_switches = input_checks(search_ip, username, password)
-    except InputSwitchException as er:
-        return JsonResponse({"error": f"Произошла ошибка. {er}."})
-    response = {}
-    try:
-        for ip in ip_switches:
-            with Connect(ip) as session:
-                sw, error_ports, changed_ports, = session.remove_rezerv_1g_planning()
-                response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
-    except SwitchException as er:
-        logger.exception(er)
-        response.update({"error": f"Выполнение прервано. Произошла ошибка. {er}"})
-    return JsonResponse(response)
-
-
-def analysis_switch_ports(request, search_ip):
-    user = User.objects.get(username=request.user.username)
-    username, password = get_user_credential_cordis(user)
-    try:
-        ip_switches = input_checks(search_ip, username, password)
-    except InputSwitchException as er:
-        return JsonResponse({"error": f"Произошла ошибка. {er}."})
-    response = {}
-    try:
-        for ip in ip_switches:
-            with Connect(ip) as session:
-                sw, params = session.get_interfaces_summary()
-                response.update({sw: params})
-    except SwitchException as er:
-        logger.exception(er)
-        return JsonResponse({"error": f"Произошла ошибка. {er}"})
-    return JsonResponse(response)
 
 
 @permission_check(["Сотрудники ОУЗП", "Сотрудники ОУПМ", "Сотрудники ОНИТС"])

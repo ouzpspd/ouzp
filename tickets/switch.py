@@ -199,7 +199,7 @@ class Snr:
         interfaces = self.get_interfaces_1g_rezerv_planning()
         prefix_port, range_ports = self._get_range_ports(interfaces)
         if not range_ports:
-            raise SwitchException(f"{self.name}: нет портов Rezerv_1G_planning.")
+            raise SwitchException("Нет портов Rezerv_1G_planning.")
         if any(i in range_ports for i in [";", "-"]):
             prompt_port = f"\(config-if-port-range\)#"
         else:
@@ -217,7 +217,7 @@ class Snr:
         interfaces = self.get_interfaces_1g_no_description()
         prefix_port, range_ports = self._get_range_ports(interfaces)
         if not range_ports:
-            raise SwitchException(f"{self.name}: нет портов 1G без description.")
+            raise SwitchException("Нет портов 1G без description.")
         if any(i in range_ports for i in [";", "-"]):
             prompt_port = f"\(config-if-port-range\)#"
         else:
@@ -425,7 +425,7 @@ class Cisco:
         interfaces = self.get_interfaces_1g_no_description()
         range_ports = self._get_range_ports(interfaces)
         if not range_ports:
-            raise SwitchException(f"{self.name}: нет портов 1G без description.")
+            raise SwitchException("Нет портов 1G без description.")
         commands = []
         commands.append(("conf t", "\(config\)#"))
         for block_range_ports in range_ports:
@@ -439,7 +439,7 @@ class Cisco:
         interfaces = self.get_interfaces_1g_rezerv_planning()
         range_ports = self._get_range_ports(interfaces)
         if not range_ports:
-            raise SwitchException(f"{self.name}: нет портов Rezerv_1G_planning.")
+            raise SwitchException("Нет портов Rezerv_1G_planning.")
         commands = []
         commands.append(("conf t", "\(config\)#"))
         for block_range_ports in range_ports:
@@ -503,22 +503,3 @@ class Cisco:
     def get_interfaces_10g_no_description(self):
         int_10g = self._get_interfaces_10g()
         return {k: v for k, v in int_10g.items() if v["Desc"] == ' '}
-
-
-def input_checks(search_ip, username, password):
-    input = [line for line in search_ip.split(";") if line]
-    if len(input) > 10:
-        raise InputSwitchException("Введено более 10 устройств")
-    is_not_ar_ias = [line for line in input if not (line.startswith("AR") or line.startswith("IAS"))]
-    if is_not_ar_ias:
-        raise InputSwitchException("Поиск выполняется только по АМ/КПА")
-    switches_in_db = {}
-    for switch in input:
-        switch_ip = get_switch_ip(username, password, switch)
-        if switch_ip:
-            switches_in_db.update({switch: switch_ip})
-    ip_switches = switches_in_db.values()
-    if not switches_in_db or len(input) != len(ip_switches):
-        unrecognized = set(input) - set(switches_in_db.keys())
-        raise InputSwitchException(f"Ошибка в текстовом вводе. Не удалось получить IP для {', '.join(unrecognized)}")
-    return ip_switches
