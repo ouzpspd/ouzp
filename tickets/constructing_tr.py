@@ -2471,10 +2471,10 @@ class KtcMount:
             template = self.templates.get("Изменение трассы присоединения к СПД.")
             self.ortr.append(self.text_block.construct(template))
             self.service_part_tr = False
-        elif self.job == 'Организация' and self.change_log == self.change_physic == 'не меняется' and self.mount_type == self.exist_mount_type:
-            # сейчас когда change_log не меняется автоматически нов. среда становится равной существующей и невозможно
-            # обработать случай расширения когда из работ только 100М конвертер надо поменять на 1Г у клиента
-            pass
+        elif self.change_log == self.change_physic == 'не меняется' and self.mount_type == self.exist_mount_type:
+            if self.job == 'Расширение' and self.exist_mount_type == '4':
+                template = self.templates.get("Изменение присоединения к СПД.")
+                self.ortr.append(self.text_block.construct(template))
         else:
             template = self.templates.get("Изменение присоединения к СПД.")
             self.ortr.append(self.text_block.construct(template))
@@ -2524,6 +2524,29 @@ class OpticKtcMount(KtcMount):
             'отдел ОИПМ / ОИПД': 'ОИПМ',
             'тип конвертера/передатчика на стороне узла доступа': self.params.get('device_pps'),
             'тип конвертера/передатчика на стороне клиента': self.params.get('device_client'),
+            'режим работы порта доступа': self.params.get('speed_port'),
+        })
+        if self.change_log == 'не меняется' and self.job == 'Расширение' and self.exist_mount_type == '4':
+            self.fill_converter_1000_for_extend_by_ftth()
+
+    def fill_converter_1000_for_extend_by_ftth(self):
+        """Метод для добавления в шаблон по-умолчанию конвертера 1000 для расширения услуги организованной по FTTH.
+         В интерфейсе пользователя нет параметра, указывающего текущую скорость порта и кодга лог. подключение
+          не меняется поля конвертеров недоступны. Поэтому для расширения по FTTH всегда добавляется конвертер,
+           а для остальных сред всегда такой строки нет, их можно использовать при расширении с 10 до 100."""
+        line_str = '- Организовать %тип линии связи% [от %узел связи% ]до клиентcкого оборудования [в новой точке подключения ]по решению ОАТТР.'
+        if self.text_block.hidden_vars.get(line_str):
+            del self.text_block.hidden_vars[line_str]
+        strs = [
+            '- На стороне клиента %вид работ% [%установленный тип конвертера/передатчика на стороне клиента% на ]%тип конвертера/передатчика на стороне клиента%',
+            'ОНИТС СПД проведение работ:',
+            '- На порту подключения клиента выставить скоростной режим %режим работы порта доступа%.'
+        ]
+        self.text_block.hidden_vars.update({i: i for i in strs})
+        self.text_block.static_vars['вид работ'] = 'установить'
+        converter = '1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'
+        self.text_block.static_vars.update({
+            'тип конвертера/передатчика на стороне клиента': converter,
             'режим работы порта доступа': self.params.get('speed_port'),
         })
 

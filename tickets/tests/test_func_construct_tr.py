@@ -915,6 +915,35 @@ TEMPLATE_NEW_CKS_ACCESS = """Организация услуги ЦКС Etherlin
 - Ограничить скорость и настроить маркировку трафика для ЦКС портом подключения."""
 
 
+TEMPLATE_FTTH_ONLY_CLIENT_CONVERTER = """Изменение присоединения к СПД.
+-----------------------------------------------------------------------------------
+
+ОИПМ проведение работ:
+- На стороне клиента установить 1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"
+- Логическое подключение клиента не изменится.
+- Совместно с ОНИТС СПД убедиться в восстановлении связи у клиента.
+
+
+ОНИТС СПД проведение работ:
+- На порту подключения клиента выставить скоростной режим "auto"."""
+
+
+TEMPLATE_CKS_EXTEND = """Расширение сервиса ЦКС.
+-----------------------------------------------------------------------------------
+
+МКО:
+- Проинформировать клиента о простое сервиса на время проведения работ.
+- Согласовать время проведение работ.
+- Создать заявку в ИС Cordis на ОНИТС СПД для расширения сервиса ЦКС.
+В заявке ИС Cordis указать время проведения работ.
+
+ОНИТС СПД проведение работ:
+- По заявке в ИС Cordis:
+- Выполнить настройки на оборудовании для расширения полосы сервиса ЦКС  "Малышева 36 - Карла Либкнехта 23 VC:2101 10 Мбит/с" на 1 Гбит/с.
+- Ограничить скорость и настроить маркировку трафика для сервиса ЦКС полисером на Subinterface.
+- Убедиться в восстановлении сервиса у клиента."""
+
+
 TEMPLATE_NEW_CKS_TRUNK = """Организация услуги ЦКС Etherline trunk'ом.
 -----------------------------------------------------------------------------------
  
@@ -3163,6 +3192,96 @@ COPPER_ONE_CKS_TRUNK_EXPECTED_ORTR = [TEMPLATE_COPPER, TEMPLATE_NEW_CKS_TRUNK]
 COPPER_ONE_CKS_TRUNK_EXPECTED_OTC = None
 
 
+CKS_TRUNK_EXIST_PORT = deepcopy(INITIAL)
+connects = {'connect_0': {
+    'type_connect': 'AR13-23.ekb_GigabitEthernet1/13',
+    'exist_sreda': '2',
+    'sreda': '2',
+    'kad': 'AR13-23.ekb',
+    'port': 'GigabitEthernet1/13',
+    'change_physic': 'не меняется',
+    'change_log': 'не меняется',
+    'services': {'ЦКС': [' "Малышева 36 - Карла Либкнехта 23 VC:2101 10 Мбит/с"']}}}
+CKS_TRUNK_EXIST_PORT.update({
+    'service_params': {
+        'ЦКС ЦКС  - М.Сибиряка, 101 - Екатеринбург, Евгения Савкова, д. 35/2, 467,  100мбит/с': {
+            'pointA': 'Мамина-Сибиряка, д.101',
+            'pointB': 'Евгения Савкова, д.35/2, оф.467',
+            'policer_cks': 'полисером на Subinterface',
+            'port_type': 'trunk',
+            'exist_service': '',
+            'connect': 'connect_0'
+        }},
+    'types_jobs': {
+        'ЦКС ЦКС  - М.Сибиряка, 101 - Екатеринбург, Евгения Савкова, д. 35/2, 467,  100мбит/с': 'Организация'},
+    'new_job_services': ['ЦКС ЦКС  - М.Сибиряка, 101 - Екатеринбург, Евгения Савкова, д. 35/2, 467,  100мбит/с'],
+    'connects': connects
+})
+CKS_TRUNK_EXIST_PORT_EXPECTED_ORTR = [TEMPLATE_NEW_CKS_TRUNK]
+CKS_TRUNK_EXIST_PORT_EXPECTED_OTC = None
+
+
+CKS_EXTEND_EXIST_PORT_FTTH = deepcopy(INITIAL)
+connects = {'connect_0': {
+    'type_connect': 'AR13-23.ekb_GigabitEthernet1/13',
+    'exist_sreda': '4',
+    'sreda': '4',
+    'kad': 'AR13-23.ekb',
+    'port': 'GigabitEthernet1/13',
+    'change_physic': 'не меняется',
+    'change_log': 'не меняется',
+    'speed_port': '"auto"',
+    'services': {'ЦКС': [' "Малышева 36 - Карла Либкнехта 23 VC:2101 10 Мбит/с"']}}}
+CKS_EXTEND_EXIST_PORT_FTTH.update({
+    'selected_ono': [['001', 'ООО "1"', 'Etherline', 'Екатеринбург, Малышева, д. 36', 'Малышева 36 - Карла Либкнехта 23 VC:2101 10 Мбит/с', 'AR13-23.ekb-Z-1222-CKS-Malisheva36-Lenina39', 'AR13-23.ekb', 'GigabitEthernet1/13']],
+    'service_params': {
+        'ЦКС 100 мбит ': {
+            'change_log_shpd': 'существующая адресация',
+            'connect': 'connect_0',
+            'extend_speed': '1 Гбит/с',
+            'policer_cks': 'полисером на Subinterface',
+            'policer_vm': 'полисером на SVI'
+        }
+    },
+    'types_jobs': {'ЦКС 100 мбит ': 'Расширение'},
+    'new_job_services': [],
+    'pass_job_services': ['ЦКС 100 мбит '],
+    'connects': connects
+})
+CKS_EXTEND_EXIST_PORT_FTTH_EXPECTED_ORTR = [TEMPLATE_FTTH_ONLY_CLIENT_CONVERTER, TEMPLATE_CKS_EXTEND]
+CKS_EXTEND_EXIST_PORT_FTTH_EXPECTED_OTC = None
+
+
+CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT = deepcopy(INITIAL)
+connects = {'connect_0': {
+    'type_connect': 'AR13-23.ekb_GigabitEthernet1/13',
+    'exist_sreda': '2',
+    'sreda': '2',
+    'kad': 'AR13-23.ekb',
+    'port': 'GigabitEthernet1/13',
+    'change_physic': 'не меняется',
+    'change_log': 'не меняется',
+    'services': {'ЦКС': [' "Малышева 36 - Карла Либкнехта 23 VC:2101 10 Мбит/с"']}}}
+CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT.update({
+    'selected_ono': [['001', 'ООО "1"', 'Etherline', 'Екатеринбург, Малышева, д. 36', 'Малышева 36 - Карла Либкнехта 23 VC:2101 10 Мбит/с', 'AR13-23.ekb-Z-1222-CKS-Malisheva36-Lenina39', 'AR13-23.ekb', 'GigabitEthernet1/13']],
+    'service_params': {
+        'ЦКС 100 мбит ': {
+            'change_log_shpd': 'существующая адресация',
+            'connect': 'connect_0',
+            'extend_speed': '1 Гбит/с',
+            'policer_cks': 'полисером на Subinterface',
+            'policer_vm': 'полисером на SVI'
+        }
+    },
+    'types_jobs': {'ЦКС 100 мбит ': 'Расширение'},
+    'new_job_services': [],
+    'pass_job_services': ['ЦКС 100 мбит '],
+    'connects': connects
+})
+CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT_EXPECTED_ORTR = [TEMPLATE_CKS_EXTEND]
+CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT_EXPECTED_OTC = None
+
+
 CKS_TRUNK_TURNOFF = copy(INITIAL)
 CKS_TRUNK_TURNOFF.update({
     'services_plus_desc': ['ЦКС ЦКС  - М.Сибиряка, 101 - Екатеринбург, Евгения Савкова, д. 35/2, 467,  100мбит/с'],
@@ -4969,6 +5088,9 @@ parametrs = [
 
     ('COPPER_ONE_CKS', COPPER_ONE_CKS, COPPER_ONE_CKS_EXPECTED_ORTR, COPPER_ONE_CKS_EXPECTED_OTC),
     ('COPPER_ONE_CKS_TRUNK', COPPER_ONE_CKS_TRUNK, COPPER_ONE_CKS_TRUNK_EXPECTED_ORTR, COPPER_ONE_CKS_TRUNK_EXPECTED_OTC),
+    ('CKS_TRUNK_EXIST_PORT', CKS_TRUNK_EXIST_PORT, CKS_TRUNK_EXIST_PORT_EXPECTED_ORTR, CKS_TRUNK_EXIST_PORT_EXPECTED_OTC),
+    ('CKS_EXTEND_EXIST_PORT_FTTH', CKS_EXTEND_EXIST_PORT_FTTH, CKS_EXTEND_EXIST_PORT_FTTH_EXPECTED_ORTR, CKS_EXTEND_EXIST_PORT_FTTH_EXPECTED_OTC),
+    ('CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT', CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT, CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT_EXPECTED_ORTR, CKS_EXTEND_EXIST_PORT_WITHOUT_MOUNT_EXPECTED_OTC),
     ('CKS_TRUNK_TURNOFF', CKS_TRUNK_TURNOFF, CKS_TRUNK_TURNOFF_EXPECTED_ORTR, CKS_TRUNK_TURNOFF_EXPECTED_OTC),
     ('COPPER_ONE_PORTVK', COPPER_ONE_PORTVK, COPPER_ONE_PORTVK_EXPECTED_ORTR, COPPER_ONE_PORTVK_EXPECTED_OTC),
     ('COPPER_ONE_ITV', COPPER_ONE_ITV, COPPER_ONE_ITV_EXPECTED_ORTR, COPPER_ONE_ITV_EXPECTED_OTC),
