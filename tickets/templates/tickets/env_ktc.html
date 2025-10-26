@@ -301,6 +301,7 @@
                                         <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование'>SFP WDM, до 3 км, 1550 нм</option>
                                         <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм</option>
                                         <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм</option>
+                                        <option value=''></option>
                                     </select>
                                 </div>
                             </div>
@@ -383,7 +384,7 @@
                             <div class="col-1 mb-1">
                                 <div class="form-group">
                                     <label for="logic_change_csw">Перенос КК</label>
-                                    <input type="checkbox" class="form-group" id="logic_change_csw_0" name="logic_change_csw_0">
+                                    <input type="checkbox" class="form-group logic_change_csw" id="logic_change_csw_0" name="logic_change_csw_0">
                                 </div>
                             </div>
                             <div class="col-1 mb-1">
@@ -584,6 +585,7 @@
                                                 <option value='оптический модуль SFP WDM с длиной волны 1550 нм, дальность до 3 км в клиентское оборудование'>SFP WDM, до 3 км, 1550 нм</option>
                                                 <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 3 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 3 км, 1550 нм</option>
                                                 <option value='1000 Мбит/с конвертер с модулем SFP WDM с длиной волны 1550 нм, дальность до 20 км, режим работы "AUTO/CVT"'>SNR-CVT-1000SFP-mini с SFP WDM, 20 км, 1550 нм</option>
+                                                <option value=''></option>
                                             </select>
                                         </div>
                                     </div>
@@ -662,7 +664,7 @@
                                     <div class="col-1 mb-1">
                                         <div class="form-group">
                                             <label for="logic_change_csw">Перенос КК</label>
-                                            <input type="checkbox" class="form-group" id="logic_change_csw_${blockCount}" name="logic_change_csw_${blockCount}">
+                                            <input type="checkbox" class="form-group logic_change_csw" id="logic_change_csw_${blockCount}" name="logic_change_csw_${blockCount}">
                                         </div>
                                     </div>
 
@@ -728,7 +730,7 @@
             });
 
             // Обработчик изменения состояния чекбоксов
-            $(document).on('change', '.logic_csw, .logic_replace_csw, .logic_change_gi_csw', function() {
+            $(document).on('change', '.logic_csw, .logic_replace_csw, .logic_change_csw, .logic_change_gi_csw', function() {
 
                 const block = $(this).closest('.form-block');
                 console.log(block)
@@ -794,8 +796,9 @@
                 const isLogicCswChecked = block.find('.logic_csw').is(':checked');
                 const isLogicReplaceCswChecked = block.find('.logic_replace_csw').is(':checked');
                 const isLogicChangeGiCswChecked = block.find('.logic_change_gi_csw').is(':checked');
+                const isLogicChangeCswChecked = block.find('.logic_change_csw').is(':checked');
 
-                if (isLogicCswChecked || isLogicReplaceCswChecked || isLogicChangeGiCswChecked) {
+                if (isLogicCswChecked || isLogicReplaceCswChecked || isLogicChangeCswChecked || isLogicChangeGiCswChecked) {
                     block.find('.fields-for-csw').show();
                 } else {
                     block.find('.fields-for-csw').hide();
