@@ -1731,6 +1731,8 @@ class NewServiceLvs:
                 self.text_block.hidden_vars.update({i: i for i in strs})
             self.text_block.static_vars['модель коммутатора'] = self.lvs_switch
             ports_lvs_switch = {
+                'Origo OS2205/А2A': '5',
+                'Cudy GS108': '8',
                 'TP-Link TL-SG105 V4': '5',
                 'ZYXEL GS1200-5': '5',
                 'TP-Link TL-SG108 V4': '8',
@@ -3349,28 +3351,32 @@ class Csw:
         vgw_chains = self.value_vars.get('vgw_chains') if self.value_vars.get('vgw_chains') else []
         waste_vgw = self.value_vars.get('waste_vgw') if self.value_vars.get('waste_vgw') else []
         vgws = [i.get('name') for i in vgw_chains + waste_vgw if i.get('model') != 'ITM SIP']
-
-        if vgws and len(vgws) == 1:
+        if vgws:
             strs = [
-                ' и тел. шлюза %название тел. шлюза%',
-                ' и тел. шлюз %название тел. шлюза%',
-                'и тел. шлюза %название тел. шлюза%',
-                'и тел. шлюз %название тел. шлюза%'
-            ]
+                '- Перед проведением работ запросить ОНИТС СПД сменить реквизиты тел. шлюза %название тел. шлюза% на ZIP.'
+            ]   # только для случая замены КК, т.к. смены реквизитов КК до работ не требуется
             self.text_block.hidden_vars.update({i: i for i in strs})
-            self.text_block.static_vars['название тел. шлюза'] = ', '.join(vgws)
-        elif vgws and len(vgws) > 1:
-            vgw_str_1 = ' и тел. шлюза %название тел. шлюза%'
-            vgw_str_2 = ' и тел. шлюз %название тел. шлюза%'
-            vgw_str_3 = 'и тел. шлюза %название тел. шлюза%'
-            vgw_str_4 = 'и тел. шлюз %название тел. шлюза%'
-            self.text_block.hidden_vars.update({
-                vgw_str_1: ' и тел. шлюзов %название тел. шлюза%',
-                vgw_str_2: ' и тел. шлюзы %название тел. шлюза%',
-                vgw_str_3: 'и тел. шлюзов %название тел. шлюза%',
-                vgw_str_4: 'и тел. шлюзы %название тел. шлюза%',
-            })
-            self.text_block.static_vars['название тел. шлюза'] = ', '.join(vgws)
+            if len(vgws) == 1:
+                strs = [
+                    ' и тел. шлюза %название тел. шлюза%',
+                    ' и тел. шлюз %название тел. шлюза%',
+                    'и тел. шлюза %название тел. шлюза%',
+                    'и тел. шлюз %название тел. шлюза%'
+                ]
+                self.text_block.hidden_vars.update({i: i for i in strs})
+                self.text_block.static_vars['название тел. шлюза'] = ', '.join(vgws)
+            elif len(vgws) > 1:
+                vgw_str_1 = ' и тел. шлюза %название тел. шлюза%'
+                vgw_str_2 = ' и тел. шлюз %название тел. шлюза%'
+                vgw_str_3 = 'и тел. шлюза %название тел. шлюза%'
+                vgw_str_4 = 'и тел. шлюз %название тел. шлюза%'
+                self.text_block.hidden_vars.update({
+                    vgw_str_1: ' и тел. шлюзов %название тел. шлюза%',
+                    vgw_str_2: ' и тел. шлюзы %название тел. шлюза%',
+                    vgw_str_3: 'и тел. шлюзов %название тел. шлюза%',
+                    vgw_str_4: 'и тел. шлюзы %название тел. шлюза%',
+                })
+                self.text_block.static_vars['название тел. шлюза'] = ', '.join(vgws)
 
     def fill_change_shpd_subnet_32(self):
         """Метод добавляет переменные при смене агрегации, связанные с ШПД."""
