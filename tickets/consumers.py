@@ -9,7 +9,7 @@ from tickets.utils import sql_request_cordis
 logger = logging.getLogger(__name__)
 
 query_cisco_ar_sr = """
-SELECT DISTINCT s.name, Nets.IpDigitToCanon(s.ip_address)
+SELECT DISTINCT s.name, Nets.IpDigitToCanon(s.ip_address), sm.vendor, sm.model
 FROM nets.switch s
 JOIN Nets.switch_model sm ON s.switch_model = sm.switch_model
 WHERE sm.vendor = 'cisco'
@@ -20,7 +20,7 @@ AND NOT s.name LIKE '%FAKE%' ORDER BY s.name
 """
 
 query_ar_cisco_ias_snr = """
-SELECT DISTINCT s.name, Nets.IpDigitToCanon(s.ip_address)
+SELECT DISTINCT s.name, Nets.IpDigitToCanon(s.ip_address), sm.vendor, sm.model
 FROM nets.switch s
 JOIN Nets.switch_model sm ON s.switch_model = sm.switch_model
 WHERE (sm.vendor = 'cisco' OR sm.vendor = 'snr')
@@ -35,13 +35,13 @@ class ComponentsConsumer(AsyncWebsocketConsumer):
 	@sync_to_async
 	def get_switches(self, territory):
 		switches = sql_request_cordis(query_cisco_ar_sr)
-		ip_switches = [ip for name, ip in switches if name.endswith(territory)]
-		return ip_switches
+		territory_switches = [(name, ip, vendor, model) for name, ip, vendor, model in switches if name.endswith(territory)]
+		return territory_switches
 
 	@sync_to_async
-	def connect_switches(self, ip_switches, table, summary):
-		for ip in ip_switches:
-			with Connect(ip) as session:
+	def connect_switches(self, switches, table, summary):
+		for switch in switches:
+			with Connect(*switch) as session:
 				switch_table = session.get_components_table()
 				table += switch_table
 				switch_summary = session.get_components_summary()
@@ -84,18 +84,19 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		is_not_ar_ias = [line for line in input_switches if not (line.startswith("AR") or line.startswith("IAS"))]
 		if is_not_ar_ias:
 			raise InputSwitchException("Поиск выполняется только по АМ/КПА")
-		recognised_switches = {name: ip for name, ip in switches if name in input_switches}
-		if not recognised_switches or len(input_switches) != len(recognised_switches):
-			unrecognized_switches = input_switches - recognised_switches.keys()
-			raise InputSwitchException(f"Не удалось получить IP для {', '.join(unrecognized_switches)}")
+		recognised_switches = [(name, ip, vendor, model) for name, ip, vendor, model in switches if name in input_switches]
+		recognised_names = [name for name, *other in recognised_switches]
+		if not recognised_names or len(input_switches) != len(recognised_names):
+			unrecognized_names = input_switches - recognised_names
+			raise InputSwitchException(f"Не удалось распознать {', '.join(unrecognized_names)}")
 		return recognised_switches
 
 	@sync_to_async
 	def connect_switches(self, switches, action):
 		response = {'action': action}
-		for name, ip in switches.items():
+		for name, ip, vendor, model in switches:
 			try:
-				with Connect(ip) as session:
+				with Connect(name, ip, vendor, model) as session:
 					if action == 'add':
 						sw, error_ports, changed_ports = session.add_rezerv_1g_planning()
 						response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
@@ -118,7 +119,7 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		text_data_json = json.loads(text_data)
 		action = text_data_json['action']
 		input_data = text_data_json['switches']
-		input_switches = set([line for line in input_data.split(";") if line])
+		input_switches = list(set([line for line in input_data.split(";") if line]))
 		switches_in_db = await self.get_switches()
 		try:
 			switches = self.recognise_switches(input_switches, switches_in_db)
