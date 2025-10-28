@@ -33,13 +33,15 @@ AND NOT s.name LIKE '%FAKE%' ORDER BY s.name
 class ComponentsConsumer(AsyncWebsocketConsumer):
 
 	@sync_to_async
-	def get_switches(self, territory):
+	def get_switches(self, territory: str):
 		switches = sql_request_cordis(query_cisco_ar_sr)
 		territory_switches = [(name, ip, vendor, model) for name, ip, vendor, model in switches if name.endswith(territory)]
 		return territory_switches
 
 	@sync_to_async
-	def connect_switches(self, switches, table, summary):
+	def connect_switches(self, switches: list[tuple[str, str, str, str]]):
+		table = []
+		summary = {}
 		for switch in switches:
 			with Connect(*switch) as session:
 				switch_table = session.get_components_table()
@@ -54,13 +56,11 @@ class ComponentsConsumer(AsyncWebsocketConsumer):
 
 	async def receive(self, text_data):
 		response = {}
-		table = []
-		summary = {}
 		text_data_json = json.loads(text_data)
 		territory = text_data_json['territory']
-		ip_switches = await self.get_switches(territory)
+		switches = await self.get_switches(territory)
 		try:
-			table, summary = await self.connect_switches(ip_switches, table, summary)
+			table, summary = await self.connect_switches(switches)
 			response.update({'data': table, 'summary': summary, 'territory': territory})
 		except SwitchException as er:
 			logger.error(er)
@@ -78,7 +78,7 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		return switches
 
 	@staticmethod
-	def recognise_switches(input_switches, switches):
+	def recognise_switches(input_switches: set, switches: list[tuple[str, str, str, str]]):
 		if not input_switches:
 			raise InputSwitchException("Необходимо ввести название АМ/КПА")
 		is_not_ar_ias = [line for line in input_switches if not (line.startswith("AR") or line.startswith("IAS"))]
@@ -87,12 +87,12 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		recognised_switches = [(name, ip, vendor, model) for name, ip, vendor, model in switches if name in input_switches]
 		recognised_names = [name for name, *other in recognised_switches]
 		if not recognised_names or len(input_switches) != len(recognised_names):
-			unrecognized_names = input_switches - recognised_names
+			unrecognized_names = input_switches - set(recognised_names)
 			raise InputSwitchException(f"Не удалось распознать {', '.join(unrecognized_names)}")
 		return recognised_switches
 
 	@sync_to_async
-	def connect_switches(self, switches, action):
+	def connect_switches(self, switches: list[tuple], action: str):
 		response = {'action': action}
 		for name, ip, vendor, model in switches:
 			try:
@@ -119,7 +119,7 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		text_data_json = json.loads(text_data)
 		action = text_data_json['action']
 		input_data = text_data_json['switches']
-		input_switches = list(set([line for line in input_data.split(";") if line]))
+		input_switches = set([line for line in input_data.split(";") if line])
 		switches_in_db = await self.get_switches()
 		try:
 			switches = self.recognise_switches(input_switches, switches_in_db)
