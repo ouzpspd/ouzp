@@ -100,7 +100,7 @@ from . import text
 def _titles(result_services, result_services_ots):
     """Данный метод формирует список заголовков из шаблонов в блоках ОРТР и ОТС"""
     index_template = 1
-    titles = []
+    titles = ['Перечень работ:\n']
     for i in range(len(result_services)):
         result_services[i] = '{}. '.format(index_template) + result_services[i]
         titles.append(result_services[i][:result_services[i].index('---')])
@@ -117,7 +117,7 @@ def _titles(result_services, result_services_ots):
 
 def get_need(value_vars):
     """Данный метод формирует текст для поля Требуется в готовом ТР"""
-    need = ['Требуется:']
+    need = ['Цель:']
     if value_vars.get('pass_job_services') and value_vars.get('needs'):
         for needs, services in value_vars.get('needs').items():
             if needs == 'Перенос сервиса':
@@ -145,9 +145,13 @@ def get_need(value_vars):
     if value_vars.get('new_job_services'):
         name_new_service = [_.split()[0] for _ in value_vars.get('new_job_services')]
         if name_new_service and len(name_new_service) > 1:
-            need.append(f"- организовать дополнительные услуги {', '.join(name_new_service)};")
+            new_service_str = f"- организовать дополнительные услуги {', '.join(name_new_service)};"
+            new_service_str = new_service_str.replace('HotSpot','Хот-Спот').replace('Интернет,','ШПД в интернет')
+            need.append(new_service_str)
         elif name_new_service and len(name_new_service) == 1:
-            need.append(f"- организовать дополнительную услугу {''.join(name_new_service)};")
+            new_service_str = f"- организовать дополнительную услугу {''.join(name_new_service)};"
+            new_service_str = new_service_str.replace('HotSpot', 'Хот-Спот').replace('Интернет,', 'ШПД в интернет')
+            need.append(new_service_str)
     if value_vars.get('change_job_services'):
         types_trunk = [
             "Организация ШПД trunk'ом",
@@ -1260,7 +1264,7 @@ class Connectable:
         self.ortr.append(text_block.construct(template))
 
 class HotSpot(Connectable):
-    """Класс организации новой услуги Хот-спот"""
+    """Класс организации новой услуги Хот-Спот"""
     def __init__(self, value_vars, service, ortr, ots):
         self.service_params = value_vars.get('service_params', {}).get(service)
         if not self.service_params:
@@ -2572,12 +2576,12 @@ class WiFiKtcMount(KtcMount):
         self.text_block.static_vars['модель беспроводной базовой станции'] = self.params.get('access_points')
         if self.params.get('access_points') == 'Infinet E5':
             strs = [
-                '- Доставить в офис ОНИТС СПД беспроводные точки Infinet E5 для их настройки.'
-                ' и настройки точек в офисе ОНИТС СПД'
+                '- Доставить в офис ОНИТС СПД беспроводные точки Infinet E5 для их настройки.',
+                ' и настройки точек в офисе ОНИТС СПД',
                 'После выполнения подготовительных работ в рамках заявки в ИС Cordis на ОНИТС СПД и настройки точек в офисе ОНИТС СПД:'
             ]
         else:
-            strs = ['После выполнения подготовительных работ в рамках заявки в ИС Cordis на ОНИТС СПД:']    # переделать чтобы подставлялось как в обычной беспроводной среде
+            strs = ['После выполнения подготовительных работ в рамках заявки в ИС Cordis на ОНИТС СПД:']
         self.text_block.hidden_vars.update({i:i for i in strs})
         to_client_str = '- Организовать %тип линии связи% от %узел связи% до клиента по решению ОТПМ.'
         if self.text_block.hidden_vars.get(to_client_str):
@@ -3630,7 +3634,7 @@ class PassServiceITV(PassService):
 
 
 class PassServiceHotspot(PassService):
-    """Класс переноса услуги Хот-спот"""
+    """Класс переноса услуги Хот-Спот"""
     def __init__(self, value_vars, service, ortr):
         super().__init__(value_vars, service, ortr)
         self.service_name = 'Хот-Спот'

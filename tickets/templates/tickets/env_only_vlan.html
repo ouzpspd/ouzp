@@ -76,14 +76,14 @@
               <!-- Первый блок полей -->
               <div class="form-block mb-3 p-3 border">
 
-                  <input type="hidden" class="form-control" name="connect_0" value="True">
-                  <input type="hidden" class="form-control" name="sreda_0" value="1">
-                  <input type="hidden" class="form-control" name="change_log_0" value="меняется">
-                  <input type="hidden" class="form-control" name="kad_0" value="">
+                  <input type="hidden" class="form-control" name="connect_1" value="True">
+                  <input type="hidden" class="form-control" name="sreda_1" value="1">
+                  <input type="hidden" class="form-control" name="change_log_1" value="меняется">
+                  <input type="hidden" class="form-control" name="kad_1" value="">
                   <div class="row">
                     <div class="col-4 mb-1 ">
                         <div class="form-group">
-                            <label>Подключение №0</label>
+                            <label>Подключение №1</label>
                         </div>
                     </div>
                     <div class="col-7">
@@ -101,7 +101,7 @@
                         <div class="col-4 mb-1">
                             <div class="form-group">
                                 <label for="type_connect">Тип подключения</label>
-                                <select class="form-control type-connect" id="type_connect_0" name="type_connect_0">
+                                <select class="form-control type-connect" id="type_connect_1" name="type_connect_1">
                                     {% for connection in connections %}
                                         <option value="{{ connection }}">{{ connection }}</option>
                                     {% endfor %}
@@ -114,9 +114,9 @@
           </div>
 
         <div class="row">
-            <div class="col-2">
+            <div class="col-4">
                 <div class="form-group">
-                    <button id="addBlock" class="btn btn-success btn-block">Добавить блок</button>
+                    <button id="addBlock" class="btn btn-success btn-block">Добавить подключение</button>
                 </div>
             </div>
         </div>
@@ -146,7 +146,7 @@
 $(document).ready(function() {
 
 
-  let blockCount = 0;
+  let blockCount = 1;
 
   // Функция для добавления нового блока полей
   $('#addBlock').click(function(e) {

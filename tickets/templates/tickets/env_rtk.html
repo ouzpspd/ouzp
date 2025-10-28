@@ -80,17 +80,12 @@
               <!-- Первый блок полей -->
               <div class="form-block mb-3 p-3 border">
 
-                  <input type="hidden" class="form-control" name="connect_0" value="True">
+                  <input type="hidden" class="form-control" name="connect_1" value="True">
 
                     <div class="row">
-                        <div class="col-4 mb-1">
+                        <div class="col-4 mb-1 ">
                             <div class="form-group">
-                                <label for="type_connect">Тип подключения</label>
-                                <select class="form-control type-connect" id="type_connect_0" name="type_connect_0">
-                                    {% for connection in connections %}
-                                        <option value="{{ connection }}">{{ connection }}</option>
-                                    {% endfor %}
-                                </select>
+                                <label>Подключение №1</label>
                             </div>
                         </div>
                         <div class="col-7">
@@ -104,11 +99,23 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-4 mb-1">
+                            <div class="form-group">
+                                <label for="type_connect">Тип подключения</label>
+                                <select class="form-control type-connect" id="type_connect_1" name="type_connect_1">
+                                    {% for connection in connections %}
+                                        <option value="{{ connection }}">{{ connection }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row pps-not-changed">
                         <div class="col-4 mb-1">
                             <div class="form-group">
                                 <label for="sreda">Cуществующая среда передачи</label>
-                                <select class="form-control exist-sreda" id="exist_sreda_0" name="exist_sreda_0">
+                                <select class="form-control exist-sreda" id="exist_sreda_1" name="exist_sreda_1">
                                   <option value="ПМ">ПМ</option>
                                   <option value="FVNO Медь">FVNO Медь</option>
                                   <option value="FVNO FTTH">FVNO FTTH</option>
@@ -120,7 +127,7 @@
                         <div class="col-4 mb-1">
                             <div class="form-group">
                                 <label for="sreda">Лог. подключение</label>
-                                <select class="form-control change-log" id="change_log_0" name="change_log_0">
+                                <select class="form-control change-log" id="change_log_1" name="change_log_1">
                                     <option value="меняется">меняется</option>
                                     <option value="не меняется">не меняется</option>
                                 </select>
@@ -129,7 +136,7 @@
                         <div class="col-4 mb-1">
                             <div class="form-group">
                                 <label for="sreda">Физ. подключение</label>
-                                <select class="form-control change-physic" id="change_physic_0" name="change_physic_0">
+                                <select class="form-control change-physic" id="change_physic_1" name="change_physic_1">
                                     <option value="меняется">меняется</option>
                                     <option value="не меняется">не меняется</option>
                                 </select>
@@ -141,16 +148,16 @@
                     <div class="row">
                         <div class="col-4 mb-1 ">
                             <div class="form-group">
-                                <label for="vlan_0">VLAN</label>
-                                <input type="text" class="form-control vlan-group" id="vlan_0" name="vlan_0" required>
+                                <label for="vlan_1">VLAN</label>
+                                <input type="text" class="form-control vlan-group" id="vlan_1" name="vlan_1" required>
                             </div>
                         </div>
                     </div>
                   <div class="row">
                       <div class="col-4 mb-1">
                           <div class="form-group">
-                              <label for="sreda_0">Среда</label>
-                              <select class="form-control type-pm-select" id="sreda_0" name="sreda_0" required="True">
+                              <label for="sreda_1">Среда</label>
+                              <select class="form-control type-pm-select" id="sreda_1" name="sreda_1" required="True">
                                   <option value="ПМ">ПМ</option>
                                   <option value="FVNO Медь">FVNO Медь</option>
                                   <option value="FVNO FTTH">FVNO FTTH</option>
@@ -162,32 +169,32 @@
                   <div class="row switch-group" style="display: none;">
                       <div class="col-4 mb-1">
                           <div class="form-group">
-                              <label for="kad_0">Switch IP</label>
-                              <input type="text" class="form-control kad" id="kad_0" name="kad_0" required>
+                              <label for="kad_1">Switch IP</label>
+                              <input type="text" class="form-control kad" id="kad_1" name="kad_1" required>
                           </div>
                       </div>
                   </div>
                   <div class="row switch-port-group" style="display: none;">
                       <div class="col-4 mb-1">
                           <div class="form-group">
-                              <label for="port_0">Switch Port</label>
-                              <input type="text" class="form-control port" id="port_0" name="port_0" required>
+                              <label for="port_1">Switch Port</label>
+                              <input type="text" class="form-control port" id="port_1" name="port_1" required>
                           </div>
                       </div>
                   </div>
                   <div class="row optic-socket-group" style="display: none;">
                       <div class="col-4 mb-1">
                           <div class="form-group">
-                              <label for="optic_socket_0">Optic Socket</label>
-                              <input type="text" class="form-control" id="optic_socket_0" name="optic_socket_0" required>
+                              <label for="optic_socket_1">Optic Socket</label>
+                              <input type="text" class="form-control" id="optic_socket_1" name="optic_socket_1" required>
                           </div>
                       </div>
                   </div>
                   <div class="row ploam-group" style="display: none;">
                       <div class="col-4 mb-1">
                           <div class="form-group">
-                              <label for="ploam_0">PLOAM</label>
-                              <input type="text" class="form-control ploam" id="ploam_0" name="ploam_0" required>
+                              <label for="ploam_1">PLOAM</label>
+                              <input type="text" class="form-control ploam" id="ploam_1" name="ploam_1" required>
                           </div>
                       </div>
                   </div>
@@ -195,9 +202,9 @@
           </div>
 
         <div class="row">
-            <div class="col-2">
+            <div class="col-4">
                 <div class="form-group">
-                    <button id="addBlock" class="btn btn-success btn-block">Добавить блок</button>
+                    <button id="addBlock" class="btn btn-success btn-block">Добавить подключение</button>
                 </div>
             </div>
         </div>
@@ -298,7 +305,7 @@ $(document).ready(function() {
 
 
 
-  let blockCount = 0;
+  let blockCount = 1;
 
   // Функция для добавления нового блока полей
   $('#addBlock').click(function(e) {
@@ -307,6 +314,24 @@ $(document).ready(function() {
       const newBlock = `
           <div class="form-block mb-3 p-3 border">
               <input type="hidden" class="form-control" name="connect_${blockCount}" value="True">
+            <div class="row">
+                <div class="col-4 mb-1 ">
+                    <div class="form-group">
+                        <label>Подключение №${blockCount}</label>
+                    </div>
+                </div>
+                <div class="col-7">
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <button class="btn btn-danger remove-block">
+                        <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
+                        <span class="sr-only">Close</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
               <div class="row">
                     <div class="col-4 mb-1">
                         <div class="form-group">
@@ -316,16 +341,6 @@ $(document).ready(function() {
                                     <option value="{{ connection }}">{{ connection }}</option>
                                 {% endfor %}
                             </select>
-                        </div>
-                    </div>
-                    <div class="col-7">
-                    </div>
-                    <div class="col">
-                        <div class="form-group">
-                            <button class="btn btn-danger remove-block">
-                            <span class="ui-icon ui-icon-close" role="status" aria-hidden="true"></span>
-                            <span class="sr-only">Close</span>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -366,7 +381,7 @@ $(document).ready(function() {
                 <div class="row">
                     <div class="col-4 mb-1 ">
                         <div class="form-group">
-                            <label for="vlan_0">VLAN</label>
+                            <label for="vlan_${blockCount}">VLAN</label>
                             <input type="text" class="form-control vlan-group" id="vlan_${blockCount}" name="vlan_${blockCount}" required>
                         </div>
                     </div>
@@ -374,7 +389,7 @@ $(document).ready(function() {
               <div class="row">
                   <div class="col-4 mb-1">
                       <div class="form-group">
-                          <label for="sreda_0">Среда</label>
+                          <label for="sreda_${blockCount}">Среда</label>
                           <select class="form-control type-pm-select" id="sreda_${blockCount}" name="sreda_${blockCount}" required="True">
                               <option value="ПМ">ПМ</option>
                               <option value="FVNO Медь">FVNO Медь</option>
@@ -387,7 +402,7 @@ $(document).ready(function() {
               <div class="row switch-group" style="display: none;">
                   <div class="col-4 mb-1">
                       <div class="form-group">
-                          <label for="kad_0">Switch IP</label>
+                          <label for="kad_${blockCount}">Switch IP</label>
                           <input type="text" class="form-control kad" id="kad_${blockCount}" name="kad_${blockCount}" required>
                       </div>
                   </div>
@@ -395,7 +410,7 @@ $(document).ready(function() {
               <div class="row switch-port-group" style="display: none;">
                   <div class="col-4 mb-1">
                       <div class="form-group">
-                          <label for="port_0">Switch Port</label>
+                          <label for="port_${blockCount}">Switch Port</label>
                           <input type="text" class="form-control port" id="port_${blockCount}" name="port_${blockCount}" required>
                       </div>
                   </div>
@@ -403,7 +418,7 @@ $(document).ready(function() {
               <div class="row optic-socket-group" style="display: none;">
                   <div class="col-4 mb-1">
                       <div class="form-group">
-                          <label for="optic_socket_0">Optic Socket</label>
+                          <label for="optic_socket_${blockCount}">Optic Socket</label>
                           <input type="text" class="form-control" id="optic_socket_${blockCount}" name="optic_socket_${blockCount}" required>
                       </div>
                   </div>
@@ -411,7 +426,7 @@ $(document).ready(function() {
               <div class="row ploam-group" style="display: none;">
                   <div class="col-4 mb-1">
                       <div class="form-group">
-                          <label for="ploam_0">PLOAM</label>
+                          <label for="ploam_${blockCount}">PLOAM</label>
                           <input type="text" class="form-control ploam" id="ploam_${blockCount}" name="ploam_${blockCount}" required>
                       </div>
                   </div>

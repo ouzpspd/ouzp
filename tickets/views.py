@@ -878,10 +878,7 @@ def hotspot(request, trID):
         hotspotform = HotspotForm(initial={'hotspot_points': hotspot_points, 'hotspot_users': hotspot_users})
         connects = session_tr_id.get('connects')
         if connects:
-            for k,v in connects.items():
-                postfix = k[k.index('_'):]
-                res = v.get(f'switch{postfix}') +' '+ v.get(f'switch_port{postfix}') if v.get(f'switch{postfix}') else k
-                hotspotform.fields['connect'].widget.choices.append((k, res))
+            hotspotform = add_connects_to_form(hotspotform, connects)
         context = {
             'premium_plus': session_tr_id.get('premium_plus'),
             'premium': premium,
@@ -975,8 +972,7 @@ def phone(request, trID):
             form.fields['type_phone'].widget.choices = [('s', 'SIP, по логину/паролю'),]
         connects = session_tr_id.get('connects')
         if connects:
-            for k in connects.keys():
-                form.fields['connect'].widget.choices.append((k, k))
+            form = add_connects_to_form(form, connects)
 
         context = {
             'service_vgw': service,
@@ -1100,8 +1096,7 @@ def itv(request, trID):
 
         connects = session_tr_id.get('connects')
         if connects:
-            for k in connects.keys():
-                itvform.fields['connect'].widget.choices.append((k, k))
+            itvform = add_connects_to_form(itvform, connects)
         return render(request, 'tickets/itv.html', {
             'itvform': itvform,
             'service_itv': service,
@@ -1145,10 +1140,7 @@ def cks(request, trID):
             cksform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         connects = session_tr_id.get('connects')
         if connects:
-            for k,v in connects.items():
-                postfix = k[k.index('_'):]
-                res = v.get(f'switch{postfix}') +' '+ v.get(f'switch_port{postfix}') if v.get(f'switch{postfix}') else k
-                cksform.fields['connect'].widget.choices.append((k, res))
+            cksform = add_connects_to_form(cksform, connects)
         return render(request, 'tickets/cks.html', {
             'cksform': cksform,
             'list_strok': list_cks if len(list_cks) != 2 else None,
@@ -1195,8 +1187,7 @@ def shpd(request, trID):
             shpdform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         connects = session_tr_id.get('connects')
         if connects:
-            for k in connects.keys():
-                shpdform.fields['connect'].widget.choices.append((k, k))
+            shpdform = add_connects_to_form(shpdform, connects)
         context = {
             'shpdform': shpdform,
             'services_shpd': service,
@@ -1259,8 +1250,7 @@ def portvk(request, trID):
             portvkform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         connects = session_tr_id.get('connects')
         if connects:
-            for k in connects.keys():
-                portvkform.fields['connect'].widget.choices.append((k, k))
+            portvkform = add_connects_to_form(portvkform, connects)
 
         context = {'portvkform': portvkform,
                    'services_vk': service,
@@ -1307,8 +1297,7 @@ def portvm(request, trID):
             portvmform.fields['port_type'].widget.choices = [('trunk', 'trunk')]
         connects = session_tr_id.get('connects')
         if connects:
-            for k in connects.keys():
-                portvmform.fields['connect'].widget.choices.append((k, k))
+            portvmform = add_connects_to_form(portvmform, connects)
         context = {'portvmform': portvmform,
                    'services_vm': service,
                    'trunk_turnoff_on': trunk_turnoff_on,
@@ -2442,8 +2431,7 @@ def pass_services(request, trID):
         request.session[trID] = session_tr_id
         form = PassServiceForm()
         if connects:
-            for k in connects.keys():
-                form.fields['connect'].widget.choices.append((k, k))
+            form = add_connects_to_form(form, connects)
         context = {
             'service': service,
             'service_extend': service_extend,

@@ -183,11 +183,11 @@
 
                     <div class="form-block mb-3 p-3 border">
 
-                        <input type="hidden" class="form-control" name="connect_0" value="True">
+                        <input type="hidden" class="form-control" name="connect_1" value="True">
                         <div class="row">
                             <div class="col-4 mb-1 ">
                                 <div class="form-group">
-                                    <label>Подключение №0</label>
+                                    <label>Подключение №1</label>
                                 </div>
                             </div>
                             <div class="col-7">
@@ -206,7 +206,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="type_connect">Тип подключения</label>
-                                    <select class="form-control type-connect" id="type_connect_0" name="type_connect_0">
+                                    <select class="form-control type-connect" id="type_connect_1" name="type_connect_1">
                                         {% for connection in connections %}
                                             <option value="{{ connection }}">{{ connection }}</option>
                                         {% endfor %}
@@ -219,7 +219,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="sreda">Cуществующая среда передачи</label>
-                                    <select class="form-control exist-sreda" id="exist_sreda_0" name="exist_sreda_0">
+                                    <select class="form-control exist-sreda" id="exist_sreda_1" name="exist_sreda_1">
                                         <option value="1">UTP</option>
                                         <option value="2">ВОЛС</option>
                                         <option value="3">WiFi</option>
@@ -231,7 +231,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="sreda">Лог. подключение</label>
-                                    <select class="form-control change-log" id="change_log_0" name="change_log_0">
+                                    <select class="form-control change-log" id="change_log_1" name="change_log_1">
                                         <option value="меняется">меняется</option>
                                         <option value="не меняется">не меняется</option>
                                     </select>
@@ -240,7 +240,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="sreda">Физ. подключение</label>
-                                    <select class="form-control change-physic" id="change_physic_0" name="change_physic_0">
+                                    <select class="form-control change-physic" id="change_physic_1" name="change_physic_1">
                                         <option value="меняется">меняется</option>
                                         <option value="не меняется">не меняется</option>
                                     </select>
@@ -249,7 +249,7 @@
                             <!--<div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="all_res">Задействовать все ресурсы</label>
-                                    <select class="form-control all-res" id="all_res_0" name="all_res_0">
+                                    <select class="form-control all-res" id="all_res_1" name="all_res_1">
                                         <option value=0>Нет</option>
                                         <option value=1>Да</option>
                                     </select>
@@ -261,7 +261,7 @@
                             <div class="col-4 mb-1 fields-for-sreda">
                                 <div class="form-group">
                                     <label for="sreda">Среда передачи</label>
-                                    <select class="form-control sreda-select" id="sreda_0" name="sreda_0">
+                                    <select class="form-control sreda-select" id="sreda_1" name="sreda_1">
                                         <option value="1">UTP</option>
                                         <option value="2">ВОЛС</option>
                                         <option value="3">WiFi</option>
@@ -277,7 +277,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="device_pps">На стороне ППС</label>
-                                    <select class="form-control device-pps" id="device_pps_0" name="device_pps_0">
+                                    <select class="form-control device-pps" id="device_pps_1" name="device_pps_1">
                                         <option value='100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"'>конвертер 1310 нм</option>
                                         <option value='100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"'>конвертер 1550 нм</option>
                                         <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км'>SFP WDM, до 20 км, 1310 нм</option>
@@ -292,7 +292,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="device_client">На стороне клиента</label>
-                                    <select class="form-control device-client" id="device_client_0" name="device_client_0">
+                                    <select class="form-control device-client" id="device_client_1" name="device_client_1">
                                         <option value='100 Мбит/с конвертер с длиной волны 1310 нм, дальность до 20 км, режим работы "auto"'>конвертер 1310 нм</option>
                                         <option value='100 Мбит/с конвертер с длиной волны 1550 нм, дальность до 20 км, режим работы "auto"'>конвертер 1550 нм</option>
                                         <option value='оптический модуль SFP WDM с длиной волны 1310 нм, дальность до 20 км'>SFP WDM, до 20 км, 1310 нм</option>
@@ -308,7 +308,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="speed_port">Скорость порта</label>
-                                    <select class="form-control speed-port" id="speed_port_0" name="speed_port_0">
+                                    <select class="form-control speed-port" id="speed_port_1" name="speed_port_1">
                                         <option value='"auto"'>Auto</option>
                                         <option value='100FD'>100FD</option>
                                     </select>
@@ -321,7 +321,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="access_points">Точки доступа</label>
-                                    <select class="form-control access-points" id="access_points_0" name="access_points_0">
+                                    <select class="form-control access-points" id="access_points_1" name="access_points_1">
                                         <option value='LiteBeam LBE-M5-23'>LiteBeam LBE-M5-23</option>
                                         <!--<option value='AirGrid 27 M5'>AirGrid 27 M5</option>
                                         <option value='Nanostation M5'>Nanostation M5</option>-->
@@ -336,7 +336,7 @@
                             <div class="col-4 mb-1 ">
                                 <div class="form-group">
                                     <label for="kad">Коммутатор</label>
-                                    <input type="text" class="form-control kad" name="kad_0" id="kad_0">
+                                    <input type="text" class="form-control kad" name="kad_1" id="kad_1">
                                 </div>
                             </div>
                         </div>
@@ -344,7 +344,7 @@
                             <div class="col-4 mb-1 ">
                                 <div class="form-group">
                                     <label for="port">Порт</label>
-                                    <input type="text" class="form-control port" name="port_0" id="port_0">
+                                    <input type="text" class="form-control port" name="port_1" id="port_1">
                                 </div>
                             </div>
                         </div>
@@ -362,7 +362,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="ppr">ППР</label>
-                                    <input type="text" class="form-control" id="ppr_0" name="ppr_0">
+                                    <input type="text" class="form-control" id="ppr_1" name="ppr_1">
                                 </div>
                             </div>
                         </div>
@@ -372,31 +372,31 @@
                             <div class="col-1 mb-1">
                                 <div class="form-group">
                                     <label for="logic_csw">Установка КК</label>
-                                    <input type="checkbox" class="form-check logic_csw" id="logic_csw_0" name="logic_csw_0">
+                                    <input type="checkbox" class="form-check logic_csw" id="logic_csw_1" name="logic_csw_1">
                                 </div>
                             </div>
                             <div class="col-1 mb-1">
                                 <div class="form-group">
                                     <label for="logic_replace_csw">Замена КК</label>
-                                    <input type="checkbox" class="form-group logic_replace_csw" id="logic_replace_csw_0" name="logic_replace_csw_0">
+                                    <input type="checkbox" class="form-group logic_replace_csw" id="logic_replace_csw_1" name="logic_replace_csw_1">
                                 </div>
                             </div>
                             <div class="col-1 mb-1">
                                 <div class="form-group">
                                     <label for="logic_change_csw">Перенос КК</label>
-                                    <input type="checkbox" class="form-group logic_change_csw" id="logic_change_csw_0" name="logic_change_csw_0">
+                                    <input type="checkbox" class="form-group logic_change_csw" id="logic_change_csw_1" name="logic_change_csw_1">
                                 </div>
                             </div>
                             <div class="col-1 mb-1">
                                 <div class="form-group">
                                     <label for="logic_change_csw">Запуск КК 1G</label>
-                                    <input type="checkbox" class="form-group" id="logic_run_gi_csw_0" name="logic_run_gi_csw_0">
+                                    <input type="checkbox" class="form-group" id="logic_run_gi_csw_1" name="logic_run_gi_csw_1">
                                 </div>
                             </div>
                             <div class="col-1 mb-1">
                                 <div class="form-group">
                                     <label for="logic_change_gi_csw">Перевод КК 1G</label>
-                                    <input type="checkbox" class="form-group logic_change_gi_csw" id="logic_change_gi_csw_0" name="logic_change_gi_csw_0">
+                                    <input type="checkbox" class="form-group logic_change_gi_csw" id="logic_change_gi_csw_1" name="logic_change_gi_csw_1">
                                 </div>
                             </div>
                         </div>
@@ -405,7 +405,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="uplink_port_csw">Порт КК</label>
-                                    <select class="form-control uplink_port_csw" id="uplink_port_csw_0" name="uplink_port_csw_0">
+                                    <select class="form-control uplink_port_csw" id="uplink_port_csw_1" name="uplink_port_csw_1">
                                         <option value="5">5</option>
                                         <option value="6">6</option>
                                         <option value="указанный ОНИТС СПД">указанный ОНИТС СПД</option>
@@ -417,7 +417,7 @@
                             <div class="col-4 mb-1">
                                 <div class="form-group">
                                     <label for="model_csw">Модель КК</label>
-                                    <select class="form-control model_csw" id="model_csw_0" name="model_csw_0">
+                                    <select class="form-control model_csw" id="model_csw_1" name="model_csw_1">
                                         <option value="D-Link DGS-1100-06/ME">D-Link DGS-1100-06/ME</option>
                                         <option value="24-портовый коммутатор">24-портовый коммутатор</option>
                                     </select>
@@ -429,9 +429,9 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-2">
+                    <div class="col-4">
                         <div class="form-group">
-                            <button id="addBlock" class="btn btn-success btn-block">Добавить блок</button>
+                            <button id="addBlock" class="btn btn-success btn-block">Добавить подключение</button>
                         </div>
                     </div>
                 </div>
@@ -466,7 +466,7 @@
             let on_speed_port = "{{speed_port}}".replace(/&quot;/g, '"');
             let on_port = "{{port}}";
 
-            let blockCount = 0;
+            let blockCount = 1;
             // Функция для добавления нового блока
             $("#addBlock").click(function(e) {
                 e.preventDefault();

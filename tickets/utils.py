@@ -807,6 +807,8 @@ def add_readable_service(readable_services, serv, res):
 
 
 def get_services_in_connection(selected_ono, connect, readable_services, all_resources=False):
+    """Данный метод получает все ресурсы с договора в выбранной точке и отфильтровывает те, которые соответствуют
+     выбранному подключению"""
     new_readable_services = {}
     type_connect = connect['type_connect']
     resources = [ono[-4] for ono in selected_ono if f'{ono[-2]}_{ono[-1]}' == type_connect]
@@ -824,3 +826,12 @@ def get_services_in_connection(selected_ono, connect, readable_services, all_res
                         else:
                             new_readable_services[name] = [description]
         return new_readable_services
+
+
+def add_connects_to_form(form, connects):
+    """Данный метод преобразует созданные подключения в читаемый вид и добавляет их в форму."""
+    connect_names = sorted(list(connects.keys()))
+    for connect_name in connect_names:
+        readable_name = f"Подключение №{connect_name.split('_')[1]}"
+        form.fields['connect'].widget.choices.append((connect_name, readable_name))
+    return form
