@@ -2,6 +2,7 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
+from typing import List, Tuple
 
 from tickets.switch import Connect, SwitchException, InputSwitchException
 from tickets.utils import sql_request_cordis
@@ -39,7 +40,7 @@ class ComponentsConsumer(AsyncWebsocketConsumer):
 		return territory_switches
 
 	@sync_to_async
-	def connect_switches(self, switches: list[tuple[str, str, str, str]]):
+	def connect_switches(self, switches: List[Tuple[str, str, str, str]]):
 		table = []
 		summary = {}
 		for switch in switches:
@@ -78,7 +79,7 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		return switches
 
 	@staticmethod
-	def recognise_switches(input_switches: set, switches: list[tuple[str, str, str, str]]):
+	def recognise_switches(input_switches: set, switches: List[Tuple[str, str, str, str]]):
 		if not input_switches:
 			raise InputSwitchException("Необходимо ввести название АМ/КПА")
 		is_not_ar_ias = [line for line in input_switches if not (line.startswith("AR") or line.startswith("IAS"))]
@@ -92,7 +93,7 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 		return recognised_switches
 
 	@sync_to_async
-	def connect_switches(self, switches: list[tuple], action: str):
+	def connect_switches(self, switches: List[Tuple], action: str):
 		response = {'action': action}
 		for name, ip, vendor, model in switches:
 			try:
