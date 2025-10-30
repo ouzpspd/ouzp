@@ -1313,6 +1313,8 @@ class HotSpot(Connectable):
             self.mount_kad = self.mount.kad
             self.mount_type = self.mount.mount_type
             if isinstance(self.mount, KtcMount) and self.mount.logic_csw:
+                if self.type_hotspot == 'Хот-Спот Премиум +':
+                    self.hotspot_points = 1
                 for i in range(self.hotspot_points):
                     self.get_template_line_from_csw()
         self.fill_vars()
@@ -2874,8 +2876,7 @@ class PassServiceShpd(PassService):
                 'ОНИТС СПД подготовиться к работам:',
                 '- По заявке в ИС Cordis выделить подсеть с маской %нов. маска IP-сети%.',
                 '-- по согласованию с клиентом сменить реквизиты для услуги "ШПД в Интернет" на новую подсеть с маской %нов. маска IP-сети%.',
-                '- После смены реквизитов:',
-                '- разобрать ресурс %ресурс на договоре% на договоре.',
+                '- После смены реквизитов разобрать ресурс %ресурс на договоре% на договоре.'
             ]
             self.text_block.hidden_vars.update({i: i for i in strs})
             self.text_block.static_vars[
@@ -3088,7 +3089,7 @@ class GigabitPassJob(PassageJob):
         if self.mount.csw and self.mount.csw.change_gi_csw:
             shpd = [s for s in self.services if isinstance(s, PassServiceShpd)]
             if shpd:
-                self.template_name = 'Расширение сервиса "ШПД в Интернет".'
+                self.template_name = 'Расширение сервиса "ШПД в интернет".'
             messge_str = '- Сообщить в ОЛИ СПД об освободившемся порте на коммутаторе %название коммутатора%.'
             if self.text_block.hidden_vars.get(messge_str):
                 del self.text_block.hidden_vars[messge_str]
@@ -3391,8 +3392,7 @@ class Csw:
         if dhcp:
             strs = [
                 '- Выделить новую адресацию с маской %нов. маска IP-сети% вместо %ресурс на договоре%.',
-                '- После смены реквизитов:',
-                '- разобрать ресурс %ресурс на договоре% на договоре.'
+                '- После смены реквизитов разобрать ресурс %ресурс на договоре% на договоре.'
             ]
             self.text_block.hidden_vars.update({i: i for i in strs})
             self.text_block.static_vars['нов. маска IP-сети'] = '/32'
