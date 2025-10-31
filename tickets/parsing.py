@@ -506,9 +506,8 @@ def for_tr_view(login, password, dID, tID, trID):
         spp_params['id_otu_project'] = id_otu_project
         search = soup.find_all('tr')
         for index, i in enumerate(search):
-            if 'Перечень' in i.find_all('td')[0].text:
+            if 'Переченьтребуемых услуг' in i.find_all('td')[0].text:
                 total_services = []
-                leng_services = i.find_all('td')[1].find_all('tr')
                 for service_index in range(1, len(i.find_all('td')[1].find_all('tr'))-1):
                     services = i.find_all('td')[1].find_all('tr')[service_index].find_all('td')
                     var_list = []

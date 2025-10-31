@@ -3081,7 +3081,6 @@ class GigabitPassJob(PassageJob):
         super().fill_vars()
         if self.mount.change_log == 'меняется' and not self.mount.csw:
             strs = [
-                '-- сопроводить работы %отдел ОИПМ / ОИПД% по перенесу ^сервиса^ %указать сервис% %тип переноса%.',
                 '-- перенести ^сервис^ %указать сервис% %тип переноса%.'
             ]
             self.text_block.hidden_vars.update({i: i for i in strs})
