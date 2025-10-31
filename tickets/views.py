@@ -3042,12 +3042,11 @@ class KtcEnvFormView(EnvFormView):
         pps = session_tr_id.get('pps')
         if not list_switches:
             username, password = self.get_credential()
-
             list_switches = parsingByNodename(pps, username, password)
             if not isinstance(list_switches, list):
                 return render(self.request, 'base.html', {'my_message': 'Нет доступа к странице Cordis с коммутаторами'})
-
-            list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
+            if list_switches:
+                list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
             session_tr_id.update({'list_switches': list_switches})
 
 
@@ -3325,16 +3324,17 @@ class PpsFormView(FormView, CredentialMixin):
         context['ticket_spp_id'] = session_tr_id.get('ticket_spp_id')
         context['dID'] = session_tr_id.get('dID')
         context['trID'] = self.kwargs['trID']
-        if session_tr_id.get('list_switches'):
-            list_switches = session_tr_id.get('list_switches')
-        else:
+        list_switches = session_tr_id.get('list_switches')
+        if not list_switches:
             list_switches = parsingByNodename(ticket_tr.pps.strip(), username, password)
-            list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
-            if isinstance(list_switches[0], str):
-                list_switches = None
+            if not isinstance(list_switches, list):
+                return render(self.request, 'base.html', {'my_message': 'Нет доступа к странице Cordis с коммутаторами'})
+            if list_switches:
+                list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
             session_tr_id.update({'list_switches': list_switches, 'pps': ticket_tr.pps.strip()})
             self.request.session[str(self.kwargs['trID'])] = session_tr_id
         context['list_switches'] = list_switches
+        context['pps'] = ticket_tr.pps.strip()
         return context
 
     def get_success_url(self, **kwargs):

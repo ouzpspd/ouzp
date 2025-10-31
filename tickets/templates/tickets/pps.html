@@ -21,12 +21,12 @@
       <tbody>
         <tr>
             <th class="table-secondary text-right" style="width: 25%">Узел связи</th>
-            <td class="table-light" style="width: 75%">{{ticket_tr.pps}}</td>
+            <td class="table-light" style="width: 75%">{{pps}}</td>
         </tr>
       </tbody>
     </table>
 
-
+    {% if list_switches %}
     <table class="table table-striped" id="switch">
       <thead>
         <tr>
@@ -119,6 +119,15 @@
       {% endfor %}
       </tbody>
     </table>
+    {% else %}
+    <div class="row">
+        <div class="col">
+            <div class="breadcrumb video alert-danger">
+                <p class="breadcrumb-item"><b>Внимание!</b><br>На узле {{pps}} нет коммутаторов.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 
 
