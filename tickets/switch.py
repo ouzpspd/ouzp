@@ -8,6 +8,9 @@ from django.conf import settings
 class SwitchException(Exception):
 	pass
 
+class WarningSwitchException(SwitchException):
+	pass
+
 class InputSwitchException(Exception):
 	pass
 
@@ -202,7 +205,7 @@ class Snr:
 		interfaces = self.get_interfaces_1g_rezerv_planning()
 		prefix_port, range_ports = self._get_range_ports(interfaces)
 		if not range_ports:
-			raise SwitchException("Нет портов Rezerv_1G_planning.")
+			raise WarningSwitchException("Нет портов Rezerv_1G_planning.")
 		if any(i in range_ports for i in [";", "-"]):
 			prompt_port = f"\(config-if-port-range\)#"
 		else:
@@ -220,7 +223,7 @@ class Snr:
 		interfaces = self.get_interfaces_1g_no_description()
 		prefix_port, range_ports = self._get_range_ports(interfaces)
 		if not range_ports:
-			raise SwitchException("Нет портов 1G без description.")
+			raise WarningSwitchException("Нет портов 1G без description.")
 		if any(i in range_ports for i in [";", "-"]):
 			prompt_port = f"\(config-if-port-range\)#"
 		else:
@@ -428,7 +431,7 @@ class Cisco:
 		interfaces = self.get_interfaces_1g_no_description()
 		range_ports = self._get_range_ports(interfaces)
 		if not range_ports:
-			raise SwitchException("Нет портов 1G без description.")
+			raise WarningSwitchException("Нет портов 1G без description.")
 		commands = []
 		commands.append(("conf t", "\(config\)#"))
 		for block_range_ports in range_ports:
@@ -442,7 +445,7 @@ class Cisco:
 		interfaces = self.get_interfaces_1g_rezerv_planning()
 		range_ports = self._get_range_ports(interfaces)
 		if not range_ports:
-			raise SwitchException("Нет портов Rezerv_1G_planning.")
+			raise WarningSwitchException("Нет портов Rezerv_1G_planning.")
 		commands = []
 		commands.append(("conf t", "\(config\)#"))
 		for block_range_ports in range_ports:

@@ -1,10 +1,11 @@
+import asyncio
 import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from typing import List, Tuple
 
-from tickets.switch import Connect, SwitchException, InputSwitchException
+from tickets.switch import Connect, SwitchException, InputSwitchException, WarningSwitchException
 from tickets.utils import sql_request_cordis
 
 logger = logging.getLogger(__name__)
@@ -92,30 +93,6 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 			raise InputSwitchException(f"Не удалось распознать {', '.join(unrecognized_names)}")
 		return recognised_switches
 
-	@sync_to_async
-	def connect_switches(self, switches: List[Tuple], action: str):
-		response = {'action': action}
-		for name, ip, vendor, model in switches:
-			try:
-				with Connect(name, ip, vendor, model) as session:
-					if action == 'add':
-						sw, error_ports, changed_ports = session.add_rezerv_1g_planning()
-						response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
-					elif action == 'remove':
-						sw, error_ports, changed_ports, = session.remove_rezerv_1g_planning()
-						response.update({sw: {"error_ports": error_ports, "changed_ports": changed_ports}})
-					elif action == 'show':
-						sw, params = session.get_interfaces_summary()
-						response.update({sw: params})
-			except SwitchException as er:
-				logger.error(f"{name}, {ip}. {er}")
-				response.update({name: {"error_switch": f"{er}"}})
-			except Exception as er:
-				logger.error(f"{name}, {ip}. {er}")
-				response.update({name: {"error_switch": f"{er}"}})
-				raise er
-		return response
-
 	async def receive(self, text_data):
 		text_data_json = json.loads(text_data)
 		action = text_data_json['action']
@@ -126,7 +103,91 @@ class ReservePortsConsumer(AsyncWebsocketConsumer):
 			switches = self.recognise_switches(input_switches, switches_in_db)
 		except InputSwitchException as er:
 			logger.error(er)
-			response = {"error": f"Выполнение прервано. {er}.", 'action': action}
+			await self.send(json.dumps({
+				'type': 'error',
+				'message': f"Выполнение прервано. {er}."
+			}))
 		else:
-			response = await self.connect_switches(switches, action)
-		await self.send(text_data=json.dumps(response))
+			asyncio.create_task(self.process_and_send_messages(switches, action))
+
+	@sync_to_async
+	def connect_switches(self, switch: Tuple[str, str, str, str], action: str, response):
+		name, ip, vendor, model = switch
+		message = f'{name}:'
+		status = 'success'
+		try:
+			with Connect(name, ip, vendor, model) as session:
+				if action == 'add':
+					sw, error_ports, changed_ports = session.add_rezerv_1g_planning()
+					if changed_ports:
+						message += f' Успешно зарезервированы порты {changed_ports}.'
+					if error_ports:
+						message += f' Внимание! Обратить внимание незапланированно изменились порты {error_ports}.'
+						status = 'warning'
+					response.update({sw.strip(): {"message": message, "status": status}})
+				elif action == 'remove':
+					sw, error_ports, changed_ports, = session.remove_rezerv_1g_planning()
+					if changed_ports:
+						message += f' Успешно снят резерв портов {changed_ports}.'
+					if error_ports:
+						message += f' Внимание! Обратить внимание незапланированно изменились порты {error_ports}.'
+						status = 'warning'
+					response.update({sw.strip(): {"message": message, "status": status}})
+				elif action == 'show':
+					sw, params = session.get_interfaces_summary()
+					message += " Данные получены."
+					response.update({sw.strip(): {"params": params, "message":message, "status": status}})
+		except WarningSwitchException as er:
+			status = 'warning'
+			message += f" {er}"
+			response.update({name: {"message": message, "status": status}})
+		except SwitchException as er:
+			logger.error(f"{name}, {ip}. {er}")
+			status = 'error'
+			message += f" {er}"
+			response.update({name: {"message": message, "status": status}})
+		except Exception as er:
+			logger.error(f"{name}, {ip}. {er}")
+			status = 'error'
+			message += f" {er}"
+			response.update({name: {"message": message, "status": status}})
+			raise er
+		finally:
+			return name
+
+	async def process_and_send_messages(self, switches: List[Tuple[str, str, str, str]], action: str):
+		response = {}
+		try:
+			await self.send(json.dumps({
+				'type': 'status',
+				'message': 'Начинаем обработку...',
+				'progress': 0
+			}))
+
+			for i, sw in enumerate(switches):
+				sw_name = await self.connect_switches(sw, action, response)
+				progress = int((i + 1) / len(switches) * 100)
+				res = {
+					'action': action,
+					'type': response[sw_name]['status'],
+					'message': response[sw_name]['message'],
+					'progress': progress,
+				}
+				await self.send(json.dumps(res))
+
+			final = {
+				'action': action,
+				'type': 'complete',
+				'message': 'Обработка завершена.',
+				'progress': 100,
+			}
+			if action == 'show':
+				data = {k:v.get('params') for k,v in response.items() if v.get('params')}
+				final.update({'data': data})
+			await self.send(json.dumps(final))
+
+		except Exception as e:
+			await self.send(json.dumps({
+				'type': 'error',
+				'message': f'Произошла ошибка: {str(e)}'
+			}))

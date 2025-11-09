@@ -375,9 +375,6 @@ $(function () {
                   }
 
                   else {
-                      console.log(response.result)
-                      console.log(response.result[1])
-
                       for (let counter = 0; counter < response.result.length; counter++) {
                       $("#forms").append(`
 
@@ -393,7 +390,7 @@ $(function () {
                             <div class="col-5">
                                 <div class="form-group get_node">
 
-                                    <input type="text" name="pps_${counter}" class="form-control" value="${response.result[counter]}" required="True">
+                                    <input type="text" name="pps_${counter}" class="form-control" value="${response.result[counter].replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" required="True">
                                 </div>
                             </div>
                             <div class="col-2">
