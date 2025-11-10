@@ -744,8 +744,8 @@ def search_last_created_ppr(login, password, authorname, authorid):
     if req.status_code == 200:
         soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
         links = soup.find_all('a', {"target": "MainFrame"})
-        pprs = [link.text for link in links if link.text != ' ']
-        last_ppr = pprs[0]
+        pprs = [int(link.text) for link in links if link.text.isdigit() and 'mvc/demand' in link['href']]
+        last_ppr = sorted(pprs)[-1]
     return last_ppr
 
 
