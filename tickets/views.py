@@ -3160,6 +3160,11 @@ class RtkEnvFormView(EnvFormView):
                     services = get_services_in_connection(selected_ono, session_tr_id['connects'][c], readable_services)
                     session_tr_id['connects'][c].update({'services': services})
 
+                if session_tr_id['connects'][c]['sreda'] == 'FVNO FTTH':
+                    username, password = super().get_credential(self)
+                    msan_exist = ckb_parse_msan_exist(username, password, session_tr_id['connects'][c]['kad'])
+                    session_tr_id['connects'][c].update({'msan_exist': msan_exist})
+
             self.request.session[str(self.kwargs['trID'])] = session_tr_id
         return super().form_valid(form)
 

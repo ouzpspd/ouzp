@@ -2607,9 +2607,9 @@ class RtkMount:
         self.value_vars = value_vars
         self.templates = value_vars.get('templates')
         self.params = value_vars.get('connects', {}).get(connect)
-        self.msan = value_vars.get('msan_exist')
         if not self.params:
             raise ExistError('No data RTK')
+        self.msan = self.params.get('msan_exist')
         self.mount_type = self.params.get('sreda') if self.params else None
         self.change_log = self.params.get('change_log')
         self.change_physic = self.params.get('change_physic')
