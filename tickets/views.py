@@ -148,9 +148,6 @@ def private_page(request):
 def group_check_ouzp(user):
     return user.groups.filter(name='Сотрудники ОУЗП').exists()
 
-def group_check_mko(user):
-    return user.groups.filter(name='Менеджеры').exists()
-
 
 def permission_check(perm_groups=[]):
     """Проверка пользователя в составе перечисленных групп"""
@@ -355,17 +352,14 @@ def project_tr(request, dID, tID, trID):
                           'dID': dID,})
 
     spd = session_tr_id.get('spd')
-    if user.groups.filter(name='Менеджеры').exists():
-        tag_service.append({'ktc_env': None})
+    envs= [{'ktc_env': None}, {'rtk_env': None}, {'vlan_env': None}]
+    [tag_service.remove(e) for e in envs if e in tag_service]
+    if spd == 'РТК':
+        tag_service.insert(1, {'rtk_env': None})
+    elif spd == 'Комтехцентр':
+        tag_service.insert(1, {'ktc_env': None})
     else:
-        envs= [{'ktc_env': None}, {'rtk_env': None}, {'vlan_env': None}]
-        [tag_service.remove(e) for e in envs if e in tag_service]
-        if spd == 'РТК':
-            tag_service.insert(1, {'rtk_env': None})
-        elif spd == 'Комтехцентр':
-            tag_service.insert(1, {'ktc_env': None})
-        else:
-            tag_service.insert(1, {'vlan_env': None})
+        tag_service.insert(1, {'vlan_env': None})
     tag_service.append({'data': None})
     response = get_response_with_prev_get_params(request, tag_service, session_tr_id, trID)
     return response
@@ -428,10 +422,7 @@ def data(request, trID):
 
     userlastname = None
     if request.user.is_authenticated:
-        if user.groups.filter(name='Менеджеры').exists():
-            userlastname = 'МКО ' + request.user.last_name
-        else:
-            userlastname = 'ОУЗП СПД ' + request.user.last_name
+        userlastname = 'ОУЗП СПД ' + request.user.last_name
     now = datetime.datetime.now()
     now = now.strftime("%d.%m.%Y")
     need = get_need(value_vars)
@@ -968,8 +959,6 @@ def phone(request, trID):
         request.session[trID] = session_tr_id
 
         form = PhoneForm(initial={'type_phone': 's'})
-        if user.groups.filter(name='Менеджеры').exists():
-            form.fields['type_phone'].widget.choices = [('s', 'SIP, по логину/паролю'),]
         connects = session_tr_id.get('connects')
         if connects:
             form = add_connects_to_form(form, connects)
@@ -1023,13 +1012,6 @@ def local(request, trID):
         session_tr_id.update({'current_service': service, 'current_index_local': index + 1})
         request.session[trID] = session_tr_id
         localform = LocalForm()
-        if user.groups.filter(name='Менеджеры').exists():
-            localform.fields['local_type'].widget.choices = [
-                ('sks_standart', 'СКС Стандарт (без использования кабель-канала)'),
-                ('sks_business', 'СКС Бизнес (с использованием кабель-канала)'),
-                ('lvs_standart', 'ЛВС Стандарт (без использования кабель-канала)'),
-                ('lvs_business', 'ЛВС Бизнес (с использованием кабель-канала)'),
-            ]
         context = {
             'service_lvs': service,
             'localform': localform,
@@ -1087,13 +1069,6 @@ def itv(request, trID):
         types_jobs = session_tr_id.get('types_jobs')
         job = types_jobs.get(service) if types_jobs.get(service) else None
         itvform = ItvForm()
-        if user.groups.filter(name='Менеджеры').exists():
-            con_point = session_tr_id.get('con_point')
-            if con_point == 'Нов. точка':
-                itvform.fields['type_itv'].widget.choices = [('novl', 'В vlan организуемой услуги ШПД'),]
-            elif con_point == 'Сущ. точка':
-                itvform.fields['type_itv'].widget.choices = [('novlexist', 'В vlan действующей услуги ШПД'),]
-
         connects = session_tr_id.get('connects')
         if connects:
             itvform = add_connects_to_form(itvform, connects)
@@ -1393,9 +1368,6 @@ def add_spp(request, dID):
     spp_params = for_spp_view(username, password, dID)
     if spp_params.get('Access denied') == 'Access denied':
         return render(request, 'base.html', {'my_message': 'Нет доступа в СПП'})
-    elif not spp_params.get('ТР по упрощенной схеме') and user.groups.filter(name='Менеджеры').exists():
-        messages.warning(request, 'Нельзя взять в работу неупрощенное ТР')
-        return redirect('mko')
     try:
         current_spp = SPP.objects.filter(dID=dID).latest('created')
     except ObjectDoesNotExist:
@@ -1429,8 +1401,6 @@ def add_spp(request, dID):
     else:
         if current_spp.process == True:
             messages.warning(request, '{} уже взял в работу'.format(current_spp.user.last_name))
-            if user.groups.filter(name='Менеджеры').exists():
-                return redirect('mko')
             return redirect('ortr')
         if spp_params['ТР по упрощенной схеме'] is True:
             accept_to_ortr(username, password, dID, spp_params['uID'], spp_params['trDifPeriod'],
@@ -1474,8 +1444,6 @@ def remove_spp_process(request, ticket_spp_id):
         if request.session.get(ticket_tr.ticket_tr):
             del request.session[ticket_tr.ticket_tr]
     messages.success(request, 'Работа по заявке {} завершена'.format(current_ticket_spp.ticket_k))
-    if user.groups.filter(name='Менеджеры').exists():
-        return redirect('mko')
     return redirect('ortr')
 
 
@@ -2209,11 +2177,7 @@ def project_tr_exist_cl(request, trID):
                 tag_service.insert(1, tag)
                 tag_service.insert(1, {'change_serv': None})
 
-        if user.groups.filter(name='Менеджеры').exists():
-            tag_service.append({'ktc_env': None})
-        elif pass_job_services:
-            pass
-        else:
+        if not pass_job_services:
             [tag_service.remove(_) for _ in [{'rtk_env': None}, {'ktc_env': None}, {'vlan_env': None}] if _ in tag_service]
             if spd == 'РТК' and not {'pass_serv': None} in tag_service:
                 tag_service.insert(1, {'rtk_env': None})
@@ -2863,8 +2827,6 @@ def add_comment_to_return_ticket(request, dID):
                 return redirect('ortr')
     else:
         addcommentform = AddCommentForm()
-        if user.groups.filter(name='Менеджеры').exists():
-            addcommentform.fields['return_to'].widget.choices = [('Вернуть менеджеру', 'Вернуть менеджеру')]
         context = {'addcommentform': addcommentform,
                    'ticket_spp_id': ticket_spp_id,
                    'dID': dID,
@@ -2904,8 +2866,6 @@ def send_ticket_to_otpm_control(request, dID):
         if request.session.get(ticket_tr.ticket_tr):
             del request.session[ticket_tr.ticket_tr]
     messages.success(request, f'Заявка {ticket_k} выполнена и отправлена.')
-    if user.groups.filter(name='Менеджеры').exists():
-        return redirect('mko')
     return redirect('ortr')
 
 
@@ -3048,32 +3008,6 @@ class KtcEnvFormView(EnvFormView):
             if list_switches:
                 list_switches, switches_name = add_portconfig_to_list_swiches(list_switches, username, password)
             session_tr_id.update({'list_switches': list_switches})
-
-
-        user = User.objects.get(username=self.request.user.username)
-        if user.groups.filter(name='Менеджеры').exists():
-            manager_allowed = (
-            'SNR S2990G-24T', 'SNR S2990G-48T', 'SNR S2982G-24TE', 'SNR S2985G-24TC', 'SNR S2985G-48T',
-            'D-Link DGS-1210-28/ME', 'SNR S2950-24G', 'Orion Alpha A26', 'SNR S2960-48G',
-            'SNR S2962-24T', 'SNR S2965-24T', 'SNR S2965-48T', 'D-Link DES-1210-52/ME',
-            'D-Link DES-1228/ME/B1', 'Cisco Cisco WS-C2950')
-            list_switches = [switch for switch in list_switches if
-                             any(switch[1].startswith(sw) for sw in manager_allowed)]
-            if not list_switches:
-                messages.warning(self.request, f'Нет медных коммутаторов на узле {pps}. Требуется полноценное ТР.')
-                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
-            ports_all_switches = [switch[10] for switch in list_switches]
-            counter_free_ports = 0
-            for ports in ports_all_switches:
-                for port, value in ports.items():
-                    port_free = all([value[0] == '-', value[1] == '-', value[2] == '-', value[3] == 'Заглушка 4094'])
-                    if port_free and len(ports) > 30 and not any(_ in port for _ in ['49', '50', '51', '52', 'Gi']):
-                        counter_free_ports += 1
-                    elif port_free and len(ports) < 30 and not any(_ in port for _ in ['25', '26', '27', '28', 'Gi']):
-                        counter_free_ports += 1
-            if counter_free_ports < 4:
-                messages.warning(self.request, 'На узле связи недостаточно свободных портов. Требуется решению ОУЗП СПД')
-                return redirect('spp_view_save', session_tr_id.get('dID'), session_tr_id.get('ticket_spp_id'))
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -3353,33 +3287,6 @@ class PpsFormView(FormView, CredentialMixin):
         return reverse('data', kwargs={'trID': self.kwargs['trID']})
 
 
-class MkoView(UserPassesTestMixin, LoginRequiredMixin, CredentialMixin, View):
-    login_url = '/login/'
-    def test_func(self):
-        return self.request.user.groups.filter(name='Менеджеры').exists()
-
-    def get(self, request):
-        username, password = super().get_credential(self)
-        user = User.objects.get(username=request.user.username)
-        search = in_work_ortr(username, password)
-        spp_proc = SPP.objects.filter(process=True)
-        list_spp_proc = list(spp_proc.values_list('ticket_k', flat=True))
-        if not isinstance(search[0], str):
-            unhandled_managers_ticket = [i for i in search if i[0] not in list_spp_proc and i[5]==user.last_name]
-            handled_managers_ticket = [i for i in search if i[0] in list_spp_proc and i[5] == user.last_name]
-            handled_by_all = []
-            if handled_managers_ticket:
-                for i in handled_managers_ticket:
-                    entity = SPP.objects.get(process=True, ticket_k=i[0])
-                    handled_by_all.append(entity)
-            handled_by_manager = SPP.objects.filter(process=True, user=user)
-            spp_process = set(handled_by_all + list(handled_by_manager))
-        else:
-            unhandled_managers_ticket = None
-            spp_process = SPP.objects.filter(process=True, user=user)
-        return render(request, 'tickets/mko.html', {'search': unhandled_managers_ticket, 'spp_process': spp_process})
-
-
 class CreateSpecificationView(CredentialMixin, View):
     """Создание и заполнение спецификации"""
     def get(self, request, trID):
@@ -3457,10 +3364,6 @@ def sppdata(request, trID):
     else:
         user = User.objects.get(username=request.user.username)
         form = SppDataForm()
-        if user.groups.filter(name='Менеджеры').exists():
-            form.fields['spd'].widget.choices = [('Комтехцентр', 'Комтехцентр'),]
-            form.fields['con_point'].widget.choices = [('Нов. точка', 'Новая точка'),]
-            form.fields['type_tr'].widget.choices = [('Коммерческое', 'Коммерческое'), ]
         ticket_tr = TR.objects.filter(ticket_tr=trID).last()
         request.session[trID] = {'ticket_spp_id': ticket_tr.ticket_k.id, 'ticket_tr_id': ticket_tr.id,
                                  'technical_solution': trID, 'dID': ticket_tr.ticket_k.dID}

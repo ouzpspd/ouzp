@@ -760,9 +760,7 @@ def formatted(string):
 
 
 def get_user_credential_cordis(user):
-    if user.groups.filter(name='Менеджеры').exists():
-        return (settings.CORDIS_USER_MKO, settings.CORDIS_PASSWORD_MKO)
-    elif user.groups.filter(name='Сотрудники ОУЗП').exists():
+    if user.groups.filter(name='Сотрудники ОУЗП').exists():
         return (settings.CORDIS_USER_OUZP_SPD, settings.CORDIS_PASSWORD_OUZP_SPD)
     elif user.groups.filter(name='Сотрудники ОАТТР').exists():
         return (settings.CORDIS_USER_OATTR, settings.CORDIS_PASSWORD_OATTR)

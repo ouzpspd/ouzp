@@ -3,12 +3,7 @@
 
 {% block nav_active %}
 {% load custom_filters %}
-{% if request.user|has_group:"Менеджеры" %}
-
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'mko' %}">Пул заявок</a>
-</li>
-{% elif request.user|has_group:"Сотрудники ОУЗП" %}
+{% if request.user|has_group:"Сотрудники ОУЗП" %}
 <li class="nav-item">
   <a class="nav-link" href="{% url 'ortr' %}">Пул заявок</a>
 </li>

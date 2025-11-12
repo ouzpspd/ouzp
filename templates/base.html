@@ -54,13 +54,7 @@
 
           <ul class="navbar-nav mr-auto mb-2 mb-lg-0">
             {% block nav_active %}
-            {% if request.user|has_group:"Менеджеры" %}
-
-
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'mko' %}">Пул заявок</a>
-            </li>
-            {% elif request.user|has_group:"Сотрудники ОУПМ" or request.user|has_group:"Сотрудники ОНИТС"%}
+            {% if request.user|has_group:"Сотрудники ОУПМ" or request.user|has_group:"Сотрудники ОНИТС"%}
 
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

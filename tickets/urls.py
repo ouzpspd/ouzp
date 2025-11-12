@@ -67,7 +67,6 @@ urlpatterns = [
     path('export_xls', export_xls, name='export_xls'),
     path('report_time_tracking/', report_time_tracking, name='report_time_tracking'),
     path('send_to_otpm_control/<int:dID>/', send_ticket_to_otpm_control, name='send_ticket_to_otpm_control'),
-    path('mko/', MkoView.as_view(), name='mko'),
     path('specification/<int:trID>/', CreateSpecificationView.as_view(), name='specification'),
     path('pps/<int:trID>/', PpsFormView.as_view(), name='pps'),
     path('spec_objects/<int:trID>/', spec_objects, name='spec_objects'),

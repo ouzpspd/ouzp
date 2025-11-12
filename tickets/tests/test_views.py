@@ -509,44 +509,5 @@ class OuzpViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'tickets/pps.html')
 
-class MkoViewsTestCase(TestCase):
-    DID = '141891'
-    TID = '211509'
-    TRID = '72459'
-    PPS = 'БЗК Березовский тракт 5 П1 Э3 (Лестничная клетка), АВ'
-
-    def setUp(self):
-        hold_position = HoldPosition.objects.create(name='Менеджер')
-        User = get_user_model()
-        user = User.objects.create_user('manager', 'manager@gmail.com', 'manager',
-                                        last_name='Бискинский Е.В.')
-        UserHoldPosition.objects.create(user=user, hold_position=hold_position)
-        group = Group.objects.create(name='Менеджеры')
-        group.user_set.add(user)
-
-        self.spp = SPP.objects.create(user=user, dID='123456', services={}, des_tr={}, created=timezone.now(),
-                                      complited=timezone.now(), version=1,
-                                      ticket_k='2023_00000', process=True,
-                                      )
-        self.tr = TR.objects.create(ticket_k=self.spp, ticket_tr=self.TRID, services={}, vID=1,
-                                    pps=self.PPS
-                                    )
-        self.client.login(username='manager', password='manager')
-        self.sess = {'ticket_spp_id': self.tr.ticket_k.id, 'ticket_tr_id': self.tr.id, 'dID': '123456',
-                     'technical_solution': self.TRID}
-
-    def test_call_mko(self):
-        response = self.client.get(reverse('mko'))
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertTemplateUsed(response, 'tickets/mko.html')
-
-    def test_call_view_add_spp_not_simplified(self):
-        response = self.client.get(f'/add_spp/{self.DID}/')
-        self.assertRedirects(response, reverse('mko'))
-
-    def test_call_view_add_spp_simplified(self):
-        response = self.client.get(f'/add_spp/174280/')
-        created_spp = SPP.objects.last()
-        self.assertRedirects(response, reverse('spp_view_save', kwargs={'dID': '174280', 'ticket_spp_id': created_spp.id}))
 
 
