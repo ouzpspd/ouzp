@@ -7,9 +7,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb align-items-center justify-content-center">
-                  {% if department == 'otpm'%}
-                  <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Выбор Узла Связи ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.address_cp}}</h6></li>
-                  {% else %}
+                  {% if department == 'ortr'%}
                   <li class="breadcrumb-item"><h6 class="text-center" style="color:black">Выбор Узла Связи ТР №{{ticket_tr.ticket_tr}} {{ticket_tr.connection_point}}</h6></li>
                   {% endif %}
               </ol>

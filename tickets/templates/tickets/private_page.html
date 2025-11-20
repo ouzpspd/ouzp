@@ -40,16 +40,12 @@
   </div>
 </li>
 
-{% if user|has_group:"Руководство ОУЗП" %}
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
-</li>
-{% endif %}
+    {% if user|has_group:"Руководство ОУЗП" %}
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'report_time_tracking' %}">Отчет</a>
+    </li>
+    {% endif %}
 
-{% elif user|has_group:"Сотрудники ОАТТР" %}
-<li class="nav-item">
-  <a class="nav-link" href="{% url 'otpm' %}">Пул заявок</a>
-</li>
 {% endif %}
 {% endblock %}
 
@@ -130,11 +126,7 @@
             <th scope="row">{{ page_obj.number | multiply:50 | add:forloop.counter}} </th>
             {% endif %}
             <td class="custom">{{ticket.created|date:"d.m.Y"}}</td>
-            {% if user|has_group:"Сотрудники ОАТТР" %}
-            <td><a href="{% url 'spp_view_oattr' ticket.dID %}">{{ticket.ticket_k}}</a></td>
-            {% else %}
             <td><a href="{% url 'spp_view_save' ticket.dID ticket.id %}">{{ticket.ticket_k}}</a></td>
-            {% endif %}
             <td>{{ticket.client}}</td>
             <td> {%comment%}{{ticket.des_tr}}{%endcomment%}
             {% for it in ticket.des_tr %}
@@ -149,14 +141,8 @@
 
             </td>
             <td>{{ticket.created|time:"H:i"}}</td>
-            {% if user|has_group:"Сотрудники ОАТТР" %}
-            <td>{{ticket.evaluate_completed|time:"H:i"}}</td>
-            <td>{{ticket.created|timesince:ticket.evaluate_completed}}</td>
-            {% comment %}<td>{{ticket.duration_process|duration}}</td>{% endcomment %}
-            {% else %}
             <td>{{ticket.complited|time:"H:i"}}</td>
             <td>{{ticket.created|timesince:ticket.complited}}</td>
-            {% endif %}
         </tr>
         {% endfor %}
       </tbody>

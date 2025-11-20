@@ -1515,3 +1515,99 @@ def parsing_switches_by_model(name, login, password):
         trs = table.find_all('tr')
         switches = {tr.find_all('td')[0].text.strip(): tr.find_all('td')[3].text.strip() for tr in trs}
         return switches
+
+
+def get_or_create_otu(login, password, trID, only_get=False):
+    url = 'https://sss.corp.itmh.ru/dem_tr/dem_ajax.php'
+    data = {'action': 'GetOtu', 'trID': f'{trID}'}
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    if not req.json().get('id') and not only_get:
+        data = {'action': 'CreateOtu', 'trID': f'{trID}'}
+        requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+        data = {'action': 'GetOtu', 'trID': f'{trID}'}
+        req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    id_otu = req.json().get('id')
+    return id_otu
+
+
+def construct_table_nodes(search):
+    entries = []
+    for tr in search:
+        c3 = tr.find_all('td', class_="C3")
+        output_city = c3[0].text
+        output_street = lost_whitespace(c3[1].text)
+        c11 = tr.find('td', class_="C11")
+        output_house = '\n'.join(c11.find_all(text=True))  # recursive=False
+        c9 = tr.find('td', class_="C9")
+        output_spd = ''.join(c9.find_all(text=True))
+        aid = tr['aid']
+        entries.append([output_city, output_street, output_house, output_spd, aid])
+    return entries
+
+
+def get_spp_addresses(login, password, city, street, house):
+    """Данный метод парсит страницу с адресами в СПП"""
+    lines = []
+    data = {
+        'distr_adm': 'any',
+        'distr_mark': 'any',
+        'distr_pto': 'any',
+        'hideWithOutSPD': 0,
+        'aCity': city,
+        'aStreet': street,
+        'aHouse': house,
+        'aTP': 'any',
+        'vStatus': 'any',
+        'showAll': 0,
+        'activeSeach': 1,
+        'mode': 'selectAV',
+        'parent': 0,
+    }
+    url = 'https://sss.corp.itmh.ru/building/address.php'
+    req = requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('tr')
+        node_entries = construct_table_nodes(search)
+        return node_entries
+
+
+def get_nodes_by_address(login, password, aid):
+    url = f'https://sss.corp.itmh.ru/building/address_spd.php?aID={aid}&mode=selectAV&parent=0'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        table_nodes = soup.find_all('table', class_="nice")[1]
+        trs = table_nodes.find_all('tr')[1:]
+        entries = []
+        for tr in trs:
+            node_vid = tr['vid']
+            tds = tr.find_all('td')
+            node_type = tds[1].text
+            node_name = tds[3].text
+            node_parent_id = tds[4].text
+            node_id = tds[5].text
+            node_status = tds[6].text
+            entries.append((node_vid, node_type, node_name, node_parent_id, node_id, node_status))
+        return entries
+
+
+def get_initial_node(login, password, ticket_tr):
+    url = f'https://sss.corp.itmh.ru/building/address.php?mode=selectAV&aID={ticket_tr.aid}&parent=0'
+    req = requests.get(url, verify=False, auth=HTTPBasicAuth(login, password))
+    if req.status_code == 200:
+        soup = BeautifulSoup(req.content.decode('utf-8'), "html.parser")
+        search = soup.find_all('tr')
+        node_entries = construct_table_nodes(search)
+        return node_entries
+
+
+def send_spp(login, password, ticket_tr, department):
+    dID = ticket_tr.ticket_k.dID
+    tID = ticket_tr.ticket_cp
+    trID = ticket_tr.ticket_tr
+    url = f'https://sss.corp.itmh.ru/dem_tr/dem_point.php?dID={dID}&tID={tID}&trID={trID}'
+    vID = ticket_tr.vID
+    if department == 'ortr':
+        data = {'action': 'saveVariant', 'vID': vID}
+        requests.post(url, verify=False, auth=HTTPBasicAuth(login, password), data=data)

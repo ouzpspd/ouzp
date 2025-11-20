@@ -1,13 +1,12 @@
-import requests
-from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
-from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import View
-from django.views.generic import DetailView, FormView, ListView
-from urllib3.exceptions import NewConnectionError
+from django.views.generic import FormView
 
-from oattr.forms import UserRegistrationForm, UserLoginForm, AuthForServiceForm
-from oattr.parsing import get_or_create_otu, Tentura, Specification, BundleSpecItems, get_specication_resources
+
+from .forms import UserRegistrationForm, UserLoginForm
+from .specification import Tentura, Specification, get_specication_resources
 from .models import TR, SPP, OrtrTR
 from .forms import HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     CksForm, PortVKForm, PortVMForm, VideoForm, LocalForm, \
@@ -15,11 +14,10 @@ from .forms import HotspotForm, PhoneForm, ItvForm, ShpdForm, \
     ChangeServForm, ChangeParamsForm, ListJobsForm, \
     ListContractIdForm, ExtendServiceForm, PassTurnoffForm, SearchTicketsForm, \
     PprForm, AddResourcesPprForm, AddCommentForm, TimeTrackingForm, SppDataForm, PpsForm, PassVideoForm, \
-    OtherEnvForm, KtcEnvForm, PassServiceForm
+    OtherEnvForm, KtcEnvForm, PassServiceForm, AddressForm
 
-from oattr.models import OtpmSpp
-
-
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import logging
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -31,14 +29,11 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
-from django.utils import timezone
-from django.contrib.auth.decorators import user_passes_test
 
 
 import xlwt
-from django.db.models import F, Func, Value, CharField
+from django.db.models import F
 from django.utils import timezone
-import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms import formset_factory
 
@@ -134,11 +129,7 @@ def change_password(request):
 @login_required(login_url='login/')
 def private_page(request):
     """Данный метод в Личном пространстве пользователя отображает все задачи этого пользователя"""
-    #request = flush_session_key(request)
-    if request.user.groups.filter(name='Сотрудники ОАТТР').exists():
-        spp_success = OtpmSpp.objects.filter(user=request.user).order_by('-created')
-    else:
-        spp_success = SPP.objects.filter(user=request.user).order_by('-created')
+    spp_success = SPP.objects.filter(user=request.user).order_by('-created')
     paginator = Paginator(spp_success, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -469,43 +460,7 @@ def data(request, trID):
                           'counter_str_ots': counter_str_ots
                           })
     request.session[trID] = session_tr_id
-    try:
-        manlink = request.session['manlink']
-    except KeyError:
-        manlink = None
-
-    if manlink:
-        return redirect('unsaved_data')
-    else:
-        return redirect(reverse('saved_data', kwargs={'trID': trID}))
-
-
-def unsaved_data(request):
-    """Данный метод отображает нередактируемую html-страничку готового ТР"""
-    services_plus_desc = request.session['services_plus_desc']
-    oattr = request.session['oattr']
-    titles = request.session['titles']
-    result_services = request.session['result_services']
-    counter_str_ortr = request.session['counter_str_ortr']
-    counter_str_ots = request.session['counter_str_ots']
-    result_services_ots = request.session['result_services_ots']
-    try:
-        list_switches = request.session['list_switches']
-    except KeyError:
-        list_switches = None
-    now = datetime.datetime.now()
-    context = {
-        'services_plus_desc': services_plus_desc,
-        'oattr': oattr,
-        'titles': titles,
-        'result_services': result_services,
-        'result_services_ots': result_services_ots,
-        'now': now,
-        'list_switches': list_switches,
-        'counter_str_ortr': counter_str_ortr,
-        'counter_str_ots': counter_str_ots
-    }
-    return render(request, 'tickets/data.html', context)
+    return redirect(reverse('saved_data', kwargs={'trID': trID}))
 
 
 def saved_data(request, trID):
@@ -3486,3 +3441,56 @@ def tag_analysis(request):
         'total_rezerv_tags': total_rezerv_tags
     })
 
+
+class AddressView(CredentialMixin, View):
+    """Поиск адресов в СПП"""
+    def get(self, request, department, trID):
+        username, password = super().get_credential(self)
+        if not department == 'ortr':
+            return render(request, 'base.html', {'my_message': 'Нет прав на изменение узла связи.'})
+        ticket_tr = TR.objects.filter(ticket_tr=trID).last()
+        if request.GET:
+            form = AddressForm(request.GET)
+            if form.is_valid():
+                city = form.cleaned_data['city']
+                street = None if not form.cleaned_data['street'] else form.cleaned_data['street']
+                house = None if not form.cleaned_data['house'] else form.cleaned_data['house']
+
+                search = get_spp_addresses(username, password, city, street, house)
+                context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search, 'department': department}
+                return render(request, 'tickets/addresses.html', context)
+        else:
+            form = AddressForm()
+
+            search = get_initial_node(username, password, ticket_tr)
+            context = {'addressform': form, 'ticket_tr': ticket_tr, 'search': search, 'department': department}
+            return render(request, 'tickets/addresses.html', context)
+
+
+class SelectNodeView(CredentialMixin, View):
+    """Выбор узла на адресе для добавления в ТР"""
+    def get(self, request, department, trID, aid):
+        username, password = super().get_credential(self)
+        ticket_tr = TR.objects.filter(ticket_tr=trID).last() if department == 'ortr' else None
+        search = get_nodes_by_address(username, password, aid)
+
+        context = {
+            'search': search,
+            'ticket_tr': ticket_tr,
+            'department': department
+        }
+        return render(request, 'tickets/select_node.html', context)
+
+
+class UpdateNodeView(CredentialMixin, LoginRequiredMixin, View):
+    """Выбор узла на адресе для добавления в ТР"""
+    def get(self, request, department, trID, vid):
+        username, password = super().get_credential(self)
+        if department == 'ortr':
+            ticket_tr = TR.objects.filter(ticket_tr=trID).last()
+            url = reverse('add_tr', kwargs={'dID': ticket_tr.ticket_k.dID, 'tID': ticket_tr.ticket_cp, 'trID': trID})
+            ticket_tr.vID = vid
+            ticket_tr.save()
+            send_spp(username, password, ticket_tr, department)
+            return redirect(url)
+        return render(request, 'base.html', {'my_message': 'Нет прав на изменение узла связи.'})

@@ -19,16 +19,12 @@ from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
 
-
-from oattr.views import AddressView, SelectNodeView, UpdateNodeView
-
-handler500 = 'oattr.views.handler500'
+from tickets.views import AddressView, SelectNodeView, UpdateNodeView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('address/<str:department>/tr-<int:trID>/', AddressView.as_view(), name='addresses'),
     path('address/select_node/<str:department>/tr-<int:trID>/aid-<int:aid>', SelectNodeView.as_view(), name='select_node'),
     path('address/update_node/<str:department>/tr-<int:trID>/vid-<int:vid>', UpdateNodeView.as_view(), name='update_node'),
-    path('otpm/', include('oattr.urls')),
     path('', include('tickets.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

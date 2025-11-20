@@ -12,8 +12,7 @@ from django.utils import timezone
 from dotenv import load_dotenv
 from parameterized import parameterized
 
-from tickets.models import SPP, TR
-from oattr.models import HoldPosition, UserHoldPosition
+from tickets.models import SPP, TR, HoldPosition, UserHoldPosition
 from django.contrib.auth.models import Group
 
 BASE_DIR = Path(__file__).resolve().parent.parent
